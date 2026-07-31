@@ -1,0 +1,22 @@
+services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - valkey-data:/data
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: tanuki
+      POSTGRES_PASSWORD: tanuki
+      POSTGRES_DB: tanuki
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  valkey-data:
+  postgres-data:

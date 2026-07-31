@@ -15,9 +15,9 @@ VitePWA({
   strategies: 'injectManifest',
   srcDir: 'src/sw',
   filename: 'sw.ts',
-  registerType: 'prompt',        // не autoUpdate — см. ниже
-  manifest: { /* ... */ },
-})
+  registerType: 'prompt', // не autoUpdate — см. ниже
+  manifest: {/* ... */},
+});
 ```
 
 `registerType: 'prompt'`, а не `autoUpdate`: обновление SW посреди чтения главы
@@ -26,16 +26,16 @@ VitePWA({
 
 ## Стратегии кеширования
 
-| Ресурс | Стратегия | Параметры |
-| ------ | --------- | --------- |
-| App shell (JS, CSS, шрифты) | Precache | Ревизии из манифеста сборки |
-| `/api/v1/sources` | StaleWhileRevalidate | TTL 24 ч |
-| `/api/v1/sources/*/manga` (каталог) | NetworkFirst | Таймаут 3 с, TTL 15 мин, 50 записей |
-| `/api/v1/manga/*` (детали, главы) | StaleWhileRevalidate | TTL 1 ч, 200 записей |
-| `/api/v1/img` — обложки | CacheFirst | TTL 30 дней, 500 записей, LRU |
-| `/api/v1/img` — страницы глав (онлайн) | CacheFirst | TTL 7 дней, лимит по объёму |
-| `/api/v1/img` — страницы скачанных глав | **Отдельный кеш, без вытеснения** | `tanuki-offline-v1` |
-| Навигация | NetworkFirst с офлайн-фолбэком | `offline.html` |
+| Ресурс                                  | Стратегия                         | Параметры                           |
+| --------------------------------------- | --------------------------------- | ----------------------------------- |
+| App shell (JS, CSS, шрифты)             | Precache                          | Ревизии из манифеста сборки         |
+| `/api/v1/sources`                       | StaleWhileRevalidate              | TTL 24 ч                            |
+| `/api/v1/sources/*/manga` (каталог)     | NetworkFirst                      | Таймаут 3 с, TTL 15 мин, 50 записей |
+| `/api/v1/manga/*` (детали, главы)       | StaleWhileRevalidate              | TTL 1 ч, 200 записей                |
+| `/api/v1/img` — обложки                 | CacheFirst                        | TTL 30 дней, 500 записей, LRU       |
+| `/api/v1/img` — страницы глав (онлайн)  | CacheFirst                        | TTL 7 дней, лимит по объёму         |
+| `/api/v1/img` — страницы скачанных глав | **Отдельный кеш, без вытеснения** | `tanuki-offline-v1`                 |
+| Навигация                               | NetworkFirst с офлайн-фолбэком    | `offline.html`                      |
 
 Ключевой момент — **два раздельных кеша изображений**. Обычный кеш чтения живёт по LRU и
 чистится браузером при нехватке места. Кеш скачанных глав чистится **только** по явному

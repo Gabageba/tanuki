@@ -5,13 +5,13 @@
 
 ## Что изменилось относительно gabageba-ui
 
-| Изменение | Причина |
-| --------- | ------- |
-| `@typescript-eslint/parser` + `/eslint-plugin` → единый пакет `typescript-eslint` | Официально рекомендуемый способ с v8, меньше рассинхрона версий |
-| `project: './tsconfig.eslint.json'` → `projectService: true` | Не нужно вручную поддерживать список файлов, быстрее на монорепо |
-| Ручной список `globals` (~40 строк) → пакет `globals` | Ваш список неполон (нет `AbortController`, `caches`, `crypto`) и его придётся дополнять вечно |
-| `eslint-plugin-prettier` удалён | Prettier как ESLint-правило заметно замедляет линт. Оставлен только `eslint-config-prettier` (отключает конфликтующие правила), сам Prettier — отдельным шагом в lint-staged |
-| Конфиги вынесены в `packages/eslint-config` и `packages/stylelint-config` | Три пакета (`web`, `api`, `contracts`) должны линтиться одинаково |
+| Изменение                                                                         | Причина                                                                                                                                                                      |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@typescript-eslint/parser` + `/eslint-plugin` → единый пакет `typescript-eslint` | Официально рекомендуемый способ с v8, меньше рассинхрона версий                                                                                                              |
+| `project: './tsconfig.eslint.json'` → `projectService: true`                      | Не нужно вручную поддерживать список файлов, быстрее на монорепо                                                                                                             |
+| Ручной список `globals` (~40 строк) → пакет `globals`                             | Ваш список неполон (нет `AbortController`, `caches`, `crypto`) и его придётся дополнять вечно                                                                                |
+| `eslint-plugin-prettier` удалён                                                   | Prettier как ESLint-правило заметно замедляет линт. Оставлен только `eslint-config-prettier` (отключает конфликтующие правила), сам Prettier — отдельным шагом в lint-staged |
+| Конфиги вынесены в `packages/eslint-config` и `packages/stylelint-config`         | Три пакета (`web`, `api`, `contracts`) должны линтиться одинаково                                                                                                            |
 
 Правила именования (`selector-class-pattern` в camelCase, `custom-property-pattern` в
 kebab-case, `quotes: single`, `consistent-type-imports`) перенесены **без изменений** —
@@ -89,12 +89,15 @@ export default [
       'jsx-a11y/no-static-element-interactions': 'off',
 
       // Границы слоёв FSD — см. 05-frontend.md
-      'no-restricted-imports': ['error', {
-        patterns: [
-          { group: ['@/app/*'],      message: 'app — верхний слой, импорт из него запрещён' },
-          { group: ['@/pages/*'],    message: 'Импорт из pages разрешён только в app' },
-        ],
-      }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['@/app/*'], message: 'app — верхний слой, импорт из него запрещён' },
+            { group: ['@/pages/*'], message: 'Импорт из pages разрешён только в app' },
+          ],
+        },
+      ],
     },
   },
 ];
@@ -193,11 +196,11 @@ pnpm turbo typecheck test
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build":     { "dependsOn": ["^build"], "outputs": ["dist/**", "build/**"] },
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", "build/**"] },
     "typecheck": { "dependsOn": ["^build"] },
-    "lint":      {},
-    "test":      { "dependsOn": ["^build"] },
-    "dev":       { "cache": false, "persistent": true }
+    "lint": {},
+    "test": { "dependsOn": ["^build"] },
+    "dev": { "cache": false, "persistent": true }
   }
 }
 ```

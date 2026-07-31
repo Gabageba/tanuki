@@ -1,0 +1,50 @@
+{
+  "name": "tanuki",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint && pnpm run lint:styles && pnpm run lint:format",
+    "lint:format": "prettier --check .",
+    "lint:styles": "stylelint \"apps/**/*.scss\" --allow-empty-input",
+    "prepare": "husky",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.scss": [
+      "stylelint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "apps/parsers/**/*.kt": [
+      "./gradlew ktlintFormat --quiet"
+    ],
+    "package.json": "sort-package-json"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@tanuki/stylelint-config": "workspace:*",
+    "eslint": "^10.8.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.2.0",
+    "prettier": "^3.9.6",
+    "sort-package-json": "^4.0.0",
+    "stylelint": "^17.14.1",
+    "turbo": "^2.10.7",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

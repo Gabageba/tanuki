@@ -1,0 +1,23 @@
+{
+  "name": "@tanuki/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tanuki/eslint-config": "workspace:*",
+    "@tanuki/tsconfig": "workspace:*",
+    "@types/node": "^26.1.2",
+    "eslint": "^10.8.0",
+    "typescript": "^5.9.3"
+  }
+}

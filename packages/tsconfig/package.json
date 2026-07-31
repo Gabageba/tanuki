@@ -1,0 +1,11 @@
+{
+  "name": "@tanuki/tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "files": [
+    "base.json",
+    "react-app.json",
+    "node-app.json"
+  ]
+}

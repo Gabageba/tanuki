@@ -11,7 +11,7 @@
 всегда составной:
 
 ```ts
-type MangaRef = `${SourceId}:${string}`;   // "READMANGA:solo-leveling"
+type MangaRef = `${SourceId}:${string}`; // "READMANGA:solo-leveling"
 ```
 
 Все ID стабильны в рамках источника. Клиент никогда не парсит их содержимое.
@@ -20,14 +20,14 @@ type MangaRef = `${SourceId}:${string}`;   // "READMANGA:solo-leveling"
 
 ```ts
 const MangaSchema = z.object({
-  id: z.string(),                    // "READMANGA:solo-leveling"
+  id: z.string(), // "READMANGA:solo-leveling"
   sourceId: z.string(),
   slug: z.string(),
 
-  title: z.string(),                 // локализованное название источника
-  altTitles: z.array(z.string()),    // оригинал, англ., синонимы
+  title: z.string(), // локализованное название источника
+  altTitles: z.array(z.string()), // оригинал, англ., синонимы
 
-  coverUrl: z.string(),              // уже проксированный /api/v1/img?...
+  coverUrl: z.string(), // уже проксированный /api/v1/img?...
   largeCoverUrl: z.string().nullable(),
 
   description: z.string().nullable(),
@@ -38,10 +38,10 @@ const MangaSchema = z.object({
   contentRating: z.enum(['SAFE', 'SUGGESTIVE', 'ADULT']),
   type: z.enum(['MANGA', 'MANHWA', 'MANHUA', 'COMICS', 'OTHER']).nullable(),
 
-  rating: z.number().min(0).max(1).nullable(),   // нормализовано к 0..1
+  rating: z.number().min(0).max(1).nullable(), // нормализовано к 0..1
   chaptersCount: z.number().nullable(),
 
-  publicUrl: z.string(),             // ссылка на страницу источника — обязательна
+  publicUrl: z.string(), // ссылка на страницу источника — обязательна
 });
 ```
 
@@ -57,15 +57,15 @@ const ChapterSchema = z.object({
   id: z.string(),
   mangaId: z.string(),
 
-  number: z.number().nullable(),     // 145.5 — дробные бывают
+  number: z.number().nullable(), // 145.5 — дробные бывают
   volume: z.number().nullable(),
   title: z.string().nullable(),
 
-  branch: z.string().nullable(),      // "Команда Ронин" — КРИТИЧНО для RU
+  branch: z.string().nullable(), // "Команда Ронин" — КРИТИЧНО для RU
   scanlator: z.string().nullable(),
   uploadedAt: z.string().datetime().nullable(),
 
-  url: z.string(),                    // внутренний, наружу не отдаётся как есть
+  url: z.string(), // внутренний, наружу не отдаётся как есть
 });
 ```
 
@@ -87,8 +87,8 @@ const ChapterSchema = z.object({
 ```ts
 const PageSchema = z.object({
   index: z.number(),
-  url: z.string(),                    // /api/v1/img?u=<signed>&s=<sourceId>
-  width: z.number().nullable(),       // если источник отдаёт — резервируем место
+  url: z.string(), // /api/v1/img?u=<signed>&s=<sourceId>
+  width: z.number().nullable(), // если источник отдаёт — резервируем место
   height: z.number().nullable(),
 });
 ```
@@ -195,14 +195,14 @@ POST   /sync                            → батч-синхронизация 
 { error: { code: 'SOURCE_UNAVAILABLE', message: '...', sourceId, retryAfter?: 30 } }
 ```
 
-| Код | HTTP | Смысл |
-| --- | ---- | ----- |
-| `SOURCE_UNAVAILABLE` | 503 | Circuit breaker открыт |
-| `SOURCE_BLOCKED` | 502 | Источник вернул антибот-челлендж |
-| `PARSER_FAILED` | 502 | Парсер не смог разобрать ответ — сайт сменил вёрстку |
-| `NOT_FOUND` | 404 | Тайтла или главы нет на источнике |
-| `RATE_LIMITED` | 429 | Превышен лимит запросов клиента |
-| `INVALID_SIGNATURE` | 403 | Некорректная подпись у `/img` |
+| Код                  | HTTP | Смысл                                                |
+| -------------------- | ---- | ---------------------------------------------------- |
+| `SOURCE_UNAVAILABLE` | 503  | Circuit breaker открыт                               |
+| `SOURCE_BLOCKED`     | 502  | Источник вернул антибот-челлендж                     |
+| `PARSER_FAILED`      | 502  | Парсер не смог разобрать ответ — сайт сменил вёрстку |
+| `NOT_FOUND`          | 404  | Тайтла или главы нет на источнике                    |
+| `RATE_LIMITED`       | 429  | Превышен лимит запросов клиента                      |
+| `INVALID_SIGNATURE`  | 403  | Некорректная подпись у `/img`                        |
 
 `PARSER_FAILED` стоит логировать отдельным счётчиком с разбивкой по источникам — это
 ранний сигнал, что пора обновлять форк парсеров.

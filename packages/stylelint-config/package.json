@@ -1,0 +1,11 @@
+{
+  "name": "@tanuki/stylelint-config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "index.json",
+  "dependencies": {
+    "postcss-scss": "^4.0.9",
+    "stylelint-config-standard-scss": "^17.0.0"
+  }
+}
