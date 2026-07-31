@@ -28,6 +28,25 @@
 > стороны. Перед первой сборкой откройте [JitPack-страницу форка](https://jitpack.io/#Kotatsu-Redo/kotatsu-parsers-redo)
 > и возьмите фактическую координату + актуальный тег оттуда. Это первая задача Фазы 2.
 
+## Наш собственный форк
+
+Поверх `Kotatsu-Redo/kotatsu-parsers-redo` мы ведём свой форк с проектными патчами:
+
+- Репозиторий: [`Gabageba/tanuki-parsers-redo`](https://github.com/Gabageba/tanuki-parsers-redo)
+  (remote `git@github.com:Gabageba/tanuki-parsers-redo.git`).
+- Локальная копия: `/Users/gabageba/Develop/web/tanuki-parsers-redo` — рядом с этим
+  репозиторием (`tanuki`), не внутри него.
+- Патчи в форке сейчас: фикс разбора `summary` как rich-text/ProseMirror-документа в
+  `LibSocialParser.kt` (MangaLib) и добавление домена `desu.uno` в `DesuMeParser.kt`.
+
+`apps/parsers` подключает форк напрямую через [JitPack](https://jitpack.io/#Gabageba/tanuki-parsers-redo)
+по хэшу коммита — см. зависимость `com.github.Gabageba:tanuki-parsers-redo:<commit>` в
+[`build.gradle.kts`](../apps/parsers/build.gradle.kts). JitPack собирает форк по
+требованию и публикует нормальный POM/Gradle module metadata, поэтому transitive-зависимости
+библиотеки (okhttp, okio, jsoup и т.д.) резолвятся сами — вручную их перечислять не нужно.
+При обновлении форка достаточно поменять хэш коммита (или тег) в зависимости, ручной
+пересборки jar больше не требуется.
+
 ## Почему JVM-сайдкар, а не порт на TypeScript
 
 Библиотека написана на Kotlin и завязана на JVM-рантайм (OkHttp, Jsoup, корутины). Из
@@ -128,7 +147,14 @@ fun Application.module() {
 
 ## План обновления форка
 
-1. Раз в неделю CI проверяет наличие нового тега в `kotatsu-parsers-redo`.
-2. Бот открывает PR с bump версии в `apps/parsers/build.gradle.kts`.
+Два независимых шага, так как `apps/parsers` собирается из **своего** форка
+(`Gabageba/tanuki-parsers-redo`), а не из апстрима напрямую:
+
+1. Раз в неделю CI проверяет наличие нового тега/коммита в апстриме
+   `Kotatsu-Redo/kotatsu-parsers-redo` и открывает PR с ребейзом/мержем в наш форк.
+2. После обновления форка (или добавления нового патча) второй CI-джоб обновляет
+   хэш коммита в зависимости `com.github.Gabageba:tanuki-parsers-redo:<commit>` в
+   [`apps/parsers/build.gradle.kts`](../apps/parsers/build.gradle.kts). JitPack соберёт
+   этот коммит по требованию — публиковать jar вручную не нужно.
 3. Прогоняются контрактные тесты (по одному запросу на каждый P0/P1-источник).
-4. Зелёные — мержим. Красные — смотрим, что сломалось: форк или сам сайт.
+4. Зелёные — мержим. Красные — смотрим, что сломалось: форк, наш патч или сам сайт.

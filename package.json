@@ -13,23 +13,6 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.scss": [
-      "stylelint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ],
-    "apps/parsers/**/*.kt": [
-      "./gradlew ktlintFormat --quiet"
-    ],
-    "package.json": "sort-package-json"
-  },
   "devDependencies": {
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",

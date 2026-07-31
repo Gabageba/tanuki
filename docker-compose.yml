@@ -17,6 +17,14 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  # JVM-сайдкар парсеров (docs/03-parsers.md). В проде слушает только внутреннюю сеть
+  # докера — порт публикуется наружу только ради удобства локальной разработки, пока
+  # apps/api запускается через `pnpm dev`, а не в compose.
+  parsers:
+    build: ./apps/parsers
+    ports:
+      - '8085:8080'
+
 volumes:
   valkey-data:
   postgres-data:
