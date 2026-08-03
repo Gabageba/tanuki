@@ -23,12 +23,14 @@ export type CatalogResponse = z.infer<typeof CatalogResponseSchema>;
 export const MangaDetailsResponseSchema = z.object({
   manga: MangaSchema,
   branches: z.array(BranchSchema),
+  stale: z.boolean().optional(),
 });
 
 export type MangaDetailsResponse = z.infer<typeof MangaDetailsResponseSchema>;
 
 export const ChaptersResponseSchema = z.object({
   items: z.array(ChapterSchema),
+  stale: z.boolean().optional(),
 });
 
 export type ChaptersResponse = z.infer<typeof ChaptersResponseSchema>;
@@ -37,6 +39,7 @@ export const PagesResponseSchema = z.object({
   items: z.array(PageSchema),
   prevChapterId: z.string().nullable(),
   nextChapterId: z.string().nullable(),
+  stale: z.boolean().optional(),
 });
 
 export type PagesResponse = z.infer<typeof PagesResponseSchema>;

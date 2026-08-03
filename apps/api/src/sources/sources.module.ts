@@ -7,5 +7,6 @@ import { SourcesService } from './sources.service';
   imports: [ParsersClientModule],
   controllers: [SourcesController],
   providers: [SourcesService],
+  exports: [SourcesService],
 })
 export class SourcesModule {}

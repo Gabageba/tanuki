@@ -8,5 +8,6 @@ import { MangaController } from './manga.controller';
   imports: [ParsersClientModule],
   controllers: [CatalogController, MangaController],
   providers: [CatalogService],
+  exports: [CatalogService],
 })
 export class CatalogModule {}

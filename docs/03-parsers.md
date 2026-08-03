@@ -36,8 +36,18 @@
   (remote `git@github.com:Gabageba/tanuki-parsers-redo.git`).
 - Локальная копия: `/Users/gabageba/Develop/web/tanuki-parsers-redo` — рядом с этим
   репозиторием (`tanuki`), не внутри него.
-- Патчи в форке сейчас: фикс разбора `summary` как rich-text/ProseMirror-документа в
-  `LibSocialParser.kt` (MangaLib) и добавление домена `desu.uno` в `DesuMeParser.kt`.
+- Патчи в форке сейчас:
+  - фикс разбора `summary` как rich-text/ProseMirror-документа в `LibSocialParser.kt` (MangaLib);
+  - `LibSocialParser.getDetails()` не мержил `coverUrl`/`largeCoverUrl`/`id` из seed-объекта в
+    ответ — добавлено (заодно убран лишний `fields[]=cover` из запроса, на который API отвечал
+    422);
+  - добавление домена `desu.uno` в `DesuMeParser.kt`;
+  - `DesuMeParser.getDetails()` аналогично не заполнял `coverUrl`/`largeCoverUrl` в возвращаемом
+    объекте — добавлено;
+  - `GroupleParser.getDetails()` (ReadManga/MintManga/SelfManga) держал устаревший селектор
+    обложки `div.subject-cover img[data-thumb]` — сайт мигрировал разметку тайтла на
+    carousel-блок `cr-hero-poster`, старый селектор ничего не находил и `coverUrl` всегда уходил
+    пустым. Селектор обновлён на новую разметку с фолбэком на старую.
 
 `apps/parsers` подключает форк напрямую через [JitPack](https://jitpack.io/#Gabageba/tanuki-parsers-redo)
 по хэшу коммита — см. зависимость `com.github.Gabageba:tanuki-parsers-redo:<commit>` в
@@ -144,6 +154,66 @@ fun Application.module() {
   лучше читалки, показывающей ошибку.
 - **Синтетические проверки.** Ночной cron дёргает по одному запросу на каждый источник
   и репортит в мониторинг, какие парсеры сломались. Вы узнаёте раньше пользователей.
+
+### Решение по антиботу (Фаза 2)
+
+Риск MangaLib из "Главного риска фазы" (Фаза 1) закрылся без headless-браузера:
+`evaluateJs` в `TanukiMangaLoaderContext` всегда возвращает `null`, `LibSocialParser` использует
+его только для best-effort проверки "залогинен ли пользователь через WebView" и переживает
+`null` как анонимную сессию. Решение на сейчас: **headless-браузер и прокси-пул не поднимаем**.
+Вместо этого `apps/api/src/parsers-client/antibot-detection.ts` эвристически отличает
+антибот-челлендж (Cloudflare-заголовки, "Just a moment"-подобные тела ответа) от обычной
+недоступности источника и бросает `SOURCE_BLOCKED` вместо `SOURCE_UNAVAILABLE` — честнее для
+мониторинга. Пересматриваем это решение, если реальный источник начнёт систематически отдавать
+такие челленджи.
+
+Первый прогон контрактных тестов (`apps/parsers/src/test/kotlin/.../SourceContractTest.kt`) уже
+показал конкретные проблемы. Часть из них проверена повторно с обычной сети (не из песочницы
+разработки, где DNS источников резолвился в подозрительный диапазон `198.18.0.0/15`) — статус
+ниже актуален, а не гипотеза:
+
+- **MINTMANGA — подтверждено, живая проблема.** `GroupleParser.checkIfAuthRequired` бросает
+  `AuthRequiredException` на обычном листинге каталога и на страницах глав (проверено прямым
+  запросом к `/sources/MINTMANGA/pages` мимо кеша — сайт реально отвечает
+  `{"error":"Authorization required"}`). Не квирк песочницы и не баг наших патчей — mintmanga.com
+  сейчас требует авторизованную сессию сайт-вайд. Детали и план — в подразделе ниже.
+- **SELFMANGA** — `getList()` вернулся пустым списком при дефолтной сортировке (тот же
+  Grouple-домен, вероятно, тот же возрастной/авторизационный гейт, но проявляется иначе — стоит
+  перепроверить тем же способом, что и MINTMANGA, когда дойдут руки).
+- **DESUME** (`desu.uno`) — `SSLHandshakeException`/PKIX path building failed при живом TLS
+  хендшейке; сертификат сайта валиден и локально проверяется `openssl s_client`, так что похоже
+  на квирк конкретного сетевого пути, а не на реальную проблему сертификата источника. Требует
+  перепроверки вне песочницы.
+
+Ночной CI (`.github/workflows/parsers-nightly.yml`) ловит это на постоянной основе.
+
+### Следующий шаг: авторизация для Grouple-сети (MINTMANGA/SELFMANGA)
+
+`GroupleParser` уже реализует `MangaParserAuthProvider` и `Interceptor`
+(`checkIfAuthRequired()` в форке): запрос считается требующим логина, если путь оканчивается на
+`/login`, либо приходит 404 без куки `gwt` в cookie jar — то есть **любой** настоящий 404 на
+Grouple-домене без активной сессии тоже маскируется под `AuthRequiredException`, не только
+реальные login-стены. `authUrl`/`getUsername()`/`isAuthorized()` в библиотеке рассчитаны на
+Android-приложение с WebView (юзер логинится в браузере, библиотека потом просто читает готовую
+куку) — сама библиотека логин не выполняет.
+
+В `TanukiMangaLoaderContext` (`apps/parsers`) `cookieJar` — `InMemoryCookieJar()`, общий на
+процесс и пустой; логин-флоу или каких-либо кредов для Grouple в проекте сейчас нет вообще.
+
+Чтобы MINTMANGA/SELFMANGA заработали, нужно:
+
+1. Аккаунт на grouple.co (общий паспорт для readmanga/mintmanga/selfmanga).
+2. Программный логин: POST в реальную login-форму grouple.co логином/паролем, получить куку
+   `gwt`.
+3. Хранение куки хотя бы в процессе (пережить рестарт сервиса — не обязательно на первом шаге) +
+   переавторизация при истечении.
+4. Креды — через env (например `GROUPLE_LOGIN`/`GROUPLE_PASSWORD`), не хардкодить.
+5. Юридический риск: скриптовый логин под живым аккаунтом может нарушать ToS сайта — см.
+   [09 — Правовые аспекты](09-legal.md), учитывать при решении.
+
+Пока не сделано — MINTMANGA/SELFMANGA остаются `degraded` при попадании на контент, требующий
+сессии; circuit breaker (`SOURCE_BREAKER_*`, см. раздел «Устойчивость» выше) корректно
+отражает это как недоступность источника, а не как баг.
 
 ## План обновления форка
 

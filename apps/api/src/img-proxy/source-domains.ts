@@ -3,6 +3,7 @@
 // по самому URL картинки. Расширяется по мере подключения источников (Фаза 2).
 const SOURCE_REFERERS: Record<string, string> = {
   DESUME: 'https://x.desu.city/',
+  REMANGA: 'https://remanga.org/',
 };
 
 export function getSourceReferer(sourceId: string, imageUrl: string): string {

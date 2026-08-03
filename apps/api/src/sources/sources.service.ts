@@ -3,23 +3,25 @@ import type { Source } from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
+import { SourceHealthService } from '../resilience/source-health.service';
 
 @Injectable()
 export class SourcesService {
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly parsersClient: ParsersClientService,
+    private readonly sourceHealth: SourceHealthService,
   ) {}
 
   async listSources(): Promise<Source[]> {
-    const { items } = await this.parsersClient.getSources();
-    return items
+    const { data } = await this.parsersClient.getSources();
+    return data.items
       .filter((source) => this.env.ENABLED_SOURCES.includes(source.id))
       .map((source): Source => ({
         id: source.id,
         title: source.title,
         locale: source.locale,
-        status: 'ok', // circuit breaker по источнику — Фаза 2
+        status: source.isBroken ? 'down' : this.sourceHealth.getStatus(source.id),
         capabilities: {
           search: source.isSearchSupported,
           tagFilter: source.isMultipleTagsSupported,

@@ -22,3 +22,9 @@ export {
   PagesResponseSchema,
   type PagesResponse,
 } from './responses';
+export {
+  SearchGroupSchema,
+  type SearchGroup,
+  SearchResponseSchema,
+  type SearchResponse,
+} from './search';

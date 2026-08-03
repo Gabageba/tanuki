@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const ApiErrorCodeSchema = z.enum([
   'SOURCE_UNAVAILABLE',
   'SOURCE_BLOCKED',
+  'SOURCE_AUTH_REQUIRED',
   'PARSER_FAILED',
   'NOT_FOUND',
   'RATE_LIMITED',

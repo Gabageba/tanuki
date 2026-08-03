@@ -31,20 +31,22 @@ export class CatalogService {
     sourceId: string,
     params: { page: number; order?: string; query?: string },
   ): Promise<CatalogResponse> {
-    const { items } = await this.parsersClient.listManga(sourceId, params);
+    const { data, stale } = await this.parsersClient.listManga(sourceId, params);
     return {
-      items: items.map((raw) => normalizeManga(this.env, sourceId, raw)),
+      items: data.items.map((raw) => normalizeManga(this.env, sourceId, raw)),
       page: params.page,
-      hasNext: items.length >= PAGE_SIZE,
+      hasNext: data.items.length >= PAGE_SIZE,
+      stale: stale || undefined,
     };
   }
 
   async getMangaDetails(sourceId: string, mangaId: string): Promise<MangaDetailsResponse> {
     const ref = decodeMangaId(mangaId);
-    const raw = await this.parsersClient.getDetails(sourceId, ref.url);
+    const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
     return {
       manga: normalizeManga(this.env, sourceId, raw),
       branches: computeBranches(raw.chapters ?? []),
+      stale: stale || undefined,
     };
   }
 
@@ -54,24 +56,28 @@ export class CatalogService {
     branch: string | undefined,
   ): Promise<ChaptersResponse> {
     const ref = decodeMangaId(mangaId);
-    const raw = await this.parsersClient.getDetails(sourceId, ref.url);
+    const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
     const chapters = raw.chapters ?? [];
     const targetBranch = branch ?? pickDefaultBranch(chapters);
     const filtered = chapters
       .filter((chapter) => chapter.branch === targetBranch)
       .sort((a, b) => a.number - b.number);
 
-    return { items: filtered.map((chapter) => normalizeChapter(sourceId, mangaId, chapter)) };
+    return {
+      items: filtered.map((chapter) => normalizeChapter(sourceId, mangaId, chapter)),
+      stale: stale || undefined,
+    };
   }
 
   async getPages(sourceId: string, mangaId: string, chapterId: string): Promise<PagesResponse> {
     const chapterRef = decodeChapterId(chapterId);
     const mangaRef = decodeMangaId(mangaId);
 
-    const [pagesResult, details] = await Promise.all([
+    const [pagesResult, detailsResult] = await Promise.all([
       this.parsersClient.getPages(sourceId, chapterRef.url),
       this.parsersClient.getDetails(sourceId, mangaRef.url),
     ]);
+    const details = detailsResult.data;
 
     const siblings = (details.chapters ?? [])
       .filter((chapter) => chapter.branch === chapterRef.branch)
@@ -82,12 +88,15 @@ export class CatalogService {
       chapter ? normalizeChapter(sourceId, mangaId, chapter).id : null;
 
     return {
-      items: pagesResult.items.map((page, index) => normalizePage(this.env, sourceId, index, page)),
+      items: pagesResult.data.items.map((page, index) =>
+        normalizePage(this.env, sourceId, index, page),
+      ),
       prevChapterId: currentIndex > 0 ? toChapterId(siblings[currentIndex - 1]) : null,
       nextChapterId:
         currentIndex >= 0 && currentIndex < siblings.length - 1
           ? toChapterId(siblings[currentIndex + 1])
           : null,
+      stale: pagesResult.stale || detailsResult.stale || undefined,
     };
   }
 }

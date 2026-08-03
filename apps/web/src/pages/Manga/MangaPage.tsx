@@ -52,7 +52,7 @@ export default function MangaPage() {
     <Container py="xl">
       <Grid>
         <Grid.Col span={{ base: 12, sm: 4, md: 3 }}>
-          <Image src={manga.largeCoverUrl || undefined} alt={manga.title} radius="md" />
+          <Image src={manga.largeCoverUrl || manga.coverUrl} alt={manga.title} radius="md" />
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 8, md: 9 }}>
           <Title order={1}>{manga.title}</Title>

@@ -7,6 +7,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import org.koitharu.kotatsu.parsers.exception.AuthRequiredException
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
@@ -173,6 +174,12 @@ private suspend fun RoutingContext.respondCatching(block: suspend () -> Any) {
         call.respond(block())
     } catch (e: UnsupportedOperationException) {
         call.respond(HttpStatusCode.NotImplemented, mapOf("error" to (e.message ?: "not supported")))
+    } catch (e: AuthRequiredException) {
+        // Отдельный статус (не 502, как для прочих ошибок парсера) — BFF (apps/api) должен
+        // явно отличать "источнику нужна авторизация" от "источник упал", иначе оба случая
+        // выглядят как SOURCE_UNAVAILABLE и приводят к бесполезным ретраям вместо диагностики
+        // GROUPLE_USERNAME/PASSWORD (см. loader/GroupleAuth.kt).
+        call.respond(HttpStatusCode.Unauthorized, mapOf("error" to (e.message ?: "authorization required")))
     } catch (e: Exception) {
         call.respond(HttpStatusCode.BadGateway, mapOf("error" to (e.message ?: "parser failed")))
     }

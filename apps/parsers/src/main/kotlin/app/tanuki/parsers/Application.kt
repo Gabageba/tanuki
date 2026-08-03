@@ -1,6 +1,8 @@
 package app.tanuki.parsers
 
+import app.tanuki.parsers.loader.InMemoryCookieJar
 import app.tanuki.parsers.loader.TanukiMangaLoaderContext
+import app.tanuki.parsers.loader.authenticateGrouple
 import app.tanuki.parsers.routes.registerRoutes
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
@@ -12,6 +14,10 @@ import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -42,5 +48,25 @@ fun Application.module() {
     }
 
     val loaderContext = TanukiMangaLoaderContext()
+
+    // Grouple-сеть (MintManga, Readmanga, SelfManga) прячет часть глав за логином
+    // (GroupleParser.checkIfAuthRequired) — без учётки сайдкар навсегда получает
+    // AuthRequiredException на таких главах. Логин необязателен: без переменных
+    // окружения источники продолжают работать анонимно, как раньше.
+    val groupleUsername = System.getenv("GROUPLE_USERNAME")
+    val grouplePassword = System.getenv("GROUPLE_PASSWORD")
+    if (!groupleUsername.isNullOrBlank() && !grouplePassword.isNullOrBlank()) {
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                authenticateGrouple(
+                    loaderContext.httpClient,
+                    loaderContext.cookieJar as InMemoryCookieJar,
+                    groupleUsername,
+                    grouplePassword,
+                )
+            }.onFailure { e -> LoggerFactory.getLogger("Application").error("Grouple login failed", e) }
+        }
+    }
+
     registerRoutes(loaderContext)
 }

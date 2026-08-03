@@ -1,0 +1,26 @@
+name: Parsers nightly contract tests
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/parsers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew test --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: parsers-contract-test-report
+          path: apps/parsers/build/reports/tests/test

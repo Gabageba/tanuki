@@ -43,3 +43,21 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build
+
+  # apps/parsers не входит в pnpm/turbo пайплайн (это отдельный Gradle-проект), поэтому
+  # компиляция сайдкара иначе не проверялась вообще ни в одном CI-джобе. Сетевые
+  # контрактные тесты (bin по живым сайтам) намеренно не гоняются здесь — только в
+  # parsers-nightly.yml — чтобы PR не зависели от доступности внешних сайтов.
+  parsers-compile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/parsers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew compileKotlin compileTestKotlin --no-daemon

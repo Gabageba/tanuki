@@ -2,6 +2,8 @@ import { Controller, Get, HttpStatus, Inject, Query, Res } from '@nestjs/common'
 import type { FastifyReply } from 'fastify';
 import sharp from 'sharp';
 import { request } from 'undici';
+import { createBrotliDecompress, createGunzip, createInflate } from 'node:zlib';
+import type { Readable } from 'node:stream';
 import { SourceUnavailableException } from '../common/errors';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
@@ -46,6 +48,22 @@ export class ImgProxyController {
 
     reply.header('Cache-Control', 'public, max-age=31536000, immutable');
 
+    // undici's `request()` (в отличие от `fetch()`) не распаковывает тело автоматически по
+    // Content-Encoding. Некоторые источники (напр. static.desu.uno за ddos-guard) отдают
+    // картинки гружёными gzip'ом независимо от Accept-Encoding — без ручной распаковки клиент
+    // получает сырые gzip-байты под видом image/*, а sharp падает на них с 500.
+    const contentEncoding = upstream.headers['content-encoding'];
+    const encodingValue = Array.isArray(contentEncoding) ? contentEncoding[0] : contentEncoding;
+    const body = upstream.body as unknown as Readable;
+    const decodedBody: Readable =
+      encodingValue === 'gzip' || encodingValue === 'x-gzip'
+        ? body.pipe(createGunzip())
+        : encodingValue === 'br'
+          ? body.pipe(createBrotliDecompress())
+          : encodingValue === 'deflate'
+            ? body.pipe(createInflate())
+            : body;
+
     const width = w ? Number.parseInt(w, 10) : undefined;
     const format = f === 'webp' || f === 'avif' ? f : undefined;
 
@@ -59,7 +77,7 @@ export class ImgProxyController {
           ? (contentType[0] ?? '')
           : (contentType ?? 'application/octet-stream'),
       );
-      reply.status(HttpStatus.OK).send(upstream.body);
+      reply.status(HttpStatus.OK).send(decodedBody);
       return;
     }
 
@@ -71,6 +89,6 @@ export class ImgProxyController {
       transform.toFormat(format);
     }
     reply.header('Content-Type', `image/${format ?? 'jpeg'}`);
-    reply.status(HttpStatus.OK).send(upstream.body.pipe(transform));
+    reply.status(HttpStatus.OK).send(decodedBody.pipe(transform));
   }
 }
