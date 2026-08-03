@@ -1,230 +1,211 @@
 # 03 — Слой парсеров
 
-## Состояние экосистемы kotatsu (актуально на июль 2026)
+## Итог: свой TS-пакет, а не JVM-сайдкар поверх kotatsu
 
-Вы правы, что оригинал устарел, но история чуть запутаннее, чем «есть один форк».
+До июля 2026 парсинг источников жил в `apps/parsers` — Ktor-сервис на JVM, линковавший форк
+`kotatsu-parsers-redo` (~1000 источников на десятках языков) и отдававший BFF (`apps/api`)
+сериализованные доменные объекты по HTTP.
 
-| Репозиторий                                                                                 | Статус                                                          | Вердикт            |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------ |
-| [`KotatsuApp/kotatsu-parsers`](https://github.com/KotatsuApp/kotatsu-parsers)               | **Архивирован 4 ноября 2025**, read-only                        | ❌ Не использовать |
-| [`YakaTeam/kotatsu-parsers`](https://github.com/YakaTeam/kotatsu-parsers)                   | Помечен самими авторами как **ABANDONED PROJECT**               | ❌ Не использовать |
-| [`Kotatsu-Redo/kotatsu-parsers-redo`](https://github.com/Kotatsu-Redo/kotatsu-parsers-redo) | **Активен.** ~2833 коммита (на ~426 впереди архивного апстрима) | ✅ **Берём это**   |
-| [`AppFuton/futon-parsers`](https://github.com/AppFuton/futon-parsers)                       | Заморожен, авторы сами перешли на Redo                          | ❌ Не использовать |
+Причина отказа от этой схемы простая: из тысячи источников библиотеки нужны только русские —
+23 штуки. «Кто-то другой чинит парсер, когда сайт меняет вёрстку» — вот единственный
+содержательный довод в пользу внешней библиотеки — на практике не работал даже для этих 23:
+все патчи, когда-либо влившиеся в форк (`LibSocialParser`/MangaLib, `DesuMeParser`, RU-фиксы
+`GroupleParser`), были написаны нами же, а не пришли из апстрима. Оставалась только цена: второй
+рантайм (Gradle, JVM toolchain, JitPack, отдельный Dockerfile, два CI-джоба) ради 977 источников,
+которыми никто не пользуется.
 
-**Итого: `Kotatsu-Redo/kotatsu-parsers-redo`.**
+**Текущая архитектура: `packages/parsers` — TS-библиотека, импортируемая в процесс `apps/api`.**
+Никакого HTTP-хопа, никакого второго рантайма. `apps/api/src/parsers-client/parsers-client.service.ts`
+держит реестр парсеров (`ParsersRegistry` из `@tanuki/parsers`) и вызывает его методы напрямую;
+кеш, circuit breaker и rate-limiter (см. «Устойчивость» ниже) работают точно так же, как раньше,
+просто оборачивают прямой вызов вместо HTTP GET.
 
-Аргументы в пользу именно его:
+Логика самих 23 парсеров — **порт** соответствующего кода из
+[`Kotatsu-Redo/kotatsu-parsers-redo`](https://github.com/Kotatsu-Redo/kotatsu-parsers-redo)
+(и нашего форка `Gabageba/tanuki-parsers-redo` поверх него) на TypeScript, а не переписывание с
+нуля по вёрстке сайтов — там годами накоплено знание вида «Desu переехал на XenForo и `/manga/
+api/` отдаёт 410», «SelfManga 301-редиректит на `1.selfmanga.live`», которое дороже всего
+переоткрывать заново. Поскольку это перевод GPLv3-кода на другой язык, весь репозиторий теперь
+распространяется под GPLv3 — детали в [09 — Правовые аспекты](09-legal.md).
 
-- Это тот форк, на который мигрировали остальные живые проекты экосистемы — сам
-  Kotatsu-Redo (Android-читалка, релизы продолжаются), Futon и Kototoro. Там, где сидят
-  потребители, туда идут и фиксы парсеров.
-- YakaTeam выглядел живым ещё в июне 2026, но затем был явно закрыт авторами. Если бы вы
-  начали с него — пришлось бы мигрировать через месяц.
-- Лицензия GPLv3, как и у апстрима — см. [09 — Правовые аспекты](09-legal.md), это
-  влияет на лицензирование вашего сайдкара.
-
-> ⚠️ Важно про Maven-координаты. Redo-форк в README всё ещё указывает координаты
-> `com.github.KotatsuApp:kotatsu-parsers` — это следствие форка, а не опечатка с вашей
-> стороны. Перед первой сборкой откройте [JitPack-страницу форка](https://jitpack.io/#Kotatsu-Redo/kotatsu-parsers-redo)
-> и возьмите фактическую координату + актуальный тег оттуда. Это первая задача Фазы 2.
-
-## Наш собственный форк
-
-Поверх `Kotatsu-Redo/kotatsu-parsers-redo` мы ведём свой форк с проектными патчами:
-
-- Репозиторий: [`Gabageba/tanuki-parsers-redo`](https://github.com/Gabageba/tanuki-parsers-redo)
-  (remote `git@github.com:Gabageba/tanuki-parsers-redo.git`).
-- Локальная копия: `/Users/gabageba/Develop/web/tanuki-parsers-redo` — рядом с этим
-  репозиторием (`tanuki`), не внутри него.
-- Патчи в форке сейчас:
-  - фикс разбора `summary` как rich-text/ProseMirror-документа в `LibSocialParser.kt` (MangaLib);
-  - `LibSocialParser.getDetails()` не мержил `coverUrl`/`largeCoverUrl`/`id` из seed-объекта в
-    ответ — добавлено (заодно убран лишний `fields[]=cover` из запроса, на который API отвечал
-    422);
-  - добавление домена `desu.uno` в `DesuMeParser.kt`;
-  - `DesuMeParser.getDetails()` аналогично не заполнял `coverUrl`/`largeCoverUrl` в возвращаемом
-    объекте — добавлено;
-  - `GroupleParser.getDetails()` (ReadManga/MintManga/SelfManga) держал устаревший селектор
-    обложки `div.subject-cover img[data-thumb]` — сайт мигрировал разметку тайтла на
-    carousel-блок `cr-hero-poster`, старый селектор ничего не находил и `coverUrl` всегда уходил
-    пустым. Селектор обновлён на новую разметку с фолбэком на старую.
-
-`apps/parsers` подключает форк напрямую через [JitPack](https://jitpack.io/#Gabageba/tanuki-parsers-redo)
-по хэшу коммита — см. зависимость `com.github.Gabageba:tanuki-parsers-redo:<commit>` в
-[`build.gradle.kts`](../apps/parsers/build.gradle.kts). JitPack собирает форк по
-требованию и публикует нормальный POM/Gradle module metadata, поэтому transitive-зависимости
-библиотеки (okhttp, okio, jsoup и т.д.) резолвятся сами — вручную их перечислять не нужно.
-При обновлении форка достаточно поменять хэш коммита (или тег) в зависимости, ручной
-пересборки jar больше не требуется.
-
-## Почему JVM-сайдкар, а не порт на TypeScript
-
-Библиотека написана на Kotlin и завязана на JVM-рантайм (OkHttp, Jsoup, корутины). Из
-Node.js её не подключить. Варианты были такие:
-
-| Вариант                     | Оценка                                                                                   |
-| --------------------------- | ---------------------------------------------------------------------------------------- |
-| **JVM-сайдкар + TS BFF** ✅ | ~1000 источников с первого дня, чужие руки чинят парсеры. Цена — второй рантайм.         |
-| Порт на TS                  | 2–3 месяца до паритета по 10 источникам, дальше вечное сопровождение в одиночку.         |
-| Kotlin/JS-компиляция        | Библиотека использует JVM-only API (OkHttp, Jsoup). Не скомпилируется без переписывания. |
-| GraalVM polyglot            | Хрупко, плохо документировано, экономии нет.                                             |
-
-Ключевой довод: парсеры — это **расходник**. Сайты меняют вёрстку и защиту раз в
-несколько недель. Ценность форка не в коде, а в том, что кто-то другой круглосуточно
-чинит этот код. Порт на TS означает, что этим кем-то становитесь вы.
-
-## Русские источники
-
-Аудитория задаёт приоритет. Ориентировочный список того, что нужно поддержать в первую
-очередь (точные ID сверяйте в `MangaParserSource` форка — они меняются):
-
-| Источник                                    | Тип интеграции                    | Сложность | Приоритет                                    |
-| ------------------------------------------- | --------------------------------- | --------- | -------------------------------------------- |
-| Desu                                        | Открытый JSON API                 | Низкая    | P0 — первый источник для вертикального среза |
-| ReadManga / MintManga / SelfManga (Grouple) | HTML-парсинг, стабильная вёрстка  | Низкая    | P0                                           |
-| Remanga                                     | JSON API, местами требует токен   | Средняя   | P1                                           |
-| MangaLib / YaoiLib / HentaiLib              | JS-heavy, антибот, частые поломки | Высокая   | P1                                           |
-| Newmanga                                    | JSON API                          | Средняя   | P1                                           |
-| MangaPoisk, Comx, AllHentai                 | HTML                              | Средняя   | P2                                           |
-
-Важная особенность RU-источников — **ветки переводов**. У одного тайтла на ReadManga
-или MangaLib бывает 3–5 команд перевода со своими нумерациями глав. `kotatsu-parsers`
-отдаёт это через `MangaChapter.branch`. Это не деталь — это то, на чём ломается UX
-большинства самописных читалок. Модель данных и UI обязаны учитывать ветки с самого
-начала, см. [04 — Контракт API](04-api-contract.md).
-
-## Контракт сайдкара
-
-Ktor-сервис, слушает только внутреннюю сеть докера. Никакой авторизации (её обеспечивает
-сетевая изоляция), никакого кеша (кеширует BFF).
+## Архитектура `packages/parsers`
 
 ```
-GET  /health
-GET  /sources                      → список доступных источников + возможности фильтров
-GET  /sources/{id}/list            → ?page=&order=&query=&tags=&state=&contentRating=
-GET  /sources/{id}/details         → ?url=        (описание + список глав)
-GET  /sources/{id}/pages           → ?chapterUrl= (список страниц)
-GET  /sources/{id}/page-url        → ?pageUrl=    (резолв отложенного URL страницы)
-GET  /sources/{id}/tags            → справочник жанров источника
+packages/parsers/
+  LICENSE                 # GPLv3
+  src/
+    index.ts              # единственная точка экспорта
+    types.ts              # RawManga/RawChapter/RawPage/RawTag/RawSourceInfo
+    errors.ts              # иерархия ParserError (framework-free)
+    registry.ts            # SOURCE_IDS, SOURCES, createRegistry()
+    core/
+      parser.ts            # интерфейс Parser, ParserContext, ListParams
+      paging.ts             # planWindow / fetchPaged / fetchOffsetNative
+      uid.ts                 # generateUid (FNV-1a, стабилен между рестартами)
+      http/                  # свой HttpClient поверх undici: редиректы + куки + декомпрессия
+      html/                  # cheerio-обёртка (dom, selectors, urls)
+      text/                  # RU-даты, строки, числа
+    sources/
+      grouple/              # 1 движок → READMANGA_RU, MINTMANGA, SELFMANGA, SEIMANGA, USAGI, ALLHENTAI
+      desu/                  # DESUME
+      ...                    # остальные 16 движков по мере портирования
+  test/                     # фикстурные тесты + conformance-набор (каждый PR)
+  contract/                 # живые контрактные тесты (только ночной CI)
 ```
 
-Ответы — сериализованные доменные объекты kotatsu (`Manga`, `MangaChapter`, `MangaPage`)
-через `kotlinx.serialization`, **без переименований**. Вся нормализация — в BFF: так при
-обновлении форка ломается один слой, а не два.
+### Интерфейс `Parser`
 
-Скелет реализации:
-
-```kotlin
-// apps/parsers/src/main/kotlin/Application.kt
-val context = MangaLoaderContextImpl()          // OkHttp + cookie jar + WebView-less
-val registry = MangaParserSource.entries.associateBy { it.name }
-
-fun Application.module() {
-    install(ContentNegotiation) { json() }
-    routing {
-        get("/sources/{id}/list") {
-            val source = registry[call.parameters["id"]] ?: return@get call.respond(NotFound)
-            val parser = context.newParserInstance(source)
-            val result = parser.getList(
-                offset = call.request.queryParameters["page"]?.toInt()?.times(20) ?: 0,
-                order  = SortOrder.valueOf(...),
-                filter = MangaListFilter(...),
-            )
-            call.respond(result)
-        }
-    }
+```ts
+export interface Parser {
+  readonly id: string;
+  readonly info: RawSourceInfo; // статика, без сети
+  getList(params: ListParams): Promise<RawManga[]>; // chapters ОБЯЗАН быть null
+  getDetails(url: string): Promise<RawManga>; // chapters заполнены
+  getPages(chapterUrl: string): Promise<RawPage[]>; // url абсолютный, преразрешённый
+  imageHeaders(imageUrl: string): Record<string, string>;
+  init?(): Promise<void>; // разовый прогрев (SSO Grouple)
+  close?(): Promise<void>;
 }
 ```
 
-Ключевой класс для изучения — `MangaLoaderContext`: он предоставляет парсерам HTTP-клиент,
-хранилище кук и исполнение JS. В серверном окружении (без Android WebView) исполнение JS
-придётся закрыть либо заглушкой, либо headless-браузером — это отдельная задача Фазы 2,
-и от неё зависит, заработает ли MangaLib.
+Источники с общим движком (Grouple, LibSocial, Chan) реализованы как **фабрика с конфигом**
+(`createGroupleParser(config, ctx)`), а не через наследование — в Kotlin один класс на источник
+был вынужденной мерой (KSP-аннотация `@MangaSourceParser` требует по классу на элемент enum),
+в TS такого ограничения нет, а конфиги ещё и перечисляемы, что важно для реестра.
+
+### Реестр источников
+
+`packages/parsers/src/registry.ts` — одна таблица `Record<SourceId, SourceDescriptor>` на все
+23 источника. У источника, для которого `create` ещё не реализован, `isBroken: true`
+(независимо от того, что говорит апстрим kotatsu) — это честно отражается в `/sources` как
+`status: 'down'`, а не как ошибка. `title`/`contentType`/родной kotatsu-флаг `isBroken` для
+каждого источника взяты дословно из сгенерированного enum'а форка
+(`tanuki-parsers-redo/build/generated/ksp/.../model/MangaSource.kt`).
+
+### HTTP-слой
+
+Свой `HttpClient` поверх `undici.request` (не поверх Dispatcher-интерцепторов — те лежат ниже
+редиректов и кук). Обязанности, которых нет в `undici.request` из коробки:
+
+1. **Свой цикл редиректов** со сбором кук на каждом хопе — антибот-кука на промежуточном хопе
+   не должна теряться.
+2. **Декомпрессия** — `undici.request()`, в отличие от `fetch()`, не распаковывает тело по
+   `Content-Encoding` сама.
+3. **Charset** — DLE-сайты (MANGACHAN, HENCHAN, YAOICHAN, NUDEMOON) отдают **windows-1251**;
+   декодирование как UTF-8 даёт кашу без единой ошибки, поэтому charset сначала сниффится из
+   `Content-Type`, потом из `<meta charset>`.
+4. **Классификация ошибок** каждого ответа в `ParserError` — включая антибот-эвристику
+   (`core/http/classify.ts`), которая теперь смотрит на **настоящий** ответ источника, а не на
+   JSON-конверт бывшего сайдкара.
+
+**Куки — по семействам, не по процессу и не по источнику.** Общая на процесс кука протекает из
+одного сайта в 22 чужих; отдельная кука на источник тоже неверна для MANGALIB/HENTAILIB/YAOILIB —
+все три ходят на один хост `api.cdnlibs.org`, различаясь только заголовком `Site-Id`. Поле
+`cookieScope` в дескрипторе источника решает это одной строкой.
+
+Grouple-сеть (ReadManga/MintManga/SelfManga/SeiManga/Usagi) логинится через общий SSO-шлюз
+`3.grouple.co` при старте процесса (`GROUPLE_USERNAME`/`GROUPLE_PASSWORD`, опционально — без них
+источники работают анонимно), а полученная `gwt`-кука раскладывается по доменам всех источников
+сети (`packages/parsers/src/sources/grouple/auth.ts`) — список доменов выводится из конфига
+источников, а не хардкодится отдельно. AllHentai использует отдельный SSO-шлюз (`qawa.org`) и
+этими кредами не логинится.
+
+### Пагинация
+
+`core/paging.ts`: `planWindow`/`fetchPaged`/`fetchOffsetNative` без внутреннего состояния —
+на каждый вызов `getList({offset, limit})` вычисляют, какие нативные страницы источника
+покрывают запрошенное окно, и режут точный срез. Максимум 2 обращения наверх на страницу API
+(кроме источников с нативным размером страницы ≥ лимита — там всегда 1).
+
+### Идентификаторы
+
+`core/uid.ts`: FNV-1a, маскированный до 53 бит. Совместимость с kotatsu не нужна (opaque id
+эфемерны до релиза), но стабильность между рестартами процесса обязательна — `catalog.service.ts`
+на BFF матчит соседние главы по `id`, пришедшему от клиента в более раннем запросе.
+
+## Русские источники: движки и статус
+
+23 источника = **14 движков** (проверено по форку `tanuki-parsers-redo`). Ни один из них не
+использует `evaluateJs` и не расшифровывает картинки — headless-браузер не нужен.
+
+| Движок            | Источники                                                                            | Статус                      |
+| ----------------- | ------------------------------------------------------------------------------------ | --------------------------- |
+| Grouple           | READMANGA_RU, MINTMANGA, SELFMANGA, SEIMANGA, USAGI, ALLHENTAI                       | ✅ портирован               |
+| Desu (standalone) | DESUME                                                                               | ✅ портирован               |
+| LibSocial         | MANGALIB, HENTAILIB, YAOILIB                                                         | ⏳ фаза 2                   |
+| Chan              | MANGACHAN, HENCHAN, YAOICHAN                                                         | ⏳ фаза 2                   |
+| standalone        | REMANGA, NUDEMOON, ACOMICS, COMX, MANGABUFF, MANGA_WTF, TOMILOLIB, WAMANGA, ZENMANGA | ⏳ фаза 3–4                 |
+| Senkuro (GraphQL) | SENKURO                                                                              | ⏳ фаза 5, наименьший рычаг |
+
+Пока источник не портирован, `SOURCES[id].create` возвращает заглушку, бросающую
+`NotImplementedError` на любой вызов — `/sources` показывает его честно как `status: 'down'`,
+без падений на остальных.
+
+Особенность RU-источников — **ветки переводов**: у одного тайтла на ReadManga или MangaLib
+бывает несколько команд перевода со своими нумерациями глав (`RawChapter.branch`). Модель
+данных и UI это учитывают с самого начала, см. [04 — Контракт API](04-api-contract.md).
 
 ## Устойчивость
 
-Парсеры ломаются. Это норма, а не инцидент. Что должно быть в BFF с первого дня:
+Парсеры ломаются — сайты меняют вёрстку и защиту раз в несколько недель, это норма, не инцидент.
+Что есть в BFF с первого дня (не изменилось после перехода на TS — то же самое просто оборачивает
+прямой вызов реестра, а не HTTP-запрос к сайдкару):
 
-- **Circuit breaker на источник.** 5 ошибок подряд → источник помечается `degraded` на
-  10 минут, UI показывает это честно вместо бесконечного спиннера.
-- **Rate limit на источник.** Не больше N одновременных запросов к одному домену.
-  Агрегатор, который положил источник, остался без контента.
-- **Stale-while-revalidate.** Если источник упал, а в Valkey есть протухший ответ —
-  отдаём протухший с пометкой `stale: true`. Читалка, показывающая вчерашний каталог,
-  лучше читалки, показывающей ошибку.
-- **Синтетические проверки.** Ночной cron дёргает по одному запросу на каждый источник
-  и репортит в мониторинг, какие парсеры сломались. Вы узнаёте раньше пользователей.
+- **Circuit breaker на источник** (`apps/api/src/resilience/source-health.service.ts`). 5 ошибок
+  подряд → источник помечается `degraded` на 10 минут.
+- **Concurrency limiter на источник** — не больше N одновременных запросов к одному домену.
+- **Stale-while-revalidate** в Valkey — протухший кеш лучше ошибки.
+- **Живые контрактные тесты** (`packages/parsers/contract/`, ночной CI,
+  `.github/workflows/parsers-nightly.yml`) — по одному проходу `getList → getDetails → getPages`
+  на каждый портированный источник.
 
-### Решение по антиботу (Фаза 2)
+### Решение по антиботу
 
-Риск MangaLib из "Главного риска фазы" (Фаза 1) закрылся без headless-браузера:
-`evaluateJs` в `TanukiMangaLoaderContext` всегда возвращает `null`, `LibSocialParser` использует
-его только для best-effort проверки "залогинен ли пользователь через WebView" и переживает
-`null` как анонимную сессию. Решение на сейчас: **headless-браузер и прокси-пул не поднимаем**.
-Вместо этого `apps/api/src/parsers-client/antibot-detection.ts` эвристически отличает
-антибот-челлендж (Cloudflare-заголовки, "Just a moment"-подобные тела ответа) от обычной
-недоступности источника и бросает `SOURCE_BLOCKED` вместо `SOURCE_UNAVAILABLE` — честнее для
-мониторинга. Пересматриваем это решение, если реальный источник начнёт систематически отдавать
-такие челленджи.
+`packages/parsers/src/core/http/classify.ts` эвристически отличает антибот-челлендж
+(Cloudflare/ddos-guard заголовки и тела ответа) от обычной недоступности источника и бросает
+`SourceBlockedError` вместо `SourceUnavailableError` — честнее для мониторинга. В отличие от
+сайдкар-версии, эта проверка теперь смотрит на **настоящий** ответ источника (сайдкар видел
+только `{"error": "..."}`, в который Ktor заворачивал исключение парсера, и поэтому эвристика
+практически не могла сработать).
 
-Первый прогон контрактных тестов (`apps/parsers/src/test/kotlin/.../SourceContractTest.kt`) уже
-показал конкретные проблемы. Часть из них проверена повторно с обычной сети (не из песочницы
-разработки, где DNS источников резолвился в подозрительный диапазон `198.18.0.0/15`) — статус
-ниже актуален, а не гипотеза:
+### Grouple: авторизация
 
-- **MINTMANGA — подтверждено, живая проблема.** `GroupleParser.checkIfAuthRequired` бросает
-  `AuthRequiredException` на обычном листинге каталога и на страницах глав (проверено прямым
-  запросом к `/sources/MINTMANGA/pages` мимо кеша — сайт реально отвечает
-  `{"error":"Authorization required"}`). Не квирк песочницы и не баг наших патчей — mintmanga.com
-  сейчас требует авторизованную сессию сайт-вайд. Детали и план — в подразделе ниже.
-- **SELFMANGA** — `getList()` вернулся пустым списком при дефолтной сортировке (тот же
-  Grouple-домен, вероятно, тот же возрастной/авторизационный гейт, но проявляется иначе — стоит
-  перепроверить тем же способом, что и MINTMANGA, когда дойдут руки).
-- **DESUME** (`desu.uno`) — `SSLHandshakeException`/PKIX path building failed при живом TLS
-  хендшейке; сертификат сайта валиден и локально проверяется `openssl s_client`, так что похоже
-  на квирк конкретного сетевого пути, а не на реальную проблему сертификата источника. Требует
-  перепроверки вне песочницы.
+`GroupleParser` (в форке) считает, что логин требуется, если путь запроса оканчивается на
+`/login`, либо приходит 404 без `gwt`-куки в jar'е — то есть любой настоящий 404 на Grouple-домене
+без активной сессии тоже маскируется под ошибку авторизации. Порт (`sources/grouple/engine.ts`)
+воспроизводит это поведение через HTTP-интерцептор.
 
-Ночной CI (`.github/workflows/parsers-nightly.yml`) ловит это на постоянной основе.
+Чтобы получить доступ к главам, требующим сессии (типично для MintManga/SelfManga), нужен
+аккаунт на grouple.co (общий паспорт для всей сети) и `GROUPLE_USERNAME`/`GROUPLE_PASSWORD` в
+`.env` — см. `.env.example`. Юридический риск скриптового логина под живым аккаунтом — см.
+[09 — Правовые аспекты](09-legal.md).
 
-### Следующий шаг: авторизация для Grouple-сети (MINTMANGA/SELFMANGA)
+## Тесты
 
-`GroupleParser` уже реализует `MangaParserAuthProvider` и `Interceptor`
-(`checkIfAuthRequired()` в форке): запрос считается требующим логина, если путь оканчивается на
-`/login`, либо приходит 404 без куки `gwt` в cookie jar — то есть **любой** настоящий 404 на
-Grouple-домене без активной сессии тоже маскируется под `AuthRequiredException`, не только
-реальные login-стены. `authUrl`/`getUsername()`/`isAuthorized()` в библиотеке рассчитаны на
-Android-приложение с WebView (юзер логинится в браузере, библиотека потом просто читает готовую
-куку) — сама библиотека логин не выполняет.
+Раннер — **vitest**. Два независимых слоя, отвечающих на разные вопросы:
 
-В `TanukiMangaLoaderContext` (`apps/parsers`) `cookieJar` — `InMemoryCookieJar()`, общий на
-процесс и пустой; логин-флоу или каких-либо кредов для Grouple в проекте сейчас нет вообще.
+- **Фикстурные + conformance (`packages/parsers/test/`, каждый PR).** Один параметризованный
+  набор инвариантов, который обязан пройти каждый источник: `chapters === null` в списке и
+  заполнены в деталях; `rating` либо `-1`, либо `0..1` (не `0..10`); `uploadDate` — миллисекунды
+  или `0`; id глав уникальны и стабильны между рестартами; `RawPage.url` абсолютный.
+- **Живые контрактные (`packages/parsers/contract/`, только ночной CI)** — реальные запросы к
+  сайтам, `getList → getDetails → getPages` по каждому портированному источнику, с
+  `allSettled`-семантикой: один мёртвый сайт не маскирует остальные.
 
-Чтобы MINTMANGA/SELFMANGA заработали, нужно:
+`apps/api` тоже покрыт точечно — `common/normalize.test.ts` и `common/opaque-id.test.ts`
+фиксируют сентинел-конвенции (`-1` → `null`, `0` → `null`, epoch-миллисекунды), которые обязаны
+остаться неизменными независимо от того, что происходит на стороне парсеров.
 
-1. Аккаунт на grouple.co (общий паспорт для readmanga/mintmanga/selfmanga).
-2. Программный логин: POST в реальную login-форму grouple.co логином/паролем, получить куку
-   `gwt`.
-3. Хранение куки хотя бы в процессе (пережить рестарт сервиса — не обязательно на первом шаге) +
-   переавторизация при истечении.
-4. Креды — через env (например `GROUPLE_LOGIN`/`GROUPLE_PASSWORD`), не хардкодить.
-5. Юридический риск: скриптовый логин под живым аккаунтом может нарушать ToS сайта — см.
-   [09 — Правовые аспекты](09-legal.md), учитывать при решении.
+## Как добавить источник
 
-Пока не сделано — MINTMANGA/SELFMANGA остаются `degraded` при попадании на контент, требующий
-сессии; circuit breaker (`SOURCE_BREAKER_*`, см. раздел «Устойчивость» выше) корректно
-отражает это как недоступность источника, а не как баг.
-
-## План обновления форка
-
-Два независимых шага, так как `apps/parsers` собирается из **своего** форка
-(`Gabageba/tanuki-parsers-redo`), а не из апстрима напрямую:
-
-1. Раз в неделю CI проверяет наличие нового тега/коммита в апстриме
-   `Kotatsu-Redo/kotatsu-parsers-redo` и открывает PR с ребейзом/мержем в наш форк.
-2. После обновления форка (или добавления нового патча) второй CI-джоб обновляет
-   хэш коммита в зависимости `com.github.Gabageba:tanuki-parsers-redo:<commit>` в
-   [`apps/parsers/build.gradle.kts`](../apps/parsers/build.gradle.kts). JitPack соберёт
-   этот коммит по требованию — публиковать jar вручную не нужно.
-3. Прогоняются контрактные тесты (по одному запросу на каждый P0/P1-источник).
-4. Зелёные — мержим. Красные — смотрим, что сломалось: форк, наш патч или сам сайт.
+1. Найти соответствующий парсер в `tanuki-parsers-redo/src/main/kotlin/.../site/ru/`.
+2. Если он — часть уже портированного движка (Grouple/LibSocial/Chan), добавить конфиг в
+   `packages/parsers/src/sources/<engine>/config.ts` и обновить `RAW_TABLE` в `registry.ts`
+   (`isImplemented: true`).
+3. Если новый standalone-движок — создать `packages/parsers/src/sources/<id>/index.ts` с
+   `create<Name>Parser(ctx): Parser`, портировать логику из Kotlin-файла один в один
+   (селекторы, форматы дат, сентинелы), подключить в `registry.ts`.
+4. Фикстурные тесты: записать реальный HTML/JSON в `test/fixtures/<ID>/`, добавить источник в
+   параметризованный `conformance`-набор.
+5. Добавить в `IMPLEMENTED_SOURCE_IDS` в `contract/live.test.ts`.
+6. Сузить/расширить `ENABLED_SOURCES` в `.env.example`, если источник готов к использованию.

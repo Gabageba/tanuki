@@ -8,19 +8,22 @@ on:
 jobs:
   contract-tests:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/parsers
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          distribution: temurin
-          java-version: 21
-      - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew test --no-daemon
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @tanuki/parsers build
+      - run: pnpm --filter @tanuki/parsers test:contract
+        env:
+          GROUPLE_USERNAME: ${{ secrets.GROUPLE_USERNAME }}
+          GROUPLE_PASSWORD: ${{ secrets.GROUPLE_PASSWORD }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: parsers-contract-test-report
-          path: apps/parsers/build/reports/tests/test
+          path: packages/parsers/contract-report.json
+          if-no-files-found: ignore

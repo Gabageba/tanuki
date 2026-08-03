@@ -32,10 +32,9 @@ export class SourceBlockedException extends ApiException {
 }
 
 // Источник из Grouple-сети (MintManga/Readmanga/SelfManga) пометил главу/тайтл как
-// доступную только авторизованным — сайдкар парсеров получает AuthRequiredException и
-// сигнализирует об этом статусом 401 (apps/parsers/.../routes/Routes.kt). Не путать с
-// SOURCE_UNAVAILABLE: ретраить бессмысленно, нужна учётка GROUPLE_USERNAME/PASSWORD
-// у сайдкара (apps/parsers/src/main/kotlin/.../loader/GroupleAuth.kt).
+// доступную только авторизованным — парсер бросает SourceAuthRequiredError
+// (packages/parsers/src/errors.ts). Не путать с SOURCE_UNAVAILABLE: ретраить бессмысленно,
+// нужна учётка GROUPLE_USERNAME/PASSWORD (packages/parsers/src/sources/grouple/auth.ts).
 export class SourceAuthRequiredException extends ApiException {
   constructor(sourceId?: string) {
     super(

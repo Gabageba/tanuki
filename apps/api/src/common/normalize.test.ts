@@ -1,0 +1,116 @@
+import { describe, expect, it } from 'vitest';
+import { computeBranches, normalizeChapter, normalizeManga, pickDefaultBranch } from './normalize';
+import type { RawChapter, RawManga } from '../parsers-client/parsers-client.types';
+
+const ENV = { IMG_SIGN_SECRET: 'a'.repeat(32) };
+
+function raw(overrides: Partial<RawManga> = {}): RawManga {
+  return {
+    id: 1,
+    title: 'Title',
+    altTitles: [],
+    url: '/manga/1',
+    publicUrl: 'https://example.com/manga/1',
+    rating: -1,
+    contentRating: null,
+    coverUrl: null,
+    tags: [],
+    state: null,
+    authors: [],
+    largeCoverUrl: null,
+    description: null,
+    chapters: null,
+    source: 'DESUME',
+    ...overrides,
+  };
+}
+
+function chapter(overrides: Partial<RawChapter> = {}): RawChapter {
+  return {
+    id: 1,
+    title: null,
+    number: 0,
+    volume: 0,
+    url: '/manga/1/ch1',
+    scanlator: null,
+    uploadDate: 0,
+    branch: null,
+    source: 'DESUME',
+    ...overrides,
+  };
+}
+
+describe('normalizeManga', () => {
+  it('maps RATING_UNKNOWN (-1) to null, otherwise passes rating through unchanged', () => {
+    expect(normalizeManga(ENV, 'DESUME', raw({ rating: -1 })).rating).toBeNull();
+    expect(normalizeManga(ENV, 'DESUME', raw({ rating: 0.42 })).rating).toBe(0.42);
+    expect(normalizeManga(ENV, 'DESUME', raw({ rating: 0 })).rating).toBe(0);
+  });
+
+  it('defaults a null contentRating to SAFE', () => {
+    expect(normalizeManga(ENV, 'DESUME', raw({ contentRating: null })).contentRating).toBe('SAFE');
+    expect(normalizeManga(ENV, 'DESUME', raw({ contentRating: 'ADULT' })).contentRating).toBe(
+      'ADULT',
+    );
+  });
+
+  it('maps RESTRICTED state to null — contracts has no such state', () => {
+    expect(normalizeManga(ENV, 'DESUME', raw({ state: 'RESTRICTED' })).state).toBeNull();
+    expect(normalizeManga(ENV, 'DESUME', raw({ state: 'ONGOING' })).state).toBe('ONGOING');
+  });
+
+  it('turns a null coverUrl into an empty string, never null', () => {
+    expect(normalizeManga(ENV, 'DESUME', raw({ coverUrl: null })).coverUrl).toBe('');
+  });
+
+  it('derives chaptersCount from the chapters array, null when absent (list items)', () => {
+    expect(normalizeManga(ENV, 'DESUME', raw({ chapters: null })).chaptersCount).toBeNull();
+    expect(
+      normalizeManga(ENV, 'DESUME', raw({ chapters: [chapter(), chapter()] })).chaptersCount,
+    ).toBe(2);
+  });
+});
+
+describe('normalizeChapter', () => {
+  it('maps 0 (unknown sentinel) to null for number/volume, keeps positive values', () => {
+    const c = normalizeChapter('DESUME', 'manga-id', chapter({ number: 0, volume: 0 }));
+    expect(c.number).toBeNull();
+    expect(c.volume).toBeNull();
+
+    const c2 = normalizeChapter('DESUME', 'manga-id', chapter({ number: 12.5, volume: 3 }));
+    expect(c2.number).toBe(12.5);
+    expect(c2.volume).toBe(3);
+  });
+
+  it('maps 0 uploadDate to null, otherwise formats as ISO from epoch millis', () => {
+    expect(normalizeChapter('DESUME', 'm', chapter({ uploadDate: 0 })).uploadedAt).toBeNull();
+    const ms = Date.UTC(2024, 0, 15, 12, 0, 0);
+    expect(normalizeChapter('DESUME', 'm', chapter({ uploadDate: ms })).uploadedAt).toBe(
+      new Date(ms).toISOString(),
+    );
+  });
+});
+
+describe('branch grouping', () => {
+  it('picks the branch with the most chapters as default, ties broken by freshness', () => {
+    const chapters = [
+      chapter({ id: 1, branch: 'A', uploadDate: 1000 }),
+      chapter({ id: 2, branch: 'A', uploadDate: 2000 }),
+      chapter({ id: 3, branch: 'B', uploadDate: 5000 }),
+    ];
+    // Branch A has 2 chapters vs B's 1 — A wins on count even though B is fresher.
+    expect(pickDefaultBranch(chapters)).toBe('A');
+  });
+
+  it('computeBranches reports chaptersCount and lastUpdatedAt per branch', () => {
+    const chapters = [
+      chapter({ id: 1, branch: null, uploadDate: 1000 }),
+      chapter({ id: 2, branch: null, uploadDate: 3000 }),
+    ];
+    const branches = computeBranches(chapters);
+    expect(branches).toHaveLength(1);
+    expect(branches[0]!.id).toBe('default');
+    expect(branches[0]!.chaptersCount).toBe(2);
+    expect(branches[0]!.lastUpdatedAt).toBe(new Date(3000).toISOString());
+  });
+});

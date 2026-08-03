@@ -86,8 +86,10 @@ Nest будет выглядеть тяжеловато. Это осознанн
 
 - **Valkey 8** — форк Redis под BSD. Кеш каталога и метаданных.
 - **PostgreSQL 17** — аккаунты, библиотека, прогресс чтения. Нужен только с Фазы 5.
-- **JVM 21 (Temurin)** — рантайм сайдкара парсеров.
 - **Docker Compose** для локальной разработки, что угодно для прода.
+
+Парсеры источников (`packages/parsers`) — TS-библиотека в процессе `apps/api`, отдельного
+рантайма для них больше нет, см. [03 — Слой парсеров](03-parsers.md).
 
 ## Инструменты
 
@@ -112,13 +114,13 @@ Nest будет выглядеть тяжеловато. Это осознанн
 tanuki/
 ├── apps/
 │   ├── web/                    # React + Vite PWA
-│   ├── api/                    # NestJS BFF
-│   └── parsers/                # Kotlin/JVM сайдкар (Gradle, вне pnpm-workspace)
+│   └── api/                    # NestJS BFF, импортирует @tanuki/parsers в процесс
 ├── packages/
-│   ├── contracts/              # zod-схемы + выведенные типы, общие для web и api
-│   ├── eslint-config/          # общий flat config
-│   ├── stylelint-config/       # общие правила SCSS
-│   └── tsconfig/               # базовые tsconfig'и
+│   ├── parsers/                 # TS-парсеры 23 RU-источников (GPLv3, см. docs/09-legal.md)
+│   ├── contracts/                # zod-схемы + выведенные типы, общие для web и api
+│   ├── eslint-config/            # общий flat config
+│   ├── stylelint-config/         # общие правила SCSS
+│   └── tsconfig/                 # базовые tsconfig'и
 ├── docs/
 ├── docker-compose.yml
 ├── pnpm-workspace.yaml
@@ -129,5 +131,5 @@ tanuki/
 zod-схемой, бекенд валидирует ей ответы парсеров, фронт получает выведенные типы. Рассинхрон
 типов между фронтом и беком становится ошибкой компиляции, а не багом в проде.
 
-`apps/parsers` живёт в том же git-репозитории, но собирается Gradle и не входит в
-pnpm-workspace. Turbo дёргает его через `./gradlew` как внешнюю задачу.
+Весь монорепо — единый pnpm-workspace, все задачи (`build`/`lint`/`typecheck`/`test`) идут через
+`turbo`. Отдельных внешних систем сборки больше нет.

@@ -1,7 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { request } from 'undici';
-import { ENV } from '../config/env.module';
-import type { Env } from '../config/env';
+import type { Parser, ParsersRegistry } from '@tanuki/parsers';
 import { CacheService } from '../cache/cache.service';
 import { CACHE_TTL, type CacheTtlSpec } from '../cache/cache.constants';
 import { cacheKey } from '../cache/cache-keys';
@@ -10,18 +8,16 @@ import {
   ConcurrencyLimiterService,
   QueueOverflowError,
 } from '../resilience/concurrency-limiter.service';
-import { looksLikeAntibotChallenge } from './antibot-detection';
 import {
-  NotFoundApiException,
-  ParserFailedException,
   RateLimitedException,
   SourceAuthRequiredException,
-  SourceBlockedException,
   SourceUnavailableException,
 } from '../common/errors';
+import { toApiException } from './parser-error.mapper';
+import { PARSERS } from './parsers.provider';
 import type { RawManga, RawPage, RawSourceInfo } from './parsers-client.types';
 
-type QueryValue = string | number | undefined;
+const PAGE_SIZE = 20;
 
 export interface CachedResult<T> {
   data: T;
@@ -31,17 +27,17 @@ export interface CachedResult<T> {
 @Injectable()
 export class ParsersClientService {
   constructor(
-    @Inject(ENV) private readonly env: Env,
+    @Inject(PARSERS) private readonly parsers: ParsersRegistry,
     private readonly cache: CacheService,
     private readonly sourceHealth: SourceHealthService,
     private readonly concurrencyLimiter: ConcurrencyLimiterService,
   ) {}
 
-  // /sources сам по себе не бьёт по внешним сайтам (сайдкар читает только статические
-  // метаданные парсера), поэтому идёт напрямую в кеш, без breaker/rate-limiter.
+  // /sources само по себе не бьёт по внешним сайтам (статические метаданные реестра),
+  // поэтому идёт напрямую в кеш, без breaker/rate-limiter — как и раньше.
   async getSources(): Promise<CachedResult<{ items: RawSourceInfo[] }>> {
     const result = await this.cache.getOrSet(cacheKey('sources', 'all'), CACHE_TTL.sources, () =>
-      this.httpGet<{ items: RawSourceInfo[] }>('/sources'),
+      Promise.resolve({ items: this.parsers.listSources() }),
     );
     return { data: result.value, stale: result.stale };
   }
@@ -51,16 +47,19 @@ export class ParsersClientService {
     params: { page: number; order?: string; query?: string },
   ): Promise<CachedResult<{ items: RawManga[] }>> {
     const key = cacheKey('catalog', sourceId, params.page, params.order ?? '', params.query ?? '');
-    return this.fetchCached(key, CACHE_TTL.catalog, sourceId, () =>
-      this.httpGet<{ items: RawManga[] }>(`/sources/${sourceId}/list`, params),
-    );
+    return this.fetchCached(key, CACHE_TTL.catalog, sourceId, async (parser) => ({
+      items: await parser.getList({
+        offset: params.page * PAGE_SIZE,
+        limit: PAGE_SIZE,
+        order: params.order,
+        query: params.query,
+      }),
+    }));
   }
 
   async getDetails(sourceId: string, url: string): Promise<CachedResult<RawManga>> {
     const key = cacheKey('details', sourceId, url);
-    return this.fetchCached(key, CACHE_TTL.details, sourceId, () =>
-      this.httpGet<RawManga>(`/sources/${sourceId}/details`, { url }),
-    );
+    return this.fetchCached(key, CACHE_TTL.details, sourceId, (parser) => parser.getDetails(url));
   }
 
   async getPages(
@@ -68,22 +67,25 @@ export class ParsersClientService {
     chapterUrl: string,
   ): Promise<CachedResult<{ items: RawPage[] }>> {
     const key = cacheKey('pages', sourceId, chapterUrl);
-    return this.fetchCached(key, CACHE_TTL.pages, sourceId, () =>
-      this.httpGet<{ items: RawPage[] }>(`/sources/${sourceId}/pages`, { chapterUrl }),
-    );
+    return this.fetchCached(key, CACHE_TTL.pages, sourceId, async (parser) => ({
+      items: await parser.getPages(chapterUrl),
+    }));
   }
 
   private async fetchCached<T>(
     key: string,
     ttl: CacheTtlSpec,
     sourceId: string,
-    doFetch: () => Promise<T>,
+    doFetch: (parser: Parser) => Promise<T>,
   ): Promise<CachedResult<T>> {
     const result = await this.cache.getOrSet(key, ttl, () => this.guardedFetch(sourceId, doFetch));
     return { data: result.value, stale: result.stale };
   }
 
-  private async guardedFetch<T>(sourceId: string, doFetch: () => Promise<T>): Promise<T> {
+  private async guardedFetch<T>(
+    sourceId: string,
+    doFetch: (parser: Parser) => Promise<T>,
+  ): Promise<T> {
     if (!this.sourceHealth.canAttempt(sourceId)) {
       throw new SourceUnavailableException(
         sourceId,
@@ -91,8 +93,18 @@ export class ParsersClientService {
       );
     }
 
+    // The parser lookup itself can throw (UnknownSourceError/NotImplementedError) — that's
+    // not a source-health signal, it's a config/rollout state, so it's mapped and rethrown
+    // before entering the breaker/limiter accounting below.
+    let parser: Parser;
     try {
-      const value = await this.concurrencyLimiter.run(sourceId, doFetch);
+      parser = this.parsers.get(sourceId);
+    } catch (error) {
+      throw toApiException(error, sourceId);
+    }
+
+    try {
+      const value = await this.concurrencyLimiter.run(sourceId, () => doFetch(parser));
       this.sourceHealth.recordSuccess(sourceId);
       return value;
     } catch (error) {
@@ -102,53 +114,16 @@ export class ParsersClientService {
         this.sourceHealth.releaseProbe(sourceId);
         throw new RateLimitedException(sourceId);
       }
-      if (error instanceof SourceAuthRequiredException) {
+      const apiError = toApiException(error, sourceId);
+      if (apiError instanceof SourceAuthRequiredException) {
         // Источник ответил, и ответ детерминирован (глава требует авторизации) — это не
         // признак того, что источник "лежит", остальные главы того же источника наверняка
         // грузятся нормально. Не даём этому открыть breaker на весь источник на 10 минут.
         this.sourceHealth.releaseProbe(sourceId);
-        throw error;
+        throw apiError;
       }
       this.sourceHealth.recordFailure(sourceId);
-      throw error;
+      throw apiError;
     }
-  }
-
-  private async httpGet<T>(path: string, query?: Record<string, QueryValue>): Promise<T> {
-    const url = new URL(path, this.env.PARSERS_URL);
-    for (const [key, value] of Object.entries(query ?? {})) {
-      if (value !== undefined) {
-        url.searchParams.set(key, String(value));
-      }
-    }
-
-    const sourceId = path.split('/')[2];
-
-    let response;
-    try {
-      response = await request(url, { method: 'GET' });
-    } catch {
-      throw new SourceUnavailableException(sourceId);
-    }
-
-    if (response.statusCode < 400) {
-      return (await response.body.json()) as T;
-    }
-
-    const body = await response.body.text();
-
-    if (looksLikeAntibotChallenge(response.statusCode, response.headers, body)) {
-      throw new SourceBlockedException(sourceId);
-    }
-    if (response.statusCode === 404) {
-      throw new NotFoundApiException();
-    }
-    if (response.statusCode === 401) {
-      throw new SourceAuthRequiredException(sourceId);
-    }
-    if (response.statusCode >= 500) {
-      throw new SourceUnavailableException(sourceId);
-    }
-    throw new ParserFailedException(body, sourceId);
   }
 }

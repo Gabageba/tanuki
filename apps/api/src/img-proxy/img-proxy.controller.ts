@@ -2,12 +2,13 @@ import { Controller, Get, HttpStatus, Inject, Query, Res } from '@nestjs/common'
 import type { FastifyReply } from 'fastify';
 import sharp from 'sharp';
 import { request } from 'undici';
+import type { ParsersRegistry } from '@tanuki/parsers';
 import { createBrotliDecompress, createGunzip, createInflate } from 'node:zlib';
 import type { Readable } from 'node:stream';
 import { SourceUnavailableException } from '../common/errors';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
-import { getSourceReferer } from './source-domains';
+import { PARSERS } from '../parsers-client/parsers-client.module';
 import { verifySignedImageUrl } from './sign.util';
 
 const DEFAULT_USER_AGENT =
@@ -15,7 +16,10 @@ const DEFAULT_USER_AGENT =
 
 @Controller('img')
 export class ImgProxyController {
-  constructor(@Inject(ENV) private readonly env: Env) {}
+  constructor(
+    @Inject(ENV) private readonly env: Env,
+    @Inject(PARSERS) private readonly parsers: ParsersRegistry,
+  ) {}
 
   @Get()
   async proxy(
@@ -29,15 +33,18 @@ export class ImgProxyController {
   ): Promise<void> {
     const absoluteUrl = verifySignedImageUrl(this.env.IMG_SIGN_SECRET, { u, s, exp, sig });
 
+    // Each parser knows its own Referer/User-Agent expectations (Grouple in particular needs
+    // a specific UA on image requests) — falls back to the image's own origin for sources with
+    // no special requirements, same as the old hardcoded-map default did.
+    const parserHeaders = this.parsers.imageHeaders(s, absoluteUrl);
+    const headers: Record<string, string> = {
+      Referer: parserHeaders['Referer'] ?? `${new URL(absoluteUrl).origin}/`,
+      'User-Agent': parserHeaders['User-Agent'] ?? DEFAULT_USER_AGENT,
+    };
+
     let upstream;
     try {
-      upstream = await request(absoluteUrl, {
-        method: 'GET',
-        headers: {
-          Referer: getSourceReferer(s, absoluteUrl),
-          'User-Agent': DEFAULT_USER_AGENT,
-        },
-      });
+      upstream = await request(absoluteUrl, { method: 'GET', headers });
     } catch {
       throw new SourceUnavailableException(s);
     }

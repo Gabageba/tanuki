@@ -1,8 +1,12 @@
 import { z } from 'zod';
+import { SOURCE_IDS } from '@tanuki/parsers';
+
+// z.enum needs a non-empty tuple, not `readonly string[]` — SOURCE_IDS is always non-empty
+// (23 registered sources) so this cast is safe.
+const SourceIdSchema = z.enum(SOURCE_IDS as [string, ...string[]]);
 
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(3000),
-  PARSERS_URL: z.string().url().default('http://localhost:8085'),
   IMG_SIGN_SECRET: z.string().min(16),
   ENABLED_SOURCES: z
     .string()
@@ -12,7 +16,13 @@ const EnvSchema = z.object({
         .split(',')
         .map((sourceId) => sourceId.trim())
         .filter(Boolean),
-    ),
+    )
+    .pipe(z.array(SourceIdSchema)),
+  // Optional Grouple network account (ReadManga/MintManga/SelfManga/SeiManga/Usagi share one
+  // SSO login) — without these, those sources work anonymously and member-only chapters 401.
+  GROUPLE_USERNAME: z.string().optional(),
+  GROUPLE_PASSWORD: z.string().optional(),
+  SOURCE_HTTP_TIMEOUT_MS: z.coerce.number().default(20_000),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   SOURCE_BREAKER_FAILURE_THRESHOLD: z.coerce.number().default(5),
   SOURCE_BREAKER_RESET_MS: z.coerce.number().default(600_000),
