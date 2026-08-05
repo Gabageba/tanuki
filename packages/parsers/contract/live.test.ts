@@ -15,10 +15,36 @@ const IMPLEMENTED_SOURCE_IDS = [
   'SELFMANGA',
   'SEIMANGA',
   'USAGI',
-  // ALLHENTAI intentionally excluded: its catalog requires an authenticated session
-  // site-wide, and its SSO gateway is qawa.org — a separate login GROUPLE_USERNAME/PASSWORD
-  // (the main network's credentials) doesn't cover. See sources/grouple/auth.ts. This is a
-  // known limitation, not a regression, so it's not part of the always-must-pass contract.
+  // ALLHENTAI's catalog requires an authenticated session site-wide, via its own qawa.org SSO
+  // gateway — separate credentials from the main network (see ALLHENTAI_USERNAME/PASSWORD and
+  // sources/grouple/auth.ts). Included here, but will fail like any other source if those
+  // secrets aren't configured for this run.
+  'ALLHENTAI',
+  'MANGALIB',
+  'YAOILIB',
+  // HENTAILIB intentionally excluded: marked broken in the upstream kotatsu enum
+  // (`isBroken: true` in registry.ts) independent of this port's own correctness.
+  'MANGACHAN',
+  'HENCHAN',
+  'YAOICHAN',
+  'REMANGA',
+  'MANGABUFF',
+  'INKSTORY',
+  'COMX',
+  'TOMILOLIB',
+  'WAMANGA',
+  'NUDEMOON',
+  // ACOMICS intentionally excluded: marked broken in the upstream kotatsu enum
+  // (`isBroken: true` in registry.ts) independent of this port's own correctness.
+  'SENKURO',
+  // Shares SENKURO's backend but serves a disjoint catalog, selected by the `app-id` header
+  // (see sources/senkuro/config.ts). Covered separately so a silent fallback to SENKURO's
+  // catalog — what a wrong or missing app-id causes — doesn't go unnoticed.
+  'SENKOGNITO',
+  'HENTAICHAN_CC',
+  'SEXKOMIX2',
+  'MULTPORN',
+  'MULTPORN_HENTAI',
 ] as const;
 
 const registry = createRegistry({
@@ -26,6 +52,13 @@ const registry = createRegistry({
     grouple:
       process.env['GROUPLE_USERNAME'] && process.env['GROUPLE_PASSWORD']
         ? { username: process.env['GROUPLE_USERNAME'], password: process.env['GROUPLE_PASSWORD'] }
+        : undefined,
+    allhentai:
+      process.env['ALLHENTAI_USERNAME'] && process.env['ALLHENTAI_PASSWORD']
+        ? {
+            username: process.env['ALLHENTAI_USERNAME'],
+            password: process.env['ALLHENTAI_PASSWORD'],
+          }
         : undefined,
   },
   logger: { info: () => {}, warn: (msg) => console.warn(msg), error: (msg) => console.error(msg) },

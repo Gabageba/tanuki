@@ -1,6 +1,7 @@
 import { Button, Center, Loader, Text } from '@mantine/core';
 import { useNavigate, useParams } from 'react-router';
 import { useChapterPages } from '@/shared/api/manga';
+import { ApiErrorText } from '@/shared/ui';
 import styles from './ReaderPage.module.scss';
 
 export default function ReaderPage() {
@@ -14,7 +15,7 @@ export default function ReaderPage() {
     chapterId: string;
   }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useChapterPages(sourceId, mangaId, chapterId);
+  const { data, error, isLoading, isError } = useChapterPages(sourceId, mangaId, chapterId);
 
   if (isLoading) {
     return (
@@ -27,7 +28,7 @@ export default function ReaderPage() {
   if (isError || !data) {
     return (
       <Center className={styles.reader} mih="100vh">
-        <Text c="red">Не удалось загрузить главу. Источник может быть недоступен.</Text>
+        <ApiErrorText error={error} fallback="Не удалось загрузить главу." />
       </Center>
     );
   }

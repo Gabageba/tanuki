@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { z } from 'zod';
 import { SOURCE_IDS } from '@tanuki/parsers';
 
@@ -8,9 +9,9 @@ const SourceIdSchema = z.enum(SOURCE_IDS as [string, ...string[]]);
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(3000),
   IMG_SIGN_SECRET: z.string().min(16),
-  ENABLED_SOURCES: z
+  DISABLED_SOURCES: z
     .string()
-    .default('DESUME')
+    .default('')
     .transform((value) =>
       value
         .split(',')
@@ -22,6 +23,22 @@ const EnvSchema = z.object({
   // SSO login) — without these, those sources work anonymously and member-only chapters 401.
   GROUPLE_USERNAME: z.string().optional(),
   GROUPLE_PASSWORD: z.string().optional(),
+  // AllHentai uses its own qawa.org SSO gateway and account system, separate from the main
+  // Grouple network above — its catalog requires a session for every request, not just
+  // member-only chapters, so without these ALLHENTAI is unusable rather than degraded.
+  ALLHENTAI_USERNAME: z.string().optional(),
+  ALLHENTAI_PASSWORD: z.string().optional(),
+  // LibSocial (MANGALIB/HENTAILIB/YAOILIB): login is reCAPTCHA-gated and can't be automated
+  // in-process (see sources/libsocial/auth.ts) — a human runs
+  // `pnpm --filter @tanuki/parsers login:libsocial <SOURCE_ID>` once via a real (Playwright)
+  // browser, which writes the resulting OAuth token to `<dir>/<SOURCE_ID>.json` (one file per
+  // network member — each has its own auth gateway/account, see libsocial/config.ts `auth`);
+  // the engine only reads and rotates it afterwards via its refresh_token. Defaults to
+  // <repo-root>/data/libsocial-tokens/, which both this process (cwd apps/api) and the login
+  // script (cwd packages/parsers) resolve identically.
+  LIBSOCIAL_TOKEN_STORE_DIR: z
+    .string()
+    .default(resolve(process.cwd(), '../../data/libsocial-tokens')),
   SOURCE_HTTP_TIMEOUT_MS: z.coerce.number().default(20_000),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   SOURCE_BREAKER_FAILURE_THRESHOLD: z.coerce.number().default(5),

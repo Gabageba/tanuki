@@ -12,7 +12,12 @@ export interface FixtureResponse {
   contentType?: string;
 }
 
-type Matcher = (url: string) => boolean;
+/**
+ * `body` lets a rule disambiguate requests that share a URL (e.g. a single GraphQL endpoint
+ * POSTed to with different queries) — existing matchers that only look at `url` still work
+ * unchanged since the parameter is optional.
+ */
+type Matcher = (url: string, body?: string) => boolean;
 
 /**
  * Minimal in-memory HttpClient for conformance tests — no network, no redirects, no cookies.
@@ -20,6 +25,10 @@ type Matcher = (url: string) => boolean;
  */
 export class FakeHttpClient implements HttpClient {
   private readonly rules: { test: Matcher; response: () => FixtureResponse }[] = [];
+
+  /** Every request that reached this client, in order — for asserting on headers a Matcher
+   *  can't see (e.g. Senkuro's catalog-selecting `app-id`). */
+  readonly requests: { url: string; headers: Record<string, string>; body?: string }[] = [];
 
   register(test: Matcher, response: FixtureResponse | (() => FixtureResponse)): void {
     this.rules.push({ test, response: typeof response === 'function' ? response : () => response });
@@ -31,14 +40,16 @@ export class FakeHttpClient implements HttpClient {
     // cookie jar round-trip that fixture-based tests intentionally don't model).
   }
 
-  private resolve(url: string): FixtureResponse {
-    const rule = this.rules.find((r) => r.test(url));
+  private resolve(url: string, requestBody?: string): FixtureResponse {
+    const rule = this.rules.find((r) => r.test(url, requestBody));
     if (!rule) throw new Error(`FakeHttpClient: no fixture registered for ${url}`);
     return rule.response();
   }
 
   async request(req: Partial<HttpRequest> & { url: string }): Promise<HttpResponse> {
-    const { status, body, contentType } = this.resolve(req.url);
+    const requestBody = typeof req.body === 'string' ? req.body : req.body?.toString();
+    this.requests.push({ url: req.url, headers: req.headers ?? {}, body: requestBody });
+    const { status, body, contentType } = this.resolve(req.url, requestBody);
     const bytes = Buffer.from(body, 'utf-8');
     return {
       status,

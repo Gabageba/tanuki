@@ -34,16 +34,19 @@ export class CacheService implements OnModuleDestroy {
    * Отдаёт свежее значение из кеша, иначе вызывает fetch. Если fetch падает, но в кеше есть
    * хоть протухший envelope (не старше staleSeconds), отдаёт его с stale: true вместо ошибки.
    * Любая ошибка самого Redis-клиента тихо деградирует в прямой вызов fetch — мёртвый Valkey
-   * не должен становиться новым источником простоя.
+   * не должен становиться новым источником простоя. options.force игнорирует freshSeconds и
+   * идёт за fetch безусловно (ручное обновление), но fallback на протухший envelope при ошибке
+   * работает как обычно.
    */
   async getOrSet<T>(
     key: string,
     ttl: CacheTtlSpec,
     fetch: () => Promise<T>,
+    options?: { force?: boolean },
   ): Promise<CacheResult<T>> {
     const envelope = await this.readEnvelope<T>(key);
 
-    if (envelope && Date.now() - envelope.storedAt < ttl.freshSeconds * 1000) {
+    if (!options?.force && envelope && Date.now() - envelope.storedAt < ttl.freshSeconds * 1000) {
       return { value: envelope.value, stale: false };
     }
 

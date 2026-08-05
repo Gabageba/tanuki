@@ -4,5 +4,5 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": ["src", "test", "contract", "vitest.config.mts"]
+  "include": ["src", "test", "contract", "scripts", "vitest.config.mts"]
 }

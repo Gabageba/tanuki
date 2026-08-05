@@ -13,6 +13,7 @@ export {
   ParserError,
   NotFoundError,
   SourceAuthRequiredError,
+  SourceTokenExpiredError,
   SourceUnavailableError,
   SourceBlockedError,
   ParseError,
@@ -20,7 +21,14 @@ export {
   NotImplementedError,
 } from './errors';
 
-export type { Parser, ParserContext, Credentials, GroupleCredentials, Logger } from './core/parser';
+export type {
+  Parser,
+  ParserContext,
+  Credentials,
+  GroupleCredentials,
+  LibSocialCredentials,
+  Logger,
+} from './core/parser';
 export type { ListParams } from './core/paging';
 
 export {

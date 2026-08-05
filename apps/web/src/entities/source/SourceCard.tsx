@@ -7,9 +7,9 @@ interface SourceCardProps {
   source: Source;
 }
 
-export default function SourceCard({ source }: SourceCardProps) {
+function SourceCard({ source }: SourceCardProps) {
   return (
-    <Card component={Link} to={`/source/${source.id}`} withBorder padding="lg">
+    <Card component={Link} to={`/source/${source.id}`} padding="lg" withBorder>
       <Group justify="space-between" wrap="nowrap">
         <div>
           <Text fw={500}>{source.title}</Text>
@@ -22,3 +22,5 @@ export default function SourceCard({ source }: SourceCardProps) {
     </Card>
   );
 }
+
+export default SourceCard;

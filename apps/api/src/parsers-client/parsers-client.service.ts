@@ -44,17 +44,23 @@ export class ParsersClientService {
 
   async listManga(
     sourceId: string,
-    params: { page: number; order?: string; query?: string },
+    params: { page: number; order?: string; query?: string; force?: boolean },
   ): Promise<CachedResult<{ items: RawManga[] }>> {
     const key = cacheKey('catalog', sourceId, params.page, params.order ?? '', params.query ?? '');
-    return this.fetchCached(key, CACHE_TTL.catalog, sourceId, async (parser) => ({
-      items: await parser.getList({
-        offset: params.page * PAGE_SIZE,
-        limit: PAGE_SIZE,
-        order: params.order,
-        query: params.query,
+    return this.fetchCached(
+      key,
+      CACHE_TTL.catalog,
+      sourceId,
+      async (parser) => ({
+        items: await parser.getList({
+          offset: params.page * PAGE_SIZE,
+          limit: PAGE_SIZE,
+          order: params.order,
+          query: params.query,
+        }),
       }),
-    }));
+      { force: params.force },
+    );
   }
 
   async getDetails(sourceId: string, url: string): Promise<CachedResult<RawManga>> {
@@ -77,8 +83,14 @@ export class ParsersClientService {
     ttl: CacheTtlSpec,
     sourceId: string,
     doFetch: (parser: Parser) => Promise<T>,
+    options?: { force?: boolean },
   ): Promise<CachedResult<T>> {
-    const result = await this.cache.getOrSet(key, ttl, () => this.guardedFetch(sourceId, doFetch));
+    const result = await this.cache.getOrSet(
+      key,
+      ttl,
+      () => this.guardedFetch(sourceId, doFetch),
+      options,
+    );
     return { data: result.value, stale: result.stale };
   }
 
@@ -86,6 +98,10 @@ export class ParsersClientService {
     sourceId: string,
     doFetch: (parser: Parser) => Promise<T>,
   ): Promise<T> {
+    // Прогрев реестра (SSO-логины) идёт в фоне, чтобы не задерживать старт сервера. Первые
+    // запросы к источнику ждут его здесь — иначе они ушли бы анонимными.
+    await this.parsers.ready();
+
     if (!this.sourceHealth.canAttempt(sourceId)) {
       throw new SourceUnavailableException(
         sourceId,

@@ -74,3 +74,31 @@ export async function fetchOffsetNative(
   }
   return acc.slice(params.offset - base, params.offset - base + params.limit);
 }
+
+/**
+ * For cursor-native sources (Senkuro) whose list endpoint only exposes an opaque forward
+ * cursor — no direct "give me page N" or "skip N items". Reaching offset K therefore costs
+ * ceil(K / cfg.maxPageSize) requests, since each response's cursor is required to ask for the
+ * next chunk. cfg.maxPageSize should be the endpoint's max items-per-request; requesting exactly
+ * `target - acc.length` (capped at that max) means offsets that fit in one page cost one request.
+ */
+export async function fetchCursorPaged(
+  params: ListParams,
+  cfg: { maxPageSize: number },
+  fetchPage: (
+    cursor: string | null,
+    first: number,
+  ) => Promise<{ items: RawManga[]; nextCursor: string | null }>,
+): Promise<RawManga[]> {
+  const target = params.offset + params.limit;
+  const acc: RawManga[] = [];
+  let cursor: string | null = null;
+  while (acc.length < target) {
+    const first = Math.min(cfg.maxPageSize, target - acc.length);
+    const { items, nextCursor } = await fetchPage(cursor, first);
+    acc.push(...items);
+    if (items.length < first || !nextCursor) break;
+    cursor = nextCursor;
+  }
+  return acc.slice(params.offset, params.offset + params.limit);
+}

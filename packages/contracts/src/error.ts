@@ -4,6 +4,7 @@ export const ApiErrorCodeSchema = z.enum([
   'SOURCE_UNAVAILABLE',
   'SOURCE_BLOCKED',
   'SOURCE_AUTH_REQUIRED',
+  'SOURCE_TOKEN_EXPIRED',
   'PARSER_FAILED',
   'NOT_FOUND',
   'RATE_LIMITED',

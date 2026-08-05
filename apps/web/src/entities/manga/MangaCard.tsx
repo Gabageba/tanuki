@@ -20,7 +20,7 @@ export default function MangaCard({ manga, showSource = false }: MangaCardProps)
     >
       <Card.Section pos="relative">
         <Image
-          src={manga.largeCoverUrl || manga.coverUrl}
+          src={manga.coverUrl}
           alt={manga.title}
           loading="lazy"
           decoding="async"

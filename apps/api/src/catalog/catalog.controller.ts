@@ -12,11 +12,13 @@ export class CatalogController {
     @Query('page') page: string | undefined,
     @Query('order') order: string | undefined,
     @Query('query') query: string | undefined,
+    @Query('refresh') refresh: string | undefined,
   ): Promise<CatalogResponse> {
     return this.catalogService.listCatalog(sourceId, {
       page: page ? Number.parseInt(page, 10) : 0,
       order,
       query,
+      force: refresh === 'true',
     });
   }
 }

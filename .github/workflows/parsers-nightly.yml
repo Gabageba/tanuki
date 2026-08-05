@@ -21,6 +21,8 @@ jobs:
         env:
           GROUPLE_USERNAME: ${{ secrets.GROUPLE_USERNAME }}
           GROUPLE_PASSWORD: ${{ secrets.GROUPLE_PASSWORD }}
+          ALLHENTAI_USERNAME: ${{ secrets.ALLHENTAI_USERNAME }}
+          ALLHENTAI_PASSWORD: ${{ secrets.ALLHENTAI_PASSWORD }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

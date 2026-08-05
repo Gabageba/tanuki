@@ -13,7 +13,8 @@ import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { toTitleCase, nullIfEmpty, findGroupValue } from '../../core/text/strings';
 import { ParseError, SourceAuthRequiredError } from '../../errors';
 import { UserAgents } from '../../core/http/user-agents';
-import { authenticateGrouple } from './auth';
+import { catalogEntryFor } from '../catalog';
+import { authenticateGrouple, authenticateAllHentai } from './auth';
 import type { GroupleConfig } from './config';
 
 const PAGE_SIZE = 50;
@@ -27,22 +28,6 @@ const HREF_CHAPTER_NUMBER_REGEX = /\/vol\d+\/([0-9]+(?:[.,]\d+)?)/i;
 const TITLE_CHAPTER_NUMBER_REGEX = /([0-9]+(?:[.,]\d+)?)\s*$/;
 const HREF_VOLUME_REGEX = /\/vol(\d+)\//i;
 const USER_HASH_REGEX = /window\.user_hash\s*=\s*'([^']+)'/;
-
-function getSortKey(order: string | undefined): string {
-  switch (order) {
-    case 'ALPHABETICAL':
-      return 'name';
-    case 'POPULARITY':
-      return 'rate';
-    case 'ADDED':
-    case 'NEWEST':
-      return 'created';
-    case 'RATING':
-      return 'votes';
-    default:
-      return 'updated';
-  }
-}
 
 function getSearchSortType(order: string | undefined): string {
   switch (order) {
@@ -314,25 +299,14 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
     };
   }
 
-  async function fetchListPage(
-    nativeOffset: number,
-    order: string | undefined,
-  ): Promise<RawManga[]> {
-    const url = `https://${domain}/list?sortType=${getSortKey(order)}&offset=${nativeOffset}`;
-    const doc = await ctx.http.getHtml(url);
-    const root = doc.$('#mangaBox').length > 0 ? doc.$('#mangaBox') : doc.$('#mangaResults');
-    const tiles = root.find('div.tiles.row').first();
-    if (tiles.length === 0) {
-      if (root.text().includes(NOTHING_FOUND)) return [];
-      throw new ParseError('No tiles found', cfg.id);
-    }
-    return tiles
-      .find('div.tile')
-      .toArray()
-      .map((el) => parseManga(doc.$(el), doc.$, doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
-  }
-
+  /**
+   * Also used for plain catalog browsing (empty query): `/list` (the old page-driven catalog
+   * endpoint `getSortKey` used to target) has fallen behind the site's own live index — on both
+   * SEIMANGA and READMANGA_RU it omits titles updated in roughly the last few hours entirely,
+   * rather than just reordering them. `/search/advancedResults` with `q=''` hits the same live
+   * index the site's own catalog UI now calls through its JSON API and returns identical
+   * ordering, so it doubles as the browse endpoint instead of `/list`.
+   */
   async function searchPage(
     query: string,
     nativeOffset: number,
@@ -396,13 +370,8 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
   }
 
   async function getList(params: ListParams): Promise<RawManga[]> {
-    if (params.query) {
-      return fetchOffsetNative(params, { size: PAGE_SIZE }, (offset) =>
-        searchPage(params.query!, offset, params.order),
-      );
-    }
     return fetchOffsetNative(params, { size: PAGE_SIZE }, (offset) =>
-      fetchListPage(offset, params.order),
+      searchPage(params.query ?? '', offset, params.order),
     );
   }
 
@@ -621,7 +590,7 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
     id: cfg.id,
     info: {
       id: cfg.id,
-      title: cfg.title,
+      title: catalogEntryFor(cfg.id).title,
       locale: 'ru',
       contentType: cfg.isNsfw ? 'HENTAI' : cfg.id === 'SELFMANGA' ? 'OTHER' : 'MANGA',
       isBroken: false,
@@ -634,7 +603,9 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/`, 'User-Agent': UserAgents.GROUPLE_ARORA }),
     async init() {
-      if (cfg.authGateway !== 'qawa.org') {
+      if (cfg.authGateway === 'z.qawa.org') {
+        await authenticateAllHentai(ctx.http, ctx.jar, cfg, ctx.credentials.allhentai, ctx.logger);
+      } else {
         await authenticateGrouple(ctx.http, ctx.jar, ctx.credentials.grouple, ctx.logger);
       }
     },

@@ -29,7 +29,7 @@ export class CatalogService {
 
   async listCatalog(
     sourceId: string,
-    params: { page: number; order?: string; query?: string },
+    params: { page: number; order?: string; query?: string; force?: boolean },
   ): Promise<CatalogResponse> {
     const { data, stale } = await this.parsersClient.listManga(sourceId, params);
     return {

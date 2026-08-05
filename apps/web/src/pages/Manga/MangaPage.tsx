@@ -14,10 +14,11 @@ import {
 } from '@mantine/core';
 import { Link, useParams } from 'react-router';
 import { useChapters, useMangaDetails } from '@/shared/api/manga';
+import { ApiErrorText } from '@/shared/ui';
 
 export default function MangaPage() {
   const { sourceId = '', mangaId = '' } = useParams<{ sourceId: string; mangaId: string }>();
-  const { data, isLoading, isError } = useMangaDetails(sourceId, mangaId);
+  const { data, error, isLoading, isError } = useMangaDetails(sourceId, mangaId);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 
   const branches = data?.branches ?? [];
@@ -41,7 +42,7 @@ export default function MangaPage() {
   if (isError || !data) {
     return (
       <Container py="xl">
-        <Text c="red">Тайтл недоступен. Источник может быть недоступен.</Text>
+        <ApiErrorText error={error} fallback="Не удалось загрузить тайтл." />
       </Container>
     );
   }
@@ -97,7 +98,7 @@ export default function MangaPage() {
               component={Link}
               to={`/manga/${sourceId}/${mangaId}/read/${chapter.id.slice(sourceId.length + 1)}`}
             >
-              {chapter.title ?? `Глава ${chapter.number ?? '?'}`}
+              {chapter.title || `Глава ${chapter.number ?? '?'}`}
             </Anchor>
           </List.Item>
         ))}

@@ -14,6 +14,7 @@ import { useSearchParams } from 'react-router';
 import { MangaCard } from '@/entities/manga';
 import { useSearch } from '@/shared/api/search';
 import { useSources } from '@/shared/api/sources';
+import { ApiErrorText } from '@/shared/ui';
 import type { SearchGroup } from '@tanuki/contracts';
 
 const GROUP_STATUS_LABEL: Record<Exclude<SearchGroup['status'], 'ok'>, string> = {
@@ -25,7 +26,7 @@ export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query') ?? '';
   const [input, setInput] = useState(query);
-  const { data, isLoading, isError } = useSearch(query);
+  const { data, error, isLoading, isError } = useSearch(query);
   const { data: sourcesData } = useSources();
 
   const sourceTitle = (sourceId: string) =>
@@ -54,7 +55,7 @@ export default function SearchPage() {
       </form>
 
       {isLoading && <Loader />}
-      {isError && <Text c="red">Не удалось выполнить поиск.</Text>}
+      {isError && <ApiErrorText error={error} fallback="Не удалось выполнить поиск." />}
 
       <Stack gap="xl">
         {data?.groups.map((group) => (

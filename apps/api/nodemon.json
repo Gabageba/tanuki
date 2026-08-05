@@ -1,0 +1,6 @@
+{
+  "watch": ["../../packages/parsers/dist"],
+  "ext": "js,d.ts",
+  "delay": 300,
+  "exec": "nest start --watch --preserveWatchOutput"
+}

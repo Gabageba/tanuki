@@ -19,6 +19,14 @@ export class NotFoundError extends ParserError {}
 /** The upstream source demands an authenticated session for this resource. */
 export class SourceAuthRequiredError extends ParserError {}
 
+/**
+ * A previously-obtained session/token for this source (stored out-of-band, e.g. LibSocial's
+ * OAuth refresh_token) is missing, expired, or was rejected on renewal — distinct from
+ * SourceAuthRequiredError, which means "this particular resource needs auth we never had,"
+ * not "our stored credential went stale." A human has to redo the login flow.
+ */
+export class SourceTokenExpiredError extends ParserError {}
+
 /** Connect/DNS/timeout failure, or upstream responded with a server error. */
 export class SourceUnavailableError extends ParserError {}
 

@@ -35,11 +35,25 @@ export class SourceBlockedException extends ApiException {
 // доступную только авторизованным — парсер бросает SourceAuthRequiredError
 // (packages/parsers/src/errors.ts). Не путать с SOURCE_UNAVAILABLE: ретраить бессмысленно,
 // нужна учётка GROUPLE_USERNAME/PASSWORD (packages/parsers/src/sources/grouple/auth.ts).
+// ALLHENTAI — отдельный случай: у него свой шлюз qawa.org и своя учётка
+// ALLHENTAI_USERNAME/PASSWORD, а авторизация там нужна для каталога целиком, а не только
+// для отдельных глав.
 export class SourceAuthRequiredException extends ApiException {
   constructor(sourceId?: string) {
+    super('SOURCE_AUTH_REQUIRED', 'Источник требует авторизации', HttpStatus.BAD_GATEWAY, sourceId);
+  }
+}
+
+// LibSocial (MANGALIB/HENTAILIB/YAOILIB): a previously-stored OAuth token (see
+// @tanuki/parsers SourceTokenExpiredError, sources/libsocial/auth.ts) is missing or was
+// rejected on refresh. Distinct from SOURCE_AUTH_REQUIRED — that means "this particular
+// chapter/manga needs a session we never had"; this means "our saved session went stale and a
+// human has to redo the reCAPTCHA-gated login" (`pnpm --filter @tanuki/parsers login:libsocial`).
+export class SourceTokenExpiredException extends ApiException {
+  constructor(sourceId?: string) {
     super(
-      'SOURCE_AUTH_REQUIRED',
-      'Источник требует авторизации для этой главы',
+      'SOURCE_TOKEN_EXPIRED',
+      'Сохранённая сессия источника истекла, требуется повторный вход',
       HttpStatus.BAD_GATEWAY,
       sourceId,
     );

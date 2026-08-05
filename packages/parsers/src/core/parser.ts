@@ -16,8 +16,22 @@ export interface GroupleCredentials {
   password: string;
 }
 
+export interface LibSocialCredentials {
+  /**
+   * Directory holding one JSON token file per network member (`<sourceId>.json`), written by
+   * `pnpm --filter @tanuki/parsers login:libsocial <sourceId>` (see sources/libsocial/auth.ts).
+   * OAuth login itself is reCAPTCHA-gated and can only be driven by a human via that script, so
+   * unlike Grouple this isn't a username/password pair the engine can use to log itself in —
+   * it only ever reads and rotates the file afterwards.
+   */
+  tokenStoreDir: string;
+}
+
 export interface Credentials {
   grouple?: GroupleCredentials;
+  /** AllHentai's qawa.org SSO gateway is a separate account system from the main network. */
+  allhentai?: GroupleCredentials;
+  libsocial?: LibSocialCredentials;
 }
 
 export interface ParserContext {
@@ -40,6 +54,12 @@ export interface Parser {
   getPages(chapterUrl: string): Promise<RawPage[]>;
   /** Headers the source expects when hotlinking its images — consumed by img-proxy. */
   imageHeaders(imageUrl: string): Record<string, string>;
+  /**
+   * Post-fetch transform for sources that serve obfuscated/encrypted image bytes (e.g.
+   * INKSTORY's client-side XOR scheme) — consumed by img-proxy after the raw body is fetched
+   * and decompressed. Sources whose images are plain files omit this entirely.
+   */
+  decodeImage?(bytes: Buffer, imageUrl: string): Promise<Buffer>;
   /** Optional one-time warmup (e.g. Grouple SSO login). Failure must be non-fatal. */
   init?(): Promise<void>;
   close?(): Promise<void>;

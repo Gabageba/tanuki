@@ -16,7 +16,7 @@ export class SourcesService {
   async listSources(): Promise<Source[]> {
     const { data } = await this.parsersClient.getSources();
     return data.items
-      .filter((source) => this.env.ENABLED_SOURCES.includes(source.id))
+      .filter((source) => !this.env.DISABLED_SOURCES.includes(source.id))
       .map((source): Source => ({
         id: source.id,
         title: source.title,
@@ -28,6 +28,7 @@ export class SourcesService {
           sortOrders: source.sortOrders,
           multipleTags: source.isMultipleTagsSupported,
         },
-      }));
+      }))
+      .sort((a, b) => Number(a.status === 'down') - Number(b.status === 'down'));
   }
 }

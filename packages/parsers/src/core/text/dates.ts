@@ -104,3 +104,16 @@ export function parseGroupleDate(raw: string | null | undefined): number {
 
   return 0;
 }
+
+const DD_MM_YYYY = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+
+/** "dd.MM.yyyy" (full 4-digit year) — MangaBuff and Com-X chapter dates. Returns epoch millis, 0 = unknown. */
+export function parseDdMmYyyy(raw: string | null | undefined): number {
+  const text = raw?.trim();
+  if (!text) return 0;
+  const match = DD_MM_YYYY.exec(text);
+  if (!match) return 0;
+  const [, d, m, y] = match;
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}

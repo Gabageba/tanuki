@@ -2,11 +2,32 @@ import type { CookieJar } from 'tough-cookie';
 import type { Parser, ParserContext, Credentials, Logger } from './core/parser';
 import type { RawSourceInfo } from './types';
 import { HttpClientImpl, type Timeouts } from './core/http/client';
+import { UserAgents } from './core/http/user-agents';
 import { jarFor } from './core/http/cookies';
 import { NotImplementedError, UnknownSourceError } from './errors';
+import { SOURCE_CATALOG, SOURCE_IDS, type SourceId } from './sources/catalog';
+export { SOURCE_IDS, type SourceId } from './sources/catalog';
 import { GROUPLE_CONFIGS } from './sources/grouple/config';
 import { createGroupleParser } from './sources/grouple/engine';
 import { createDesuParser } from './sources/desu';
+import { LIBSOCIAL_CONFIGS } from './sources/libsocial/config';
+import { createLibSocialParser } from './sources/libsocial/engine';
+import { CHAN_CONFIGS } from './sources/chan/config';
+import { createChanParser } from './sources/chan/engine';
+import { createRemangaParser } from './sources/remanga';
+import { createMangaBuffParser } from './sources/mangabuff';
+import { createInkStoryParser } from './sources/inkstory';
+import { createComxParser } from './sources/comx';
+import { createTomiloLibParser } from './sources/tomilolib';
+import { createWaMangaParser } from './sources/wamanga';
+import { createNudeMoonParser } from './sources/nudemoon';
+import { createAComicsParser } from './sources/acomics';
+import { SENKURO_CONFIGS } from './sources/senkuro/config';
+import { createSenkuroParser } from './sources/senkuro/engine';
+import { createHentaichanCcParser } from './sources/hentaichancc';
+import { createSexKomix2Parser } from './sources/sexkomix2';
+import { MULTPORN_CONFIGS } from './sources/multporn/config';
+import { createMultpornParser } from './sources/multporn/engine';
 
 export interface SourceDescriptor {
   info: RawSourceInfo;
@@ -33,208 +54,6 @@ function notImplemented(id: string, info: RawSourceInfo): SourceDescriptor['crea
   });
 }
 
-/**
- * title/contentType/isBroken (the kotatsu-known-broken flag) copied verbatim from the fork's
- * generated enum: tanuki-parsers-redo/build/generated/ksp/.../model/MangaSource.kt. Domains
- * copied from each source's `configKeyDomain`. Only READMANGA_RU..DESUME (phase 1, see
- * docs/03-parsers.md) have a real `create` — everything else is `isImplemented: false` and
- * reports `isBroken: true` regardless of its real kotatsu status, because "not ported yet" and
- * "kotatsu marked it broken" both mean the same thing to sources.service.ts: status 'down'.
- */
-interface RawEntry {
-  title: string;
-  contentType: string;
-  kotatsuBroken: boolean;
-  domains: [string, ...string[]];
-  isImplemented: boolean;
-}
-
-// `satisfies` (not `: Record<string, RawEntry>`) keeps the literal key union so `SourceId`
-// below is the real 23-member type, not `string` — that's what makes a missing/typo'd source
-// id a compile error everywhere else in this file instead of a silent `| undefined`.
-const RAW_TABLE = {
-  READMANGA_RU: {
-    title: 'ReadManga',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['a.zazaza.me', '3.readmanga.ru'],
-    isImplemented: true,
-  },
-  MINTMANGA: {
-    title: 'MintManga',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['2.mintmanga.one', '24.mintmanga.one', 'mintmanga.live', 'mintmanga.com'],
-    isImplemented: true,
-  },
-  SELFMANGA: {
-    title: 'SelfManga',
-    contentType: 'OTHER',
-    kotatsuBroken: false,
-    domains: ['1.selfmanga.live', 'selfmanga.live'],
-    isImplemented: true,
-  },
-  SEIMANGA: {
-    title: 'SeiManga',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['1.seimanga.me', 'seimanga.me'],
-    isImplemented: true,
-  },
-  USAGI: {
-    title: 'Usagi',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['web.usagi.one'],
-    isImplemented: true,
-  },
-  ALLHENTAI: {
-    title: 'AllHentai',
-    contentType: 'HENTAI',
-    kotatsuBroken: false,
-    domains: ['20.allhen.online', 'z.ahen.me', '24.allhen.online', '2023.allhen.online'],
-    isImplemented: true,
-  },
-  DESUME: {
-    title: 'Desu',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['desu.uno', 'x.desu.city', 'desu.city', 'desu.work', 'desu.store', 'desu.win'],
-    isImplemented: true,
-  },
-  MANGALIB: {
-    title: 'MangaLib',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['mangalib.org', 'mangalib.me'],
-    isImplemented: false,
-  },
-  HENTAILIB: {
-    title: 'HentaiLib',
-    contentType: 'HENTAI',
-    kotatsuBroken: true,
-    domains: ['v1.hentailib.org', 'hentailib.me'],
-    isImplemented: false,
-  },
-  YAOILIB: {
-    title: 'SlashLib',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['v2.slashlib.me'],
-    isImplemented: false,
-  },
-  MANGACHAN: {
-    title: 'Манга-тян',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['manga-chan.me'],
-    isImplemented: false,
-  },
-  HENCHAN: {
-    title: 'Хентай-тян',
-    contentType: 'HENTAI',
-    kotatsuBroken: false,
-    domains: [
-      'x5.h-chan.me',
-      'xxxx.henchan.pro',
-      'xxl.hentaichan.live',
-      'xxx.henchan.pro',
-      'y.hentaichan.live',
-      'xx.hentaichan.live',
-      'x.henchan.pro',
-      'hentaichan.live',
-    ],
-    isImplemented: false,
-  },
-  YAOICHAN: {
-    title: 'Яой-тян',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: [
-      'v9.yaoi-chan.me',
-      'v10.yaoi-chan.me',
-      'v3.yaoi-chan.me',
-      'v2.yaoi-chan.me',
-      'v1.yaoi-chan.me',
-      'yaoi-chan.me',
-    ],
-    isImplemented: false,
-  },
-  REMANGA: {
-    title: 'Реманга',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['remanga.org'],
-    isImplemented: false,
-  },
-  NUDEMOON: {
-    title: 'Nude-Moon',
-    contentType: 'HENTAI',
-    kotatsuBroken: false,
-    domains: ['b.nude-moon.fun', 'nude-moon.org', 'nude-moon.net'],
-    isImplemented: false,
-  },
-  ACOMICS: {
-    title: 'AComics',
-    contentType: 'COMICS',
-    kotatsuBroken: true,
-    domains: ['acomics.ru'],
-    isImplemented: false,
-  },
-  COMX: {
-    title: 'Com-X',
-    contentType: 'COMICS',
-    kotatsuBroken: false,
-    domains: ['com-x.life', 'comx.life'],
-    isImplemented: false,
-  },
-  MANGABUFF: {
-    title: 'MangaBuff',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['mangabuff.ru'],
-    isImplemented: false,
-  },
-  MANGA_WTF: {
-    title: 'MangaWtf',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['manga.wtf'],
-    isImplemented: false,
-  },
-  SENKURO: {
-    title: 'Senkuro',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['senkuro.com'],
-    isImplemented: false,
-  },
-  TOMILOLIB: {
-    title: 'TomiloLib',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['tomilo-lib.ru'],
-    isImplemented: false,
-  },
-  WAMANGA: {
-    title: 'WaManga',
-    contentType: 'MANGA',
-    kotatsuBroken: false,
-    domains: ['wamanga.ru'],
-    isImplemented: false,
-  },
-  ZENMANGA: {
-    title: 'ZenManga',
-    contentType: 'MANGA',
-    kotatsuBroken: true,
-    domains: ['inkstory.me'],
-    isImplemented: false,
-  },
-} satisfies Record<string, RawEntry>;
-
-export const SOURCE_IDS = Object.keys(RAW_TABLE).sort() as SourceId[];
-export type SourceId = keyof typeof RAW_TABLE;
-
 const GROUPLE_IDS = new Set(GROUPLE_CONFIGS.map((c) => c.id));
 /** MANGALIB/HENTAILIB/YAOILIB all hit the same host (api.cdnlibs.org) — see docs plan. */
 const LIBSOCIAL_IDS = new Set(['MANGALIB', 'HENTAILIB', 'YAOILIB']);
@@ -245,43 +64,111 @@ function cookieScopeFor(id: string): string {
   return id;
 }
 
-function buildDescriptor(id: string, entry: RawEntry): SourceDescriptor {
+/** Sources with a single id, no shared-engine config to pick between. */
+const SINGLE_SOURCE_FACTORIES: Record<string, (ctx: ParserContext) => Parser> = {
+  DESUME: createDesuParser,
+  REMANGA: createRemangaParser,
+  MANGABUFF: createMangaBuffParser,
+  INKSTORY: createInkStoryParser,
+  COMX: createComxParser,
+  TOMILOLIB: createTomiloLibParser,
+  WAMANGA: createWaMangaParser,
+  NUDEMOON: createNudeMoonParser,
+  ACOMICS: createAComicsParser,
+  HENTAICHAN_CC: createHentaichanCcParser,
+  SEXKOMIX2: createSexKomix2Parser,
+};
+
+function buildDescriptor(id: SourceId): SourceDescriptor {
+  const catalogEntry = SOURCE_CATALOG[id];
+  const { title, domains } = catalogEntry;
   const groupleConfig = GROUPLE_CONFIGS.find((c) => c.id === id);
+  const libSocialConfig = LIBSOCIAL_CONFIGS.find((c) => c.id === id);
+  const chanConfig = CHAN_CONFIGS.find((c) => c.id === id);
+  const multpornConfig = MULTPORN_CONFIGS.find((c) => c.id === id);
+  const senkuroConfig = SENKURO_CONFIGS.find((c) => c.id === id);
+
   const info: RawSourceInfo = {
     id,
-    title: entry.title,
+    title,
     locale: 'ru',
-    contentType: entry.contentType,
-    isBroken: entry.isImplemented ? entry.kotatsuBroken : true,
-    sortOrders: entry.isImplemented ? [] : ['UPDATED'],
-    isSearchSupported: entry.isImplemented,
-    isMultipleTagsSupported: entry.isImplemented,
+    contentType: catalogEntry.contentType,
+    isBroken: catalogEntry.isBroken,
+    sortOrders: [],
+    isSearchSupported: true,
+    isMultipleTagsSupported: true,
   };
 
   if (groupleConfig) {
     return {
       info,
-      domains: entry.domains,
+      domains,
       cookieScope: cookieScopeFor(id),
+      // The network's antibot now blocks bare/undici-default User-Agents on every page, not
+      // just images (see UserAgents.GROUPLE_ARORA) — verified against mintmanga.com and
+      // 20.allhen.online both returning 402 without it.
       defaultHeaders: {
         'Accept-Language': 'ru,en-US;q=0.7,en;q=0.3',
-        Referer: `https://${entry.domains[0]}/`,
+        Referer: `https://${domains[0]}/`,
+        'User-Agent': UserAgents.GROUPLE_ARORA,
       },
       create: (ctx) => createGroupleParser(groupleConfig, ctx),
     };
   }
-  if (id === 'DESUME') {
+  if (libSocialConfig) {
     return {
       info,
-      domains: entry.domains,
+      domains,
       cookieScope: cookieScopeFor(id),
       defaultHeaders: {},
-      create: (ctx) => createDesuParser(ctx),
+      create: (ctx) => createLibSocialParser(libSocialConfig, ctx),
+    };
+  }
+  if (chanConfig) {
+    return {
+      info,
+      domains,
+      cookieScope: cookieScopeFor(id),
+      // These DLE-engine sites stall requests with no User-Agent for ~60s before answering
+      // 504 — well past our 20s headers timeout — but respond immediately to a browser-like one.
+      defaultHeaders: {
+        'User-Agent': UserAgents.CHROME_DESKTOP,
+        'Accept-Language': 'ru,en-US;q=0.7,en;q=0.3',
+      },
+      create: (ctx) => createChanParser(chanConfig, ctx),
+    };
+  }
+  if (multpornConfig) {
+    return {
+      info,
+      domains,
+      cookieScope: cookieScopeFor(id),
+      defaultHeaders: {},
+      create: (ctx) => createMultpornParser(multpornConfig, ctx),
+    };
+  }
+  if (senkuroConfig) {
+    return {
+      info,
+      domains,
+      cookieScope: cookieScopeFor(id),
+      defaultHeaders: {},
+      create: (ctx) => createSenkuroParser(senkuroConfig, ctx),
+    };
+  }
+  const singleSourceFactory = SINGLE_SOURCE_FACTORIES[id];
+  if (singleSourceFactory) {
+    return {
+      info,
+      domains,
+      cookieScope: cookieScopeFor(id),
+      defaultHeaders: {},
+      create: singleSourceFactory,
     };
   }
   return {
     info,
-    domains: entry.domains,
+    domains,
     cookieScope: cookieScopeFor(id),
     defaultHeaders: {},
     create: notImplemented(id, info),
@@ -289,7 +176,7 @@ function buildDescriptor(id: string, entry: RawEntry): SourceDescriptor {
 }
 
 export const SOURCES: Record<SourceId, SourceDescriptor> = Object.fromEntries(
-  SOURCE_IDS.map((id) => [id, buildDescriptor(id, RAW_TABLE[id]!)]),
+  SOURCE_IDS.map((id) => [id, buildDescriptor(id)]),
 ) as Record<SourceId, SourceDescriptor>;
 
 export function listSources(): RawSourceInfo[] {
@@ -300,7 +187,14 @@ export interface ParsersRegistry {
   listSources(): RawSourceInfo[];
   get(sourceId: string): Parser;
   imageHeaders(sourceId: string, imageUrl: string): Record<string, string>;
+  decodeImage(sourceId: string, bytes: Buffer, imageUrl: string): Promise<Buffer>;
   init(): Promise<void>;
+  /**
+   * Resolves once the init() kicked off at boot has settled (immediately if init() was never
+   * called). Lets the host start listening right away and make only the calls that actually
+   * touch a source wait for warmup — see parsers.provider.ts.
+   */
+  ready(): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -318,6 +212,7 @@ export interface RegistryOptions {
 export function createRegistry(opts: RegistryOptions): ParsersRegistry {
   const jars = new Map<string, CookieJar>();
   const parsers = new Map<string, Parser>();
+  let initPromise: Promise<void> | null = null;
 
   for (const id of SOURCE_IDS) {
     const descriptor = SOURCES[id];
@@ -349,8 +244,12 @@ export function createRegistry(opts: RegistryOptions): ParsersRegistry {
     imageHeaders(sourceId, imageUrl) {
       return parsers.get(sourceId)?.imageHeaders(imageUrl) ?? {};
     },
-    async init() {
-      await Promise.allSettled(
+    async decodeImage(sourceId, bytes, imageUrl) {
+      return (await parsers.get(sourceId)?.decodeImage?.(bytes, imageUrl)) ?? bytes;
+    },
+    init() {
+      // Memoized so ready() can hand out the same promise and repeat init() calls are no-ops.
+      initPromise ??= Promise.allSettled(
         [...parsers.values()].map(async (parser) => {
           try {
             await parser.init?.();
@@ -360,7 +259,11 @@ export function createRegistry(opts: RegistryOptions): ParsersRegistry {
             );
           }
         }),
-      );
+      ).then(() => undefined);
+      return initPromise;
+    },
+    ready() {
+      return initPromise ?? Promise.resolve();
     },
     async close() {
       await Promise.allSettled(

@@ -17,6 +17,11 @@ export const parsersProvider: Provider = {
           env.GROUPLE_USERNAME && env.GROUPLE_PASSWORD
             ? { username: env.GROUPLE_USERNAME, password: env.GROUPLE_PASSWORD }
             : undefined,
+        allhentai:
+          env.ALLHENTAI_USERNAME && env.ALLHENTAI_PASSWORD
+            ? { username: env.ALLHENTAI_USERNAME, password: env.ALLHENTAI_PASSWORD }
+            : undefined,
+        libsocial: { tokenStoreDir: env.LIBSOCIAL_TOKEN_STORE_DIR },
       },
       timeouts: {
         connect: env.SOURCE_HTTP_TIMEOUT_MS,
@@ -29,8 +34,11 @@ export const parsersProvider: Provider = {
       },
     });
     // Grouple SSO login etc. — allSettled internally, a failed login is logged and leaves
-    // that source working anonymously, never blocks boot.
-    await registry.init();
+    // that source working anonymously. Deliberately not awaited: it costs a few seconds of
+    // network round-trips, and awaiting it here delays app.listen(), which shows up as
+    // ECONNREFUSED in the vite dev proxy (the web dev server boots much faster). Calls that
+    // actually hit a source await registry.ready() instead — see ParsersClientService.
+    void registry.init();
     return registry;
   },
 };

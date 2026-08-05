@@ -3,6 +3,7 @@ import {
   ParseError,
   SourceAuthRequiredError,
   SourceBlockedError,
+  SourceTokenExpiredError,
   SourceUnavailableError,
   UnknownSourceError,
 } from '@tanuki/parsers';
@@ -11,6 +12,7 @@ import {
   ParserFailedException,
   SourceAuthRequiredException,
   SourceBlockedException,
+  SourceTokenExpiredException,
   SourceUnavailableException,
   type ApiException,
 } from '../common/errors';
@@ -24,6 +26,7 @@ import {
 export function toApiException(error: unknown, sourceId: string): ApiException {
   if (error instanceof SourceBlockedError) return new SourceBlockedException(sourceId);
   if (error instanceof NotFoundError) return new NotFoundApiException();
+  if (error instanceof SourceTokenExpiredError) return new SourceTokenExpiredException(sourceId);
   if (error instanceof SourceAuthRequiredError) return new SourceAuthRequiredException(sourceId);
   if (error instanceof SourceUnavailableError) return new SourceUnavailableException(sourceId);
   if (error instanceof ParseError) return new ParserFailedException(error.message, sourceId);

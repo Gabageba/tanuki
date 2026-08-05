@@ -1,33 +1,73 @@
 import { useEffect } from 'react';
-import { Container, Loader, SimpleGrid, Text, Title } from '@mantine/core';
+import { Container, Group, Loader, SimpleGrid, Title } from '@mantine/core';
 import { useIntersection } from '@mantine/hooks';
+import { notifications } from '@mantine/notifications';
 import { useParams } from 'react-router';
 import { MangaCard } from '@/entities/manga';
 import { useCatalog } from '@/shared/api/catalog';
+import { ApiRequestError } from '@/shared/api/client';
+import { ApiErrorText } from '@/shared/ui';
+import PullToRefreshIndicator from './PullToRefreshIndicator';
+import RefreshCatalogButton from './RefreshCatalogButton';
+import { usePullToRefresh } from './usePullToRefresh';
 
 export default function CatalogPage() {
   const { sourceId } = useParams<{ sourceId: string }>();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = useCatalog(
-    sourceId ?? '',
-  );
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    isFetching,
+    refresh,
+  } = useCatalog(sourceId ?? '');
   const { ref, entry } = useIntersection({ threshold: 0 });
+  const { pullDistance, isRefreshing: isPullRefreshing } = usePullToRefresh(refresh);
 
   useEffect(() => {
     if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
-  }, [entry?.isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry?.isIntersecting]);
+
+  const errorMessage =
+    error instanceof ApiRequestError ? error.message : 'Источник недоступен. Попробуйте позже.';
+
+  useEffect(() => {
+    if (error) {
+      notifications.show({
+        color: 'red',
+        title: 'Не удалось загрузить каталог',
+        message: errorMessage,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   const items = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <Container py="xl">
-      <Title order={1} mb="md">
-        {sourceId}
-      </Title>
+      <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isPullRefreshing} />
+
+      <Group justify="space-between" mb="md">
+        <Title order={1}>{sourceId}</Title>
+        {sourceId && (
+          <RefreshCatalogButton
+            key={sourceId}
+            sourceId={sourceId}
+            isRefreshing={isFetching && !isFetchingNextPage}
+            onRefresh={refresh}
+          />
+        )}
+      </Group>
 
       {isLoading && <Loader />}
-      {isError && <Text c="red">Источник недоступен. Попробуйте позже.</Text>}
+      {isError && <ApiErrorText error={error} fallback={errorMessage} />}
 
       <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="md">
         {items.map((manga) => (

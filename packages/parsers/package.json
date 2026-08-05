@@ -7,7 +7,9 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "lint": "eslint .",
+    "login:libsocial": "tsx scripts/libsocial-login.ts",
     "test": "vitest run --project unit",
     "test:contract": "vitest run --project contract --reporter=verbose --reporter=json --outputFile=contract-report.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.eslint.json --noEmit"
@@ -23,7 +25,10 @@
     "@tanuki/eslint-config": "workspace:*",
     "@tanuki/tsconfig": "workspace:*",
     "@types/node": "^26.1.2",
+    "dotenv": "^17.2.3",
     "eslint": "^10.8.0",
+    "playwright": "^1.56.1",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.6"
   }
