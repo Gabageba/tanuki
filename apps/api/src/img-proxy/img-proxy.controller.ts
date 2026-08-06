@@ -2,9 +2,9 @@ import { Controller, Get, HttpStatus, Inject, Query, Res } from '@nestjs/common'
 import type { FastifyReply } from 'fastify';
 import sharp from 'sharp';
 import { request } from 'undici';
-import type { ParsersRegistry } from '@tanuki/parsers';
 import { createBrotliDecompress, createGunzip, createInflate } from 'node:zlib';
 import type { Readable } from 'node:stream';
+import type { ParsersRegistry } from '@tanuki/parsers';
 import { SourceUnavailableException } from '../common/errors';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
@@ -12,24 +12,19 @@ import { PARSERS } from '../parsers-client/parsers-client.module';
 import { CacheService } from '../cache/cache.service';
 import { CACHE_TTL } from '../cache/cache.constants';
 import { cacheKey } from '../cache/cache-keys';
+import { IMAGE_FORMAT, type ImageFormat, type TransformedImage } from './models';
 import { verifySignedImageUrl } from './sign.util';
 
 const DEFAULT_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
-interface TransformedImage {
-  contentType: string;
-  /** base64 — CacheService envelopes go through JSON.stringify, raw Buffer doesn't round-trip. */
-  bodyBase64: string;
-}
-
-async function streamToBuffer(stream: Readable): Promise<Buffer> {
+const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
     chunks.push(chunk instanceof Buffer ? chunk : Buffer.from(chunk));
   }
   return Buffer.concat(chunks);
-}
+};
 
 @Controller('img')
 export class ImgProxyController {
@@ -51,7 +46,7 @@ export class ImgProxyController {
   ): Promise<void> {
     const absoluteUrl = verifySignedImageUrl(this.env.IMG_SIGN_SECRET, { u, s, exp, sig });
     const width = w ? Number.parseInt(w, 10) : undefined;
-    const format = f === 'webp' || f === 'avif' ? f : undefined;
+    const format = f === IMAGE_FORMAT.webp || f === IMAGE_FORMAT.avif ? f : undefined;
 
     reply.header('Cache-Control', 'public, max-age=31536000, immutable');
 
@@ -127,7 +122,7 @@ export class ImgProxyController {
     absoluteUrl: string,
     sourceId: string,
     width: number | undefined,
-    format: 'webp' | 'avif' | undefined,
+    format: Exclude<ImageFormat, typeof IMAGE_FORMAT.orig> | undefined,
   ): Promise<TransformedImage> {
     const upstream = await this.fetchUpstream(absoluteUrl, sourceId);
     const raw = await streamToBuffer(this.decodeBody(upstream));

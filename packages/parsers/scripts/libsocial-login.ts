@@ -16,6 +16,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { resolve, join } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import { chromium, type Frame } from 'playwright';
+import { catalogEntryFor } from '../src/sources/catalog';
 import { LIBSOCIAL_CONFIGS } from '../src/sources/libsocial/config';
 import { writeTokenStore, type LibSocialTokenState } from '../src/sources/libsocial/token-store';
 
@@ -26,18 +27,18 @@ loadDotenv({ path: resolve(__dirname, '../../../apps/api/.env'), quiet: true });
 
 const LOGIN_TIMEOUT_MS = 5 * 60_000;
 
-interface TokenResponse {
+type TokenResponse = {
   token_type: string;
   expires_in: number;
   access_token: string;
   refresh_token: string;
-}
+};
 
-function base64url(buf: Buffer): string {
+const base64url = (buf: Buffer): string => {
   return buf.toString('base64url');
-}
+};
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   const sourceId = process.argv[2] ?? 'HENTAILIB';
   const cfg = LIBSOCIAL_CONFIGS.find((c) => c.id === sourceId);
   if (!cfg) {
@@ -81,7 +82,7 @@ async function main(): Promise<void> {
   const login = process.env.LIB_USERNAME;
   const password = process.env.LIB_PASSWORD;
 
-  console.log(`Открываю браузер для входа в ${cfg.title}...`);
+  console.log(`Открываю браузер для входа в ${catalogEntryFor(cfg.id).title}...`);
   console.log(
     login && password
       ? 'Логин/пароль подставлены — останется решить капчу и нажать кнопку входа.'
@@ -191,7 +192,7 @@ async function main(): Promise<void> {
   console.log(
     `Действителен до ${new Date(state_.expiresAt).toISOString()}, дальше обновляется сам.`,
   );
-}
+};
 
 main().catch((err) => {
   console.error(err instanceof Error ? err.message : err);

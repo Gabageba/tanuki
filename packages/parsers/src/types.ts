@@ -11,20 +11,35 @@
  * - id (RawManga, RawChapter): stable across process restarts — see core/uid.ts.
  */
 
+import {
+  MANGA_STATE,
+  type ContentRating,
+  type EnumLiteralsOf,
+  type SourceContentType,
+} from '@tanuki/contracts';
+
 export const RATING_UNKNOWN = -1;
 
-export type RawContentRating = 'SAFE' | 'SUGGESTIVE' | 'ADULT';
+export type RawContentRating = ContentRating;
 
-export type RawMangaState =
-  'ONGOING' | 'FINISHED' | 'ABANDONED' | 'PAUSED' | 'UPCOMING' | 'RESTRICTED';
+/**
+ * Публичные статусы (@tanuki/contracts MANGA_STATE) плюс RESTRICTED — гео-ограничение или
+ * юридическая блокировка на стороне источника. Наружу он не выходит: normalize.ts в api
+ * схлопывает его в null, чтобы не тащить редкое значение в публичный контракт.
+ */
+export const RAW_MANGA_STATE = {
+  ...MANGA_STATE,
+  RESTRICTED: 'RESTRICTED',
+} as const;
+export type RawMangaState = EnumLiteralsOf<typeof RAW_MANGA_STATE>;
 
-export interface RawTag {
+export type RawTag = {
   title: string;
   key: string;
   source: string;
-}
+};
 
-export interface RawManga {
+export type RawManga = {
   id: number;
   title: string;
   altTitles: string[];
@@ -41,9 +56,9 @@ export interface RawManga {
   /** null on list items, populated (possibly []) on getDetails. */
   chapters: RawChapter[] | null;
   source: string;
-}
+};
 
-export interface RawChapter {
+export type RawChapter = {
   id: number;
   title: string | null;
   number: number;
@@ -53,23 +68,26 @@ export interface RawChapter {
   uploadDate: number;
   branch: string | null;
   source: string;
-}
+};
 
-export interface RawPage {
+export type RawPage = {
   id: number;
   /** Absolute, pre-resolved — getPages() must not return lazy/relative page handles. */
   url: string;
   preview: string | null;
   source: string;
-}
+};
 
-export interface RawSourceInfo {
+export type RawSourceInfo = {
   id: string;
   title: string;
+  /** Host the parser is configured against — SOURCE_CATALOG[id].domains[0], no scheme. */
+  domain: string;
   locale: string;
-  contentType: string;
+  contentType: SourceContentType;
   isBroken: boolean;
+  isAdult: boolean;
   sortOrders: string[];
   isSearchSupported: boolean;
   isMultipleTagsSupported: boolean;
-}
+};

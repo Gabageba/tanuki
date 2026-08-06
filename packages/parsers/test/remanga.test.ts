@@ -69,7 +69,7 @@ const PAGES_JSON = JSON.stringify({
   ],
 });
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -77,9 +77,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register(
     (url) => url.includes('/api/v2/titles/chapters/?'),
@@ -111,7 +111,7 @@ function setUpFixtures(): FakeHttpClient {
     contentType: 'application/json',
   });
   return http;
-}
+};
 
 describe('Remanga parser conformance', () => {
   const http = setUpFixtures();

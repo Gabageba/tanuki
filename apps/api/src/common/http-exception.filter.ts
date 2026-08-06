@@ -1,6 +1,7 @@
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { Catch, HttpException, HttpStatus } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
+import { API_ERROR_CODE } from '@tanuki/contracts';
 import { ApiException } from './errors';
 
 @Catch()
@@ -24,7 +25,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const status = exception.getStatus();
       reply.status(status).send({
         error: {
-          code: status === HttpStatus.NOT_FOUND ? 'NOT_FOUND' : 'PARSER_FAILED',
+          code:
+            status === HttpStatus.NOT_FOUND
+              ? API_ERROR_CODE.NOT_FOUND
+              : API_ERROR_CODE.PARSER_FAILED,
           message: exception.message,
         },
       });
@@ -32,7 +36,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-      error: { code: 'PARSER_FAILED', message: 'Внутренняя ошибка сервера' },
+      error: { code: API_ERROR_CODE.PARSER_FAILED, message: 'Внутренняя ошибка сервера' },
     });
   }
 }

@@ -1,6 +1,16 @@
-import type { Branch, Chapter, Manga, Page, Tag } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  type Branch,
+  type Chapter,
+  type Manga,
+  type Page,
+  type Tag,
+} from '@tanuki/contracts';
+import { RAW_MANGA_STATE } from '@tanuki/parsers';
 import type { Env } from '../config/env';
 import { buildSignedImageUrl } from '../img-proxy/sign.util';
+import { IMAGE_FORMAT } from '../img-proxy/models';
+import { toServerDateTime } from './dates';
 import { encodeChapterId, encodeMangaId } from './opaque-id';
 import type {
   RawChapter,
@@ -10,38 +20,36 @@ import type {
   RawTag,
 } from '../parsers-client/parsers-client.types';
 
-const DEFAULT_CONTENT_RATING = 'SAFE' as const;
-
-function normalizeTag(raw: RawTag): Tag {
+const normalizeTag = (raw: RawTag): Tag => {
   return { id: raw.key, title: raw.title };
-}
+};
 
 // Contracts не знают о RESTRICTED (гео-ограничение/юр. блокировка на источнике) — в doc04
 // такого статуса нет. Отдаём "неизвестно" вместо расширения публичного контракта ради
 // одного редкого значения.
-function normalizeState(state: RawMangaState | null): Manga['state'] {
-  return state === null || state === 'RESTRICTED' ? null : state;
-}
+const normalizeState = (state: RawMangaState | null): Manga['state'] => {
+  return state === null || state === RAW_MANGA_STATE.RESTRICTED ? null : state;
+};
 
-export function mangaIdOf(sourceId: string, raw: Pick<RawManga, 'id' | 'url'>): string {
+export const mangaIdOf = (sourceId: string, raw: Pick<RawManga, 'id' | 'url'>): string => {
   return `${sourceId}:${encodeMangaId({ id: raw.id, url: raw.url })}`;
-}
+};
 
-export function normalizeManga(
+export const normalizeManga = (
   env: Pick<Env, 'IMG_SIGN_SECRET'>,
   sourceId: string,
   raw: RawManga,
-): Manga {
+): Manga => {
   const coverUrl = raw.coverUrl
     ? buildSignedImageUrl(env.IMG_SIGN_SECRET, sourceId, raw.coverUrl, {
         width: 360,
-        format: 'webp',
+        format: IMAGE_FORMAT.webp,
       })
     : '';
   const largeCoverUrl = raw.largeCoverUrl
     ? buildSignedImageUrl(env.IMG_SIGN_SECRET, sourceId, raw.largeCoverUrl, {
         width: 1080,
-        format: 'webp',
+        format: IMAGE_FORMAT.webp,
       })
     : null;
 
@@ -57,15 +65,15 @@ export function normalizeManga(
     authors: raw.authors,
     tags: raw.tags.map(normalizeTag),
     state: normalizeState(raw.state),
-    contentRating: raw.contentRating ?? DEFAULT_CONTENT_RATING,
+    contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
     type: null,
     rating: raw.rating >= 0 ? raw.rating : null,
     chaptersCount: raw.chapters?.length ?? null,
     publicUrl: raw.publicUrl,
   };
-}
+};
 
-export function normalizeChapter(sourceId: string, mangaId: string, raw: RawChapter): Chapter {
+export const normalizeChapter = (sourceId: string, mangaId: string, raw: RawChapter): Chapter => {
   const id = `${sourceId}:${encodeChapterId({ id: raw.id, url: raw.url, branch: raw.branch })}`;
   return {
     id,
@@ -75,33 +83,33 @@ export function normalizeChapter(sourceId: string, mangaId: string, raw: RawChap
     title: raw.title,
     branch: raw.branch,
     scanlator: raw.scanlator,
-    uploadedAt: raw.uploadDate > 0 ? new Date(raw.uploadDate).toISOString() : null,
+    uploadedAt: raw.uploadDate > 0 ? toServerDateTime(raw.uploadDate) : null,
     // Внутренний относительный url источника наружу не отдаётся (см. contracts/chapter.ts) —
     // клиенту для навигации достаточно непрозрачного id.
     url: id,
   };
-}
+};
 
-export function normalizePage(
+export const normalizePage = (
   env: Pick<Env, 'IMG_SIGN_SECRET'>,
   sourceId: string,
   index: number,
   raw: RawPage,
-): Page {
+): Page => {
   return {
     index,
     url: buildSignedImageUrl(env.IMG_SIGN_SECRET, sourceId, raw.url),
     width: null,
     height: null,
   };
-}
+};
 
-interface BranchGroup {
+type BranchGroup = {
   key: string | null;
   items: RawChapter[];
-}
+};
 
-function groupByBranch(chapters: RawChapter[]): BranchGroup[] {
+const groupByBranch = (chapters: RawChapter[]): BranchGroup[] => {
   const groups = new Map<string | null, RawChapter[]>();
   for (const chapter of chapters) {
     const list = groups.get(chapter.branch) ?? [];
@@ -116,9 +124,9 @@ function groupByBranch(chapters: RawChapter[]): BranchGroup[] {
       const freshnessB = Math.max(0, ...b.items.map((chapter) => chapter.uploadDate));
       return b.items.length - a.items.length || freshnessB - freshnessA;
     });
-}
+};
 
-export function computeBranches(chapters: RawChapter[]): Branch[] {
+export const computeBranches = (chapters: RawChapter[]): Branch[] => {
   return groupByBranch(chapters).map(({ key, items }) => {
     const freshness = Math.max(0, ...items.map((chapter) => chapter.uploadDate));
     return {
@@ -126,12 +134,12 @@ export function computeBranches(chapters: RawChapter[]): Branch[] {
       name: key,
       scanlator: items[0]?.scanlator ?? null,
       chaptersCount: items.length,
-      lastUpdatedAt: freshness > 0 ? new Date(freshness).toISOString() : null,
+      lastUpdatedAt: freshness > 0 ? toServerDateTime(freshness) : null,
     };
   });
-}
+};
 
 /** Ветка по умолчанию — самая полная и свежая (doc04, правило 2). */
-export function pickDefaultBranch(chapters: RawChapter[]): string | null {
+export const pickDefaultBranch = (chapters: RawChapter[]): string | null => {
   return groupByBranch(chapters)[0]?.key ?? null;
-}
+};

@@ -1,19 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { SOURCE_STATUS, type SourceStatus } from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
+import { BREAKER_STATE, type SourceState } from './models';
 
-type BreakerState = 'closed' | 'open' | 'half-open';
-
-interface SourceState {
-  state: BreakerState;
-  consecutiveFailures: number;
-  openedAt: number;
-  probeInFlight: boolean;
-}
-
-function initialState(): SourceState {
-  return { state: 'closed', consecutiveFailures: 0, openedAt: 0, probeInFlight: false };
-}
+const initialState = (): SourceState => {
+  return { state: BREAKER_STATE.closed, consecutiveFailures: 0, openedAt: 0, probeInFlight: false };
+};
 
 /**
  * Circuit breaker на источник: docs/03-parsers.md — "5 ошибок подряд → degraded на 10 минут".
@@ -38,7 +31,7 @@ export class SourceHealthService {
   /** true, если запрос можно попробовать выполнить прямо сейчас. */
   canAttempt(sourceId: string): boolean {
     const entry = this.stateOf(sourceId);
-    if (entry.state !== 'open') {
+    if (entry.state !== BREAKER_STATE.open) {
       return true;
     }
 
@@ -51,14 +44,14 @@ export class SourceHealthService {
       return false;
     }
 
-    entry.state = 'half-open';
+    entry.state = BREAKER_STATE.halfOpen;
     entry.probeInFlight = true;
     return true;
   }
 
   recordSuccess(sourceId: string): void {
     const entry = this.stateOf(sourceId);
-    entry.state = 'closed';
+    entry.state = BREAKER_STATE.closed;
     entry.consecutiveFailures = 0;
     entry.probeInFlight = false;
   }
@@ -67,15 +60,15 @@ export class SourceHealthService {
     const entry = this.stateOf(sourceId);
     entry.probeInFlight = false;
 
-    if (entry.state === 'half-open') {
-      entry.state = 'open';
+    if (entry.state === BREAKER_STATE.halfOpen) {
+      entry.state = BREAKER_STATE.open;
       entry.openedAt = Date.now();
       return;
     }
 
     entry.consecutiveFailures += 1;
     if (entry.consecutiveFailures >= this.env.SOURCE_BREAKER_FAILURE_THRESHOLD) {
-      entry.state = 'open';
+      entry.state = BREAKER_STATE.open;
       entry.openedAt = Date.now();
     }
   }
@@ -89,13 +82,15 @@ export class SourceHealthService {
     this.stateOf(sourceId).probeInFlight = false;
   }
 
-  getStatus(sourceId: string): 'ok' | 'degraded' {
-    return this.stateOf(sourceId).state === 'closed' ? 'ok' : 'degraded';
+  getStatus(sourceId: string): SourceStatus {
+    return this.stateOf(sourceId).state === BREAKER_STATE.closed
+      ? SOURCE_STATUS.ok
+      : SOURCE_STATUS.degraded;
   }
 
   getRetryAfterSeconds(sourceId: string): number {
     const entry = this.stateOf(sourceId);
-    if (entry.state !== 'open') {
+    if (entry.state !== BREAKER_STATE.open) {
       return 0;
     }
     const remainingMs = entry.openedAt + this.env.SOURCE_BREAKER_RESET_MS - Date.now();

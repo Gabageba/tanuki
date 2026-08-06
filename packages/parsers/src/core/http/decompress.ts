@@ -5,7 +5,7 @@ import { brotliDecompressSync, gunzipSync, inflateSync } from 'node:zlib';
  * (e.g. static.desu.uno behind ddos-guard) send gzip regardless of Accept-Encoding — without
  * this, callers get raw compressed bytes labeled as html/json/image.
  */
-export function decompress(bytes: Buffer, contentEncoding: string | undefined): Buffer {
+export const decompress = (bytes: Buffer, contentEncoding: string | undefined): Buffer => {
   switch (contentEncoding) {
     case 'gzip':
     case 'x-gzip':
@@ -17,4 +17,4 @@ export function decompress(bytes: Buffer, contentEncoding: string | undefined): 
     default:
       return bytes;
   }
-}
+};

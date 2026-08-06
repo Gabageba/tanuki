@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { planWindow, fetchPaged, fetchOffsetNative } from '../src/core/paging';
 import type { RawManga } from '../src/types';
 
-function manga(id: number): RawManga {
+const manga = (id: number): RawManga => {
   return {
     id,
     title: `Manga ${id}`,
@@ -20,7 +20,7 @@ function manga(id: number): RawManga {
     chapters: null,
     source: 'TEST',
   };
-}
+};
 
 describe('planWindow', () => {
   // Table mirrors the real per-source native page sizes from the fork, verified in

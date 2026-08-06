@@ -1,16 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
+import type { SourceQueue } from './models';
 
 export class QueueOverflowError extends Error {
   constructor(public readonly sourceId: string) {
     super(`Too many queued requests for source ${sourceId}`);
   }
-}
-
-interface SourceQueue {
-  active: number;
-  queue: Array<() => void>;
 }
 
 /**

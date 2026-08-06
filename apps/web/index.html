@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tanuki</title>
+    <script>
+      // Выставляем схему до первой отрисовки, иначе у пользователя с тёмной темой
+      // успевает моргнуть светлый фон. Ключ и значение по умолчанию продублированы
+      // из src/app/components/Providers/models.ts.
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('tanuki-color-scheme');
+          var scheme =
+            stored === 'light' || stored === 'dark' || stored === 'auto' ? stored : 'auto';
+          var computed =
+            scheme !== 'auto'
+              ? scheme
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.setAttribute('data-mantine-color-scheme', computed);
+        } catch (error) {
+          // localStorage может быть недоступен (приватный режим) — тогда схему выставит Mantine.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

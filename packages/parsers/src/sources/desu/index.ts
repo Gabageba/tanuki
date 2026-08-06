@@ -1,5 +1,7 @@
 import type { Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import { RAW_MANGA_STATE } from '../../types';
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -25,25 +27,25 @@ const READER_PREFIX_REGEX = /prefix:\s*"([^"]*)"/;
 const READER_IMAGE_REGEX = /\[\s*"([^"]+)"\s*,\s*\d+\s*,\s*\d+\s*]/g;
 const CSS_URL_REGEX = /url\((['"]?)([^'")]+)\1\)/;
 
-function toRelativePath(href: string): string {
+const toRelativePath = (href: string): string => {
   return href.startsWith('/') ? href : `/${href}`;
-}
+};
 
-function extractCssUrl(css: string): string | null {
+const extractCssUrl = (css: string): string | null => {
   return CSS_URL_REGEX.exec(css)?.[2] ?? null;
-}
+};
 
-function toLargeCoverUrl(coverUrl: string): string {
+const toLargeCoverUrl = (coverUrl: string): string => {
   return coverUrl.replace(/\/(preview|snippet|x120)\//, '/original/');
-}
+};
 
-function mangaStateByClass(cls: string | null): RawMangaState | null {
-  if (cls === 'ongoing') return 'ONGOING';
-  if (cls === 'released' || cls === 'completed') return 'FINISHED';
+const mangaStateByClass = (cls: string | null): RawMangaState | null => {
+  if (cls === 'ongoing') return RAW_MANGA_STATE.ONGOING;
+  if (cls === 'released' || cls === 'completed') return RAW_MANGA_STATE.FINISHED;
   return null;
-}
+};
 
-function getSortKey(order: string | undefined): string {
+const getSortKey = (order: string | undefined): string => {
   switch (order) {
     case 'ALPHABETICAL':
       return 'name';
@@ -54,10 +56,10 @@ function getSortKey(order: string | undefined): string {
     default:
       return 'updated';
   }
-}
+};
 
 /** dl.pairsInline label/value pairs, e.g. "Жанры:" / "Рейтинг:" on catalog cards. */
-function pairValue($li: Cheerio<AnyNode>, label: string): string | null {
+const pairValue = ($li: Cheerio<AnyNode>, label: string): string | null => {
   const pairs = $li.find('dl.pairsInline').toArray();
   for (const el of pairs) {
     const $pair = $li.find(el);
@@ -66,10 +68,10 @@ function pairValue($li: Cheerio<AnyNode>, label: string): string | null {
     }
   }
   return null;
-}
+};
 
 /** .line-container .line label/value rows on the details page, e.g. "Статус:". */
-function detailValue($root: Cheerio<AnyNode>, label: string): Cheerio<AnyNode> | null {
+const detailValue = ($root: Cheerio<AnyNode>, label: string): Cheerio<AnyNode> | null => {
   const lines = $root.find('.line-container .line').toArray();
   for (const el of lines) {
     const $line = $root.find(el);
@@ -78,18 +80,18 @@ function detailValue($root: Cheerio<AnyNode>, label: string): Cheerio<AnyNode> |
     }
   }
   return null;
-}
+};
 
-export function createDesuParser(ctx: ParserContext): Parser {
+export const createDesuParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let tagsPromise: Promise<Map<string, RawTag>> | null = null;
 
-  function getTagsMap(): Promise<Map<string, RawTag>> {
+  const getTagsMap = (): Promise<Map<string, RawTag>> => {
     if (!tagsPromise) tagsPromise = fetchTags();
     return tagsPromise;
-  }
+  };
 
-  async function fetchTags(): Promise<Map<string, RawTag>> {
+  const fetchTags = async (): Promise<Map<string, RawTag>> => {
     const doc = await ctx.http.getHtml(`https://${domain}/manga/`);
     const filterRoot = selectFirstOrThrow(doc.$.root(), '#animeFilter', SOURCE_ID, 'fetchTags');
     const genresRoot = selectFirstOrThrow(filterRoot, '.catalog-genres', SOURCE_ID, 'fetchTags');
@@ -108,21 +110,21 @@ export function createDesuParser(ctx: ParserContext): Parser {
         result.set(title, { source: SOURCE_ID, key: `${id}-${slug}`, title });
       });
     return result;
-  }
+  };
 
-  function parseTagFromLink($a: Cheerio<AnyNode>): RawTag | null {
+  const parseTagFromLink = ($a: Cheerio<AnyNode>): RawTag | null => {
     const href = attrOrNull($a, 'href') ?? '';
     const key = nullIfEmpty(href.split('genres=')[1]?.split('&')[0] ?? '');
     const title = nullIfEmpty((textOrNull($a) ?? '').replace(/^#/, '').trim());
     if (!key || !title) return null;
     return { key, title: toTitleCase(title), source: SOURCE_ID };
-  }
+  };
 
-  function parseMangaItem(
+  const parseMangaItem = (
     $li: Cheerio<AnyNode>,
     baseUrl: string,
     tagsMap: Map<string, RawTag>,
-  ): RawManga | null {
+  ): RawManga | null => {
     const titleLink = $li.find('h3 a.animeTitle').first();
     const href = attrOrNull(titleLink, 'href');
     if (!href) return null;
@@ -150,7 +152,7 @@ export function createDesuParser(ctx: ParserContext): Parser {
       url,
       publicUrl: new URL(url, baseUrl).toString(),
       rating: rating !== null ? Math.min(Math.max(rating / 10, 0), 1) : RATING_UNKNOWN,
-      contentRating: avatarLink.hasClass('age_18_plus') ? 'ADULT' : null,
+      contentRating: avatarLink.hasClass('age_18_plus') ? CONTENT_RATING.ADULT : null,
       coverUrl,
       largeCoverUrl: coverUrl ? toLargeCoverUrl(coverUrl) : null,
       tags,
@@ -160,10 +162,10 @@ export function createDesuParser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
   /** Quick-search results carry only cover + two title variants — getDetails fills the rest. */
-  function parseSearchItem($li: Cheerio<AnyNode>, baseUrl: string): RawManga | null {
+  const parseSearchItem = ($li: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
     const $a = $li.find('a').first();
     const href = attrOrNull($a, 'href');
     if (!href) return null;
@@ -191,9 +193,9 @@ export function createDesuParser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  function parseChapterItem($li: Cheerio<AnyNode>): RawChapter | null {
+  const parseChapterItem = ($li: Cheerio<AnyNode>): RawChapter | null => {
     const $a = $li.find('h4 a').first();
     const hrefRaw = attrOrNull($a, 'href');
     if (!hrefRaw) return null;
@@ -217,9 +219,9 @@ export function createDesuParser(ctx: ParserContext): Parser {
       scanlator: null,
       branch: null,
     };
-  }
+  };
 
-  async function search(query: string): Promise<RawManga[]> {
+  const search = async (query: string): Promise<RawManga[]> => {
     const res = await ctx.http.postForm(
       `https://${domain}/manga/search/`,
       { q: query, _xfToken: '', _xfNoRedirect: '1', _xfResponseType: 'json' },
@@ -238,9 +240,9 @@ export function createDesuParser(ctx: ParserContext): Parser {
       .toArray()
       .map((el) => parseSearchItem(doc.$(el), doc.baseUrl))
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  async function fetchCatalogPage(page: number, order: string | undefined): Promise<RawManga[]> {
+  const fetchCatalogPage = async (page: number, order: string | undefined): Promise<RawManga[]> => {
     const url = new URL(`https://${domain}/manga/`);
     const orderBy = getSortKey(order);
     if (orderBy !== 'updated') url.searchParams.set('order_by', orderBy);
@@ -251,18 +253,18 @@ export function createDesuParser(ctx: ParserContext): Parser {
       .toArray()
       .map((el) => parseMangaItem(doc.$(el), doc.baseUrl, tagsMap))
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, async (page) => {
       if (params.query) {
         return page === 1 ? search(params.query!) : [];
       }
       return fetchCatalogPage(page, params.order);
     });
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = new URL(mangaUrl, `https://${domain}/`).toString();
     const doc = await ctx.http.getHtml(absoluteUrl);
     const root = doc.$.root();
@@ -331,9 +333,9 @@ export function createDesuParser(ctx: ParserContext): Parser {
       chapters,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const absoluteUrl = new URL(chapterUrl, `https://${domain}/`).toString();
     const doc = await ctx.http.getHtml(absoluteUrl);
     const script = doc
@@ -360,16 +362,18 @@ export function createDesuParser(ctx: ParserContext): Parser {
         source: SOURCE_ID,
       };
     });
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'Desu',
+      domain,
       locale: 'ru',
-      contentType: 'MANGA',
+      contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
+      isAdult: false,
       sortOrders: ['UPDATED', 'POPULARITY', 'NEWEST', 'ALPHABETICAL'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -379,4 +383,4 @@ export function createDesuParser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: IMAGE_REFERER, 'User-Agent': UserAgents.KOTATSU }),
   };
-}
+};

@@ -1,3 +1,4 @@
+import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -13,7 +14,7 @@ const SOURCE_ID = 'ACOMICS';
 const PAGE_SIZE = 10;
 const FIRST_PAGE = 0;
 
-function getSortKey(order: string | undefined): string {
+const getSortKey = (order: string | undefined): string => {
   switch (order) {
     case 'ALPHABETICAL':
       return 'serial_name';
@@ -22,20 +23,20 @@ function getSortKey(order: string | undefined): string {
     default:
       return 'last_update';
   }
-}
+};
 
-export function createAComicsParser(ctx: ParserContext): Parser {
+export const createAComicsParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let tagsPromise: Promise<Map<string, RawTag>> | null = null;
 
   void ctx.jar.setCookie(`ageRestrict=18; Domain=${domain}; Path=/`, `https://${domain}/`);
 
-  function getTagMap(): Promise<Map<string, RawTag>> {
+  const getTagMap = (): Promise<Map<string, RawTag>> => {
     tagsPromise ??= fetchTagMap();
     return tagsPromise;
-  }
+  };
 
-  async function fetchTagMap(): Promise<Map<string, RawTag>> {
+  const fetchTagMap = async (): Promise<Map<string, RawTag>> => {
     const doc = await ctx.http.getHtml(`https://${domain}/comics`);
     const map = new Map<string, RawTag>();
     doc
@@ -51,13 +52,13 @@ export function createAComicsParser(ctx: ParserContext): Parser {
         map.set(name, { title: name, key, source: SOURCE_ID });
       });
     return map;
-  }
+  };
 
-  async function fetchListPage(
+  const fetchListPage = async (
     page: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<RawManga[]> {
+  ): Promise<RawManga[]> => {
     let url: string;
     if (query) {
       if (page > 0) return [];
@@ -101,15 +102,15 @@ export function createAComicsParser(ctx: ParserContext): Parser {
         };
       })
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: FIRST_PAGE }, (page) =>
       fetchListPage(page, params.order, params.query),
     );
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const tagMap = await getTagMap();
@@ -162,14 +163,14 @@ export function createAComicsParser(ctx: ParserContext): Parser {
       ],
       source: SOURCE_ID,
     };
-  }
+  };
 
   /**
    * Unlike the fork (which resolves each page's image lazily via a separate `getPageUrl`
    * step), this package's `RawPage.url` must already be absolute and pre-resolved — so every
    * page's own HTML has to be fetched up front here instead of on demand.
    */
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const base = toAbsoluteUrl(chapterUrl, domain);
     const firstDoc = await ctx.http.getHtml(`${base}1`);
     const counterText = textOrNull(firstDoc.$('span.issueNumber').first());
@@ -188,16 +189,18 @@ export function createAComicsParser(ctx: ParserContext): Parser {
       pages.push({ id: generateUid(SOURCE_ID, url), url, preview: null, source: SOURCE_ID });
     }
     return pages;
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'AComics',
+      domain,
       locale: 'ru',
-      contentType: 'COMICS',
+      contentType: SOURCE_CONTENT_TYPE.comics,
       isBroken: true,
+      isAdult: false,
       sortOrders: ['UPDATED', 'ALPHABETICAL', 'POPULARITY'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -207,4 +210,4 @@ export function createAComicsParser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

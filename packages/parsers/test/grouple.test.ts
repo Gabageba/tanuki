@@ -9,9 +9,7 @@ const DOMAIN = 'mintmanga.example';
 
 const CFG: GroupleConfig = {
   id: 'MINTMANGA',
-  title: 'MintManga',
   siteId: 2,
-  domains: [DOMAIN],
   authGateway: '3.grouple.co',
   isNsfw: false,
 };
@@ -71,7 +69,7 @@ const PAGES_HTML = `<!doctype html><html><body>
   </script>
 </body></html>`;
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -79,9 +77,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/search/advancedResults?'), {
     status: 200,
@@ -93,7 +91,7 @@ function setUpFixtures(): FakeHttpClient {
   });
   http.register((url) => url.includes('/vol1/1'), { status: 200, body: PAGES_HTML });
   return http;
-}
+};
 
 describe('Grouple parser conformance', () => {
   const http = setUpFixtures();

@@ -1,5 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -22,7 +23,7 @@ const SOURCE_ID = 'SEXKOMIX2';
  */
 const PAGE_SIZE = 23;
 
-function getSortKey(order: string | undefined): string {
+const getSortKey = (order: string | undefined): string => {
   switch (order) {
     case 'POPULARITY':
       return 'prosmotr';
@@ -31,10 +32,10 @@ function getSortKey(order: string | undefined): string {
     default:
       return 'date';
   }
-}
+};
 
 /** Dedupes by the tag's own `tag_pagex` slug — the same tag can appear on multiple `<a>`s. */
-function parseTagLinks($links: Cheerio<AnyNode>, $: CheerioAPI): RawTag[] {
+const parseTagLinks = ($links: Cheerio<AnyNode>, $: CheerioAPI): RawTag[] => {
   const seen = new Set<string>();
   const tags: RawTag[] = [];
   $links.toArray().forEach((el) => {
@@ -48,7 +49,7 @@ function parseTagLinks($links: Cheerio<AnyNode>, $: CheerioAPI): RawTag[] {
     tags.push({ title, key, source: SOURCE_ID });
   });
   return tags;
-}
+};
 
 /**
  * The page markup has *three* `<ul id="comix_directory">` (duplicate, non-unique ids): a VIP
@@ -58,20 +59,20 @@ function parseTagLinks($links: Cheerio<AnyNode>, $: CheerioAPI): RawTag[] {
  * /search (no promo carousel there) and second on /home, but always the last one not nested
  * in `#more_comics_directory`.
  */
-function findCatalogList($: CheerioAPI): Cheerio<AnyNode> {
+const findCatalogList = ($: CheerioAPI): Cheerio<AnyNode> => {
   return $('ul#comix_directory')
     .filter((_, el) => $(el).parents('#more_comics_directory').length === 0)
     .last();
-}
+};
 
-export function createSexKomix2Parser(ctx: ParserContext): Parser {
+export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
 
-  function parseMangaTile(
+  const parseMangaTile = (
     $item: Cheerio<AnyNode>,
     $: CheerioAPI,
     baseUrl: string,
-  ): RawManga | null {
+  ): RawManga | null => {
     const $a = $item.find('a').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -90,7 +91,7 @@ export function createSexKomix2Parser(ctx: ParserContext): Parser {
       url: relUrl,
       publicUrl,
       rating: RATING_UNKNOWN,
-      contentRating: 'ADULT',
+      contentRating: CONTENT_RATING.ADULT,
       coverUrl,
       tags: parseTagLinks($item.find('ul.tags_ul a'), $),
       state: null,
@@ -100,13 +101,13 @@ export function createSexKomix2Parser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function fetchListPage(
+  const fetchListPage = async (
     page: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<RawManga[]> {
+  ): Promise<RawManga[]> => {
     const sort = getSortKey(order);
     const path = query
       ? `/search/?lang=ru&q=${encodeURIComponent(query)}&sort=${sort}&page=${page}`
@@ -117,33 +118,33 @@ export function createSexKomix2Parser(ctx: ParserContext): Parser {
       .toArray()
       .map((el) => parseMangaTile(doc.$(el), doc.$, doc.baseUrl))
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.order, params.query),
     );
-  }
+  };
 
   /** "Студия:" / "Переводчик:" are two `.studio_translator_box` blocks; value is the sibling link's text. */
-  function findStudioTranslatorValue($: CheerioAPI, label: string): string | null {
+  const findStudioTranslatorValue = ($: CheerioAPI, label: string): string | null => {
     const $label = $('.studio_translator')
       .toArray()
       .map((el) => $(el))
       .find((el) => (textOrNull(el) ?? '').includes(label));
     if (!$label) return null;
     return nullIfEmpty(textOrNull($label.siblings('.link_button').find('a').first()));
-  }
+  };
 
-  function findDescriptionHtml($: CheerioAPI): string | null {
+  const findDescriptionHtml = ($: CheerioAPI): string | null => {
     const $box = $('#comix_description .info_box')
       .toArray()
       .map((el) => $(el))
       .find((el) => (textOrNull(el) ?? '').startsWith('Описание'));
     return $box ? $box.find('p').first().html() : null;
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
 
@@ -166,7 +167,7 @@ export function createSexKomix2Parser(ctx: ParserContext): Parser {
       url: mangaUrl,
       publicUrl: absoluteUrl,
       rating: RATING_UNKNOWN,
-      contentRating: 'ADULT',
+      contentRating: CONTENT_RATING.ADULT,
       coverUrl: null,
       largeCoverUrl,
       tags,
@@ -188,9 +189,9 @@ export function createSexKomix2Parser(ctx: ParserContext): Parser {
       ],
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const absoluteUrl = toAbsoluteUrl(chapterUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const seen = new Set<string>();
@@ -205,16 +206,18 @@ export function createSexKomix2Parser(ctx: ParserContext): Parser {
     });
     if (pages.length === 0) throw new ParseError('No pages found', SOURCE_ID);
     return pages;
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'SexKomix2',
+      domain,
       locale: 'ru',
-      contentType: 'COMICS',
+      contentType: SOURCE_CONTENT_TYPE.comics,
       isBroken: false,
+      isAdult: true,
       sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -224,4 +227,4 @@ export function createSexKomix2Parser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

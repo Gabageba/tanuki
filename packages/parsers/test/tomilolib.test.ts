@@ -44,7 +44,7 @@ const PAGES_JSON = JSON.stringify({
   data: { pages: ['/chapters/ch-1/001.webp', '/chapters/ch-1/002.webp'] },
 });
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -52,9 +52,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/api/chapters/ch-1'), {
     status: 200,
@@ -72,7 +72,7 @@ function setUpFixtures(): FakeHttpClient {
     contentType: 'application/json',
   });
   return http;
-}
+};
 
 describe('TomiloLib parser conformance', () => {
   const http = setUpFixtures();

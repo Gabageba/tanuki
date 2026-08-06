@@ -1,4 +1,4 @@
-export interface MultpornConfig {
+export type MultpornConfig = {
   id: string;
   /** Drupal content-type filter value for the `/new?type=` browse listing. */
   typeParam: string;
@@ -12,7 +12,7 @@ export interface MultpornConfig {
   detailTagSelector: string;
   /** Detail-page author selector — Comics and Hentai manga use separate author taxonomies. */
   authorSelector: string;
-}
+};
 
 // title/domains/contentType live in SOURCE_CATALOG (../catalog) — look them up by id, don't
 // duplicate here.

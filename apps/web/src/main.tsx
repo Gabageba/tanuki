@@ -1,8 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Providers } from './app/providers';
-import { AppRouter } from './app/router';
-
+import { Notifications } from '@mantine/notifications';
+import Providers from './app/components/Providers';
 import './styles/global.scss';
 
 const rootElement = document.getElementById('root');
@@ -13,7 +12,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <Providers>
-      <AppRouter />
+      <Notifications />
     </Providers>
   </StrictMode>,
 );

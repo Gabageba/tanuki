@@ -1,14 +1,14 @@
 import { Badge, Card, Image, Text } from '@mantine/core';
-import type { Manga } from '@tanuki/contracts';
 import { Link } from 'react-router';
+import type { Manga } from '@tanuki/contracts';
 import styles from './MangaCard.module.scss';
 
-interface MangaCardProps {
+type Props = {
   manga: Manga;
   showSource?: boolean;
-}
+};
 
-export default function MangaCard({ manga, showSource = false }: MangaCardProps) {
+function MangaCard({ manga, showSource = false }: Props) {
   return (
     <Card
       component={Link}
@@ -27,7 +27,7 @@ export default function MangaCard({ manga, showSource = false }: MangaCardProps)
           className={styles.cover}
         />
         {showSource && (
-          <Badge className={styles.sourceBadge} size="sm" variant="filled">
+          <Badge className={styles.sourceBadge} size="sm" variant="filled" ff="monospace">
             {manga.sourceId}
           </Badge>
         )}
@@ -38,3 +38,5 @@ export default function MangaCard({ manga, showSource = false }: MangaCardProps)
     </Card>
   );
 }
+
+export default MangaCard;

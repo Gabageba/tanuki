@@ -6,11 +6,11 @@ import type {
   Interceptor,
 } from '../../src/core/http/client';
 
-export interface FixtureResponse {
+export type FixtureResponse = {
   status: number;
   body: string;
   contentType?: string;
-}
+};
 
 /**
  * `body` lets a rule disambiguate requests that share a URL (e.g. a single GraphQL endpoint

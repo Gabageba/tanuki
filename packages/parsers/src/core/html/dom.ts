@@ -3,12 +3,12 @@ import iconv from 'iconv-lite';
 
 const DEFAULT_CHARSET = 'utf-8';
 
-export interface Doc {
+export type Doc = {
   $: cheerio.CheerioAPI;
   baseUrl: string;
-}
+};
 
-function sniffCharset(bytes: Buffer, contentType: string | undefined): string {
+const sniffCharset = (bytes: Buffer, contentType: string | undefined): string => {
   const headerMatch = contentType ? /charset=([\w-]+)/i.exec(contentType) : null;
   if (headerMatch) return headerMatch[1]!.toLowerCase();
 
@@ -20,7 +20,7 @@ function sniffCharset(bytes: Buffer, contentType: string | undefined): string {
   if (metaMatch) return metaMatch[1]!.toLowerCase();
 
   return DEFAULT_CHARSET;
-}
+};
 
 /**
  * Some RU forum engines (multichan/DLE sites: MANGACHAN, HENCHAN, YAOICHAN, NUDEMOON) serve
@@ -28,7 +28,7 @@ function sniffCharset(bytes: Buffer, contentType: string | undefined): string {
  * no exception, just garbage text — so charset must be sniffed from Content-Type first, then
  * <meta charset>, before falling back to UTF-8.
  */
-export function decodeBytes(bytes: Buffer, contentType: string | undefined): string {
+export const decodeBytes = (bytes: Buffer, contentType: string | undefined): string => {
   const charset = sniffCharset(bytes, contentType);
   if (charset === 'utf-8' || charset === 'utf8') {
     return bytes.toString('utf-8');
@@ -37,8 +37,8 @@ export function decodeBytes(bytes: Buffer, contentType: string | undefined): str
     return bytes.toString('utf-8');
   }
   return iconv.decode(bytes, charset);
-}
+};
 
-export function parseHtml(html: string, baseUrl: string): Doc {
+export const parseHtml = (html: string, baseUrl: string): Doc => {
   return { $: cheerio.load(html), baseUrl };
-}
+};

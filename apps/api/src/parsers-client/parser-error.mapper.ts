@@ -23,7 +23,7 @@ import {
  * pure type-to-exception mapping with no heuristics (those live in
  * @tanuki/parsers's classify.ts, applied against the real upstream response).
  */
-export function toApiException(error: unknown, sourceId: string): ApiException {
+export const toApiException = (error: unknown, sourceId: string): ApiException => {
   if (error instanceof SourceBlockedError) return new SourceBlockedException(sourceId);
   if (error instanceof NotFoundError) return new NotFoundApiException();
   if (error instanceof SourceTokenExpiredError) return new SourceTokenExpiredException(sourceId);
@@ -32,4 +32,4 @@ export function toApiException(error: unknown, sourceId: string): ApiException {
   if (error instanceof ParseError) return new ParserFailedException(error.message, sourceId);
   if (error instanceof UnknownSourceError) return new NotFoundApiException();
   return new ParserFailedException(undefined, sourceId);
-}
+};

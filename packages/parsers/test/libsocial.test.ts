@@ -11,9 +11,7 @@ const SLUG = '123--one-piece';
 
 const CFG: LibSocialConfig = {
   id: 'MANGALIB',
-  title: 'MangaLib',
   siteId: 1,
-  domains: [DOMAIN],
   isNsfw: false,
   authRequiredOnMissingPages: true,
 };
@@ -111,7 +109,7 @@ const PAGES_JSON = JSON.stringify({
   },
 });
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -119,9 +117,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/chapters'), {
     status: 200,
@@ -149,7 +147,7 @@ function setUpFixtures(): FakeHttpClient {
     contentType: 'application/json',
   });
   return http;
-}
+};
 
 describe('LibSocial parser conformance', () => {
   const http = setUpFixtures();

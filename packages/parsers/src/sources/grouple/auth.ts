@@ -22,14 +22,14 @@ const loginPromises = new WeakMap<CookieJar, Promise<void>>();
 // authenticateAllHentai below), so it gets its own memoization keyed off the same jar.
 const qawaLoginPromises = new WeakMap<CookieJar, Promise<void>>();
 
-interface GatewayLoginParams {
+type GatewayLoginParams = {
   gateway: string;
   siteId: number;
   fanOutDomains: readonly string[];
   /** Cookie names that count as proof of auth, checked in order; the first match is fanned out. */
   authCookieNames: readonly string[];
   label: string;
-}
+};
 
 /**
  * Posts credentials to a Grouple-family SSO gateway's login endpoint, then reads back
@@ -38,13 +38,13 @@ interface GatewayLoginParams {
  * the main network login and AllHentai's separate qawa.org login below — same login form
  * shape, different gateway/siteId/domains.
  */
-async function performGatewayLogin(
+const performGatewayLogin = async (
   http: HttpClient,
   jar: CookieJar,
   params: GatewayLoginParams,
   credentials: GroupleCredentials,
   logger: Logger,
-): Promise<void> {
+): Promise<void> => {
   const { gateway, siteId, fanOutDomains, authCookieNames, label } = params;
   const loginUrl = `https://${gateway}/login/authenticate?ttt=${Date.now()}&siteId=${siteId}`;
 
@@ -89,7 +89,7 @@ async function performGatewayLogin(
     );
   }
   logger.info(`${label} SSO session established for ${fanOutDomains.length} domains`);
-}
+};
 
 /**
  * Logs in through the main Grouple network's SSO gateway and fans the resulting `gwt` JWT
@@ -103,12 +103,12 @@ async function performGatewayLogin(
  * AllHentai is excluded from FAN_OUT_DOMAINS — it uses a separate qawa.org gateway, see
  * authenticateAllHentai below.
  */
-export function authenticateGrouple(
+export const authenticateGrouple = (
   http: HttpClient,
   jar: CookieJar,
   credentials: GroupleCredentials | undefined,
   logger: Logger,
-): Promise<void> {
+): Promise<void> => {
   if (!credentials) return Promise.resolve();
   const cached = loginPromises.get(jar);
   if (cached) return cached;
@@ -127,7 +127,7 @@ export function authenticateGrouple(
   );
   loginPromises.set(jar, promise);
   return promise;
-}
+};
 
 /**
  * Logs in through AllHentai's own qawa.org SSO gateway. Separate from the main network login
@@ -136,13 +136,13 @@ export function authenticateGrouple(
  * hand back `remember_me` instead of `gwt` in some cases (see GroupleConfig.extraAuthCookies),
  * so both cookie names are accepted here.
  */
-export function authenticateAllHentai(
+export const authenticateAllHentai = (
   http: HttpClient,
   jar: CookieJar,
   cfg: GroupleConfig,
   credentials: GroupleCredentials | undefined,
   logger: Logger,
-): Promise<void> {
+): Promise<void> => {
   if (!credentials) return Promise.resolve();
   const cached = qawaLoginPromises.get(jar);
   if (cached) return cached;
@@ -161,4 +161,4 @@ export function authenticateAllHentai(
   );
   qawaLoginPromises.set(jar, promise);
   return promise;
-}
+};

@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import type { ApiErrorCode } from '@tanuki/contracts';
+import { API_ERROR_CODE, type ApiErrorCode } from '@tanuki/contracts';
 
 export class ApiException extends HttpException {
   constructor(
@@ -16,7 +16,7 @@ export class ApiException extends HttpException {
 export class SourceUnavailableException extends ApiException {
   constructor(sourceId?: string, retryAfter = 30) {
     super(
-      'SOURCE_UNAVAILABLE',
+      API_ERROR_CODE.SOURCE_UNAVAILABLE,
       'Источник недоступен',
       HttpStatus.SERVICE_UNAVAILABLE,
       sourceId,
@@ -27,7 +27,12 @@ export class SourceUnavailableException extends ApiException {
 
 export class SourceBlockedException extends ApiException {
   constructor(sourceId?: string) {
-    super('SOURCE_BLOCKED', 'Источник вернул антибот-челлендж', HttpStatus.BAD_GATEWAY, sourceId);
+    super(
+      API_ERROR_CODE.SOURCE_BLOCKED,
+      'Источник вернул антибот-челлендж',
+      HttpStatus.BAD_GATEWAY,
+      sourceId,
+    );
   }
 }
 
@@ -40,7 +45,12 @@ export class SourceBlockedException extends ApiException {
 // для отдельных глав.
 export class SourceAuthRequiredException extends ApiException {
   constructor(sourceId?: string) {
-    super('SOURCE_AUTH_REQUIRED', 'Источник требует авторизации', HttpStatus.BAD_GATEWAY, sourceId);
+    super(
+      API_ERROR_CODE.SOURCE_AUTH_REQUIRED,
+      'Источник требует авторизации',
+      HttpStatus.BAD_GATEWAY,
+      sourceId,
+    );
   }
 }
 
@@ -52,7 +62,7 @@ export class SourceAuthRequiredException extends ApiException {
 export class SourceTokenExpiredException extends ApiException {
   constructor(sourceId?: string) {
     super(
-      'SOURCE_TOKEN_EXPIRED',
+      API_ERROR_CODE.SOURCE_TOKEN_EXPIRED,
       'Сохранённая сессия источника истекла, требуется повторный вход',
       HttpStatus.BAD_GATEWAY,
       sourceId,
@@ -62,26 +72,26 @@ export class SourceTokenExpiredException extends ApiException {
 
 export class ParserFailedException extends ApiException {
   constructor(message = 'Парсер не смог разобрать ответ источника', sourceId?: string) {
-    super('PARSER_FAILED', message, HttpStatus.BAD_GATEWAY, sourceId);
+    super(API_ERROR_CODE.PARSER_FAILED, message, HttpStatus.BAD_GATEWAY, sourceId);
   }
 }
 
 export class NotFoundApiException extends ApiException {
   constructor(message = 'Не найдено') {
-    super('NOT_FOUND', message, HttpStatus.NOT_FOUND);
+    super(API_ERROR_CODE.NOT_FOUND, message, HttpStatus.NOT_FOUND);
   }
 }
 
 export class InvalidSignatureException extends ApiException {
   constructor() {
-    super('INVALID_SIGNATURE', 'Некорректная подпись у /img', HttpStatus.FORBIDDEN);
+    super(API_ERROR_CODE.INVALID_SIGNATURE, 'Некорректная подпись у /img', HttpStatus.FORBIDDEN);
   }
 }
 
 export class RateLimitedException extends ApiException {
   constructor(sourceId?: string, retryAfter = 5) {
     super(
-      'RATE_LIMITED',
+      API_ERROR_CODE.RATE_LIMITED,
       'Слишком много запросов к источнику, попробуйте позже',
       HttpStatus.TOO_MANY_REQUESTS,
       sourceId,

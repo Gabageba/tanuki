@@ -1,3 +1,5 @@
+import { RAW_MANGA_STATE } from '../../types';
+import { CONTENT_RATING } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchCursorPaged } from '../../core/paging';
@@ -23,42 +25,42 @@ const URL_DELIMITER = ',,';
 // from the config, not the domain.
 const LIST_MAX_PAGE_SIZE = 100;
 
-interface LocalizedText {
+type LocalizedText = {
   lang?: string;
   content?: string;
-}
+};
 
-interface LocalizedDescription {
+type LocalizedDescription = {
   lang?: string;
   description?: string;
-}
+};
 
-interface CoverJson {
+type CoverJson = {
   original?: { url?: string };
-}
+};
 
-interface LabelJson {
+type LabelJson = {
   slug?: string;
   titles?: LocalizedText[];
-}
+};
 
-interface MangaCardJson {
+type MangaCardJson = {
   id?: string;
   slug?: string;
   titles?: LocalizedText[];
   cover?: CoverJson;
-}
+};
 
-interface MangaInfoJson extends MangaCardJson {
+type MangaInfoJson = MangaCardJson & {
   alternativeNames?: LocalizedText[];
   localizations?: LocalizedDescription[];
   status?: string;
   rating?: string;
   labels?: LabelJson[];
   mainStaff?: { person?: { name?: string } }[];
-}
+};
 
-interface ChapterJson {
+type ChapterJson = {
   id?: string;
   slug?: string;
   teamIds?: string[];
@@ -66,45 +68,45 @@ interface ChapterJson {
   volume?: string;
   name?: string;
   createdAt?: string;
-}
+};
 
-interface TeamJson {
+type TeamJson = {
   id?: string;
   name?: string;
-}
+};
 
-function parseState(raw: string | undefined): RawMangaState | null {
+const parseState = (raw: string | undefined): RawMangaState | null => {
   switch (raw?.toUpperCase()) {
     case 'FINISHED':
-      return 'FINISHED';
+      return RAW_MANGA_STATE.FINISHED;
     case 'ONGOING':
-      return 'ONGOING';
+      return RAW_MANGA_STATE.ONGOING;
     case 'HIATUS':
-      return 'PAUSED';
+      return RAW_MANGA_STATE.PAUSED;
     case 'ANNOUNCE':
-      return 'UPCOMING';
+      return RAW_MANGA_STATE.UPCOMING;
     case 'CANCELLED':
-      return 'ABANDONED';
+      return RAW_MANGA_STATE.ABANDONED;
     default:
       return null;
   }
-}
+};
 
-function parseContentRating(raw: string | undefined): RawContentRating | null {
+const parseContentRating = (raw: string | undefined): RawContentRating | null => {
   switch (raw?.toUpperCase()) {
     case 'EXPLICIT':
-      return 'ADULT';
+      return CONTENT_RATING.ADULT;
     case 'QUESTIONABLE':
     case 'SENSITIVE':
-      return 'SUGGESTIVE';
+      return CONTENT_RATING.SUGGESTIVE;
     case 'GENERAL':
-      return 'SAFE';
+      return CONTENT_RATING.SAFE;
     default:
       return null;
   }
-}
+};
 
-function pickLocalizedTitle(items: LocalizedText[] | undefined): string | null {
+const pickLocalizedTitle = (items: LocalizedText[] | undefined): string | null => {
   if (!items || items.length === 0) return null;
   let first: string | null = null;
   let en: string | null = null;
@@ -117,9 +119,9 @@ function pickLocalizedTitle(items: LocalizedText[] | undefined): string | null {
     if (lang === 'EN') en ??= text;
   }
   return en ?? first;
-}
+};
 
-function parseLocalizationDescription(items: LocalizedDescription[] | undefined): string | null {
+const parseLocalizationDescription = (items: LocalizedDescription[] | undefined): string | null => {
   if (!items || items.length === 0) return null;
   let first: string | null = null;
   for (const item of items) {
@@ -129,9 +131,9 @@ function parseLocalizationDescription(items: LocalizedDescription[] | undefined)
     if (item.lang?.toUpperCase() === 'RU') return text;
   }
   return first;
-}
+};
 
-function parseTitleList(items: LocalizedText[] | undefined): string[] {
+const parseTitleList = (items: LocalizedText[] | undefined): string[] => {
   const result: string[] = [];
   const seen = new Set<string>();
   for (const item of items ?? []) {
@@ -142,13 +144,13 @@ function parseTitleList(items: LocalizedText[] | undefined): string[] {
     }
   }
   return result;
-}
+};
 
-function buildChapterTitle(
+const buildChapterTitle = (
   volume: string | undefined,
   number: string | undefined,
   name: string | undefined,
-): string | null {
+): string | null => {
   const parts: string[] = [];
   if (volume?.trim()) parts.push(`${volume.trim()}.`);
   if (number?.trim()) parts.push(`Глава ${number.trim()}`);
@@ -156,23 +158,23 @@ function buildChapterTitle(
   const title = name?.trim();
   if (title) built = built.length > 0 ? `${built} ${title}` : title;
   return built.length > 0 ? built : null;
-}
+};
 
-function parseIsoDate(raw: string | undefined): number {
+const parseIsoDate = (raw: string | undefined): number => {
   const value = raw?.trim();
   if (!value) return 0;
   const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? 0 : parsed;
-}
+};
 
-export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Parser {
+export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   const SOURCE_ID = cfg.id;
 
-  async function postGraphQl(
+  const postGraphQl = async (
     query: string,
     variables: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<Record<string, unknown>> => {
     const res = await ctx.http.request({
       method: 'POST',
       url: cfg.apiEndpoint,
@@ -195,9 +197,9 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
     }
     if (!json.data) throw new ParseError('GraphQL response has no data', SOURCE_ID);
     return json.data;
-  }
+  };
 
-  function parseMangaCard(info: MangaCardJson | null | undefined): RawManga | null {
+  const parseMangaCard = (info: MangaCardJson | null | undefined): RawManga | null => {
     if (!info?.id || !info.slug) return null;
     const url = [info.id, info.slug].join(URL_DELIMITER);
     const title = pickLocalizedTitle(info.titles) ?? info.slug;
@@ -219,13 +221,13 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
   // Confirmed against the live endpoint: MangaOrderField only accepts VIEWS, SCORE, CREATED_AT
   // and LAST_CHAPTER_AT (introspection is disabled, so this was found by probing). VIEWS is the
   // closest match to "popularity"; LAST_CHAPTER_AT is what senkuro.me's own "last updated" browse
   // sort uses. Descending matches every other source's UPDATED/POPULARITY convention in this repo.
-  function mapOrderBy(order: string | undefined): { field: string; direction: string } {
+  const mapOrderBy = (order: string | undefined): { field: string; direction: string } => {
     switch (order) {
       case 'POPULARITY':
         return { field: 'VIEWS', direction: 'DESC' };
@@ -233,14 +235,14 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
       default:
         return { field: 'LAST_CHAPTER_AT', direction: 'DESC' };
     }
-  }
+  };
 
-  async function fetchListPage(
+  const fetchListPage = async (
     cursor: string | null,
     first: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<{ items: RawManga[]; nextCursor: string | null }> {
+  ): Promise<{ items: RawManga[]; nextCursor: string | null }> => {
     const variables: Record<string, unknown> = {
       after: cursor,
       first,
@@ -260,21 +262,21 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
       .filter((m): m is RawManga => m !== null);
     const nextCursor = payload?.pageInfo?.hasNextPage ? (payload.pageInfo.endCursor ?? null) : null;
     return { items, nextCursor };
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchCursorPaged(params, { maxPageSize: LIST_MAX_PAGE_SIZE }, (cursor, first) =>
       fetchListPage(cursor, first, params.order, params.query),
     );
-  }
+  };
 
-  function parseMangaUrl(url: string): { mangaId: string; mangaSlug: string } {
+  const parseMangaUrl = (url: string): { mangaId: string; mangaSlug: string } => {
     const [mangaId, mangaSlug] = url.split(URL_DELIMITER);
     if (!mangaId || !mangaSlug) throw new ParseError(`Cannot parse manga url: ${url}`, SOURCE_ID);
     return { mangaId, mangaSlug };
-  }
+  };
 
-  function parseMangaInfo(info: MangaInfoJson): RawManga | null {
+  const parseMangaInfo = (info: MangaInfoJson): RawManga | null => {
     const title = pickLocalizedTitle(info.titles);
     if (!title || !info.id || !info.slug) return null;
     const url = [info.id, info.slug].join(URL_DELIMITER);
@@ -322,9 +324,9 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function fetchChapters(mangaId: string, mangaSlug: string): Promise<RawChapter[]> {
+  const fetchChapters = async (mangaId: string, mangaSlug: string): Promise<RawChapter[]> => {
     const data = await postGraphQl(CHAPTERS_QUERY, { mangaId });
     const payload = data['mangaTachiyomiChapters'] as
       { chapters?: ChapterJson[]; teams?: TeamJson[] } | undefined;
@@ -360,9 +362,9 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
       })
       .filter((c): c is RawChapter => c !== null);
     return chapters.reverse();
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const { mangaId, mangaSlug } = parseMangaUrl(mangaUrl);
     const [data, chapters] = await Promise.all([
       postGraphQl(DETAILS_QUERY, { mangaId }),
@@ -373,9 +375,9 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
     const manga = parseMangaInfo(info);
     if (!manga) throw new ParseError('Cannot parse manga details', SOURCE_ID);
     return { ...manga, chapters };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const parts = chapterUrl.split(URL_DELIMITER);
     const mangaId = parts[0];
     const chapterId = parts[2];
@@ -392,16 +394,18 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
         return { id: generateUid(SOURCE_ID, url), url, preview: null, source: SOURCE_ID };
       })
       .filter((p): p is RawPage => p !== null);
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: catalogEntryFor(SOURCE_ID).title,
+      domain,
       locale: 'ru',
       contentType: catalogEntryFor(SOURCE_ID).contentType,
       isBroken: catalogEntryFor(SOURCE_ID).isBroken,
+      isAdult: catalogEntryFor(SOURCE_ID).isAdult,
       sortOrders: ['POPULARITY', 'UPDATED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -411,7 +415,7 @@ export function createSenkuroParser(cfg: SenkuroConfig, ctx: ParserContext): Par
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};
 
 const LIST_QUERY = `
 query fetchMangas(

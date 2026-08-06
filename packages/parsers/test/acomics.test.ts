@@ -33,7 +33,7 @@ const ISSUE_PAGE_HTML = (n: number, total: number) => `<!doctype html><html><bod
   <img id="mainImage" src="/issues/${n}.jpg" />
 </body></html>`;
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -41,9 +41,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.endsWith('/one-piece/1'), {
     status: 200,
@@ -57,7 +57,7 @@ function setUpFixtures(): FakeHttpClient {
   http.register((url) => url.endsWith('/comics'), { status: 200, body: TAGS_HTML });
   http.register((url) => url.includes('/comics?'), { status: 200, body: LIST_HTML });
   return http;
-}
+};
 
 describe('AComics parser conformance', () => {
   const http = setUpFixtures();

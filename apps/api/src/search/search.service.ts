@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { SearchGroup, SearchResponse } from '@tanuki/contracts';
+import { SEARCH_GROUP_STATUS, type SearchGroup, type SearchResponse } from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { CatalogService } from '../catalog/catalog.service';
@@ -20,10 +20,8 @@ export class SearchService {
     sourceIds: string[] | undefined,
     limit: number,
   ): Promise<SearchResponse> {
-    const sources = await this.sourcesService.listSources();
-    const candidates = sources.filter(
-      (source) => source.capabilities.search && (!sourceIds || sourceIds.includes(source.id)),
-    );
+    const sources = await this.sourcesService.listSearchableSources();
+    const candidates = sources.filter((source) => !sourceIds || sourceIds.includes(source.id));
 
     // Один общий дедлайн на весь веер (docs/04-api-contract.md) — источник, не уложившийся
     // в него, помечается timeout, а не получает свой персональный тайм-аут.
@@ -47,9 +45,12 @@ export class SearchService {
       const groups: SearchGroup[] = settled.map((result, index) => {
         const sourceId = candidates[index]!.id;
         if (result.status === 'fulfilled') {
-          return { sourceId, status: 'ok', items: result.value };
+          return { sourceId, status: SEARCH_GROUP_STATUS.ok, items: result.value };
         }
-        const status = result.reason instanceof SearchTimeoutError ? 'timeout' : 'error';
+        const status =
+          result.reason instanceof SearchTimeoutError
+            ? SEARCH_GROUP_STATUS.timeout
+            : SEARCH_GROUP_STATUS.error;
         return { sourceId, status, items: [] };
       });
 

@@ -13,10 +13,11 @@ import {
   Title,
 } from '@mantine/core';
 import { Link, useParams } from 'react-router';
-import { useChapters, useMangaDetails } from '@/shared/api/manga';
-import { ApiErrorText } from '@/shared/ui';
+import useChapters from '@/shared/api/hooks/useChapters';
+import useMangaDetails from '@/shared/api/hooks/useMangaDetails';
+import ApiErrorText from '@/shared/ui/ApiErrorText';
 
-export default function MangaPage() {
+function MangaPage() {
   const { sourceId = '', mangaId = '' } = useParams<{ sourceId: string; mangaId: string }>();
   const { data, error, isLoading, isError } = useMangaDetails(sourceId, mangaId);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
@@ -106,3 +107,5 @@ export default function MangaPage() {
     </Container>
   );
 }
+
+export default MangaPage;

@@ -15,15 +15,15 @@ import { CookieJar } from 'tough-cookie';
  */
 const jars = new Map<string, CookieJar>();
 
-export function jarFor(scope: string): CookieJar {
+export const jarFor = (scope: string): CookieJar => {
   let jar = jars.get(scope);
   if (!jar) {
     jar = new CookieJar();
     jars.set(scope, jar);
   }
   return jar;
-}
+};
 
-export function resetAllJars(): void {
+export const resetAllJars = (): void => {
   jars.clear();
-}
+};

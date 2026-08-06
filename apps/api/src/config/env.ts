@@ -1,10 +1,8 @@
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { SOURCE_IDS } from '@tanuki/parsers';
+import { SOURCE_ID } from '@tanuki/parsers';
 
-// z.enum needs a non-empty tuple, not `readonly string[]` — SOURCE_IDS is always non-empty
-// (23 registered sources) so this cast is safe.
-const SourceIdSchema = z.enum(SOURCE_IDS as [string, ...string[]]);
+const SourceIdSchema = z.enum(SOURCE_ID);
 
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(3000),
@@ -50,6 +48,6 @@ const EnvSchema = z.object({
 
 export type Env = z.infer<typeof EnvSchema>;
 
-export function loadEnv(): Env {
+export const loadEnv = (): Env => {
   return EnvSchema.parse(process.env);
-}
+};

@@ -9,8 +9,6 @@ const DOMAIN = 'manga-chan.example';
 
 const CFG: ChanConfig = {
   id: 'MANGACHAN',
-  title: 'Манга-тян',
-  domains: [DOMAIN],
   isNsfw: false,
   sortOrders: ['NEWEST', 'POPULARITY', 'ALPHABETICAL', 'RATING'],
   variant: 'default',
@@ -54,7 +52,7 @@ const PAGES_HTML = `<!doctype html><html><body>
   </script>
 </body></html>`;
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -62,9 +60,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('offset=') && !url.includes('/One-Piece'), {
     status: 200,
@@ -73,7 +71,7 @@ function setUpFixtures(): FakeHttpClient {
   http.register((url) => url.endsWith('/One-Piece.html'), { status: 200, body: DETAILS_HTML });
   http.register((url) => url.includes('/One-Piece/2.html'), { status: 200, body: PAGES_HTML });
   return http;
-}
+};
 
 describe('Chan parser conformance', () => {
   const http = setUpFixtures();

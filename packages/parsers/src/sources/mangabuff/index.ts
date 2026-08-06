@@ -1,5 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import { RAW_MANGA_STATE } from '../../types';
+import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -19,30 +21,30 @@ const PAGE_SIZE = 24;
 const CHAPTER_SELECTOR = 'a.chapters__item';
 const CHAPTER_NUMBER_REGEX = /\d+(?:[.,]\d+)?/;
 
-function getSortKey(order: string | undefined): string {
+const getSortKey = (order: string | undefined): string => {
   return order === 'POPULARITY' ? 'real_views' : 'updated_at';
-}
+};
 
-function parseStatus(value: string): RawMangaState | null {
+const parseStatus = (value: string): RawMangaState | null => {
   switch (value.toLowerCase().trim()) {
     case 'завершен':
-      return 'FINISHED';
+      return RAW_MANGA_STATE.FINISHED;
     case 'продолжается':
-      return 'ONGOING';
+      return RAW_MANGA_STATE.ONGOING;
     case 'заморожен':
-      return 'PAUSED';
+      return RAW_MANGA_STATE.PAUSED;
     case 'заброшен':
-      return 'ABANDONED';
+      return RAW_MANGA_STATE.ABANDONED;
     default:
       return null;
   }
-}
+};
 
-export function createMangaBuffParser(ctx: ParserContext): Parser {
+export const createMangaBuffParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let csrfToken: string | null = null;
 
-  function parseMangaCard($item: Cheerio<AnyNode>, baseUrl: string): RawManga | null {
+  const parseMangaCard = ($item: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
     // cards__item is the anchor itself; the site no longer nests a separate <a>.
     const hrefRaw = attrOrNull($item, 'href');
     if (!hrefRaw) return null;
@@ -77,21 +79,21 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  function parseMangaList(doc: { $: CheerioAPI; baseUrl: string }): RawManga[] {
+  const parseMangaList = (doc: { $: CheerioAPI; baseUrl: string }): RawManga[] => {
     return doc
       .$('.cards .cards__item')
       .toArray()
       .map((el) => parseMangaCard(doc.$(el), doc.baseUrl))
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  async function fetchListPage(
+  const fetchListPage = async (
     page: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<RawManga[]> {
+  ): Promise<RawManga[]> => {
     const url = new URL(query ? `https://${domain}/search` : `https://${domain}/manga`);
     if (query) {
       url.searchParams.set('q', query);
@@ -102,24 +104,24 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
 
     const doc = await ctx.http.getHtml(url.toString());
     return parseMangaList(doc);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.order, params.query),
     );
-  }
+  };
 
-  async function fetchCsrfToken(): Promise<string> {
+  const fetchCsrfToken = async (): Promise<string> => {
     if (csrfToken) return csrfToken;
     const doc = await ctx.http.getHtml(`https://${domain}/`);
     const token = attrOrNull(doc.$('head meta[name*=csrf-token]').first(), 'content');
     if (!token) throw new ParseError('Unable to find CSRF token', SOURCE_ID);
     csrfToken = token;
     return token;
-  }
+  };
 
-  async function loadMoreChapterElements(mangaId: string): Promise<AnyNode[]> {
+  const loadMoreChapterElements = async (mangaId: string): Promise<AnyNode[]> => {
     const post = async (): Promise<AnyNode[]> => {
       const token = await fetchCsrfToken();
       const res = await ctx.http.request({
@@ -151,9 +153,9 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
       }
       throw err;
     }
-  }
+  };
 
-  function parseChapterElement(el: AnyNode, $: CheerioAPI, index: number): RawChapter | null {
+  const parseChapterElement = (el: AnyNode, $: CheerioAPI, index: number): RawChapter | null => {
     const $a = $(el);
     const hrefRaw = attrOrNull($a, 'href');
     if (!hrefRaw) return null;
@@ -175,9 +177,9 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
       branch: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  function collectTags($: CheerioAPI): RawTag[] {
+  const collectTags = ($: CheerioAPI): RawTag[] => {
     const elements = $(
       '.manga__middle-links > a:not(:last-child), .manga-mobile__info > a:not(:last-child), .tags > .tags__item',
     ).toArray();
@@ -200,9 +202,9 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
       tags.push({ title, key, source: SOURCE_ID });
     }
     return tags;
-  }
+  };
 
-  function buildDetailsDescription($: CheerioAPI): string {
+  const buildDetailsDescription = ($: CheerioAPI): string => {
     const lines: string[] = [];
     const desc = nullIfEmpty(textOrNull($('.manga__description').first()));
     if (desc) lines.push(desc);
@@ -228,9 +230,9 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
       lines.push(...altTitles.map((t) => `• ${t}`));
     }
     return lines.join('\n\n');
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const $ = doc.$;
@@ -282,9 +284,9 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
       chapters,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const absoluteUrl = toAbsoluteUrl(chapterUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     return doc
@@ -298,16 +300,18 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
         return { id: generateUid(SOURCE_ID, url), url, preview: null, source: SOURCE_ID };
       })
       .filter((p): p is RawPage => p !== null);
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'MangaBuff',
+      domain,
       locale: 'ru',
-      contentType: 'MANGA',
+      contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
+      isAdult: false,
       sortOrders: ['UPDATED', 'POPULARITY'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -317,4 +321,4 @@ export function createMangaBuffParser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

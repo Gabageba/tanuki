@@ -1,3 +1,5 @@
+import { RAW_MANGA_STATE } from '../../types';
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -12,33 +14,33 @@ const SOURCE_ID = 'REMANGA';
 const PAGE_SIZE = 20;
 
 const STATES: Record<number, RawMangaState> = {
-  1: 'FINISHED',
-  2: 'ONGOING',
-  3: 'PAUSED',
-  4: 'ABANDONED',
-  5: 'UPCOMING',
-  6: 'RESTRICTED',
+  1: RAW_MANGA_STATE.FINISHED,
+  2: RAW_MANGA_STATE.ONGOING,
+  3: RAW_MANGA_STATE.PAUSED,
+  4: RAW_MANGA_STATE.ABANDONED,
+  5: RAW_MANGA_STATE.UPCOMING,
+  6: RAW_MANGA_STATE.RESTRICTED,
 };
 
-interface CoverJson {
+type CoverJson = {
   mid?: string;
   high?: string;
-}
+};
 
-interface TagJson {
+type TagJson = {
   id: number;
   name: string;
-}
+};
 
-interface StatusJson {
+type StatusJson = {
   id?: number;
-}
+};
 
-interface AgeLimitJson {
+type AgeLimitJson = {
   id?: number;
-}
+};
 
-interface MangaJson {
+type MangaJson = {
   dir: string;
   main_name: string;
   secondary_name?: string;
@@ -51,13 +53,13 @@ interface MangaJson {
   description?: string;
   branches?: { id: number; publishers?: { name?: string } }[];
   detail?: { message?: string };
-}
+};
 
-interface PublisherJson {
+type PublisherJson = {
   name?: string;
-}
+};
 
-interface ChapterJson {
+type ChapterJson = {
   id: number;
   chapter?: number;
   tome?: number;
@@ -66,13 +68,13 @@ interface ChapterJson {
   is_paid?: boolean;
   is_bought?: boolean;
   publishers?: PublisherJson[];
-}
+};
 
-interface PageJson {
+type PageJson = {
   link: string;
-}
+};
 
-function getSortKey(order: string | undefined): string {
+const getSortKey = (order: string | undefined): string => {
   switch (order) {
     case 'POPULARITY':
       return '-rating';
@@ -83,19 +85,19 @@ function getSortKey(order: string | undefined): string {
     default:
       return '-chapter_date';
   }
-}
+};
 
-function parseIsoDate(value: string | undefined): number {
+const parseIsoDate = (value: string | undefined): number => {
   if (!value) return 0;
   const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? 0 : parsed;
-}
+};
 
-function sleep(ms: number): Promise<void> {
+const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
+};
 
-export function createRemangaParser(ctx: ParserContext): Parser {
+export const createRemangaParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   const apiHost = `api.${domain}`;
 
@@ -110,15 +112,15 @@ export function createRemangaParser(ctx: ParserContext): Parser {
     return res;
   });
 
-  function parseTags(genres: TagJson[] | undefined): RawTag[] {
+  const parseTags = (genres: TagJson[] | undefined): RawTag[] => {
     return (genres ?? []).map((g) => ({
       title: toTitleCase(g.name),
       key: String(g.id),
       source: SOURCE_ID,
     }));
-  }
+  };
 
-  function parseManga(jo: MangaJson): RawManga {
+  const parseManga = (jo: MangaJson): RawManga => {
     const url = `/manga/${jo.dir}`;
     const cover = jo.cover;
     return {
@@ -138,13 +140,13 @@ export function createRemangaParser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function fetchListPage(
+  const fetchListPage = async (
     page: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<RawManga[]> {
+  ): Promise<RawManga[]> => {
     const path = query ? '/api/v2/search' : '/api/v2/search/catalog';
     const url = new URL(`https://${apiHost}${path}`);
     url.searchParams.set('page', String(page));
@@ -154,20 +156,20 @@ export function createRemangaParser(ctx: ParserContext): Parser {
 
     const json = await ctx.http.getJson<{ results: MangaJson[] }>(url.toString());
     return json.results.map(parseManga);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.order, params.query),
     );
-  }
+  };
 
-  function slugFromUrl(mangaUrl: string): string {
+  const slugFromUrl = (mangaUrl: string): string => {
     const trimmed = mangaUrl.replace(/\/$/, '');
     return trimmed.split('/').pop() ?? trimmed;
-  }
+  };
 
-  async function fetchAllChapters(branchId: number): Promise<ChapterJson[]> {
+  const fetchAllChapters = async (branchId: number): Promise<ChapterJson[]> => {
     const result: ChapterJson[] = [];
     for (let page = 1; ; page += 1) {
       const url = `https://${apiHost}/api/v2/titles/chapters/?branch_id=${branchId}&page=${page}&count=500`;
@@ -176,9 +178,9 @@ export function createRemangaParser(ctx: ParserContext): Parser {
       result.push(...json.results);
     }
     return result;
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const slug = slugFromUrl(mangaUrl);
     const json = await ctx.http.getJson<MangaJson>(`https://${apiHost}/api/v2/titles/${slug}/`);
 
@@ -218,9 +220,9 @@ export function createRemangaParser(ctx: ParserContext): Parser {
       rating: json.avg_rating != null ? json.avg_rating / 10 : RATING_UNKNOWN,
       contentRating:
         json.age_limit?.id === 0
-          ? 'SAFE'
+          ? CONTENT_RATING.SAFE
           : json.age_limit?.id === 1 || json.age_limit?.id === 2
-            ? 'SUGGESTIVE'
+            ? CONTENT_RATING.SUGGESTIVE
             : null,
       coverUrl: cover.mid ? toAbsoluteUrl(cover.mid, apiHost) : null,
       largeCoverUrl: cover.high ? toAbsoluteUrl(cover.high, apiHost) : null,
@@ -231,9 +233,9 @@ export function createRemangaParser(ctx: ParserContext): Parser {
       chapters,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const url = toAbsoluteUrl(chapterUrl, apiHost);
     const json = await ctx.http.getJson<{ pages?: (PageJson | PageJson[])[]; pub_date?: string }>(
       url,
@@ -254,16 +256,18 @@ export function createRemangaParser(ctx: ParserContext): Parser {
       }
     }
     return result;
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'Реманга',
+      domain,
       locale: 'ru',
-      contentType: 'MANGA',
+      contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
+      isAdult: false,
       sortOrders: ['UPDATED', 'POPULARITY', 'RATING', 'NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -273,4 +277,4 @@ export function createRemangaParser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

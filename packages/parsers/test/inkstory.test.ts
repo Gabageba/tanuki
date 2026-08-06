@@ -54,12 +54,12 @@ const PAGES_JSON = JSON.stringify({
 const SECRET_KEY = 'UySkp0BzPhwlvP2V';
 const SSR_STATE_HTML = `<script id="it-astro-state">["secret-key","${SECRET_KEY}"]</script>`;
 
-function xor(bytes: Buffer, key: string): Buffer {
+const xor = (bytes: Buffer, key: string): Buffer => {
   const keyBytes = Buffer.from(key, 'utf8');
   return Buffer.from(bytes.map((b, i) => b ^ keyBytes[i % keyBytes.length]!));
-}
+};
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -67,9 +67,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/v2/chapters/ch-'), {
     status: 200,
@@ -107,7 +107,7 @@ function setUpFixtures(): FakeHttpClient {
     contentType: 'text/html; charset=utf-8',
   });
   return http;
-}
+};
 
 describe('Inkstory parser conformance', () => {
   const http = setUpFixtures();

@@ -3,11 +3,14 @@ import { BranchSchema } from './branch';
 import { ChapterSchema } from './chapter';
 import { MangaSchema } from './manga';
 import { PageSchema } from './page';
-import { SourceSchema } from './source';
+import { SourceContentTypeSchema, SourceSchema } from './source';
 
-export const SourcesResponseSchema = z.object({
-  items: z.array(SourceSchema),
-});
+/**
+ * Grouped by contentType rather than a flat `items` list: the UI renders one section per kind
+ * of content. Every key is always present (empty array if no source of that type is enabled),
+ * so consumers can iterate the groups without null checks.
+ */
+export const SourcesResponseSchema = z.record(SourceContentTypeSchema, z.array(SourceSchema));
 
 export type SourcesResponse = z.infer<typeof SourcesResponseSchema>;
 

@@ -8,6 +8,6 @@ export class SourcesController {
 
   @Get()
   async list(): Promise<SourcesResponse> {
-    return { items: await this.sourcesService.listSources() };
+    return this.sourcesService.listGroupedSources();
   }
 }

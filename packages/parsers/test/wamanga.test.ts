@@ -45,7 +45,7 @@ const PAGES_JSON = JSON.stringify({
   files: [{ diskFile: '/files/001.jpg' }, { diskFile: '/files/002.jpg' }],
 });
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -53,9 +53,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/chapters/ch-1'), {
     status: 200,
@@ -78,7 +78,7 @@ function setUpFixtures(): FakeHttpClient {
     contentType: 'application/json',
   });
   return http;
-}
+};
 
 describe('WaManga parser conformance', () => {
   const http = setUpFixtures();

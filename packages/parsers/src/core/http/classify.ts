@@ -19,26 +19,26 @@ const CHALLENGE_MARKERS = [
   'ddos-guard',
 ];
 
-export function looksLikeAntibotChallenge(
+export const looksLikeAntibotChallenge = (
   statusCode: number,
   headers: Record<string, string | string[] | undefined>,
   bodySample: string,
-): boolean {
+): boolean => {
   if (statusCode !== 403 && statusCode !== 503) {
     return false;
   }
 
   const lowerBody = bodySample.toLowerCase();
   return CHALLENGE_MARKERS.some((marker) => lowerBody.includes(marker));
-}
+};
 
 /** Turns a raw upstream HTTP response into a ParserError, or null if the response is usable. */
-export function classifyResponse(
+export const classifyResponse = (
   sourceId: string,
   statusCode: number,
   headers: Record<string, string | string[] | undefined>,
   bodySample: string,
-): SourceBlockedError | NotFoundError | SourceUnavailableError | null {
+): SourceBlockedError | NotFoundError | SourceUnavailableError | null => {
   if (statusCode < 400) {
     return null;
   }
@@ -49,4 +49,4 @@ export function classifyResponse(
     return new NotFoundError('Not found', sourceId);
   }
   return new SourceUnavailableError(`Upstream HTTP ${statusCode}`, sourceId);
-}
+};

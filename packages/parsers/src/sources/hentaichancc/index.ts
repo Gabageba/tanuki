@@ -1,3 +1,4 @@
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
@@ -26,32 +27,32 @@ const CDN_BASE = 'https://cdn.hentaichan.cc';
 /** id and slug are both needed — id to query chapters/details, slug to rebuild publicUrl. */
 const URL_DELIMITER = ',,';
 
-interface DirectusListResponse<T> {
+type DirectusListResponse<T> = {
   data: T[];
-}
-interface DirectusItemResponse<T> {
+};
+type DirectusItemResponse<T> = {
   data: T | null;
-}
+};
 
-interface FileRef {
+type FileRef = {
   filename_disk: string | null;
-}
+};
 
-interface MangaListItem {
+type MangaListItem = {
   id: number;
   name: string;
   slug: string;
   cover: FileRef | null;
-}
+};
 
-interface TagRef {
+type TagRef = {
   tags_id: { name: string; slug: string } | null;
-}
-interface AuthorRef {
+};
+type AuthorRef = {
   authors_id: { name: string | null } | null;
-}
+};
 
-interface MangaDetail {
+type MangaDetail = {
   id: number;
   name: string;
   slug: string;
@@ -62,20 +63,20 @@ interface MangaDetail {
   romaji_name: string | null;
   tags: TagRef[];
   authors: AuthorRef[];
-}
+};
 
-interface ChapterListItem {
+type ChapterListItem = {
   id: number;
-}
-interface ChapterPages {
+};
+type ChapterPages = {
   pages: { directus_files_id: FileRef | null }[];
-}
+};
 
-function assetUrl(file: FileRef | null): string | null {
+const assetUrl = (file: FileRef | null): string | null => {
   return file?.filename_disk ? `${CDN_BASE}/${file.filename_disk}` : null;
-}
+};
 
-function sortFor(order: string | undefined): string {
+const sortFor = (order: string | undefined): string => {
   switch (order) {
     case 'POPULARITY':
       return '-views';
@@ -84,17 +85,17 @@ function sortFor(order: string | undefined): string {
     default:
       return '-date_created';
   }
-}
+};
 
-export function createHentaichanCcParser(ctx: ParserContext): Parser {
+export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
 
-  async function directusGet<T>(path: string, params: Record<string, string>): Promise<T> {
+  const directusGet = async <T>(path: string, params: Record<string, string>): Promise<T> => {
     const url = `${API_BASE}${path}?${new URLSearchParams(params).toString()}`;
     return ctx.http.getJson<T>(url);
-  }
+  };
 
-  function parseListItem(item: MangaListItem): RawManga {
+  const parseListItem = (item: MangaListItem): RawManga => {
     const cover = assetUrl(item.cover);
     return {
       id: generateUid(SOURCE_ID, item.id),
@@ -103,7 +104,7 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
       url: [item.id, item.slug].join(URL_DELIMITER),
       publicUrl: `https://${domain}/manga/${item.slug}`,
       rating: RATING_UNKNOWN,
-      contentRating: 'ADULT',
+      contentRating: CONTENT_RATING.ADULT,
       coverUrl: cover,
       largeCoverUrl: cover,
       tags: [],
@@ -113,9 +114,9 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     const query: Record<string, string> = {
       limit: String(params.limit),
       offset: String(params.offset),
@@ -125,13 +126,13 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
     if (params.query?.trim()) query['search'] = params.query.trim();
     const res = await directusGet<DirectusListResponse<MangaListItem>>('/items/manga', query);
     return res.data.map(parseListItem);
-  }
+  };
 
-  function parseMangaUrl(url: string): { mangaId: string; slug: string } {
+  const parseMangaUrl = (url: string): { mangaId: string; slug: string } => {
     const [mangaId, slug] = url.split(URL_DELIMITER);
     if (!mangaId || !slug) throw new ParseError(`Cannot parse manga url: ${url}`, SOURCE_ID);
     return { mangaId, slug };
-  }
+  };
 
   /**
    * Each catalog entry here is a standalone release (a oneshot or a single translated chapter,
@@ -139,7 +140,7 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
    * manga rows carry `chapters: 1`. `id` ordering (not `chapter_id`, which is near-always `1`
    * even across a manga's own multiple rows) is the only reliable upload order.
    */
-  async function fetchChapters(mangaId: string): Promise<RawChapter[]> {
+  const fetchChapters = async (mangaId: string): Promise<RawChapter[]> => {
     const res = await directusGet<DirectusListResponse<ChapterListItem>>('/items/chapters', {
       'filter[manga][_eq]': mangaId,
       sort: 'id',
@@ -156,9 +157,9 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
       branch: null,
       source: SOURCE_ID,
     }));
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const { mangaId, slug } = parseMangaUrl(mangaUrl);
     const [detailRes, chapters] = await Promise.all([
       directusGet<DirectusListResponse<MangaDetail>>('/items/manga', {
@@ -195,7 +196,7 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
       url: mangaUrl,
       publicUrl: `https://${domain}/manga/${slug}`,
       rating: RATING_UNKNOWN,
-      contentRating: 'ADULT',
+      contentRating: CONTENT_RATING.ADULT,
       coverUrl: cover,
       largeCoverUrl: cover,
       tags,
@@ -205,9 +206,9 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
       chapters,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const res = await directusGet<DirectusItemResponse<ChapterPages>>(
       `/items/chapters/${chapterUrl}`,
       { fields: 'id,pages.directus_files_id.filename_disk' },
@@ -217,16 +218,18 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
       .map((p) => assetUrl(p.directus_files_id))
       .filter((url): url is string => !!url)
       .map((url) => ({ id: generateUid(SOURCE_ID, url), url, preview: null, source: SOURCE_ID }));
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'HentaiChan',
+      domain,
       locale: 'ru',
-      contentType: 'HENTAI',
+      contentType: SOURCE_CONTENT_TYPE.hentai,
       isBroken: false,
+      isAdult: true,
       sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -236,4 +239,4 @@ export function createHentaichanCcParser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

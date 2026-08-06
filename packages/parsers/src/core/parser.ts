@@ -5,18 +5,18 @@ import type { HttpClient } from './http/client';
 
 export type { ListParams };
 
-export interface Logger {
+export type Logger = {
   info(message: string, ...args: unknown[]): void;
   warn(message: string, ...args: unknown[]): void;
   error(message: string, ...args: unknown[]): void;
-}
+};
 
-export interface GroupleCredentials {
+export type GroupleCredentials = {
   username: string;
   password: string;
-}
+};
 
-export interface LibSocialCredentials {
+export type LibSocialCredentials = {
   /**
    * Directory holding one JSON token file per network member (`<sourceId>.json`), written by
    * `pnpm --filter @tanuki/parsers login:libsocial <sourceId>` (see sources/libsocial/auth.ts).
@@ -25,24 +25,24 @@ export interface LibSocialCredentials {
    * it only ever reads and rotates the file afterwards.
    */
   tokenStoreDir: string;
-}
+};
 
-export interface Credentials {
+export type Credentials = {
   grouple?: GroupleCredentials;
   /** AllHentai's qawa.org SSO gateway is a separate account system from the main network. */
   allhentai?: GroupleCredentials;
   libsocial?: LibSocialCredentials;
-}
+};
 
-export interface ParserContext {
+export type ParserContext = {
   readonly http: HttpClient;
   readonly domain: string;
   readonly jar: CookieJar;
   readonly logger: Logger;
   readonly credentials: Credentials;
-}
+};
 
-export interface Parser {
+export type Parser = {
   readonly id: string;
   /** Static metadata — no network, no lazy init. Mirrors the registry descriptor's `info`. */
   readonly info: RawSourceInfo;
@@ -63,6 +63,6 @@ export interface Parser {
   /** Optional one-time warmup (e.g. Grouple SSO login). Failure must be non-fatal. */
   init?(): Promise<void>;
   close?(): Promise<void>;
-}
+};
 
 export type { RawManga, RawChapter, RawPage, RawSourceInfo };

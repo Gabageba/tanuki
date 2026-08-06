@@ -1,3 +1,5 @@
+import { RAW_MANGA_STATE } from '../../types';
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -10,7 +12,7 @@ import { toTitleCase } from '../../core/text/strings';
 const SOURCE_ID = 'WAMANGA';
 const PAGE_SIZE = 20;
 
-interface MangaJson {
+type MangaJson = {
   id: string;
   slug: string;
   title: string;
@@ -24,37 +26,37 @@ interface MangaJson {
   isAdult?: boolean;
   description?: string;
   teams?: { name?: string }[];
-}
+};
 
-interface ChapterJson {
+type ChapterJson = {
   id: string;
   position?: number;
   title?: string;
   createdAt?: string;
-}
+};
 
-interface PageFileJson {
+type PageFileJson = {
   diskFile: string;
-}
+};
 
-function parseState(status: string | undefined): RawMangaState | null {
+const parseState = (status: string | undefined): RawMangaState | null => {
   switch (status?.toLowerCase()) {
     case 'ongoing':
-      return 'ONGOING';
+      return RAW_MANGA_STATE.ONGOING;
     case 'finished':
     case 'completed':
-      return 'FINISHED';
+      return RAW_MANGA_STATE.FINISHED;
     case 'abandoned':
-      return 'ABANDONED';
+      return RAW_MANGA_STATE.ABANDONED;
     case 'paused':
     case 'frozen':
-      return 'PAUSED';
+      return RAW_MANGA_STATE.PAUSED;
     default:
       return null;
   }
-}
+};
 
-function parseTags(jo: { genres?: string[] }): RawTag[] {
+const parseTags = (jo: { genres?: string[] }): RawTag[] => {
   const seen = new Set<string>();
   const tags: RawTag[] = [];
   for (const name of jo.genres ?? []) {
@@ -63,16 +65,16 @@ function parseTags(jo: { genres?: string[] }): RawTag[] {
     tags.push({ title: toTitleCase(name), key: name, source: SOURCE_ID });
   }
   return tags;
-}
+};
 
-function collectAltTitles(jo: MangaJson): string[] {
+const collectAltTitles = (jo: MangaJson): string[] => {
   const result: string[] = [];
   if (jo.titleEnglish) result.push(jo.titleEnglish);
   for (const t of jo.alternateTitles ?? []) {
     if (t) result.push(t);
   }
   return [...new Set(result)];
-}
+};
 
 /**
  * `sortKey`/`sortDescending` per the site's own OpenAPI spec (https://wamanga.ru/api/docs-json):
@@ -81,7 +83,7 @@ function collectAltTitles(jo: MangaJson): string[] {
  * upstream default (`alphabetical`) pins the catalog to the same "100 девушек..." first page forever.
  * `likes` is deliberately unmapped: the API accepts it but returns alphabetical order for it.
  */
-function getSortKey(order: string | undefined): { key: string; descending: boolean } {
+const getSortKey = (order: string | undefined): { key: string; descending: boolean } => {
   switch (order) {
     case 'ALPHABETICAL':
       return { key: 'alphabetical', descending: false };
@@ -92,19 +94,19 @@ function getSortKey(order: string | undefined): { key: string; descending: boole
     default:
       return { key: 'updatedAt', descending: true };
   }
-}
+};
 
-function parseIsoDate(value: string | undefined): number {
+const parseIsoDate = (value: string | undefined): number => {
   if (!value) return 0;
   const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? 0 : parsed;
-}
+};
 
-export function createWaMangaParser(ctx: ParserContext): Parser {
+export const createWaMangaParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   const apiUrl = `https://${domain}/api/v1`;
 
-  function parseManga(jo: MangaJson): RawManga {
+  const parseManga = (jo: MangaJson): RawManga => {
     return {
       id: generateUid(SOURCE_ID, jo.id),
       title: jo.title,
@@ -112,7 +114,7 @@ export function createWaMangaParser(ctx: ParserContext): Parser {
       url: jo.id,
       publicUrl: `https://${domain}/manga/${jo.slug}`,
       rating: RATING_UNKNOWN,
-      contentRating: jo.isAdult ? 'ADULT' : 'SAFE',
+      contentRating: jo.isAdult ? CONTENT_RATING.ADULT : CONTENT_RATING.SAFE,
       coverUrl: jo.coverUrl ? toAbsoluteUrl(jo.coverUrl, domain) : null,
       largeCoverUrl: jo.imageUrl ? toAbsoluteUrl(jo.imageUrl, domain) : null,
       tags: parseTags(jo),
@@ -122,9 +124,9 @@ export function createWaMangaParser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, async (page) => {
       const offset = (page - 1) * PAGE_SIZE;
       const url = new URL(`${apiUrl}/manga`);
@@ -137,9 +139,9 @@ export function createWaMangaParser(ctx: ParserContext): Parser {
       const items = await ctx.http.getJson<MangaJson[]>(url.toString());
       return items.map(parseManga);
     });
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const [jo, chaptersJson] = await Promise.all([
       ctx.http.getJson<MangaJson>(`${apiUrl}/manga/${mangaUrl}`),
       ctx.http.getJson<ChapterJson[]>(`${apiUrl}/manga/${mangaUrl}/chapters`),
@@ -168,9 +170,9 @@ export function createWaMangaParser(ctx: ParserContext): Parser {
       description: jo.description ?? null,
       chapters,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const json = await ctx.http.getJson<{ files: PageFileJson[] }>(
       `${apiUrl}/chapters/${chapterUrl}`,
     );
@@ -178,16 +180,18 @@ export function createWaMangaParser(ctx: ParserContext): Parser {
       const url = toAbsoluteUrl(file.diskFile, domain);
       return { id: generateUid(SOURCE_ID, url), url, preview: null, source: SOURCE_ID };
     });
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'WaManga',
+      domain,
       locale: 'ru',
-      contentType: 'MANGA',
+      contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
+      isAdult: false,
       sortOrders: ['UPDATED', 'NEWEST', 'POPULARITY', 'ALPHABETICAL'],
       isSearchSupported: true,
       isMultipleTagsSupported: false,
@@ -197,4 +201,4 @@ export function createWaMangaParser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

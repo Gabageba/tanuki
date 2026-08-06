@@ -29,7 +29,7 @@ const WEEKDAYS_RU: Record<string, number> = {
  * occurrence of that weekday), or "9 ноя 2022 в 22:13". Ported from DesuMeParser.parseChapterDate
  * — no library in the ecosystem handles Russian relative dates. Returns epoch millis, 0 = unknown.
  */
-export function parseRuRelativeDate(raw: string | null | undefined, now = new Date()): number {
+export const parseRuRelativeDate = (raw: string | null | undefined, now = new Date()): number => {
   const text = raw?.trim() ?? '';
   const parts = text.split(' в ');
   if (parts.length !== 2) return 0;
@@ -64,7 +64,7 @@ export function parseRuRelativeDate(raw: string | null | undefined, now = new Da
     result.setFullYear(year, month, day);
   }
   return result.getTime();
-}
+};
 
 const SHORT_DATE = /^(\d{2})\.(\d{2})\.(\d{2})$/;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?)?Z?$/;
@@ -74,7 +74,7 @@ const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d
  * ("yyyy-MM-dd[ HH:mm:ss[.SSS]]", "yyyy-MM-dd'T'HH:mm:ss[.SSS]['Z']"). Ported from
  * GroupleParser.parseChapterAnyDate. Returns epoch millis, 0 = unknown/unparseable.
  */
-export function parseGroupleDate(raw: string | null | undefined): number {
+export const parseGroupleDate = (raw: string | null | undefined): number => {
   const text = raw?.trim();
   if (!text) return 0;
 
@@ -103,12 +103,12 @@ export function parseGroupleDate(raw: string | null | undefined): number {
   }
 
   return 0;
-}
+};
 
 const DD_MM_YYYY = /^(\d{2})\.(\d{2})\.(\d{4})$/;
 
 /** "dd.MM.yyyy" (full 4-digit year) — MangaBuff and Com-X chapter dates. Returns epoch millis, 0 = unknown. */
-export function parseDdMmYyyy(raw: string | null | undefined): number {
+export const parseDdMmYyyy = (raw: string | null | undefined): number => {
   const text = raw?.trim();
   if (!text) return 0;
   const match = DD_MM_YYYY.exec(text);
@@ -116,4 +116,4 @@ export function parseDdMmYyyy(raw: string | null | undefined): number {
   const [, d, m, y] = match;
   const date = new Date(Number(y), Number(m) - 1, Number(d));
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
-}
+};

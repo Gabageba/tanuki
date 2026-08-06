@@ -19,10 +19,10 @@ import type { RawManga, RawPage, RawSourceInfo } from './parsers-client.types';
 
 const PAGE_SIZE = 20;
 
-export interface CachedResult<T> {
+export type CachedResult<T> = {
   data: T;
   stale: boolean;
-}
+};
 
 @Injectable()
 export class ParsersClientService {
@@ -36,8 +36,12 @@ export class ParsersClientService {
   // /sources само по себе не бьёт по внешним сайтам (статические метаданные реестра),
   // поэтому идёт напрямую в кеш, без breaker/rate-limiter — как и раньше.
   async getSources(): Promise<CachedResult<{ items: RawSourceInfo[] }>> {
-    const result = await this.cache.getOrSet(cacheKey('sources', 'all'), CACHE_TTL.sources, () =>
-      Promise.resolve({ items: this.parsers.listSources() }),
+    // v2 — RawSourceInfo обзавёлся полем `domain`; без смены ключа записи, залитые до деплоя,
+    // ещё сутки (staleSeconds) отдавались бы с domain: undefined.
+    const result = await this.cache.getOrSet(
+      cacheKey('sources', 'all', 'v2'),
+      CACHE_TTL.sources,
+      () => Promise.resolve({ items: this.parsers.listSources() }),
     );
     return { data: result.value, stale: result.stale };
   }

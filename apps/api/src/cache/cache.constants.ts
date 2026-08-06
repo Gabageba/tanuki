@@ -1,7 +1,7 @@
-export interface CacheTtlSpec {
+export type CacheTtlSpec = {
   freshSeconds: number;
   staleSeconds: number;
-}
+};
 
 const minutes = (n: number) => n * 60;
 const hours = (n: number) => n * 60 * 60;

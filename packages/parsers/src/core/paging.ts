@@ -1,18 +1,18 @@
 import type { RawManga } from '../types';
 
-export interface ListParams {
+export type ListParams = {
   /** Offset in API items, always a multiple of `limit` (page * limit). */
   offset: number;
   /** Always 20 today (apps/api's PAGE_SIZE), explicit so the math below isn't hardcoded. */
   limit: number;
   order?: string;
   query?: string;
-}
+};
 
-export interface PagingWindow {
+export type PagingWindow = {
   pages: number[];
   skip: number;
-}
+};
 
 /**
  * offset/limit in API items -> the native pages that cover [offset, offset+limit).
@@ -24,12 +24,12 @@ export interface PagingWindow {
  * silently dropping items 20..23. This implementation is stateless and correct instead of
  * reproducing that gap.
  */
-export function planWindow(
+export const planWindow = (
   offset: number,
   limit: number,
   size: number,
   firstPage = 1,
-): PagingWindow {
+): PagingWindow => {
   const firstIndex = Math.floor(offset / size);
   const lastIndex = Math.floor((offset + limit - 1) / size);
   const pages: number[] = [];
@@ -37,14 +37,14 @@ export function planWindow(
     pages.push(i + firstPage);
   }
   return { pages, skip: offset - firstIndex * size };
-}
+};
 
 /** For sources whose catalog is paginated by an opaque page number (most sources). */
-export async function fetchPaged(
+export const fetchPaged = async (
   params: ListParams,
   cfg: { size: number; firstPage: number },
   fetchPage: (page: number) => Promise<RawManga[]>,
-): Promise<RawManga[]> {
+): Promise<RawManga[]> => {
   const { pages, skip } = planWindow(params.offset, params.limit, cfg.size, cfg.firstPage);
   const acc: RawManga[] = [];
   for (const page of pages) {
@@ -53,14 +53,14 @@ export async function fetchPaged(
     if (items.length < cfg.size) break; // short page = end of catalog
   }
   return acc.slice(skip, skip + params.limit);
-}
+};
 
 /** For offset-native sources (Grouple, Chan, NudeMoon) whose list endpoint takes a raw offset. */
-export async function fetchOffsetNative(
+export const fetchOffsetNative = async (
   params: ListParams,
   cfg: { size: number },
   fetchOffset: (nativeOffset: number) => Promise<RawManga[]>,
-): Promise<RawManga[]> {
+): Promise<RawManga[]> => {
   const base = Math.floor(params.offset / cfg.size) * cfg.size;
   const acc: RawManga[] = [];
   for (
@@ -73,7 +73,7 @@ export async function fetchOffsetNative(
     if (items.length < cfg.size) break;
   }
   return acc.slice(params.offset - base, params.offset - base + params.limit);
-}
+};
 
 /**
  * For cursor-native sources (Senkuro) whose list endpoint only exposes an opaque forward
@@ -82,14 +82,14 @@ export async function fetchOffsetNative(
  * next chunk. cfg.maxPageSize should be the endpoint's max items-per-request; requesting exactly
  * `target - acc.length` (capped at that max) means offsets that fit in one page cost one request.
  */
-export async function fetchCursorPaged(
+export const fetchCursorPaged = async (
   params: ListParams,
   cfg: { maxPageSize: number },
   fetchPage: (
     cursor: string | null,
     first: number,
   ) => Promise<{ items: RawManga[]; nextCursor: string | null }>,
-): Promise<RawManga[]> {
+): Promise<RawManga[]> => {
   const target = params.offset + params.limit;
   const acc: RawManga[] = [];
   let cursor: string | null = null;
@@ -101,4 +101,4 @@ export async function fetchCursorPaged(
     cursor = nextCursor;
   }
   return acc.slice(params.offset, params.offset + params.limit);
-}
+};

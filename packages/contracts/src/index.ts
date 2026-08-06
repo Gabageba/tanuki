@@ -1,15 +1,46 @@
+export { type EnumLiteralsOf } from './utils';
 export { TagSchema, type Tag } from './tag';
-export { MangaSchema, type Manga } from './manga';
+export {
+  MangaSchema,
+  MangaStateSchema,
+  ContentRatingSchema,
+  MangaTypeSchema,
+  MANGA_STATE,
+  CONTENT_RATING,
+  MANGA_TYPE,
+  type Manga,
+  type MangaState,
+  type ContentRating,
+  type MangaType,
+} from './manga';
 export { ChapterSchema, type Chapter } from './chapter';
 export { PageSchema, type Page } from './page';
 export {
   SourceSchema,
-  SourceCapabilitiesSchema,
+  SourceContentTypeSchema,
+  SourceStatusSchema,
+  SOURCE_CONTENT_TYPE,
+  SOURCE_STATUS,
   type Source,
-  type SourceCapabilities,
+  type SourceContentType,
+  type SourceStatus,
 } from './source';
 export { BranchSchema, type Branch } from './branch';
-export { ApiErrorSchema, ApiErrorCodeSchema, type ApiError, type ApiErrorCode } from './error';
+export {
+  SOURCE_CATALOG,
+  SOURCE_ID,
+  SOURCE_IDS,
+  catalogEntryFor,
+  type CatalogEntry,
+  type SourceId,
+} from './source-catalog';
+export {
+  ApiErrorSchema,
+  ApiErrorCodeSchema,
+  API_ERROR_CODE,
+  type ApiError,
+  type ApiErrorCode,
+} from './error';
 export {
   SourcesResponseSchema,
   type SourcesResponse,
@@ -24,7 +55,10 @@ export {
 } from './responses';
 export {
   SearchGroupSchema,
+  SearchGroupStatusSchema,
+  SEARCH_GROUP_STATUS,
   type SearchGroup,
-  SearchResponseSchema,
+  type SearchGroupStatus,
   type SearchResponse,
+  SearchResponseSchema,
 } from './search';

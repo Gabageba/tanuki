@@ -7,7 +7,7 @@ export type {
   RawContentRating,
   RawMangaState,
 } from './types';
-export { RATING_UNKNOWN } from './types';
+export { RATING_UNKNOWN, RAW_MANGA_STATE } from './types';
 
 export {
   ParserError,
@@ -32,6 +32,7 @@ export type {
 export type { ListParams } from './core/paging';
 
 export {
+  SOURCE_ID,
   SOURCE_IDS,
   SOURCES,
   listSources,

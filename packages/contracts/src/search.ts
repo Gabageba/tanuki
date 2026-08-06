@@ -1,9 +1,20 @@
 import { z } from 'zod';
 import { MangaSchema } from './manga';
+import type { EnumLiteralsOf } from './utils';
+
+/** Исход опроса одного источника в веере мультипоиска. */
+export const SEARCH_GROUP_STATUS = {
+  ok: 'ok',
+  timeout: 'timeout',
+  error: 'error',
+} as const;
+export type SearchGroupStatus = EnumLiteralsOf<typeof SEARCH_GROUP_STATUS>;
+
+export const SearchGroupStatusSchema = z.enum(SEARCH_GROUP_STATUS);
 
 export const SearchGroupSchema = z.object({
   sourceId: z.string(),
-  status: z.enum(['ok', 'timeout', 'error']),
+  status: SearchGroupStatusSchema,
   items: z.array(MangaSchema),
 });
 

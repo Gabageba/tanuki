@@ -6,12 +6,12 @@ import { SourceTokenExpiredError } from '../../errors';
 import type { LibSocialAuthConfig } from './config';
 import { readTokenStore, writeTokenStore, type LibSocialTokenState } from './token-store';
 
-interface TokenResponse {
+type TokenResponse = {
   token_type: string;
   expires_in: number;
   access_token: string;
   refresh_token: string;
-}
+};
 
 // Refresh a bit before the cached token actually expires, so a request that starts just under
 // the wire doesn't race the real expiry.
@@ -27,12 +27,12 @@ const refreshesInFlight = new Map<string, Promise<LibSocialTokenState>>();
  * interceptor chain is where the Authorization header this function exists to produce gets
  * attached, so routing the token request through it would recurse back into this function.
  */
-async function requestToken(
+const requestToken = async (
   auth: LibSocialAuthConfig,
   siteId: number,
   body: Record<string, string>,
   label: string,
-): Promise<LibSocialTokenState> {
+): Promise<LibSocialTokenState> => {
   const origin = new URL(auth.redirectUri).origin;
   let res;
   try {
@@ -90,16 +90,16 @@ async function requestToken(
     refreshToken: json.refresh_token,
     expiresAt: Date.now() + json.expires_in * 1000,
   };
-}
+};
 
-async function refreshAndPersist(
+const refreshAndPersist = async (
   auth: LibSocialAuthConfig,
   siteId: number,
   tokenStorePath: string,
   refreshToken: string,
   label: string,
   logger: Logger,
-): Promise<LibSocialTokenState> {
+): Promise<LibSocialTokenState> => {
   const state = await requestToken(
     auth,
     siteId,
@@ -111,7 +111,7 @@ async function refreshAndPersist(
     `${label}: refreshed LibSocial OAuth token, valid until ${new Date(state.expiresAt).toISOString()}`,
   );
   return state;
-}
+};
 
 /**
  * Returns a currently-valid access token for Authorization: Bearer, transparently refreshing
@@ -120,13 +120,13 @@ async function refreshAndPersist(
  * Playwright login script — when there's no token store yet, or the stored refresh_token was
  * rejected. Neither case is recoverable in-process: only a human can clear the site's reCAPTCHA.
  */
-export async function getValidAccessToken(
+export const getValidAccessToken = async (
   auth: LibSocialAuthConfig,
   siteId: number,
   tokenStorePath: string,
   label: string,
   logger: Logger,
-): Promise<string> {
+): Promise<string> => {
   const stored = await readTokenStore(tokenStorePath);
   if (!stored) {
     throw new SourceTokenExpiredError(
@@ -156,4 +156,4 @@ export async function getValidAccessToken(
   } finally {
     refreshesInFlight.delete(tokenStorePath);
   }
-}
+};

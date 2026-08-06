@@ -50,7 +50,7 @@ const PAGES_RESPONSE = JSON.stringify({
   },
 });
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -58,9 +58,9 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.startsWith(`${API_BASE}/items/chapters/5206`), {
     status: 200,
@@ -82,7 +82,7 @@ function setUpFixtures(): FakeHttpClient {
     contentType: 'application/json',
   });
   return http;
-}
+};
 
 describe('HentaiChan.cc parser conformance', () => {
   const http = setUpFixtures();

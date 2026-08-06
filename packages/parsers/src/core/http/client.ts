@@ -8,15 +8,15 @@ import { SourceUnavailableError } from '../../errors';
 export type HttpMethod = 'GET' | 'POST' | 'HEAD';
 export type HttpHeaders = Record<string, string | string[] | undefined>;
 
-export interface HttpRequest {
+export type HttpRequest = {
   method: HttpMethod;
   url: string;
   headers: Record<string, string>;
   body?: string | URLSearchParams;
   signal?: AbortSignal;
-}
+};
 
-export interface HttpResponse {
+export type HttpResponse = {
   status: number;
   headers: HttpHeaders;
   /** Final URL after following redirects. */
@@ -24,22 +24,22 @@ export interface HttpResponse {
   bytes: Buffer;
   text(): string;
   json<T>(): T;
-}
+};
 
 export type Interceptor = (
   req: HttpRequest,
   next: (r: HttpRequest) => Promise<HttpResponse>,
 ) => Promise<HttpResponse>;
 
-export interface Timeouts {
+export type Timeouts = {
   connect: number;
   headers: number;
   body: number;
-}
+};
 
 export const DEFAULT_TIMEOUTS: Timeouts = { connect: 20_000, headers: 20_000, body: 60_000 };
 
-export interface HttpClient {
+export type HttpClient = {
   use(interceptor: Interceptor): void;
   /** Raw request — does not throw on non-2xx, caller decides via classifyResponse if needed. */
   request(req: Partial<HttpRequest> & { url: string }): Promise<HttpResponse>;
@@ -55,20 +55,20 @@ export interface HttpClient {
   /** true if the target responds successfully and has a plausible non-empty body. */
   head(url: string, minContentLength?: number): Promise<boolean>;
   close(): Promise<void>;
-}
+};
 
 const MAX_REDIRECTS = 10;
 
-export interface HttpClientOptions {
+export type HttpClientOptions = {
   sourceId: string;
   jar: CookieJar;
   defaultHeaders: Record<string, string>;
   timeouts?: Partial<Timeouts>;
-}
+};
 
-function normalizeHeaderValue(value: string | string[] | undefined): string | undefined {
+const normalizeHeaderValue = (value: string | string[] | undefined): string | undefined => {
   return Array.isArray(value) ? value[0] : value;
-}
+};
 
 export class HttpClientImpl implements HttpClient {
   private readonly interceptors: Interceptor[] = [];

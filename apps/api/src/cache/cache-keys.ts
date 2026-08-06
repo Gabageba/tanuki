@@ -1,9 +1,9 @@
 import type { CacheEntity } from './cache.constants';
 
-export function cacheKey(
+export const cacheKey = (
   entity: CacheEntity,
   sourceId: string,
   ...parts: Array<string | number>
-): string {
+): string => {
   return ['cache', entity, sourceId, ...parts].join(':');
-}
+};

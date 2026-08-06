@@ -1,0 +1,12 @@
+.card {
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+
+  &:hover {
+    // Card наследует `bg` из `theme.components.Paper.defaultProps` (Providers/models.ts), а
+    // Mantine превращает style-пропы вроде `bg` в инлайн-стиль — его перебивает только `!important`.
+    background-color: var(--tanuki-color-hover) !important;
+    box-shadow: var(--mantine-shadow-sm);
+  }
+}

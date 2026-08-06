@@ -1,14 +1,11 @@
 import { Center, Loader } from '@mantine/core';
 
-interface PullToRefreshIndicatorProps {
+type Props = {
   pullDistance: number;
   isRefreshing: boolean;
-}
+};
 
-export default function PullToRefreshIndicator({
-  pullDistance,
-  isRefreshing,
-}: PullToRefreshIndicatorProps) {
+function PullToRefreshIndicator({ pullDistance, isRefreshing }: Props) {
   const height = isRefreshing ? 40 : pullDistance;
   if (height === 0) return null;
 
@@ -20,3 +17,5 @@ export default function PullToRefreshIndicator({
     </Center>
   );
 }
+
+export default PullToRefreshIndicator;

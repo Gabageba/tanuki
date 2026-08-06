@@ -1,10 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import type { SourcesResponse } from '@tanuki/contracts';
-import { apiFetch } from './client';
+import type { Source, SourcesResponse } from '@tanuki/contracts';
 
-export function useSources() {
-  return useQuery({
-    queryKey: ['sources'],
-    queryFn: () => apiFetch<SourcesResponse>('/sources'),
-  });
-}
+/** /sources отдаёт группы по contentType — для поиска источника по id нужен плоский список. */
+export const flattenSources = (data: SourcesResponse | undefined): Source[] => {
+  return data ? Object.values(data).flat() : [];
+};

@@ -3,15 +3,15 @@ import { Container, Group, Loader, SimpleGrid, Title } from '@mantine/core';
 import { useIntersection } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useParams } from 'react-router';
-import { MangaCard } from '@/entities/manga';
-import { useCatalog } from '@/shared/api/catalog';
+import MangaCard from '@/entities/manga/MangaCard';
+import useCatalog from '@/shared/api/hooks/useCatalog';
 import { ApiRequestError } from '@/shared/api/client';
-import { ApiErrorText } from '@/shared/ui';
+import ApiErrorText from '@/shared/ui/ApiErrorText';
 import PullToRefreshIndicator from './PullToRefreshIndicator';
 import RefreshCatalogButton from './RefreshCatalogButton';
-import { usePullToRefresh } from './usePullToRefresh';
+import usePullToRefresh from './hooks/usePullToRefresh';
 
-export default function CatalogPage() {
+function CatalogPage() {
   const { sourceId } = useParams<{ sourceId: string }>();
   const {
     data,
@@ -80,3 +80,5 @@ export default function CatalogPage() {
     </Container>
   );
 }
+
+export default CatalogPage;

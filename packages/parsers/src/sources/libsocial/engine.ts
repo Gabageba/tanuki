@@ -1,4 +1,6 @@
 import { join } from 'node:path';
+import { RAW_MANGA_STATE } from '../../types';
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -15,11 +17,11 @@ import { getValidAccessToken } from './auth';
 const PAGE_SIZE = 60;
 
 const STATES: Record<number, RawManga['state']> = {
-  1: 'ONGOING',
-  2: 'FINISHED',
-  3: 'UPCOMING',
-  4: 'PAUSED',
-  5: 'ABANDONED',
+  1: RAW_MANGA_STATE.ONGOING,
+  2: RAW_MANGA_STATE.FINISHED,
+  3: RAW_MANGA_STATE.UPCOMING,
+  4: RAW_MANGA_STATE.PAUSED,
+  5: RAW_MANGA_STATE.ABANDONED,
 };
 
 const SERVER_MAIN = 'main';
@@ -27,24 +29,24 @@ const SERVER_SECONDARY = 'secondary';
 const SERVER_COMPRESS = 'compress';
 const SERVER_DOWNLOAD = 'download';
 
-interface CoverJson {
+type CoverJson = {
   thumbnail: string;
   default: string;
-}
+};
 
-interface RatingJson {
+type RatingJson = {
   average?: number;
-}
+};
 
-interface StatusJson {
+type StatusJson = {
   id?: number;
-}
+};
 
-interface AgeRestrictionJson {
+type AgeRestrictionJson = {
   id?: number;
-}
+};
 
-interface MangaListItemJson {
+type MangaListItemJson = {
   id: number;
   name: string;
   rus_name?: string;
@@ -52,18 +54,18 @@ interface MangaListItemJson {
   cover: CoverJson;
   rating?: RatingJson;
   status?: StatusJson;
-}
+};
 
-interface TagJson {
+type TagJson = {
   id: number;
   name: string;
-}
+};
 
-interface AuthorJson {
+type AuthorJson = {
   name?: string;
-}
+};
 
-interface MangaDetailsJson {
+type MangaDetailsJson = {
   id: number;
   name: string;
   rus_name?: string;
@@ -76,30 +78,30 @@ interface MangaDetailsJson {
   rating?: RatingJson;
   status?: StatusJson;
   ageRestriction?: AgeRestrictionJson;
-}
+};
 
-interface BranchJson {
+type BranchJson = {
   id: number;
   branch_id?: number;
   teams?: AuthorJson[];
   restricted_view?: { is_open?: boolean };
   created_at?: string;
-}
+};
 
-interface ChapterJson {
+type ChapterJson = {
   // The API sends these as JSON numbers most of the time, but switches to strings for some
   // manga (observed live on HENTAILIB) — coerce defensively rather than trusting the type.
   volume?: number | string;
   number?: number | string;
   name?: string | null;
   branches: BranchJson[];
-}
+};
 
-interface ImageServerJson {
+type ImageServerJson = {
   id: string;
   url: string;
   site_ids: number[];
-}
+};
 
 /**
  * MangaLib's "summary" field switched from a plain string to a TipTap/ProseMirror rich-text
@@ -108,7 +110,7 @@ interface ImageServerJson {
  * see test/desu.test.ts — rather than the Kotlin fork's `nl2br()`, since there's no HTML
  * wrapping convention elsewhere in this package's `description` field).
  */
-function summaryText(summary: unknown): string {
+const summaryText = (summary: unknown): string => {
   if (typeof summary === 'string') return summary;
   if (!summary || typeof summary !== 'object') return '';
   const paragraphs: string[] = [];
@@ -128,28 +130,28 @@ function summaryText(summary: unknown): string {
   };
   walk(summary);
   return paragraphs.filter((p) => p.length > 0).join('\n\n');
-}
+};
 
-function toNumber(value: number | string | undefined): number {
+const toNumber = (value: number | string | undefined): number => {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
     const parsed = Number.parseFloat(value);
     return Number.isNaN(parsed) ? 0 : parsed;
   }
   return 0;
-}
+};
 
-function parseIsoDate(value: string | undefined): number {
+const parseIsoDate = (value: string | undefined): number => {
   if (!value) return 0;
   const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? 0 : parsed;
-}
+};
 
-function parseRating(rating: RatingJson | undefined): number {
+const parseRating = (rating: RatingJson | undefined): number => {
   return rating?.average != null ? rating.average / 10 : RATING_UNKNOWN;
-}
+};
 
-function getSortBy(order: string | undefined): string | null {
+const getSortBy = (order: string | undefined): string | null => {
   switch (order) {
     case 'UPDATED':
       return 'last_chapter_at';
@@ -165,9 +167,9 @@ function getSortBy(order: string | undefined): string | null {
     default:
       return null;
   }
-}
+};
 
-function getSortType(order: string | undefined): string | null {
+const getSortType = (order: string | undefined): string | null => {
   switch (order) {
     case 'UPDATED':
     case 'POPULARITY':
@@ -180,9 +182,9 @@ function getSortType(order: string | undefined): string | null {
     default:
       return null;
   }
-}
+};
 
-export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext): Parser {
+export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let imageServersPromise: Promise<Map<string, string>> | null = null;
 
@@ -200,7 +202,7 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
     });
   }
 
-  function parseManga(jo: MangaListItemJson): RawManga {
+  const parseManga = (jo: MangaListItemJson): RawManga => {
     const title = jo.rus_name && jo.rus_name.length > 0 ? jo.rus_name : jo.name;
     return {
       id: generateUid(cfg.id, jo.id),
@@ -209,7 +211,7 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
       url: jo.slug_url,
       publicUrl: `https://${domain}/ru/manga/${jo.slug_url}`,
       rating: parseRating(jo.rating),
-      contentRating: cfg.isNsfw ? 'ADULT' : 'SAFE',
+      contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : CONTENT_RATING.SAFE,
       coverUrl: jo.cover.thumbnail,
       tags: [],
       state: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
@@ -219,13 +221,13 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
       chapters: null,
       source: cfg.id,
     };
-  }
+  };
 
-  async function fetchListPage(
+  const fetchListPage = async (
     page: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<RawManga[]> {
+  ): Promise<RawManga[]> => {
     const url = new URL(`https://${LIBSOCIAL_API_HOST}/api/manga`);
     url.searchParams.set('site_id[]', String(cfg.siteId));
     url.searchParams.append('fields[]', 'rate');
@@ -239,18 +241,18 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
 
     const json = await ctx.http.getJson<{ data: MangaListItemJson[] }>(url.toString());
     return json.data.map(parseManga);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     // The API's own default (no sort_by at all) ranks by popularity, not by what's fresh —
     // callers that don't care about order should still see recently-updated titles first.
     const order = params.order ?? 'UPDATED';
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, order, params.query),
     );
-  }
+  };
 
-  async function fetchChapters(mangaUrl: string): Promise<RawChapter[]> {
+  const fetchChapters = async (mangaUrl: string): Promise<RawChapter[]> => {
     const url = `https://${LIBSOCIAL_API_HOST}/api/manga/${mangaUrl}/chapters`;
     const json = await ctx.http.getJson<{ data: ChapterJson[] }>(url);
     const chapters: RawChapter[] = [];
@@ -277,13 +279,13 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
       }
     }
     return chapters;
-  }
+  };
 
-  function parseTag(prefix: string, jo: TagJson): RawTag {
+  const parseTag = (prefix: string, jo: TagJson): RawTag => {
     return { title: jo.name, key: `${prefix}${jo.id}`, source: cfg.id };
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const detailsUrl = new URL(`https://${LIBSOCIAL_API_HOST}/api/manga/${mangaUrl}`);
     // 'status' used to be a valid explicit field but api.cdnlibs.org now rejects it with a 422
     // ("Выбранное значение для fields.N ошибочно") — it's already present in the base response
@@ -329,18 +331,18 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
       contentRating:
         ageRestrictionId != null
           ? ageRestrictionId >= 4
-            ? 'SUGGESTIVE'
+            ? CONTENT_RATING.SUGGESTIVE
             : cfg.isNsfw
-              ? 'ADULT'
-              : 'SAFE'
+              ? CONTENT_RATING.ADULT
+              : CONTENT_RATING.SAFE
           : cfg.isNsfw
-            ? 'ADULT'
-            : 'SAFE',
+            ? CONTENT_RATING.ADULT
+            : CONTENT_RATING.SAFE,
       coverUrl: json.cover.thumbnail,
       tags: allTags,
       state:
         chapters.length === 0 && isRestricted
-          ? 'RESTRICTED'
+          ? RAW_MANGA_STATE.RESTRICTED
           : json.status?.id != null
             ? (STATES[json.status.id] ?? null)
             : null,
@@ -350,9 +352,9 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
       chapters,
       source: cfg.id,
     };
-  }
+  };
 
-  async function fetchImageServers(): Promise<Map<string, string>> {
+  const fetchImageServers = async (): Promise<Map<string, string>> => {
     const url = `https://${LIBSOCIAL_API_HOST}/api/constants?fields[]=imageServers`;
     const json = await ctx.http.getJson<{ data: { imageServers: ImageServerJson[] } }>(url);
     const result = new Map<string, string>();
@@ -360,14 +362,14 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
       if (server.site_ids.includes(cfg.siteId)) result.set(server.id, server.url);
     }
     return result;
-  }
+  };
 
-  function getImageServers(): Promise<Map<string, string>> {
+  const getImageServers = (): Promise<Map<string, string>> => {
     imageServersPromise ??= fetchImageServers();
     return imageServersPromise;
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const url = concatUrl(`https://${LIBSOCIAL_API_HOST}/api/manga/`, chapterUrl);
     let pagesJson: { data: { pages: { id: number; url: string }[] } };
     try {
@@ -397,16 +399,18 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
         source: cfg.id,
       };
     });
-  }
+  };
 
   return {
     id: cfg.id,
     info: {
       id: cfg.id,
       title: catalogEntryFor(cfg.id).title,
+      domain,
       locale: 'ru',
-      contentType: cfg.isNsfw ? 'HENTAI' : 'MANGA',
+      contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.hentai : SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
+      isAdult: catalogEntryFor(cfg.id).isAdult,
       sortOrders: [
         'UPDATED',
         'POPULARITY',
@@ -439,4 +443,4 @@ export function createLibSocialParser(cfg: LibSocialConfig, ctx: ParserContext):
       }
     },
   };
-}
+};

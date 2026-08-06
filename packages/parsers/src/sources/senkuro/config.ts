@@ -1,10 +1,10 @@
-export interface SenkuroConfig {
+export type SenkuroConfig = {
   id: string;
   /** GraphQL endpoint serving both the `mangas` connection and the `mangaTachiyomi*` queries. */
   apiEndpoint: string;
   /** Value of the `app-id` request header — this, not the host, selects the catalog. */
   appId: string;
-}
+};
 
 // title/domains/contentType live in SOURCE_CATALOG (../catalog) — look them up by id, don't
 // duplicate here.

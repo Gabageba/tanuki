@@ -1,4 +1,4 @@
-export interface GroupleConfig {
+export type GroupleConfig = {
   id: string;
   /** SSO site id, used to build the login/authUrl for this specific site. */
   siteId: number;
@@ -7,7 +7,7 @@ export interface GroupleConfig {
   isNsfw: boolean;
   /** AllHentai also accepts this cookie name as proof of auth, in addition to `gwt`. */
   extraAuthCookies?: string[];
-}
+};
 
 export const MAIN_AUTH_GATEWAY = '3.grouple.co';
 

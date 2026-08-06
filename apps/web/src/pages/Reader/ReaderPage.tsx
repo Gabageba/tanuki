@@ -1,10 +1,10 @@
 import { Button, Center, Loader, Text } from '@mantine/core';
 import { useNavigate, useParams } from 'react-router';
-import { useChapterPages } from '@/shared/api/manga';
-import { ApiErrorText } from '@/shared/ui';
+import useChapterPages from '@/shared/api/hooks/useChapterPages';
+import ApiErrorText from '@/shared/ui/ApiErrorText';
 import styles from './ReaderPage.module.scss';
 
-export default function ReaderPage() {
+function ReaderPage() {
   const {
     sourceId = '',
     mangaId = '',
@@ -56,9 +56,11 @@ export default function ReaderPage() {
             Следующая глава
           </Button>
         ) : (
-          <Text c="dimmed">Это последняя глава</Text>
+          <Text className={styles.hint}>Это последняя глава</Text>
         )}
       </Center>
     </div>
   );
 }
+
+export default ReaderPage;

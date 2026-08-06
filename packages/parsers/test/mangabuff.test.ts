@@ -44,7 +44,7 @@ const PAGES_HTML = `<!doctype html><html><body>
   </div>
 </body></html>`;
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -52,15 +52,15 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/manga/one-piece/2'), { status: 200, body: PAGES_HTML });
   http.register((url) => url.endsWith('/manga/one-piece'), { status: 200, body: DETAILS_HTML });
   http.register((url) => url.includes('/manga?'), { status: 200, body: LIST_HTML });
   return http;
-}
+};
 
 describe('MangaBuff parser conformance', () => {
   const http = setUpFixtures();

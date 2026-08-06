@@ -1,5 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import { RAW_MANGA_STATE } from '../../types';
+import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -17,21 +19,21 @@ const SOURCE_ID = 'COMX';
 const PAGE_SIZE = 20;
 const CDN_IMAGE_HOST = 'img.com-x.life/comix/';
 
-interface ChapterJson {
+type ChapterJson = {
   id: number;
   posi?: number;
   title?: string | null;
   date?: string | null;
   volume?: number;
-}
+};
 
-interface DataJson {
+type DataJson = {
   chapters: ChapterJson[];
   news_id: number;
-}
+};
 
 /** "AltTitle / MainTitle" — the primary title is the second slash-separated part, per the fork. */
-function splitTitle(raw: string): { title: string; altTitle: string | null } {
+const splitTitle = (raw: string): { title: string; altTitle: string | null } => {
   const parts = raw
     .split(/\s*\/\s*/)
     .map((p) => p.trim())
@@ -39,10 +41,10 @@ function splitTitle(raw: string): { title: string; altTitle: string | null } {
   if (parts.length >= 2) return { title: parts[1]!, altTitle: parts[0]! };
   if (parts.length === 1) return { title: parts[0]!, altTitle: null };
   return { title: raw, altTitle: null };
-}
+};
 
 /** Decodes `\uXXXX` escapes that survive JSON parsing embedded as literal text in the page. */
-function decodeUnicodeEscapes(text: string | null | undefined): string | null {
+const decodeUnicodeEscapes = (text: string | null | undefined): string | null => {
   if (text == null) return null;
   try {
     return text.replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex: string) =>
@@ -51,9 +53,9 @@ function decodeUnicodeEscapes(text: string | null | undefined): string | null {
   } catch {
     return text;
   }
-}
+};
 
-function extractScript(doc: Doc, marker: string): string | null {
+const extractScript = (doc: Doc, marker: string): string | null => {
   return (
     doc
       .$('script')
@@ -61,9 +63,9 @@ function extractScript(doc: Doc, marker: string): string | null {
       .map((el) => doc.$(el).html() ?? '')
       .find((s) => s.includes(marker)) ?? null
   );
-}
+};
 
-export function createComxParser(ctx: ParserContext): Parser {
+export const createComxParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let tagsPromise: Promise<RawTag[]> | null = null;
 
@@ -71,12 +73,12 @@ export function createComxParser(ctx: ParserContext): Parser {
   // than on every request, matching the fork's constructor-time `insertCookies` call.
   void ctx.jar.setCookie(`adt-accepted=1; Domain=${domain}; Path=/`, `https://${domain}/`);
 
-  function getTags(): Promise<RawTag[]> {
+  const getTags = (): Promise<RawTag[]> => {
     tagsPromise ??= fetchTags();
     return tagsPromise;
-  }
+  };
 
-  async function fetchTags(): Promise<RawTag[]> {
+  const fetchTags = async (): Promise<RawTag[]> => {
     const doc = await ctx.http.getHtml(`https://${domain}/comix/`);
     const scriptText = extractScript(doc, '__XFILTER__');
     if (!scriptText) return [];
@@ -94,9 +96,9 @@ export function createComxParser(ctx: ParserContext): Parser {
       title: toTitleCase(g.value),
       source: SOURCE_ID,
     }));
-  }
+  };
 
-  function parseMangaTile($item: Cheerio<AnyNode>, baseUrl: string): RawManga | null {
+  const parseMangaTile = ($item: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
     const $a = $item.find('a.readed__img').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -125,9 +127,9 @@ export function createComxParser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function fetchListPage(page: number, query: string | undefined): Promise<RawManga[]> {
+  const fetchListPage = async (page: number, query: string | undefined): Promise<RawManga[]> => {
     let path: string;
     if (query) {
       const encoded = query
@@ -147,24 +149,24 @@ export function createComxParser(ctx: ParserContext): Parser {
       .toArray()
       .map((el) => parseMangaTile(doc.$(el), doc.baseUrl))
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.query),
     );
-  }
+  };
 
-  function findLiValueAfter($: CheerioAPI, label: string): string | null {
+  const findLiValueAfter = ($: CheerioAPI, label: string): string | null => {
     const $li = $('li')
       .toArray()
       .map((el) => $(el))
       .find((el) => (textOrNull(el) ?? '').includes(label));
     if (!$li) return null;
     return (textOrNull($li) ?? '').split(label)[1]?.trim() ?? null;
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const scriptText = extractScript(doc, '__DATA__');
@@ -194,7 +196,8 @@ export function createComxParser(ctx: ParserContext): Parser {
 
     const author = nullIfEmpty(findLiValueAfter(doc.$, 'Publisher:'));
     const releaseType = findLiValueAfter(doc.$, 'Release type:');
-    const state: RawMangaState = releaseType === 'Ongoing' ? 'ONGOING' : 'FINISHED';
+    const state: RawMangaState =
+      releaseType === 'Ongoing' ? RAW_MANGA_STATE.ONGOING : RAW_MANGA_STATE.FINISHED;
 
     const tagLinks = doc
       .$('a[href*="/genres/"]')
@@ -234,9 +237,9 @@ export function createComxParser(ctx: ParserContext): Parser {
       chapters,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const newsId = chapterUrl.split('/reader/')[1]?.split('/')[0];
     if (newsId) {
       await ctx.jar.setCookie(`adult=${newsId}; Domain=${domain}; Path=/`, `https://${domain}/`);
@@ -260,20 +263,22 @@ export function createComxParser(ctx: ParserContext): Parser {
       preview: null,
       source: SOURCE_ID,
     }));
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'Com-X',
+      domain,
       locale: 'ru',
-      contentType: 'COMICS',
+      contentType: SOURCE_CONTENT_TYPE.comics,
       // Site gates every request behind a JS PoW + TLS/JA3 fingerprint challenge (custom
       // "guard" appliance, not Cloudflare) — verified the /_v verification endpoint 404s
       // unconditionally for any non-real-browser TLS handshake, correct PoW answer or not.
       // Unfixable without a real headless-browser TLS stack; not worth the infra for one source.
       isBroken: true,
+      isAdult: false,
       sortOrders: ['UPDATED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -283,4 +288,4 @@ export function createComxParser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

@@ -9,8 +9,6 @@ const DOMAIN = 'multporn.example';
 
 const CFG: MultpornConfig = {
   id: 'MULTPORN',
-  title: 'MultPorn',
-  contentType: 'COMICS',
   typeParam: '1',
   pathPrefix: '/comics/',
   listTagSelector: '.views-field-field-category a',
@@ -65,7 +63,7 @@ const DETAILS_HTML = `<!doctype html><html><head>
   </article>
 </body></html>`;
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -73,15 +71,15 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/search'), { status: 200, body: SEARCH_HTML });
   http.register((url) => url.includes('/new'), { status: 200, body: BROWSE_LIST_HTML });
   http.register((url) => url.endsWith('/comics/one-piece'), { status: 200, body: DETAILS_HTML });
   return http;
-}
+};
 
 describe('MultPorn parser conformance', () => {
   const http = setUpFixtures();

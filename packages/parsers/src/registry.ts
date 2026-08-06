@@ -6,7 +6,7 @@ import { UserAgents } from './core/http/user-agents';
 import { jarFor } from './core/http/cookies';
 import { NotImplementedError, UnknownSourceError } from './errors';
 import { SOURCE_CATALOG, SOURCE_IDS, type SourceId } from './sources/catalog';
-export { SOURCE_IDS, type SourceId } from './sources/catalog';
+export { SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/catalog';
 import { GROUPLE_CONFIGS } from './sources/grouple/config';
 import { createGroupleParser } from './sources/grouple/engine';
 import { createDesuParser } from './sources/desu';
@@ -29,15 +29,15 @@ import { createSexKomix2Parser } from './sources/sexkomix2';
 import { MULTPORN_CONFIGS } from './sources/multporn/config';
 import { createMultpornParser } from './sources/multporn/engine';
 
-export interface SourceDescriptor {
+export type SourceDescriptor = {
   info: RawSourceInfo;
   domains: [string, ...string[]];
   cookieScope: string;
   defaultHeaders: Record<string, string>;
   create: (ctx: ParserContext) => Parser;
-}
+};
 
-function notImplemented(id: string, info: RawSourceInfo): SourceDescriptor['create'] {
+const notImplemented = (id: string, info: RawSourceInfo): SourceDescriptor['create'] => {
   return () => ({
     id,
     info,
@@ -52,17 +52,17 @@ function notImplemented(id: string, info: RawSourceInfo): SourceDescriptor['crea
     },
     imageHeaders: () => ({}),
   });
-}
+};
 
 const GROUPLE_IDS = new Set(GROUPLE_CONFIGS.map((c) => c.id));
 /** MANGALIB/HENTAILIB/YAOILIB all hit the same host (api.cdnlibs.org) — see docs plan. */
 const LIBSOCIAL_IDS = new Set(['MANGALIB', 'HENTAILIB', 'YAOILIB']);
 
-function cookieScopeFor(id: string): string {
+const cookieScopeFor = (id: string): string => {
   if (GROUPLE_IDS.has(id)) return 'grouple';
   if (LIBSOCIAL_IDS.has(id)) return 'libsocial';
   return id;
-}
+};
 
 /** Sources with a single id, no shared-engine config to pick between. */
 const SINGLE_SOURCE_FACTORIES: Record<string, (ctx: ParserContext) => Parser> = {
@@ -79,7 +79,7 @@ const SINGLE_SOURCE_FACTORIES: Record<string, (ctx: ParserContext) => Parser> = 
   SEXKOMIX2: createSexKomix2Parser,
 };
 
-function buildDescriptor(id: SourceId): SourceDescriptor {
+const buildDescriptor = (id: SourceId): SourceDescriptor => {
   const catalogEntry = SOURCE_CATALOG[id];
   const { title, domains } = catalogEntry;
   const groupleConfig = GROUPLE_CONFIGS.find((c) => c.id === id);
@@ -91,9 +91,11 @@ function buildDescriptor(id: SourceId): SourceDescriptor {
   const info: RawSourceInfo = {
     id,
     title,
+    domain: domains[0],
     locale: 'ru',
     contentType: catalogEntry.contentType,
     isBroken: catalogEntry.isBroken,
+    isAdult: catalogEntry.isAdult,
     sortOrders: [],
     isSearchSupported: true,
     isMultipleTagsSupported: true,
@@ -173,17 +175,17 @@ function buildDescriptor(id: SourceId): SourceDescriptor {
     defaultHeaders: {},
     create: notImplemented(id, info),
   };
-}
+};
 
 export const SOURCES: Record<SourceId, SourceDescriptor> = Object.fromEntries(
   SOURCE_IDS.map((id) => [id, buildDescriptor(id)]),
 ) as Record<SourceId, SourceDescriptor>;
 
-export function listSources(): RawSourceInfo[] {
+export const listSources = (): RawSourceInfo[] => {
   return SOURCE_IDS.map((id) => SOURCES[id].info);
-}
+};
 
-export interface ParsersRegistry {
+export type ParsersRegistry = {
   listSources(): RawSourceInfo[];
   get(sourceId: string): Parser;
   imageHeaders(sourceId: string, imageUrl: string): Record<string, string>;
@@ -196,20 +198,20 @@ export interface ParsersRegistry {
    */
   ready(): Promise<void>;
   close(): Promise<void>;
-}
+};
 
-export interface RegistryOptions {
+export type RegistryOptions = {
   credentials: Credentials;
   logger: Logger;
   timeouts?: Partial<Timeouts>;
-}
+};
 
 /**
  * Parser instances are long-lived — one per known source, created eagerly here rather than
  * per-request (as the Kotlin sidecar did via `newParserInstance` on every HTTP call). That's
  * what makes state like Grouple's `cachedPagesServer` or Desu's tag cache worth having at all.
  */
-export function createRegistry(opts: RegistryOptions): ParsersRegistry {
+export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
   const jars = new Map<string, CookieJar>();
   const parsers = new Map<string, Parser>();
   let initPromise: Promise<void> | null = null;
@@ -271,4 +273,4 @@ export function createRegistry(opts: RegistryOptions): ParsersRegistry {
       );
     },
   };
-}
+};

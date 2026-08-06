@@ -1,5 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import { CONTENT_RATING } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -25,11 +26,15 @@ const IMG_SRC_RE = /<img[^>]*\ssrc="([^"]+)"/g;
  * stripping that prefix (and the token) resolves to the original upload — verified live: the
  * `juicebox_medium` thumbnail and the equivalent original both 200, original ~5x the bytes.
  */
-function originalFileUrl(styledUrl: string): string {
+const originalFileUrl = (styledUrl: string): string => {
   return styledUrl.replace(/\/styles\/[^/]+\/public\//, '/').split('?')[0]!;
-}
+};
 
-function parseCategoryLinks($links: Cheerio<AnyNode>, $: CheerioAPI, sourceId: string): RawTag[] {
+const parseCategoryLinks = (
+  $links: Cheerio<AnyNode>,
+  $: CheerioAPI,
+  sourceId: string,
+): RawTag[] => {
   const seen = new Set<string>();
   const tags: RawTag[] = [];
   $links.toArray().forEach((el) => {
@@ -43,7 +48,7 @@ function parseCategoryLinks($links: Cheerio<AnyNode>, $: CheerioAPI, sourceId: s
     tags.push({ title, key, source: sourceId });
   });
   return tags;
-}
+};
 
 /**
  * The gallery's real markup lives inside `<noscript>` ("for non-javascript devices" — the JS
@@ -52,7 +57,7 @@ function parseCategoryLinks($links: Cheerio<AnyNode>, $: CheerioAPI, sourceId: s
  * elements, so `<img>` `src`s have to be pulled out of that string with a regex instead of a
  * normal cheerio selector.
  */
-function extractGalleryImageSrcs($root: Cheerio<AnyNode>): string[] {
+const extractGalleryImageSrcs = ($root: Cheerio<AnyNode>): string[] => {
   const noscriptHtml =
     $root.find('.field-name-field-com-pages .juicebox-container noscript').first().html() ?? '';
   const srcs: string[] = [];
@@ -62,15 +67,15 @@ function extractGalleryImageSrcs($root: Cheerio<AnyNode>): string[] {
     srcs.push(match[1]!);
   }
   return srcs;
-}
+};
 
-export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): Parser {
+export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
 
   /** Shared row shape between `/new` (single content type per request) and `/search` (mixed
    *  types in one feed) — `pathPrefix` is what lets a single parser pick its own rows out of
    *  the latter. */
-  function parseRow($row: Cheerio<AnyNode>, $: CheerioAPI, baseUrl: string): RawManga | null {
+  const parseRow = ($row: Cheerio<AnyNode>, $: CheerioAPI, baseUrl: string): RawManga | null => {
     const $a = $row.find('.views-field-title a').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -89,7 +94,7 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
       url: relUrl,
       publicUrl,
       rating: RATING_UNKNOWN,
-      contentRating: 'ADULT',
+      contentRating: CONTENT_RATING.ADULT,
       coverUrl,
       tags: parseCategoryLinks($row.find(cfg.listTagSelector), $, cfg.id),
       state: null,
@@ -99,9 +104,9 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
       chapters: null,
       source: cfg.id,
     };
-  }
+  };
 
-  function buildBrowseUrl(page: number): string {
+  const buildBrowseUrl = (page: number): string => {
     const url = new URL('/new', `https://${domain}/`);
     url.searchParams.set('type', cfg.typeParam);
     url.searchParams.set('language', 'All');
@@ -110,16 +115,16 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
     url.searchParams.set('sort_order', 'DESC');
     url.searchParams.set('page', String(page));
     return url.toString();
-  }
+  };
 
-  async function fetchBrowsePage(page: number): Promise<RawManga[]> {
+  const fetchBrowsePage = async (page: number): Promise<RawManga[]> => {
     const doc = await ctx.http.getHtml(buildBrowseUrl(page));
     return doc
       .$('.view-content .masonry-item')
       .toArray()
       .map((el) => parseRow(doc.$(el), doc.$, doc.baseUrl))
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
   /**
    * `/search` has no content-type filter of its own — one query mixes all ~12 node types
@@ -128,7 +133,7 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
    * stop after page 1 any time most of a page's rows belong to some other type, so this walks
    * raw pages instead and only stops when a raw page itself comes back short.
    */
-  async function fetchSearchList(params: ListParams): Promise<RawManga[]> {
+  const fetchSearchList = async (params: ListParams): Promise<RawManga[]> => {
     const acc: RawManga[] = [];
     let rawPage = 0;
     for (;;) {
@@ -145,16 +150,16 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
       if (acc.length >= params.offset + params.limit || rows.length < SEARCH_RAW_PAGE_SIZE) break;
     }
     return acc.slice(params.offset, params.offset + params.limit);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     if (params.query) return fetchSearchList(params);
     return fetchPaged(params, { size: BROWSE_PAGE_SIZE, firstPage: 0 }, (page) =>
       fetchBrowsePage(page),
     );
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const $ = doc.$;
@@ -196,7 +201,7 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
       url: mangaUrl,
       publicUrl: absoluteUrl,
       rating: RATING_UNKNOWN,
-      contentRating: 'ADULT',
+      contentRating: CONTENT_RATING.ADULT,
       coverUrl,
       largeCoverUrl: coverUrl,
       tags,
@@ -206,9 +211,9 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
       chapters: [chapter],
       source: cfg.id,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const absoluteUrl = toAbsoluteUrl(chapterUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const seen = new Set<string>();
@@ -222,16 +227,18 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
     }
     if (pages.length === 0) throw new ParseError('No pages found', cfg.id);
     return pages;
-  }
+  };
 
   return {
     id: cfg.id,
     info: {
       id: cfg.id,
       title: catalogEntryFor(cfg.id).title,
+      domain,
       locale: 'en',
       contentType: catalogEntryFor(cfg.id).contentType,
       isBroken: false,
+      isAdult: catalogEntryFor(cfg.id).isAdult,
       sortOrders: ['NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -241,4 +248,4 @@ export function createMultpornParser(cfg: MultpornConfig, ctx: ParserContext): P
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

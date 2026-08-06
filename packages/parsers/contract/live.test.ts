@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRegistry } from '../src/registry';
+import type { SourceId } from '../src/sources/catalog';
 
 /**
  * Live network port of the old apps/parsers/src/test/kotlin/.../SourceContractTest.kt — hits
@@ -8,7 +9,7 @@ import { createRegistry } from '../src/registry';
  * implemented source gets its own it.each entry instead of one test that stops at the first
  * failure.
  */
-const IMPLEMENTED_SOURCE_IDS = [
+const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   'DESUME',
   'READMANGA_RU',
   'MINTMANGA',
@@ -45,7 +46,7 @@ const IMPLEMENTED_SOURCE_IDS = [
   'SEXKOMIX2',
   'MULTPORN',
   'MULTPORN_HENTAI',
-] as const;
+];
 
 const registry = createRegistry({
   credentials: {

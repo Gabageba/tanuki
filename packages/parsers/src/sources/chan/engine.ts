@@ -1,5 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
@@ -27,7 +28,7 @@ import type { ChanConfig } from './config';
 const SEARCH_NATIVE_SIZE = 40;
 const BROWSE_NATIVE_SIZE = 20;
 
-function toTagName(raw: string): string {
+const toTagName = (raw: string): string => {
   const spaced = raw.replace(/_/g, ' ');
   return spaced
     .split(' ')
@@ -35,14 +36,14 @@ function toTagName(raw: string): string {
       word.length === 0 ? word : word[0]!.toUpperCase() + word.slice(1).toLowerCase(),
     )
     .join(' ');
-}
+};
 
 /**
  * DLE listing titles are formatted "Alt Title (Primary Title)" — the trailing balanced
  * parenthetical is the primary title, the text before it the alt title. Ported from
  * ChanParser.parseTitle.
  */
-function parseTitle(raw: string): { title: string; altTitle: string | null } {
+const parseTitle = (raw: string): { title: string; altTitle: string | null } => {
   let depth = 0;
   const lastIndex = raw.length - 1;
   for (let i = lastIndex; i >= 0; i -= 1) {
@@ -60,12 +61,12 @@ function parseTitle(raw: string): { title: string; altTitle: string | null } {
     }
   }
   return { title: raw, altTitle: null };
-}
+};
 
-function cutBeforeTrailingDiv(html: string): string {
+const cutBeforeTrailingDiv = (html: string): string => {
   const idx = html.lastIndexOf('<div');
   return idx === -1 ? html : html.slice(0, idx);
-}
+};
 
 /**
  * `"fullimg"` script marker precedes a bare JS array of quoted image paths:
@@ -73,7 +74,7 @@ function cutBeforeTrailingDiv(html: string): string {
  * extracts the array body (after the first `[`, before `;`, before the last `]`) and splits on
  * comma; each token can be single- or double-quoted.
  */
-function extractFullImgPaths(scriptText: string): string[] | null {
+const extractFullImgPaths = (scriptText: string): string[] | null => {
   const markerPos = scriptText.indexOf('"fullimg');
   if (markerPos === -1) return null;
   const tail = scriptText.slice(markerPos);
@@ -92,15 +93,15 @@ function extractFullImgPaths(scriptText: string): string[] | null {
       return (match ? match[1]! : trimmed).trim();
     })
     .filter((s) => s.length > 0);
-}
+};
 
-function buildListUrl(
+const buildListUrl = (
   cfg: ChanConfig,
   domain: string,
   offset: number,
   order: string | undefined,
   query: string | undefined,
-): string {
+): string => {
   const url = new URL(`https://${domain}/`);
   url.searchParams.set('offset', String(offset));
 
@@ -146,12 +147,16 @@ function buildListUrl(
       url.pathname = '/manga/new';
   }
   return url.toString();
-}
+};
 
-export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
+export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
 
-  function parseMangaRow($row: Cheerio<AnyNode>, $: CheerioAPI, baseUrl: string): RawManga | null {
+  const parseMangaRow = (
+    $row: Cheerio<AnyNode>,
+    $: CheerioAPI,
+    baseUrl: string,
+  ): RawManga | null => {
     const $a = $row.find('div.manga_row1 h2 a').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -193,7 +198,7 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
       url: relUrl,
       publicUrl,
       rating: RATING_UNKNOWN,
-      contentRating: cfg.isNsfw ? 'ADULT' : null,
+      contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
       coverUrl,
       tags,
       state: null,
@@ -203,13 +208,13 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
       chapters: null,
       source: cfg.id,
     };
-  }
+  };
 
-  async function fetchListPage(
+  const fetchListPage = async (
     offset: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<RawManga[]> {
+  ): Promise<RawManga[]> => {
     const url = buildListUrl(cfg, domain, offset, order, query);
     const doc = await ctx.http.getHtml(url);
     const root = doc.$('div.main_fon').find('#content').first();
@@ -221,16 +226,16 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
       .toArray()
       .map((el) => parseMangaRow(doc.$(el), doc.$, doc.baseUrl))
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     const size = params.query ? SEARCH_NATIVE_SIZE : BROWSE_NATIVE_SIZE;
     return fetchOffsetNative(params, { size }, (offset) =>
       fetchListPage(offset, params.order, params.query),
     );
-  }
+  };
 
-  function parseDefaultChapters($root: Cheerio<AnyNode>, $: CheerioAPI): RawChapter[] {
+  const parseDefaultChapters = ($root: Cheerio<AnyNode>, $: CheerioAPI): RawChapter[] => {
     const rows = $root.find('table.table_cha tr').toArray().slice(2).reverse();
     const chapters: RawChapter[] = [];
     rows.forEach((el, index) => {
@@ -252,9 +257,9 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
       });
     });
     return chapters;
-  }
+  };
 
-  function parseYaoichanChapters($root: Cheerio<AnyNode>, $: CheerioAPI): RawChapter[] {
+  const parseYaoichanChapters = ($root: Cheerio<AnyNode>, $: CheerioAPI): RawChapter[] => {
     const rows = $root.find('table.table_cha div.manga').toArray().reverse();
     const chapters: RawChapter[] = [];
     rows.forEach((el, index) => {
@@ -275,9 +280,9 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
       });
     });
     return chapters;
-  }
+  };
 
-  function henchanChapters(mangaUrl: string): RawChapter[] {
+  const henchanChapters = (mangaUrl: string): RawChapter[] => {
     const readLink = mangaUrl.split('manga').join('online');
     return [
       {
@@ -292,9 +297,9 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
         source: cfg.id,
       },
     ];
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = new URL(mangaUrl, `https://${domain}/`).toString();
     const doc = await ctx.http.getHtml(absoluteUrl);
     const root = doc.$('#dle-content').first();
@@ -353,7 +358,7 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
       url: mangaUrl,
       publicUrl: absoluteUrl,
       rating: RATING_UNKNOWN,
-      contentRating: cfg.isNsfw ? 'ADULT' : null,
+      contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
       coverUrl,
       tags,
       state: null,
@@ -363,9 +368,9 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
       chapters,
       source: cfg.id,
     };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const absoluteUrl = new URL(chapterUrl, `https://${domain}/`).toString();
     const doc = await ctx.http.getHtml(absoluteUrl);
     const scripts = doc
@@ -381,16 +386,18 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
       });
     }
     throw new ParseError(`Pages list not found at ${chapterUrl}`, cfg.id);
-  }
+  };
 
   return {
     id: cfg.id,
     info: {
       id: cfg.id,
       title: catalogEntryFor(cfg.id).title,
+      domain,
       locale: 'ru',
-      contentType: cfg.isNsfw ? 'HENTAI' : 'MANGA',
+      contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.hentai : SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
+      isAdult: catalogEntryFor(cfg.id).isAdult,
       sortOrders: cfg.sortOrders,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -400,4 +407,4 @@ export function createChanParser(cfg: ChanConfig, ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
-}
+};

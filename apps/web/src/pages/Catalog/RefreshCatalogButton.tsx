@@ -4,22 +4,18 @@ import { Button } from '@mantine/core';
 const COOLDOWN_MS = 2 * 60 * 1000;
 const storageKey = (sourceId: string) => `catalog-refresh-at:${sourceId}`;
 
-function readRemainingMs(sourceId: string): number {
+const readRemainingMs = (sourceId: string): number => {
   const storedAt = Number(localStorage.getItem(storageKey(sourceId)) ?? 0);
   return Math.max(0, storedAt + COOLDOWN_MS - Date.now());
-}
+};
 
-interface RefreshCatalogButtonProps {
+type Props = {
   sourceId: string;
   isRefreshing: boolean;
   onRefresh: () => void;
-}
+};
 
-export default function RefreshCatalogButton({
-  sourceId,
-  isRefreshing,
-  onRefresh,
-}: RefreshCatalogButtonProps) {
+function RefreshCatalogButton({ sourceId, isRefreshing, onRefresh }: Props) {
   const [remainingMs, setRemainingMs] = useState(() => readRemainingMs(sourceId));
 
   useEffect(() => {
@@ -47,3 +43,5 @@ export default function RefreshCatalogButton({
     </Button>
   );
 }
+
+export default RefreshCatalogButton;

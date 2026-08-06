@@ -37,7 +37,7 @@ const PAGES_HTML = `<!doctype html><html><body>
   <script>window.__DATA__ = {"images":["001.jpg","002.jpg"]};</script>
 </body></html>`;
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -45,15 +45,15 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/reader/555/2'), { status: 200, body: PAGES_HTML });
   http.register((url) => url.endsWith('/one-piece'), { status: 200, body: DETAILS_HTML });
   http.register((url) => url.includes('/ComicList'), { status: 200, body: LIST_HTML });
   return http;
-}
+};
 
 describe('Com-X parser conformance', () => {
   const http = setUpFixtures();

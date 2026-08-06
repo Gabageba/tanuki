@@ -1,5 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import { RAW_MANGA_STATE } from '../../types';
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
@@ -29,7 +31,7 @@ const TITLE_CHAPTER_NUMBER_REGEX = /([0-9]+(?:[.,]\d+)?)\s*$/;
 const HREF_VOLUME_REGEX = /\/vol(\d+)\//i;
 const USER_HASH_REGEX = /window\.user_hash\s*=\s*'([^']+)'/;
 
-function getSearchSortType(order: string | undefined): string {
+const getSearchSortType = (order: string | undefined): string => {
   switch (order) {
     case 'RATING':
       return 'USER_RATING';
@@ -44,9 +46,9 @@ function getSearchSortType(order: string | undefined): string {
     default:
       return 'DATE_UPDATE';
   }
-}
+};
 
-function extractJsonAfter(data: string, pos: number): string | null {
+const extractJsonAfter = (data: string, pos: number): string | null => {
   const tail = data.slice(pos);
   const openIdx = tail.indexOf('(');
   if (openIdx === -1) return null;
@@ -55,14 +57,14 @@ function extractJsonAfter(data: string, pos: number): string | null {
   const lastParen = uptoNewline.lastIndexOf(')');
   const json = lastParen === -1 ? uptoNewline : uptoNewline.slice(0, lastParen);
   return json.length === 0 ? null : json;
-}
+};
 
 /**
  * Extracts the JS array literal starting at the first `[` at or after `fromIndex`, tracking
  * bracket depth and (single/double-quoted, backslash-escaped) string state so brackets inside
  * URLs or strings don't get counted. Returns null if the array is never closed.
  */
-function extractBalancedArray(text: string, fromIndex: number): string | null {
+const extractBalancedArray = (text: string, fromIndex: number): string | null => {
   let depth = 0;
   let quote: '"' | "'" | null = null;
   let start = -1;
@@ -89,15 +91,15 @@ function extractBalancedArray(text: string, fromIndex: number): string | null {
     }
   }
   return null;
-}
+};
 
 /** Converts single-quoted JS string literals to double-quoted JSON ones; leaves the rest as-is. */
-function jsArrayLiteralToJson(text: string): string {
+const jsArrayLiteralToJson = (text: string): string => {
   return text.replace(/'((?:[^'\\]|\\.)*)'/g, (_match, inner: string) => {
     const withoutEscapedQuotes = inner.replace(/\\'/g, "'").replace(/"/g, '\\"');
     return `"${withoutEscapedQuotes}"`;
   });
-}
+};
 
 /**
  * Grouple's chapter reader embeds page lists as a JS call in a <script> tag, in one of three
@@ -106,7 +108,7 @@ function jsArrayLiteralToJson(text: string): string {
  * host is resolved later by probing candidates (see resolvePageUrl below), because the fastest
  * responding mirror changes over time and isn't knowable up front.
  */
-function parsePagesV1(data: string, pos: number, sourceId: string): RawPage[] | null {
+const parsePagesV1 = (data: string, pos: number, sourceId: string): RawPage[] | null => {
   const json = extractJsonAfter(data, pos);
   if (!json) return null;
   let ja: unknown[];
@@ -128,9 +130,9 @@ function parsePagesV1(data: string, pos: number, sourceId: string): RawPage[] | 
       : combined;
     return { id: generateUid(sourceId, url), url: fullSrc, preview: null, source: sourceId };
   });
-}
+};
 
-function parsePagesV2(data: string, pos: number, sourceId: string): RawPage[] | null {
+const parsePagesV2 = (data: string, pos: number, sourceId: string): RawPage[] | null => {
   const json = extractJsonAfter(data, pos);
   if (!json) return null;
   let ja: unknown[];
@@ -152,7 +154,7 @@ function parsePagesV2(data: string, pos: number, sourceId: string): RawPage[] | 
       : combined;
     return { id: generateUid(sourceId, url), url: fullSrc, preview: null, source: sourceId };
   });
-}
+};
 
 /**
  * The live call shape is `rm_h.readerInit(chapterInfo, [[server, '', path, w, h, ''], ...],
@@ -161,7 +163,7 @@ function parsePagesV2(data: string, pos: number, sourceId: string): RawPage[] | 
  * flag). Pulling out just the balanced `[...]` right after the first argument, instead of
  * assuming a fixed number of trailing arguments, survives that tail changing shape again.
  */
-function parsePagesV3(data: string, pos: number, domain: string, sourceId: string): RawPage[] {
+const parsePagesV3 = (data: string, pos: number, domain: string, sourceId: string): RawPage[] => {
   const tail = data.slice(pos);
   const openParen = tail.indexOf('(');
   if (openParen === -1) {
@@ -191,9 +193,9 @@ function parsePagesV3(data: string, pos: number, domain: string, sourceId: strin
       : fullUrl;
     return { id: generateUid(sourceId, url), url: finalUrl, preview: null, source: sourceId };
   });
-}
+};
 
-export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Parser {
+export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let cachedPagesServer: string | null = null;
 
@@ -233,7 +235,7 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
     return res;
   });
 
-  function parseTagFromLink($el: Cheerio<AnyNode>): RawTag | null {
+  const parseTagFromLink = ($el: Cheerio<AnyNode>): RawTag | null => {
     const title = textOrNull($el)?.replace('#', '').trim();
     if (!title) return null;
     const href = attrOrNull($el, 'href') ?? '';
@@ -242,9 +244,9 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       key: href.split('/').filter(Boolean).pop() ?? title,
       source: cfg.id,
     };
-  }
+  };
 
-  function parseManga($tile: Cheerio<AnyNode>, $: CheerioAPI, baseUrl: string): RawManga | null {
+  const parseManga = ($tile: Cheerio<AnyNode>, $: CheerioAPI, baseUrl: string): RawManga | null => {
     const imgDiv = $tile.find('div.img').first();
     const descDiv = $tile.find('div.desc').first();
     if (imgDiv.length === 0 || descDiv.length === 0) return null;
@@ -287,17 +289,18 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       url: relUrl,
       publicUrl,
       rating: rating !== null ? rating / 5 : RATING_UNKNOWN,
-      contentRating: cfg.isNsfw ? 'ADULT' : null,
+      contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
       coverUrl,
       tags,
-      state: $tile.find('div.tags span.mangaCompleted').length > 0 ? 'FINISHED' : null,
+      state:
+        $tile.find('div.tags span.mangaCompleted').length > 0 ? RAW_MANGA_STATE.FINISHED : null,
       authors: author ? [author] : [],
       largeCoverUrl: null,
       description: null,
       chapters: null,
       source: cfg.id,
     };
-  }
+  };
 
   /**
    * Also used for plain catalog browsing (empty query): `/list` (the old page-driven catalog
@@ -307,11 +310,11 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
    * index the site's own catalog UI now calls through its JSON API and returns identical
    * ordering, so it doubles as the browse endpoint instead of `/list`.
    */
-  async function searchPage(
+  const searchPage = async (
     query: string,
     nativeOffset: number,
     order: string | undefined,
-  ): Promise<RawManga[]> {
+  ): Promise<RawManga[]> => {
     const url = new URL(`https://${domain}/search/advancedResults`);
     url.searchParams.set('q', query);
     url.searchParams.set('offset', String(nativeOffset));
@@ -328,13 +331,13 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       .toArray()
       .map((el) => parseManga(doc.$(el), doc.$, doc.baseUrl))
       .filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  function parseChapterNumber(
+  const parseChapterNumber = (
     href: string,
     dataNum: string | undefined,
     titleText: string,
-  ): number {
+  ): number => {
     const hrefMatch = HREF_CHAPTER_NUMBER_REGEX.exec(href);
     const hrefValue = hrefMatch ? parseFloatOrNull(hrefMatch[1]!.replace(',', '.')) : null;
     if (hrefValue !== null) return hrefValue;
@@ -352,30 +355,30 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       }
     }
     return 0;
-  }
+  };
 
-  function parseChapterVolume(href: string, dataVol: string | undefined): number {
+  const parseChapterVolume = (href: string, dataVol: string | undefined): number => {
     const fromAttr = parseIntOrNull(dataVol ?? null);
     if (fromAttr !== null) return fromAttr;
     const match = HREF_VOLUME_REGEX.exec(href);
     return match ? (parseIntOrNull(match[1]!) ?? 0) : 0;
-  }
+  };
 
-  function parseChapterUploadDate($td: Cheerio<AnyNode>): number {
+  const parseChapterUploadDate = ($td: Cheerio<AnyNode>): number => {
     if ($td.length === 0) return 0;
     const dataDate = attrOrNull($td, 'data-date') ?? textOrNull($td);
     const primary = parseGroupleDate(dataDate);
     if (primary !== 0) return primary;
     return parseGroupleDate(attrOrNull($td, 'data-date-raw'));
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchOffsetNative(params, { size: PAGE_SIZE }, (offset) =>
       searchPage(params.query ?? '', offset, params.order),
     );
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = new URL(mangaUrl, `https://${domain}/`).toString();
     const doc = await ctx.http.getHtml(absoluteUrl);
     const mangaBox = selectFirstOrThrow(doc.$.root(), '#mangaBox', cfg.id, 'getDetails root');
@@ -488,10 +491,10 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       contentRating: isRestricted
         ? null
         : hasNsfwAlert
-          ? 'SUGGESTIVE'
+          ? CONTENT_RATING.SUGGESTIVE
           : cfg.isNsfw
-            ? 'ADULT'
-            : 'SAFE',
+            ? CONTENT_RATING.ADULT
+            : CONTENT_RATING.SAFE,
       coverUrl:
         (posterSlide.length ? attrOrNull(posterSlide, 'href') : null) ??
         attrOrNull(coverImg, 'src') ??
@@ -503,7 +506,7 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
         attrOrNull(coverImg, 'data-full') ??
         null,
       tags: [...tags.values()],
-      state: isRestricted ? 'RESTRICTED' : null,
+      state: isRestricted ? RAW_MANGA_STATE.RESTRICTED : null,
       authors: root
         .find('.elem_author,.elem_illustrator,.elem_screenwriter')
         .find('a.person-link')
@@ -514,9 +517,9 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       chapters,
       source: cfg.id,
     };
-  }
+  };
 
-  async function resolvePageUrl(pipedUrl: string): Promise<string> {
+  const resolvePageUrl = async (pipedUrl: string): Promise<string> => {
     const parts = pipedUrl.split('|');
     if (parts.length < 2) return pipedUrl;
     const path = parts[parts.length - 1]!;
@@ -545,9 +548,9 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       }
     }
     return candidates.values().next().value ?? pipedUrl;
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const url = new URL(chapterUrl, `https://${domain}/`);
     url.searchParams.set('mtr', '1');
     const doc = await ctx.http.getHtml(url.toString());
@@ -584,16 +587,22 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       resolved.push({ ...page, url: absoluteUrl });
     }
     return resolved;
-  }
+  };
 
   return {
     id: cfg.id,
     info: {
       id: cfg.id,
       title: catalogEntryFor(cfg.id).title,
+      domain,
       locale: 'ru',
-      contentType: cfg.isNsfw ? 'HENTAI' : cfg.id === 'SELFMANGA' ? 'OTHER' : 'MANGA',
+      contentType: cfg.isNsfw
+        ? SOURCE_CONTENT_TYPE.hentai
+        : cfg.id === 'SELFMANGA'
+          ? SOURCE_CONTENT_TYPE.other
+          : SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
+      isAdult: catalogEntryFor(cfg.id).isAdult,
       sortOrders: ['UPDATED', 'POPULARITY', 'NEWEST', 'RATING', 'ALPHABETICAL', 'ADDED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
@@ -610,4 +619,4 @@ export function createGroupleParser(cfg: GroupleConfig, ctx: ParserContext): Par
       }
     },
   };
-}
+};

@@ -4,15 +4,15 @@ import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import type { CacheTtlSpec } from './cache.constants';
 
-interface CacheEnvelope<T> {
+type CacheEnvelope<T> = {
   value: T;
   storedAt: number;
-}
+};
 
-export interface CacheResult<T> {
+export type CacheResult<T> = {
   value: T;
   stale: boolean;
-}
+};
 
 @Injectable()
 export class CacheService implements OnModuleDestroy {

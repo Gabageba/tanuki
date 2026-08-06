@@ -1,3 +1,5 @@
+import { RAW_MANGA_STATE } from '../../types';
+import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -18,16 +20,16 @@ const PAGE_SIZE = 24;
 const CDN_URL = 'https://s3.regru.cloud/tomilolib';
 const IMAGE_ACCEPT = 'image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5';
 
-interface ChapterJson {
+type ChapterJson = {
   _id?: string;
   isPublished?: boolean;
   chapterNumber?: number;
   name?: string | null;
   releaseDate?: string | null;
   createdAt?: string | null;
-}
+};
 
-interface MangaJson {
+type MangaJson = {
   _id?: string;
   slug?: string;
   name?: string;
@@ -43,9 +45,9 @@ interface MangaJson {
   status?: string;
   description?: string;
   chapters?: ChapterJson[];
-}
+};
 
-function getApiSortBy(order: string | undefined): string {
+const getApiSortBy = (order: string | undefined): string => {
   switch (order) {
     case 'POPULARITY':
     case 'POPULARITY_WEEK':
@@ -65,66 +67,66 @@ function getApiSortBy(order: string | undefined): string {
     default:
       return 'updatedAt';
   }
-}
+};
 
-function getApiSortOrder(order: string | undefined): string {
+const getApiSortOrder = (order: string | undefined): string => {
   return order === 'ALPHABETICAL' ? 'asc' : 'desc';
-}
+};
 
-function parseContentRating(info: MangaJson): RawContentRating {
+const parseContentRating = (info: MangaJson): RawContentRating => {
   const ageLimit = info.ageLimit ?? 0;
-  if (info.isAdult === true || ageLimit >= 18) return 'ADULT';
-  if (ageLimit >= 16) return 'SUGGESTIVE';
-  return 'SAFE';
-}
+  if (info.isAdult === true || ageLimit >= 18) return CONTENT_RATING.ADULT;
+  if (ageLimit >= 16) return CONTENT_RATING.SUGGESTIVE;
+  return CONTENT_RATING.SAFE;
+};
 
-function parseState(raw: string | undefined): RawMangaState | null {
+const parseState = (raw: string | undefined): RawMangaState | null => {
   switch (raw?.toLowerCase()) {
     case 'ongoing':
-      return 'ONGOING';
+      return RAW_MANGA_STATE.ONGOING;
     case 'completed':
-      return 'FINISHED';
+      return RAW_MANGA_STATE.FINISHED;
     case 'pause':
-      return 'PAUSED';
+      return RAW_MANGA_STATE.PAUSED;
     case 'cancelled':
-      return 'ABANDONED';
+      return RAW_MANGA_STATE.ABANDONED;
     default:
       return null;
   }
-}
+};
 
-function splitList(value: string | undefined): string[] {
+const splitList = (value: string | undefined): string[] => {
   if (!value) return [];
   return value
     .split(/[,;/]/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-}
+};
 
-function toCdnUrl(path: string): string {
+const toCdnUrl = (path: string): string => {
   if (/^https?:\/\//i.test(path)) return path;
   const withoutUploads = path.startsWith('/uploads') ? path.slice('/uploads'.length) : path;
   const normalized = withoutUploads.startsWith('/') ? withoutUploads : `/${withoutUploads}`;
   return `${CDN_URL}${normalized}`;
-}
+};
 
-function toCleanString(n: number): string {
+const toCleanString = (n: number): string => {
   return Number.isInteger(n) ? String(n) : String(n);
-}
+};
 
-function buildChapterTitle(number: number, name: string | null | undefined): string | null {
+const buildChapterTitle = (number: number, name: string | null | undefined): string | null => {
   const title = name?.trim() ?? '';
   if (title.length > 0) return title;
   return number > 0 ? `Глава ${toCleanString(number)}` : null;
-}
+};
 
-function parseDate(raw: string | null | undefined): number {
+const parseDate = (raw: string | null | undefined): number => {
   if (!raw) return 0;
   const parsed = Date.parse(raw.trim());
   return Number.isNaN(parsed) ? 0 : parsed;
-}
+};
 
-export function createTomiloLibParser(ctx: ParserContext): Parser {
+export const createTomiloLibParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
 
   ctx.http.use((req, next) => {
@@ -139,11 +141,11 @@ export function createTomiloLibParser(ctx: ParserContext): Parser {
     return next({ ...req, headers });
   });
 
-  function apiUrl(path: string): URL {
+  const apiUrl = (path: string): URL => {
     return new URL(`https://${domain}/api/${path}`);
-  }
+  };
 
-  function parseTags(info: MangaJson): RawTag[] {
+  const parseTags = (info: MangaJson): RawTag[] => {
     const values = [...(info.genres ?? []), ...(info.tags ?? [])];
     const seen = new Set<string>();
     const tags: RawTag[] = [];
@@ -154,9 +156,13 @@ export function createTomiloLibParser(ctx: ParserContext): Parser {
       tags.push({ key: value, title: value, source: SOURCE_ID });
     }
     return tags;
-  }
+  };
 
-  function parseChapterList(chapters: ChapterJson[], slug: string, titleId: string): RawChapter[] {
+  const parseChapterList = (
+    chapters: ChapterJson[],
+    slug: string,
+    titleId: string,
+  ): RawChapter[] => {
     return chapters
       .filter((ch) => ch._id && ch.isPublished !== false)
       .map((ch): RawChapter => {
@@ -174,9 +180,9 @@ export function createTomiloLibParser(ctx: ParserContext): Parser {
           source: SOURCE_ID,
         };
       });
-  }
+  };
 
-  function parseManga(info: MangaJson | null, withDetails: boolean): RawManga | null {
+  const parseManga = (info: MangaJson | null, withDetails: boolean): RawManga | null => {
     if (!info || !info._id || !info.slug) return null;
     const slug = info.slug;
     const title = info.name ?? slug;
@@ -205,13 +211,13 @@ export function createTomiloLibParser(ctx: ParserContext): Parser {
       chapters: null,
       source: SOURCE_ID,
     };
-  }
+  };
 
-  async function fetchListPage(
+  const fetchListPage = async (
     page: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<RawManga[]> {
+  ): Promise<RawManga[]> => {
     const url = apiUrl('titles');
     url.searchParams.set('page', String(page));
     url.searchParams.set('limit', String(PAGE_SIZE));
@@ -223,24 +229,24 @@ export function createTomiloLibParser(ctx: ParserContext): Parser {
     const json = await ctx.http.getJson<{ data?: { titles?: MangaJson[] } }>(url.toString());
     const titles = json.data?.titles ?? [];
     return titles.map((t) => parseManga(t, false)).filter((m): m is RawManga => m !== null);
-  }
+  };
 
-  async function getList(params: ListParams): Promise<RawManga[]> {
+  const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.order, params.query),
     );
-  }
+  };
 
-  async function fetchChapters(titleId: string, slug: string): Promise<RawChapter[]> {
+  const fetchChapters = async (titleId: string, slug: string): Promise<RawChapter[]> => {
     const url = apiUrl(`chapters/title/${titleId}`);
     url.searchParams.set('page', '1');
     url.searchParams.set('limit', '10000');
     url.searchParams.set('sortOrder', 'asc');
     const json = await ctx.http.getJson<{ data?: { chapters?: ChapterJson[] } }>(url.toString());
     return parseChapterList(json.data?.chapters ?? [], slug, titleId);
-  }
+  };
 
-  async function getDetails(mangaUrl: string): Promise<RawManga> {
+  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const slug = mangaUrl.replace(/\/$/, '').split('/').pop();
     if (!slug) throw new ParseError('Cannot parse title slug', SOURCE_ID);
     const url = apiUrl(`titles/slug/${slug}`);
@@ -262,9 +268,9 @@ export function createTomiloLibParser(ctx: ParserContext): Parser {
         : await fetchChapters(titleId, slug);
 
     return { ...manga, chapters };
-  }
+  };
 
-  async function getPages(chapterUrl: string): Promise<RawPage[]> {
+  const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const chapterId = new URL(chapterUrl, `https://${domain}/`).pathname
       .split('/')
       .filter(Boolean)
@@ -287,16 +293,18 @@ export function createTomiloLibParser(ctx: ParserContext): Parser {
         };
       })
       .filter((p): p is RawPage => p !== null);
-  }
+  };
 
   return {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
       title: 'TomiloLib',
+      domain,
       locale: 'ru',
-      contentType: 'MANGA',
+      contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
+      isAdult: false,
       sortOrders: [
         'POPULARITY',
         'POPULARITY_TODAY',
@@ -316,4 +324,4 @@ export function createTomiloLibParser(ctx: ParserContext): Parser {
     getPages,
     imageHeaders: () => ({ Referer: `https://${domain}/`, Accept: IMAGE_ACCEPT }),
   };
-}
+};

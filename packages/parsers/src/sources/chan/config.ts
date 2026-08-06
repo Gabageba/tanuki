@@ -1,4 +1,4 @@
-export interface ChanConfig {
+export type ChanConfig = {
   id: string;
   isNsfw: boolean;
   sortOrders: string[];
@@ -11,7 +11,7 @@ export interface ChanConfig {
    * docs/03-parsers.md on why the shared engines here are config-driven factories.
    */
   variant: 'default' | 'henchan' | 'yaoichan';
-}
+};
 
 // title/domains live in SOURCE_CATALOG (../catalog) — look them up by id, don't duplicate here.
 export const CHAN_CONFIGS: ChanConfig[] = [

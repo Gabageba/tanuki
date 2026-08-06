@@ -12,4 +12,5 @@ contract-report.json
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea/

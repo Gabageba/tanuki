@@ -4,7 +4,7 @@ import type { RawChapter, RawManga } from '../parsers-client/parsers-client.type
 
 const ENV = { IMG_SIGN_SECRET: 'a'.repeat(32) };
 
-function raw(overrides: Partial<RawManga> = {}): RawManga {
+const raw = (overrides: Partial<RawManga> = {}): RawManga => {
   return {
     id: 1,
     title: 'Title',
@@ -23,9 +23,9 @@ function raw(overrides: Partial<RawManga> = {}): RawManga {
     source: 'DESUME',
     ...overrides,
   };
-}
+};
 
-function chapter(overrides: Partial<RawChapter> = {}): RawChapter {
+const chapter = (overrides: Partial<RawChapter> = {}): RawChapter => {
   return {
     id: 1,
     title: null,
@@ -38,7 +38,7 @@ function chapter(overrides: Partial<RawChapter> = {}): RawChapter {
     source: 'DESUME',
     ...overrides,
   };
-}
+};
 
 describe('normalizeManga', () => {
   it('maps RATING_UNKNOWN (-1) to null, otherwise passes rating through unchanged', () => {
@@ -82,11 +82,11 @@ describe('normalizeChapter', () => {
     expect(c2.volume).toBe(3);
   });
 
-  it('maps 0 uploadDate to null, otherwise formats as ISO from epoch millis', () => {
+  it('maps 0 uploadDate to null, otherwise formats as YYYY-MM-DDTHH:MM:SSZ from epoch millis', () => {
     expect(normalizeChapter('DESUME', 'm', chapter({ uploadDate: 0 })).uploadedAt).toBeNull();
     const ms = Date.UTC(2024, 0, 15, 12, 0, 0);
     expect(normalizeChapter('DESUME', 'm', chapter({ uploadDate: ms })).uploadedAt).toBe(
-      new Date(ms).toISOString(),
+      '2024-01-15T12:00:00Z',
     );
   });
 });
@@ -111,6 +111,6 @@ describe('branch grouping', () => {
     expect(branches).toHaveLength(1);
     expect(branches[0]!.id).toBe('default');
     expect(branches[0]!.chaptersCount).toBe(2);
-    expect(branches[0]!.lastUpdatedAt).toBe(new Date(3000).toISOString());
+    expect(branches[0]!.lastUpdatedAt).toBe('1970-01-01T00:00:03Z');
   });
 });

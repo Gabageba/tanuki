@@ -11,18 +11,15 @@ import {
   Title,
 } from '@mantine/core';
 import { useSearchParams } from 'react-router';
-import { MangaCard } from '@/entities/manga';
-import { useSearch } from '@/shared/api/search';
-import { useSources } from '@/shared/api/sources';
-import { ApiErrorText } from '@/shared/ui';
-import type { SearchGroup } from '@tanuki/contracts';
+import MangaCard from '@/entities/manga/MangaCard';
+import useSearch from '@/shared/api/hooks/useSearch';
+import { flattenSources } from '@/shared/api/sources';
+import useSources from '@/shared/api/hooks/useSources';
+import ApiErrorText from '@/shared/ui/ApiErrorText';
+import { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
+import { GROUP_STATUS_LABEL } from './models';
 
-const GROUP_STATUS_LABEL: Record<Exclude<SearchGroup['status'], 'ok'>, string> = {
-  timeout: 'не успел ответить',
-  error: 'ошибка',
-};
-
-export default function SearchPage() {
+function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query') ?? '';
   const [input, setInput] = useState(query);
@@ -30,7 +27,7 @@ export default function SearchPage() {
   const { data: sourcesData } = useSources();
 
   const sourceTitle = (sourceId: string) =>
-    sourcesData?.items.find((source) => source.id === sourceId)?.title ?? sourceId;
+    flattenSources(sourcesData).find((source) => source.id === sourceId)?.title ?? sourceId;
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -62,13 +59,16 @@ export default function SearchPage() {
           <div key={group.sourceId}>
             <Group gap="xs" mb="sm">
               <Title order={3}>{sourceTitle(group.sourceId)}</Title>
-              {group.status !== 'ok' && (
-                <Badge color={group.status === 'timeout' ? 'yellow' : 'red'} variant="light">
+              {group.status !== SEARCH_GROUP_STATUS.ok && (
+                <Badge
+                  color={group.status === SEARCH_GROUP_STATUS.timeout ? 'yellow' : 'red'}
+                  variant="light"
+                >
                   {GROUP_STATUS_LABEL[group.status]}
                 </Badge>
               )}
             </Group>
-            {group.items.length === 0 && group.status === 'ok' && (
+            {group.items.length === 0 && group.status === SEARCH_GROUP_STATUS.ok && (
               <Text c="dimmed" size="sm">
                 Ничего не найдено
               </Text>
@@ -84,3 +84,5 @@ export default function SearchPage() {
     </Container>
   );
 }
+
+export default SearchPage;

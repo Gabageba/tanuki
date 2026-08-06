@@ -37,7 +37,7 @@ const PAGES_HTML = `<!doctype html><html><body>
   <img data-src="/pages/002.jpg" />
 </body></html>`;
 
-function makeContext(http: FakeHttpClient): ParserContext {
+const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
     domain: DOMAIN,
@@ -45,15 +45,15 @@ function makeContext(http: FakeHttpClient): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
-function setUpFixtures(): FakeHttpClient {
+const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.endsWith('/read/12345/1'), { status: 200, body: PAGES_HTML });
   http.register((url) => url.endsWith('/read/12345'), { status: 200, body: DETAILS_HTML });
   http.register((url) => url.includes('/all_manga'), { status: 200, body: LIST_HTML });
   return http;
-}
+};
 
 describe('Nude-Moon parser conformance', () => {
   const http = setUpFixtures();
@@ -107,12 +107,12 @@ describe('Nude-Moon parser conformance', () => {
  *  can legitimately return an already-seen card (e.g. rowstart=0 -> [1,2], rowstart=30 -> [2,3]).
  *  Regression coverage for the bug where paging through the web UI showed repeated titles
  *  because dedup used to be scoped to a single getList() call instead of the whole scan. */
-function rowRow(id: number): string {
+const rowRow = (id: number): string => {
   return `<table class="news_pic2"><tr><td>
     <a href="/${id}-title" title="Alt${id} / Title${id}"></a>
     <img src="/covers/${id}.jpg" />
   </td></tr></table>`;
-}
+};
 
 describe('Nude-Moon parser: cross-page dedup', () => {
   it('does not repeat cards across sequential getList pages', async () => {

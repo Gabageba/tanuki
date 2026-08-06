@@ -1,5 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
+import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import { createSenkuroParser } from '../src/sources/senkuro/engine';
 import { SENKURO_CONFIGS } from '../src/sources/senkuro/config';
 import type { ParserContext } from '../src/core/parser';
@@ -85,7 +86,7 @@ const PAGES_RESPONSE = JSON.stringify({
 const SENKURO_CONFIG = SENKURO_CONFIGS.find((c) => c.id === 'SENKURO')!;
 const SENKOGNITO_CONFIG = SENKURO_CONFIGS.find((c) => c.id === 'SENKOGNITO')!;
 
-function makeContext(http: FakeHttpClient, domain = DOMAIN): ParserContext {
+const makeContext = (http: FakeHttpClient, domain = DOMAIN): ParserContext => {
   return {
     http,
     domain,
@@ -93,14 +94,14 @@ function makeContext(http: FakeHttpClient, domain = DOMAIN): ParserContext {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
   };
-}
+};
 
 // `http` is a parameter so a caller can register its own rule (e.g. a request spy) ahead of
 // these — FakeHttpClient matches in registration order and stops at the first hit.
-function setUpFixtures(
+const setUpFixtures = (
   endpoint = SENKURO_CONFIG.apiEndpoint,
   http = new FakeHttpClient(),
-): FakeHttpClient {
+): FakeHttpClient => {
   http.register((url, body) => url === endpoint && !!body?.includes('mangaTachiyomiChapterPages'), {
     status: 200,
     body: PAGES_RESPONSE,
@@ -122,7 +123,7 @@ function setUpFixtures(
     contentType: 'application/json',
   });
   return http;
-}
+};
 
 describe('Senkuro parser conformance', () => {
   const http = setUpFixtures();
@@ -198,9 +199,9 @@ describe('Senkognito config', () => {
     expect(items[0]!.id).not.toBe(senkuroItems[0]!.id);
   });
 
-  it('exposes the catalog entry as a HENTAI source', () => {
+  it('exposes the catalog entry as a hentai source', () => {
     const parser = createSenkuroParser(SENKOGNITO_CONFIG, makeContext(new FakeHttpClient()));
     expect(parser.info.title).toBe('Senkognito');
-    expect(parser.info.contentType).toBe('HENTAI');
+    expect(parser.info.contentType).toBe(SOURCE_CONTENT_TYPE.hentai);
   });
 });
