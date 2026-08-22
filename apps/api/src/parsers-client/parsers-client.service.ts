@@ -17,7 +17,7 @@ import { toApiException } from './parser-error.mapper';
 import { PARSERS } from './parsers.provider';
 import type { RawManga, RawPage, RawSourceInfo } from './parsers-client.types';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 30;
 
 export type CachedResult<T> = {
   data: T;

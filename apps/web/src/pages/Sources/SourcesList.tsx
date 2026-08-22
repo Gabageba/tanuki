@@ -1,20 +1,12 @@
-import { Divider, Loader, SimpleGrid, Stack, Title } from '@mantine/core';
-import useSources from '@/shared/api/hooks/useSources';
-import ApiErrorText from '@/shared/ui/ApiErrorText';
+import { Divider, SimpleGrid, Stack, Title } from '@mantine/core';
 import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
-import SourceCard from './SourceCard';
-import { getLabelByContentType } from './models';
+import { getLabelByContentType } from '@/entities/source/lib';
+import usePageLayoutQuery from '@/shared/ui/PageLayout/hooks/usePageLayoutQuery';
+import type { SourcesQuery } from './models';
+import SourceCard from '@/entities/source/components/SourceCard';
 
 function SourcesList() {
-  const { data, error, isLoading, isError } = useSources();
-
-  if (isLoading) {
-    return <Loader />;
-  }
-
-  if (isError) {
-    return <ApiErrorText error={error} fallback="Не удалось загрузить список источников." />;
-  }
+  const { data } = usePageLayoutQuery<SourcesQuery>();
 
   return (
     <Stack gap="xl">
@@ -24,7 +16,11 @@ function SourcesList() {
         .map(({ contentType, sources }) => (
           <div key={contentType}>
             <Divider
-              label={<Title order={4}>{getLabelByContentType(contentType)}</Title>}
+              label={
+                <Title order={4} fw={600}>
+                  {getLabelByContentType(contentType)}
+                </Title>
+              }
               labelPosition="left"
               mb="xs"
             />

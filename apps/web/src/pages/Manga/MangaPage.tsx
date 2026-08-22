@@ -13,23 +13,23 @@ import {
   Title,
 } from '@mantine/core';
 import { Link, useParams } from 'react-router';
-import useChapters from '@/shared/api/hooks/useChapters';
-import useMangaDetails from '@/shared/api/hooks/useMangaDetails';
+import useChapters from './hooks/useChapters';
+import useMangaDetails from './hooks/useMangaDetails';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
 
 function MangaPage() {
   const { sourceId = '', mangaId = '' } = useParams<{ sourceId: string; mangaId: string }>();
-  const { data, error, isLoading, isError } = useMangaDetails(sourceId, mangaId);
+  const { data, error, isLoading, isError } = useMangaDetails({ sourceId, mangaId });
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 
   const branches = data?.branches ?? [];
   const branchId = selectedBranchId ?? branches[0]?.id ?? null;
   const selectedBranch = branches.find((branch) => branch.id === branchId);
-  const { data: chaptersData, isLoading: chaptersLoading } = useChapters(
+  const { data: chaptersData, isLoading: chaptersLoading } = useChapters({
     sourceId,
     mangaId,
-    selectedBranch?.name ?? undefined,
-  );
+    branch: selectedBranch?.name ?? undefined,
+  });
   const chapters = chaptersData?.items.slice().reverse() ?? [];
 
   if (isLoading) {
@@ -43,7 +43,7 @@ function MangaPage() {
   if (isError || !data) {
     return (
       <Container py="xl">
-        <ApiErrorText error={error} fallback="Не удалось загрузить тайтл." />
+        <ApiErrorText error={error} />
       </Container>
     );
   }

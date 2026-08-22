@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Notifications } from '@mantine/notifications';
-import Providers from './app/components/Providers';
+import Providers from './app/Providers';
 import './styles/global.scss';
 
 const rootElement = document.getElementById('root');

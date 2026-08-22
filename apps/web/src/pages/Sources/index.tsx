@@ -1,14 +1,14 @@
-import { Container, Title } from '@mantine/core';
+import useSources from '@/entities/source/hooks/useSources';
+import PageLayout from '@/shared/ui/PageLayout';
 import SourcesList from './SourcesList';
 
 function Sources() {
   return (
-    <Container py="xl" size="xl">
-      <Title order={2} mb="xl">
-        Источники
-      </Title>
-      <SourcesList />
-    </Container>
+    <PageLayout useQuery={useSources} params={[]}>
+      <PageLayout.Content title="Источники">
+        <SourcesList />
+      </PageLayout.Content>
+    </PageLayout>
   );
 }
 

@@ -67,6 +67,21 @@ const PAGES_HTML = `<!doctype html><html><body>
   </script>
 </body></html>`;
 
+// Real XenForo search response shape — templateHtml embeds AniMangaSearchCard markup, not the
+// blockLinksList/itemTitle classes an older site layout used.
+const SEARCH_JSON = JSON.stringify({
+  templateHtml: `
+    <ul class="AniMangaSearchList" data-search-content-type="manga">
+      <li class="AniMangaSearchCard">
+        <a href="manga/naruto.29/" class="AniMangaSearchCard__link">
+          <img src="https://static.desu.uno/data/manga/covers/x120/29.jpg" class="AniMangaSearchCard__cover" />
+          <span class="AniMangaSearchCard__title">Наруто</span>
+          <span class="AniMangaSearchCard__subtitle">Naruto</span>
+        </a>
+      </li>
+    </ul>`,
+});
+
 const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
@@ -85,6 +100,11 @@ const setUpFixtures = (): FakeHttpClient => {
     { status: 200, body: DETAILS_HTML },
   );
   http.register((url) => url.includes('/vol1/ch1/'), { status: 200, body: PAGES_HTML });
+  http.register((url) => url === `https://${DOMAIN}/manga/search/`, {
+    status: 200,
+    body: SEARCH_JSON,
+    contentType: 'application/json',
+  });
   return http;
 };
 
@@ -119,6 +139,14 @@ describe('Desu parser conformance', () => {
     expect(manga.rating).toBeCloseTo(0.87, 5);
     expect(manga.title).toBe('Поднятие уровня в одиночку');
     expect(manga.description).toBe('Первый абзац.\n\nВторой абзац.');
+  });
+
+  it('getList with query: parses AniMangaSearchCard results', async () => {
+    const items = await parser.getList({ offset: 0, limit: 20, query: 'наруто' });
+    expect(items).toHaveLength(1);
+    expect(items[0]!.title).toBe('Наруто');
+    expect(items[0]!.altTitles).toEqual(['Naruto']);
+    expect(items[0]!.url).toBe('/manga/naruto.29/');
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

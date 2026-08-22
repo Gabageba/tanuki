@@ -6,10 +6,18 @@ body,
 
 body {
   margin: 0;
+
+  // Отключает нативный pull-to-refresh браузера, чтобы им не управлял
+  // кастомный жест в usePullToRefresh.
+  overscroll-behavior-y: contain;
 }
 
 // Фон на html, а не только на body: иначе при overscroll из-под страницы видно белую подложку
 // браузера независимо от выбранной темы.
 html {
   background-color: var(--mantine-color-body);
+
+  // Скроллится именно html (body/root — height: 100%, без собственного overflow), поэтому
+  // нативный pull-to-refresh браузера завязан на нём, а не на body.
+  overscroll-behavior-y: contain;
 }

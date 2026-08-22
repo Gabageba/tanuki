@@ -18,7 +18,7 @@ import {
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawChapter } from '../parsers-client/parsers-client.types';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 30;
 
 @Injectable()
 export class CatalogService {

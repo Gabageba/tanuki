@@ -8,6 +8,7 @@ import {
 } from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
+import { NotFoundApiException } from '../common/errors';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawSourceInfo } from '../parsers-client/parsers-client.types';
 import { SourceHealthService } from '../resilience/source-health.service';
@@ -36,6 +37,14 @@ export class SourcesService {
     return (await this.enabledSources())
       .filter((source) => source.isSearchSupported)
       .map((source) => this.toSource(source));
+  }
+
+  async getSource(sourceId: string): Promise<Source> {
+    const source = (await this.listSources()).find((item) => item.id === sourceId);
+    if (!source) {
+      throw new NotFoundApiException(`Источник ${sourceId} не найден`);
+    }
+    return source;
   }
 
   async listGroupedSources(): Promise<SourcesResponse> {

@@ -166,20 +166,24 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
 
   /** Quick-search results carry only cover + two title variants — getDetails fills the rest. */
   const parseSearchItem = ($li: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
-    const $a = $li.find('a').first();
+    const $a = $li.find('a.AniMangaSearchCard__link').first();
     const href = attrOrNull($a, 'href');
     if (!href) return null;
     const id = CHAPTER_ID_REGEX.exec(href)?.[1];
     if (!id) return null;
     const url = toRelativePath(href);
     const coverUrl = attrOrNull($a.find('img').first(), 'src');
-    const originalTitle = nullIfEmpty(textOrNull($a.find('.itemTitle').first()) ?? '');
-    if (!originalTitle) return null;
-    const russianTitle = nullIfEmpty(textOrNull($a.find('.itemSubTitle').first()) ?? '');
+    const russianTitle = nullIfEmpty(
+      textOrNull($a.find('.AniMangaSearchCard__title').first()) ?? '',
+    );
+    const originalTitle = nullIfEmpty(
+      textOrNull($a.find('.AniMangaSearchCard__subtitle').first()) ?? '',
+    );
+    if (!russianTitle && !originalTitle) return null;
     return {
       id: generateUid(SOURCE_ID, id),
-      title: russianTitle ?? originalTitle,
-      altTitles: originalTitle !== russianTitle ? [originalTitle] : [],
+      title: russianTitle ?? originalTitle!,
+      altTitles: originalTitle && originalTitle !== russianTitle ? [originalTitle] : [],
       url,
       publicUrl: new URL(url, baseUrl).toString(),
       rating: RATING_UNKNOWN,
@@ -236,7 +240,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     if (!templateHtml) return [];
     const doc = parseHtml(templateHtml, `https://${domain}/`);
     return doc
-      .$('ul.blockLinksList li')
+      .$('li.AniMangaSearchCard')
       .toArray()
       .map((el) => parseSearchItem(doc.$(el), doc.baseUrl))
       .filter((m): m is RawManga => m !== null);

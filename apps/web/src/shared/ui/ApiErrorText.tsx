@@ -1,13 +1,15 @@
 import { Text } from '@mantine/core';
-import { ApiRequestError } from '@/shared/api/client';
 
 type Props = {
-  error: unknown;
-  fallback: string;
+  error: Error | null;
 };
 
-function ApiErrorText({ error, fallback }: Props) {
-  return <Text c="red">{error instanceof ApiRequestError ? error.message : fallback}</Text>;
+function ApiErrorText({ error }: Props) {
+  if (!error) {
+    return null;
+  }
+
+  return <Text c="red">{error.message}</Text>;
 }
 
 export default ApiErrorText;

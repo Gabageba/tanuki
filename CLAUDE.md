@@ -10,6 +10,8 @@
   declaration.
 - No `index.ts` barrels that only import a component and re-export it. Import components straight
   from their own file.
+- Elements with no children are self-closing — `<ActionIcon />`, never
+  `<ActionIcon></ActionIcon>`.
 
 ## Types
 

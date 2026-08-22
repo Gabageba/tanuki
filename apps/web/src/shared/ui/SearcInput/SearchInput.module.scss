@@ -1,0 +1,11 @@
+.textInput {
+  :global(.mantine-TextInput-section) {
+    &[data-position='right'] {
+      cursor: pointer;
+
+      &:hover {
+        color: var(--mantine-color-gray-filled-hover);
+      }
+    }
+  }
+}

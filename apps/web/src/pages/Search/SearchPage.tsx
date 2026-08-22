@@ -12,9 +12,9 @@ import {
 } from '@mantine/core';
 import { useSearchParams } from 'react-router';
 import MangaCard from '@/entities/manga/MangaCard';
-import useSearch from '@/shared/api/hooks/useSearch';
-import { flattenSources } from '@/shared/api/sources';
-import useSources from '@/shared/api/hooks/useSources';
+import useSearch from './hooks/useSearch';
+import { flattenSources } from '@/entities/source/lib';
+import useSources from '@/entities/source/hooks/useSources';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
 import { GROUP_STATUS_LABEL } from './models';
@@ -23,7 +23,7 @@ function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query') ?? '';
   const [input, setInput] = useState(query);
-  const { data, error, isLoading, isError } = useSearch(query);
+  const { data, error, isLoading, isError } = useSearch({ query });
   const { data: sourcesData } = useSources();
 
   const sourceTitle = (sourceId: string) =>

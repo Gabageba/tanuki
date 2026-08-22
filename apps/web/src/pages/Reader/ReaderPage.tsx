@@ -1,6 +1,6 @@
 import { Button, Center, Loader, Text } from '@mantine/core';
 import { useNavigate, useParams } from 'react-router';
-import useChapterPages from '@/shared/api/hooks/useChapterPages';
+import useChapterPages from './hooks/useChapterPages';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
 import styles from './ReaderPage.module.scss';
 
@@ -15,7 +15,7 @@ function ReaderPage() {
     chapterId: string;
   }>();
   const navigate = useNavigate();
-  const { data, error, isLoading, isError } = useChapterPages(sourceId, mangaId, chapterId);
+  const { data, error, isLoading, isError } = useChapterPages({ sourceId, mangaId, chapterId });
 
   if (isLoading) {
     return (
