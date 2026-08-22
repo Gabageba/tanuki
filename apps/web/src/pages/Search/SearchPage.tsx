@@ -52,7 +52,7 @@ function SearchPage() {
       </form>
 
       {isLoading && <Loader />}
-      {isError && <ApiErrorText error={error} fallback="Не удалось выполнить поиск." />}
+      {isError && <ApiErrorText error={error} />}
 
       <Stack gap="xl">
         {data?.groups.map((group) => (

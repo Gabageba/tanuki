@@ -28,7 +28,7 @@ function ReaderPage() {
   if (isError || !data) {
     return (
       <Center className={styles.reader} mih="100vh">
-        <ApiErrorText error={error} fallback="Не удалось загрузить главу." />
+        <ApiErrorText error={error} />
       </Center>
     );
   }
