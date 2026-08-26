@@ -7,7 +7,7 @@ import type { EnumLiteralsOf } from '@tanuki/contracts';
  * лого, единственная точка использования — `--tanuki-font-brand`.
  */
 export const FONT_FAMILY_SANS = 'Golos Text, sans-serif';
-export const FONT_FAMILY_BRAND = 'Unbounded, sans-serif';
+const FONT_FAMILY_BRAND = 'Unbounded, sans-serif';
 export const FONT_FAMILY_MONOSPACE = 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace';
 
 export const COLOR_SCHEME = {
@@ -80,7 +80,11 @@ export const CSS_VARIABLES_RESOLVER: CSSVariablesResolver = () => ({
     '--mantine-color-text': '#16181c',
     '--mantine-color-body': '#f6f7f9',
     '--mantine-color-default-border': '#dfe3e8',
-    '--mantine-color-anchor': '#ef8168',
+    // Рыжий в роли чернил меряется контрастом против фона страницы, а не против текста на себе,
+    // поэтому в светлой теме он берётся с тёмного конца шкалы (shade 9, 4.9:1 против `body`), а в
+    // тёмной — со светлого (shade 4). Брендовый `-filled` при этом один и тот же в обеих схемах:
+    // его контраст считается против собственного текста, и фон страницы в нём не участвует.
+    '--mantine-color-anchor': '#ae4f3a',
 
     '--tanuki-color-surface': '#ffffff',
     '--tanuki-color-header': '#ffffff',

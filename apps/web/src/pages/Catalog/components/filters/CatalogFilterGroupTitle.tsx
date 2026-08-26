@@ -1,0 +1,19 @@
+import { Group, Text } from '@mantine/core';
+import type { FilterGroup } from '@tanuki/contracts';
+
+type Props = {
+  group: FilterGroup;
+};
+
+function CatalogFilterGroupTitle({ group }: Props) {
+  return (
+    <Group gap={8} align="center">
+      <Text fz={14}>{group.title}</Text>
+      <Text c="dimmed" fz={12} mt={1}>
+        {group.options.length}
+      </Text>
+    </Group>
+  );
+}
+
+export default CatalogFilterGroupTitle;

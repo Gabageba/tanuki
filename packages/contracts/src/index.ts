@@ -19,13 +19,26 @@ export {
   SourceSchema,
   SourceContentTypeSchema,
   SourceStatusSchema,
+  SortOrderSchema,
   SOURCE_CONTENT_TYPE,
   SOURCE_STATUS,
+  SORT_ORDER,
   type Source,
   type SourceContentType,
   type SourceStatus,
+  type SortOrder,
 } from './source';
 export { BranchSchema, type Branch } from './branch';
+export {
+  FilterTypeSchema,
+  FilterOptionSchema,
+  FilterGroupSchema,
+  FILTER_TYPE,
+  type FilterType,
+  type FilterOption,
+  type FilterGroup,
+  type FilterSelection,
+} from './filter';
 export {
   SOURCE_CATALOG,
   SOURCE_ID,
@@ -52,6 +65,8 @@ export {
   type ChaptersResponse,
   PagesResponseSchema,
   type PagesResponse,
+  FiltersResponseSchema,
+  type FiltersResponse,
 } from './responses';
 export {
   SearchGroupSchema,

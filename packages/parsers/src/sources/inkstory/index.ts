@@ -331,6 +331,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       sortOrders: ['UPDATED', 'POPULARITY', 'RATING', 'NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

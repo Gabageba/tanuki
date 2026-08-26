@@ -2,6 +2,8 @@ import {
   CONTENT_RATING,
   type Branch,
   type Chapter,
+  type FilterGroup,
+  type FilterOption,
   type Manga,
   type Page,
   type Tag,
@@ -14,6 +16,8 @@ import { toServerDateTime } from './dates';
 import { encodeChapterId, encodeMangaId } from './opaque-id';
 import type {
   RawChapter,
+  RawFilterGroup,
+  RawFilterOption,
   RawManga,
   RawMangaState,
   RawPage,
@@ -22,6 +26,19 @@ import type {
 
 const normalizeTag = (raw: RawTag): Tag => {
   return { id: raw.key, title: raw.title };
+};
+
+const normalizeFilterOption = (raw: RawFilterOption): FilterOption => {
+  return { key: raw.key, title: raw.title, count: raw.count };
+};
+
+export const normalizeFilterGroup = (raw: RawFilterGroup): FilterGroup => {
+  return {
+    id: raw.id,
+    title: raw.title,
+    type: raw.type,
+    options: raw.options.map(normalizeFilterOption),
+  };
 };
 
 // Contracts не знают о RESTRICTED (гео-ограничение/юр. блокировка на источнике) — в doc04

@@ -25,6 +25,27 @@ export type SourceStatus = EnumLiteralsOf<typeof SOURCE_STATUS>;
 
 export const SourceStatusSchema = z.enum(SOURCE_STATUS);
 
+/**
+ * Canonical vocabulary of catalog sort orders. Each source only supports a subset — the actual
+ * per-source list travels as Source.sortOrders — so this is just the shared key space, not a
+ * claim that every source offers every value.
+ */
+export const SORT_ORDER = {
+  UPDATED: 'UPDATED',
+  NEWEST: 'NEWEST',
+  ADDED: 'ADDED',
+  POPULARITY: 'POPULARITY',
+  POPULARITY_TODAY: 'POPULARITY_TODAY',
+  POPULARITY_WEEK: 'POPULARITY_WEEK',
+  POPULARITY_MONTH: 'POPULARITY_MONTH',
+  RATING: 'RATING',
+  ALPHABETICAL: 'ALPHABETICAL',
+  ALPHABETICAL_DESC: 'ALPHABETICAL_DESC',
+} as const;
+export type SortOrder = EnumLiteralsOf<typeof SORT_ORDER>;
+
+export const SortOrderSchema = z.enum(SORT_ORDER);
+
 export const SourceSchema = z.object({
   id: z.string(), // "DESUME"
   title: z.string(),
@@ -37,6 +58,8 @@ export const SourceSchema = z.object({
   contentType: SourceContentTypeSchema,
   status: SourceStatusSchema,
   isAdult: z.boolean(),
+  /** Empty when the source doesn't support choosing an order — ListParams.order is then ignored. */
+  sortOrders: z.array(SortOrderSchema),
 });
 
 export type Source = z.infer<typeof SourceSchema>;

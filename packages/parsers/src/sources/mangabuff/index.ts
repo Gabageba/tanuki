@@ -315,6 +315,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       sortOrders: ['UPDATED', 'POPULARITY'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

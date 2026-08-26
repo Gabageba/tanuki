@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BranchSchema } from './branch';
 import { ChapterSchema } from './chapter';
+import { FilterGroupSchema } from './filter';
 import { MangaSchema } from './manga';
 import { PageSchema } from './page';
 import { SourceContentTypeSchema, SourceSchema } from './source';
@@ -46,3 +47,9 @@ export const PagesResponseSchema = z.object({
 });
 
 export type PagesResponse = z.infer<typeof PagesResponseSchema>;
+
+export const FiltersResponseSchema = z.object({
+  groups: z.array(FilterGroupSchema),
+});
+
+export type FiltersResponse = z.infer<typeof FiltersResponseSchema>;

@@ -10,12 +10,23 @@ const DOMAIN = 'desu.uno';
 // (the /manga/ catalog page embeds the genre filter widget inline).
 const CATALOG_HTML = `<!doctype html><html><body>
   <div id="animeFilter">
+    <ul class="catalog-kinds">
+      <li><div class="filter-control kind-checkbox"><input class="filter-control-input" data-kind="manga" value="0"> <span class="filter-control-text">Манга</span></div></li>
+      <li><div class="filter-control kind-checkbox"><input class="filter-control-input" data-kind="manhwa" value="0"> <span class="filter-control-text">Манхва</span></div></li>
+    </ul>
     <div class="catalog-genres">
       <ul>
-        <li><input data-genre-id="12" data-genre-slug="action" data-genre-name="боевик" /></li>
-        <li><input data-genre-id="34" data-genre-slug="fantasy" data-genre-name="фэнтези" /></li>
+        <li><div class="filter-control genre-checkbox"><input data-genre-id="12" data-genre-slug="action" data-genre-name="боевик" value="0" /> <span class="filter-control-text">Боевик</span> <span>(130)</span></div></li>
+        <li><div class="filter-control genre-checkbox"><input data-genre-id="34" data-genre-slug="fantasy" data-genre-name="фэнтези" value="0" /> <span class="filter-control-text">Фэнтези</span> <span>(3631)</span></div></li>
+        <li style="width:100% !important;height:10px !important;"></li>
+        <li><div class="filter-control genre-checkbox"><input data-genre-id="150" data-genre-slug="Artifacts" data-genre-name="артефакты" value="0" /> <span class="filter-control-text"><span style="padding-right:1px;color:rgb(150,150,150)">#</span>Артефакты</span> <span style="font-size:10px;color:rgb(150,150,150);padding-left:2px;">(477)</span></div></li>
       </ul>
     </div>
+    <ul class="catalog-status">
+      <li><div class="filter-control status-checkbox"><input class="filter-control-input" data-status="ongoing" value="0"> <span class="filter-control-text">Выходит</span></div></li>
+      <li><div class="filter-control status-checkbox"><input class="filter-control-input" data-status="completed" value="0"> <span class="filter-control-text">Завершено</span></div></li>
+      <li><div class="filter-control status-checkbox"><input class="filter-control-input" data-status="no18plus" value="0"> <span class="filter-control-text">Без 18+</span></div></li>
+    </ul>
   </div>
   <ul>
     <li class="memberListItem">
@@ -95,6 +106,12 @@ const makeContext = (http: FakeHttpClient): ParserContext => {
 const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url === `https://${DOMAIN}/manga/`, { status: 200, body: CATALOG_HTML });
+  // Filtered/paginated catalog requests append a query string (?kinds=...&page=2 etc.) — same
+  // fixture body, the assertions on filter params read `http.requests`, not this response.
+  http.register((url) => url.startsWith(`https://${DOMAIN}/manga/?`), {
+    status: 200,
+    body: CATALOG_HTML,
+  });
   http.register(
     (url) => url.startsWith(`https://${DOMAIN}/manga/solo-leveling.123`) && !url.includes('/vol'),
     { status: 200, body: DETAILS_HTML },
@@ -147,6 +164,93 @@ describe('Desu parser conformance', () => {
     expect(items[0]!.title).toBe('Наруто');
     expect(items[0]!.altTitles).toEqual(['Naruto']);
     expect(items[0]!.url).toBe('/manga/naruto.29/');
+  });
+
+  it('getFilters: all five groups with their options and counts', async () => {
+    const groups = await parser.getFilters!();
+    expect(groups.map((g) => g.id)).toEqual(['kind', 'genre', 'tag', 'status', 'rating']);
+
+    const kind = groups.find((g) => g.id === 'kind')!;
+    expect(kind.type).toBe('CHECKBOX');
+    expect(kind.options).toEqual([
+      { key: 'manga', title: 'Манга', count: null },
+      { key: 'manhwa', title: 'Манхва', count: null },
+    ]);
+
+    const genre = groups.find((g) => g.id === 'genre')!;
+    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(genre.options).toEqual([
+      { key: '12-action', title: 'Боевик', count: 130 },
+      { key: '34-fantasy', title: 'Фэнтези', count: 3631 },
+    ]);
+
+    const tag = groups.find((g) => g.id === 'tag')!;
+    expect(tag.title).toBe('Теги');
+    expect(tag.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(tag.options).toEqual([{ key: '150-Artifacts', title: 'Артефакты', count: 477 }]);
+
+    const status = groups.find((g) => g.id === 'status')!;
+    expect(status.type).toBe('CHECKBOX');
+    expect(status.options).toEqual([
+      { key: 'ongoing', title: 'Выходит', count: null },
+      { key: 'completed', title: 'Завершено', count: null },
+    ]);
+
+    const rating = groups.find((g) => g.id === 'rating')!;
+    expect(rating.title).toBe('Возрастной рейтинг');
+    expect(rating.type).toBe('CHECKBOX');
+    expect(rating.options).toEqual([{ key: 'no18plus', title: 'Без 18+', count: null }]);
+  });
+
+  it('getList with filters: kinds/status are plain lists, genre exclude packs "id-!slug"', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'kind', key: 'manga' },
+        { groupId: 'status', key: 'ongoing' },
+        { groupId: 'genre', key: '12-action' },
+        { groupId: 'genre', key: '34-fantasy', exclude: true },
+      ],
+    });
+    const catalogRequest = http.requests.find((r) => r.url.startsWith(`https://${DOMAIN}/manga/?`));
+    expect(catalogRequest).toBeDefined();
+    const url = new URL(catalogRequest!.url);
+    expect(url.searchParams.get('kinds')).toBe('manga');
+    expect(url.searchParams.get('status')).toBe('ongoing');
+    expect(url.searchParams.get('genres')).toBe('12-action,34-!fantasy');
+  });
+
+  it('getList with filters: "tag" group folds into the shared genres param', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'genre', key: '12-action' },
+        { groupId: 'tag', key: '150-Artifacts' },
+      ],
+    });
+    const catalogRequest = http.requests
+      .filter((r) => r.url.startsWith(`https://${DOMAIN}/manga/?`))
+      .at(-1);
+    const url = new URL(catalogRequest!.url);
+    expect(url.searchParams.get('genres')).toBe('12-action,150-Artifacts');
+  });
+
+  it('getList with filters: "rating" group folds into the shared status param', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'status', key: 'ongoing' },
+        { groupId: 'rating', key: 'no18plus' },
+      ],
+    });
+    const catalogRequest = http.requests
+      .filter((r) => r.url.startsWith(`https://${DOMAIN}/manga/?`))
+      .at(-1);
+    const url = new URL(catalogRequest!.url);
+    expect(url.searchParams.get('status')).toBe('ongoing,no18plus');
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

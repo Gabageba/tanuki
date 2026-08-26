@@ -1,11 +1,19 @@
 import type { Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
-import type { ListParams } from '../../core/paging';
+import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawManga, RawChapter, RawPage, RawTag, RawMangaState } from '../../types';
+import type {
+  RawManga,
+  RawChapter,
+  RawPage,
+  RawTag,
+  RawMangaState,
+  RawFilterGroup,
+  RawFilterOption,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { parseHtml } from '../../core/html/dom';
@@ -82,6 +90,52 @@ const detailValue = ($root: Cheerio<AnyNode>, label: string): Cheerio<AnyNode> |
   return null;
 };
 
+/**
+ * `(1234)` count trailing a .filter-control-checkbox — only .catalog-genres items carry one
+ * (a plain <span> with no class, styled inline); kinds/status render no count at all. Tag items
+ * additionally nest a no-class `#` marker span inside .filter-control-text, ahead of the count
+ * in document order, so the count must be the *last* such span, not the first.
+ */
+const parseFilterCount = ($control: Cheerio<AnyNode>): number | null => {
+  const text = textOrNull($control.find('span:not([class])').last());
+  return text ? parseIntOrNull(text.replace(/[()]/g, '')) : null;
+};
+
+/** .catalog-kinds / .catalog-status li — plain include-only checkbox (value cycles 0/1 only). */
+const parseCheckboxOption = ($li: Cheerio<AnyNode>, dataAttr: string): RawFilterOption | null => {
+  const $control = $li.find('.filter-control').first();
+  const key = attrOrNull($control.find('input').first(), dataAttr);
+  const title = textOrNull($control.find('.filter-control-text').first());
+  if (!key || !title) return null;
+  return { key, title, count: parseFilterCount($control) };
+};
+
+/**
+ * .catalog-genres packs genres and tags into the same list under one data-genre-* id space —
+ * the only visible difference is a `#` marker span the site prepends to a tag's label. Genre and
+ * tag options otherwise parse identically, so callers split on this and reuse the same option
+ * shape for both groups.
+ */
+const isTagOption = ($control: Cheerio<AnyNode>): boolean => {
+  const text = textOrNull($control.find('.filter-control-text').first()) ?? '';
+  return text.trim().startsWith('#');
+};
+
+/**
+ * .catalog-genres li — tri-state checkbox (value cycles 0/1/2: unset/include/exclude). The site
+ * addresses one by `data-genre-id + '-' + data-genre-slug` (see Manga.js updateCatalogUrl), so
+ * the option key mirrors that exactly — it's what fetchCatalogPage sends back unchanged.
+ */
+const parseGenreOption = ($li: Cheerio<AnyNode>): RawFilterOption | null => {
+  const $control = $li.find('.filter-control').first();
+  const input = $control.find('input').first();
+  const id = attrOrNull(input, 'data-genre-id');
+  const slug = attrOrNull(input, 'data-genre-slug');
+  const name = attrOrNull(input, 'data-genre-name');
+  if (!id || !slug || !name) return null;
+  return { key: `${id}-${slug}`, title: toTitleCase(name), count: parseFilterCount($control) };
+};
+
 export const createDesuParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let tagsPromise: Promise<Map<string, RawTag>> | null = null;
@@ -110,6 +164,133 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
         result.set(title, { source: SOURCE_ID, key: `${id}-${slug}`, title });
       });
     return result;
+  };
+
+  let filtersPromise: Promise<RawFilterGroup[]> | null = null;
+
+  const getFilters = (): Promise<RawFilterGroup[]> => {
+    if (!filtersPromise) filtersPromise = fetchFilters();
+    return filtersPromise;
+  };
+
+  const fetchFilters = async (): Promise<RawFilterGroup[]> => {
+    const doc = await ctx.http.getHtml(`https://${domain}/manga/`);
+    const filterRoot = selectFirstOrThrow(doc.$.root(), '#animeFilter', SOURCE_ID, 'fetchFilters');
+
+    const kinds = filterRoot
+      .find('.catalog-kinds li')
+      .toArray()
+      .map((el) => parseCheckboxOption(doc.$(el), 'data-kind'))
+      .filter((o): o is RawFilterOption => o !== null);
+
+    const genres: RawFilterOption[] = [];
+    const tags: RawFilterOption[] = [];
+    filterRoot
+      .find('.catalog-genres li')
+      .toArray()
+      .forEach((el) => {
+        const $li = doc.$(el);
+        const option = parseGenreOption($li);
+        if (!option) return;
+        const $control = $li.find('.filter-control').first();
+        (isTagOption($control) ? tags : genres).push(option);
+      });
+
+    // The site renders "Без 18+" as just another <li data-status="no18plus"> inside
+    // .catalog-status, but it's an age-rating toggle, not a publication status — split it into
+    // its own group so it doesn't show up under "Статус". applyFilterParams folds it back into
+    // the shared `status` query param, since that's the one attribute the site's own JS reads.
+    const allStatuses = filterRoot
+      .find('.catalog-status li')
+      .toArray()
+      .map((el) => parseCheckboxOption(doc.$(el), 'data-status'))
+      .filter((o): o is RawFilterOption => o !== null);
+    const statuses = allStatuses.filter((o) => o.key !== 'no18plus');
+    const ratings = allStatuses.filter((o) => o.key === 'no18plus');
+
+    const groups: RawFilterGroup[] = [];
+    // kind/status: a handful of options, all visible at once → CHECKBOX. genre: 50+ options →
+    // SEARCHABLE_CHECKBOX_EXCLUDE, so the client gets a scrollable, searchable list instead of a
+    // wall of chips, plus the include/exclude cycling the genre filter supports.
+    if (kinds.length > 0) {
+      groups.push({
+        id: 'kind',
+        title: 'Тип',
+        type: FILTER_TYPE.CHECKBOX,
+        options: kinds,
+      });
+    }
+    if (genres.length > 0) {
+      groups.push({
+        id: 'genre',
+        title: 'Жанры',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+        options: genres,
+      });
+    }
+    if (tags.length > 0) {
+      groups.push({
+        id: 'tag',
+        title: 'Теги',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+        options: tags,
+      });
+    }
+    if (statuses.length > 0) {
+      groups.push({
+        id: 'status',
+        title: 'Статус',
+        type: FILTER_TYPE.CHECKBOX,
+        options: statuses,
+      });
+    }
+    if (ratings.length > 0) {
+      groups.push({
+        id: 'rating',
+        title: 'Возрастной рейтинг',
+        type: FILTER_TYPE.CHECKBOX,
+        options: ratings,
+      });
+    }
+    return groups;
+  };
+
+  /**
+   * Mirrors Manga.js's updateCatalogUrl: kinds/status are plain comma-separated include lists,
+   * genres pack the exclude marker between id and slug (`id-!slug`, not `!id-slug`) — id and
+   * slug are re-split off FilterSelection.key, which fetchFilters built as `${id}-${slug}`.
+   * "tag" selections fold into the same `genres` param as "genre" — the site addresses both out
+   * of one data-genre-* id space, splitting them into two groups is a fetchFilters-side display
+   * distinction (see isTagOption) that doesn't exist in the request the site's own JS sends.
+   */
+  const applyFilterParams = (url: URL, filters: FilterSelection[] | undefined): void => {
+    if (!filters || filters.length === 0) return;
+    const byGroup = new Map<string, FilterSelection[]>();
+    for (const filter of filters) {
+      const list = byGroup.get(filter.groupId) ?? [];
+      list.push(filter);
+      byGroup.set(filter.groupId, list);
+    }
+
+    const kinds = byGroup.get('kind');
+    if (kinds?.length) url.searchParams.set('kinds', kinds.map((f) => f.key).join(','));
+
+    const statusKeys = [...(byGroup.get('status') ?? []), ...(byGroup.get('rating') ?? [])].map(
+      (f) => f.key,
+    );
+    if (statusKeys.length) url.searchParams.set('status', statusKeys.join(','));
+
+    const genres = [...(byGroup.get('genre') ?? []), ...(byGroup.get('tag') ?? [])];
+    if (genres.length) {
+      const genreParams = genres.map((f) => {
+        const separatorIndex = f.key.indexOf('-');
+        if (separatorIndex < 0) return f.key;
+        const id = f.key.slice(0, separatorIndex);
+        const slug = f.key.slice(separatorIndex + 1);
+        return f.exclude ? `${id}-!${slug}` : `${id}-${slug}`;
+      });
+      url.searchParams.set('genres', genreParams.join(','));
+    }
   };
 
   const parseTagFromLink = ($a: Cheerio<AnyNode>): RawTag | null => {
@@ -246,11 +427,16 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .filter((m): m is RawManga => m !== null);
   };
 
-  const fetchCatalogPage = async (page: number, order: string | undefined): Promise<RawManga[]> => {
+  const fetchCatalogPage = async (
+    page: number,
+    order: string | undefined,
+    filters: FilterSelection[] | undefined,
+  ): Promise<RawManga[]> => {
     const url = new URL(`https://${domain}/manga/`);
     const orderBy = getSortKey(order);
     if (orderBy !== 'updated') url.searchParams.set('order_by', orderBy);
     if (page > 1) url.searchParams.set('page', String(page));
+    applyFilterParams(url, filters);
     const [doc, tagsMap] = await Promise.all([ctx.http.getHtml(url.toString()), getTagsMap()]);
     return doc
       .$('li.memberListItem')
@@ -264,7 +450,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       if (params.query) {
         return page === 1 ? search(params.query!) : [];
       }
-      return fetchCatalogPage(page, params.order);
+      return fetchCatalogPage(page, params.order, params.filters);
     });
   };
 
@@ -381,10 +567,12 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       sortOrders: ['UPDATED', 'POPULARITY', 'NEWEST', 'ALPHABETICAL'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
+    getFilters,
     imageHeaders: () => ({ Referer: IMAGE_REFERER, 'User-Agent': UserAgents.KOTATSU }),
   };
 };

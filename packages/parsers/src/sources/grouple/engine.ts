@@ -606,6 +606,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       sortOrders: ['UPDATED', 'POPULARITY', 'NEWEST', 'RATING', 'ALPHABETICAL', 'ADDED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

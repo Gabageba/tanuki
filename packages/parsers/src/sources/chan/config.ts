@@ -1,7 +1,9 @@
+import type { SortOrder } from '@tanuki/contracts';
+
 export type ChanConfig = {
   id: string;
   isNsfw: boolean;
-  sortOrders: string[];
+  sortOrders: SortOrder[];
   /**
    * MANGACHAN uses the shared DLE-engine defaults. HENCHAN paginates `mostviews`/`mostfavorites`
    * with a `sort=manga` query param and a `manga/newest` (not `manga/new`) default path, and its

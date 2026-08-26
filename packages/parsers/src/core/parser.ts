@@ -1,9 +1,9 @@
 import type { CookieJar } from 'tough-cookie';
-import type { RawManga, RawChapter, RawPage, RawSourceInfo } from '../types';
-import type { ListParams } from './paging';
+import type { RawManga, RawChapter, RawPage, RawSourceInfo, RawFilterGroup } from '../types';
+import type { ListParams, FilterSelection } from './paging';
 import type { HttpClient } from './http/client';
 
-export type { ListParams };
+export type { ListParams, FilterSelection };
 
 export type Logger = {
   info(message: string, ...args: unknown[]): void;
@@ -52,6 +52,10 @@ export type Parser = {
   getDetails(url: string): Promise<RawManga>;
   /** RawPage.url MUST be absolute and pre-resolved. */
   getPages(chapterUrl: string): Promise<RawPage[]>;
+  /** All filter groups and their options as currently listed on the source. Omit entirely on
+   *  sources that don't expose a catalog filter UI — RawSourceInfo.isFiltersSupported mirrors
+   *  whether this is present. */
+  getFilters?(): Promise<RawFilterGroup[]>;
   /** Headers the source expects when hotlinking its images — consumed by img-proxy. */
   imageHeaders(imageUrl: string): Record<string, string>;
   /**
@@ -65,4 +69,4 @@ export type Parser = {
   close?(): Promise<void>;
 };
 
-export type { RawManga, RawChapter, RawPage, RawSourceInfo };
+export type { RawManga, RawChapter, RawPage, RawSourceInfo, RawFilterGroup };

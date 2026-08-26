@@ -1,10 +1,10 @@
 import { Center, Loader } from '@mantine/core';
-import usePageLayoutQuery from '../hooks/usePageLayoutQuery';
+import useQuery from '../hooks/useQuery';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import type { PageLayoutRefreshableQuery } from '../models';
 
 function PullToRefresh() {
-  const { refresh } = usePageLayoutQuery<PageLayoutRefreshableQuery>();
+  const { refresh } = useQuery<PageLayoutRefreshableQuery>();
   const { pullDistance, isRefreshing } = usePullToRefresh(refresh);
 
   const height = isRefreshing ? 40 : pullDistance;

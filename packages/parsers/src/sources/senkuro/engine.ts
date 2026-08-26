@@ -409,6 +409,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       sortOrders: ['POPULARITY', 'UPDATED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

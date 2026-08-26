@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ComboboxLikeRenderOptionInput, ComboboxItem } from '@mantine/core';
 import {
   createTheme,
   localStorageColorSchemeManager,
@@ -12,7 +13,7 @@ import {
   NEUTRAL_DARK_SHADES,
   NEUTRAL_LIGHT_SHADES,
   type ColorScheme,
-} from './models';
+} from '../models';
 import {
   PRIMARY_COLOR,
   PRIMARY_COLOR_SHADES,
@@ -26,6 +27,8 @@ import {
   STATUS_OK_COLOR,
   STATUS_OK_COLOR_SHADES,
 } from '@/shared/lib/palette';
+import SelectOption from './SelectOption';
+import styles from './MantineProvider.module.scss';
 
 const DEFAULT_COLOR_SCHEME: ColorScheme = COLOR_SCHEME.AUTO;
 
@@ -49,6 +52,7 @@ const THEME = createTheme({
   primaryShade: PRIMARY_SHADE,
   autoContrast: true,
   defaultRadius: 'md',
+  cursorType: 'pointer',
   components: {
     Avatar: {
       defaultProps: {
@@ -69,9 +73,25 @@ const THEME = createTheme({
       styles: {
         header: {
           backgroundColor: 'var(--tanuki-color-surface)',
+          borderTop: 'var(--mantine-radius-md)',
         },
         title: {
           fontWeight: 600,
+        },
+        content: {
+          borderTopLeftRadius: 'var(--mantine-radius-md)',
+          borderTopRightRadius: 'var(--mantine-radius-md)',
+          paddingBottom: 'var(--app-shell-footer-height)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        },
+        body: {
+          display: 'flex',
+          flex: 1,
+          flexDirection: 'column',
+          minHeight: 0,
+          overflow: 'hidden',
         },
       },
     },
@@ -91,6 +111,74 @@ const THEME = createTheme({
     Card: {
       defaultProps: {
         padding: 'sm',
+      },
+    },
+    Chip: {
+      defaultProps: {
+        radius: 'md',
+        color: PRIMARY_COLOR,
+      },
+    },
+    Pill: {
+      defaultProps: {
+        radius: 'md',
+      },
+    },
+    SegmentedControl: {
+      defaultProps: {
+        size: 'md',
+      },
+      styles: {
+        root: {
+          height: 36,
+          padding: 0,
+          border: '1px solid var(--mantine-color-default-border)',
+          backgroundColor: 'var(--mantine-color-dark-filled)',
+        },
+        label: {
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          paddingInline: 10,
+        },
+        indicator: {
+          height: '100%',
+          borderRadius: 0,
+          backgroundColor: 'var(--mantine-color-default-border)',
+        },
+        innerLabel: {
+          display: 'flex',
+        },
+      },
+    },
+    Select: {
+      defaultProps: {
+        renderOption: (data: ComboboxLikeRenderOptionInput<ComboboxItem>) => (
+          <SelectOption {...data} />
+        ),
+      },
+      classNames: {
+        option: styles.selectOption,
+      },
+    },
+    Text: {
+      styles: {
+        root: {
+          fontSize: 14,
+        },
+      },
+    },
+    NavLink: {
+      defaultProps: {
+        radius: 'md',
+      },
+      classNames: {
+        root: styles.navLink,
+      },
+      styles: {
+        root: {
+          borderRadius: 'var(--mantine-radius-md)',
+        },
       },
     },
   },

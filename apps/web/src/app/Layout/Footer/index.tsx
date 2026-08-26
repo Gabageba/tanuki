@@ -3,6 +3,7 @@ import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { closeAllDrawers } from '@/shared/lib/drawerRegistry';
 import MobileNavigationButton from './components/MobileNavigationButton';
 import MobileSourceSelect from './components/MobileSourceSelect';
 import useIsActiveUrl from './hooks/useIsActiveUrl';
@@ -24,7 +25,7 @@ function Footer() {
 
   return (
     <AppShell.Footer hiddenFrom="md" withBorder className={styles.footer}>
-      <Group h="100%" px="xs" gap={4}>
+      <Group h="100%" px="xs" gap={4} onClick={closeAllDrawers}>
         <MobileSourceSelect
           isActive={(isSourcesActive || isSourcesOpened) && !isMenuOpened}
           isOpened={isSourcesOpened}

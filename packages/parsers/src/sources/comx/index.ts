@@ -282,6 +282,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       sortOrders: ['UPDATED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

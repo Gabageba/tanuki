@@ -2,15 +2,18 @@ import { Inject, Injectable } from '@nestjs/common';
 import type {
   CatalogResponse,
   ChaptersResponse,
+  FiltersResponse,
   MangaDetailsResponse,
   PagesResponse,
 } from '@tanuki/contracts';
+import type { FilterSelection } from '@tanuki/parsers';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { decodeChapterId, decodeMangaId } from '../common/opaque-id';
 import {
   computeBranches,
   normalizeChapter,
+  normalizeFilterGroup,
   normalizeManga,
   normalizePage,
   pickDefaultBranch,
@@ -29,7 +32,13 @@ export class CatalogService {
 
   async listCatalog(
     sourceId: string,
-    params: { page: number; order?: string; query?: string; force?: boolean },
+    params: {
+      page: number;
+      order?: string;
+      query?: string;
+      force?: boolean;
+      filters?: FilterSelection[];
+    },
   ): Promise<CatalogResponse> {
     const { data, stale } = await this.parsersClient.listManga(sourceId, params);
     return {
@@ -38,6 +47,11 @@ export class CatalogService {
       hasNext: data.items.length >= PAGE_SIZE,
       stale: stale || undefined,
     };
+  }
+
+  async listFilters(sourceId: string): Promise<FiltersResponse> {
+    const { data } = await this.parsersClient.getFilters(sourceId);
+    return { groups: data.groups.map(normalizeFilterGroup) };
   }
 
   async getMangaDetails(sourceId: string, mangaId: string): Promise<MangaDetailsResponse> {

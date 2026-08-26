@@ -11,4 +11,6 @@ export type {
   RawChapter,
   RawPage,
   RawSourceInfo,
+  RawFilterGroup,
+  RawFilterOption,
 } from '@tanuki/parsers';

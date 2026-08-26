@@ -30,12 +30,12 @@
   }
 
   &[data-active] {
-    background: color-mix(in srgb, var(--mantine-color-terracotta-light) 50%, transparent);
-    color: var(--mantine-color-terracotta-outline) !important;
+    background: color-mix(in srgb, var(--mantine-primary-color-light) 50%, transparent);
+    color: var(--mantine-primary-color-light-color) !important;
 
     &:hover {
-      background: color-mix(in srgb, var(--mantine-color-terracotta-light) 50%, transparent);
-      color: var(--mantine-color-terracotta-outline) !important;
+      background: color-mix(in srgb, var(--mantine-primary-color-light) 50%, transparent);
+      color: var(--mantine-primary-color-light-color) !important;
     }
   }
 
@@ -68,19 +68,4 @@
 
 .footer {
   z-index: calc(var(--mantine-z-index-modal) + 1) !important;
-}
-
-.sourceSelectDrawerContent {
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  margin-bottom: var(--app-shell-footer-height) !important;
-}
-
-.sourceSelectDrawerBody {
-  display: flex !important;
-  flex: 1 !important;
-  flex-direction: column !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
 }

@@ -16,7 +16,7 @@ export const ACTIVE_SELECTION_KINDS = {
   ALL: 'ALL',
   NONE: 'NONE',
 } as const;
-export type ActiveSelectionKind = EnumLiteralsOf<typeof ACTIVE_SELECTION_KINDS>;
+type ActiveSelectionKind = EnumLiteralsOf<typeof ACTIVE_SELECTION_KINDS>;
 
 export type ActiveSelection = {
   title: string;

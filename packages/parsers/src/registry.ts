@@ -57,6 +57,8 @@ const notImplemented = (id: string, info: RawSourceInfo): SourceDescriptor['crea
 const GROUPLE_IDS = new Set(GROUPLE_CONFIGS.map((c) => c.id));
 /** MANGALIB/HENTAILIB/YAOILIB all hit the same host (api.cdnlibs.org) — see docs plan. */
 const LIBSOCIAL_IDS = new Set(['MANGALIB', 'HENTAILIB', 'YAOILIB']);
+/** Sources whose parser implements getFilters() — mirrored into RawSourceInfo.isFiltersSupported. */
+const FILTERS_SUPPORTED_IDS = new Set(['DESUME']);
 
 const cookieScopeFor = (id: string): string => {
   if (GROUPLE_IDS.has(id)) return 'grouple';
@@ -99,6 +101,7 @@ const buildDescriptor = (id: SourceId): SourceDescriptor => {
     sortOrders: [],
     isSearchSupported: true,
     isMultipleTagsSupported: true,
+    isFiltersSupported: FILTERS_SUPPORTED_IDS.has(id),
   };
 
   if (groupleConfig) {
@@ -237,7 +240,12 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
   }
 
   return {
-    listSources,
+    // Reads from the instantiated parsers, not the module-level `listSources` (which only knows
+    // the static descriptor `info` built before any parser ran createXParser() — that copy still
+    // carries the registry's placeholder `sortOrders: []` rather than each parser's real list).
+    listSources() {
+      return SOURCE_IDS.map((id) => parsers.get(id)!.info);
+    },
     get(sourceId) {
       const parser = parsers.get(sourceId);
       if (!parser) throw new UnknownSourceError(sourceId);

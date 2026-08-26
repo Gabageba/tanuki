@@ -242,6 +242,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       sortOrders: ['NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

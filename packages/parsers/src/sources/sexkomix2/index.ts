@@ -221,6 +221,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

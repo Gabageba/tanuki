@@ -1,12 +1,11 @@
 import { Loader } from '@mantine/core';
 import { useIntersection } from '@mantine/hooks';
 import { useEffect } from 'react';
-import usePageLayoutQuery from '../hooks/usePageLayoutQuery';
+import useQuery from '../hooks/useQuery';
 import type { PageLayoutPaginatedQuery } from '../models';
 
 function InfiniteScrollTrigger() {
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } =
-    usePageLayoutQuery<PageLayoutPaginatedQuery>();
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = useQuery<PageLayoutPaginatedQuery>();
   // rootMargin запускает подгрузку заранее, пока сентинел ещё не виден — чтобы следующая
   // страница успела прийти до того, как пользователь долистает до конца текущей.
   const { ref, entry } = useIntersection({ threshold: 0, rootMargin: '600px' });

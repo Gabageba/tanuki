@@ -1,5 +1,5 @@
 export type PageLayoutBaseQuery = {
-  isLoading: boolean;
+  isPending: boolean;
   isError: boolean;
   error: Error | null;
 };

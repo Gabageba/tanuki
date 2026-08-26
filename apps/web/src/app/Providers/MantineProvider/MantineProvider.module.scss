@@ -1,0 +1,18 @@
+.selectOption {
+  border: 1px solid var(--mantine-color-dark-filled);
+
+  &:hover {
+    background-color: var(--mantine-color-gray-light-hover);
+  }
+
+  &[data-checked] {
+    background-color: var(--mantine-primary-color-light);
+    border-color: var(--mantine-primary-color-filled);
+  }
+}
+
+.navLink {
+  &:hover {
+    background-color: var(--mantine-color-gray-light-hover);
+  }
+}

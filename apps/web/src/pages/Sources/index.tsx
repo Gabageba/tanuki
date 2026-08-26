@@ -4,7 +4,7 @@ import SourcesList from './SourcesList';
 
 function Sources() {
   return (
-    <PageLayout useQuery={useSources} params={[]}>
+    <PageLayout useQuery={useSources}>
       <PageLayout.Content title="Источники">
         <SourcesList />
       </PageLayout.Content>

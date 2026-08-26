@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { computeBranches, normalizeChapter, normalizeManga, pickDefaultBranch } from './normalize';
-import type { RawChapter, RawManga } from '../parsers-client/parsers-client.types';
+import {
+  computeBranches,
+  normalizeChapter,
+  normalizeFilterGroup,
+  normalizeManga,
+  pickDefaultBranch,
+} from './normalize';
+import type { RawChapter, RawFilterGroup, RawManga } from '../parsers-client/parsers-client.types';
 
 const ENV = { IMG_SIGN_SECRET: 'a'.repeat(32) };
 
@@ -88,6 +94,23 @@ describe('normalizeChapter', () => {
     expect(normalizeChapter('DESUME', 'm', chapter({ uploadDate: ms })).uploadedAt).toBe(
       '2024-01-15T12:00:00Z',
     );
+  });
+});
+
+describe('normalizeFilterGroup', () => {
+  it('passes id/title/type/options through unchanged — no case or key transforms', () => {
+    const raw: RawFilterGroup = {
+      id: 'genre',
+      title: 'Жанры',
+      type: 'SEARCHABLE_CHECKBOX_EXCLUDE',
+      options: [{ key: '12-action', title: 'Боевик', count: 130 }],
+    };
+    expect(normalizeFilterGroup(raw)).toEqual({
+      id: 'genre',
+      title: 'Жанры',
+      type: 'SEARCHABLE_CHECKBOX_EXCLUDE',
+      options: [{ key: '12-action', title: 'Боевик', count: 130 }],
+    });
   });
 });
 

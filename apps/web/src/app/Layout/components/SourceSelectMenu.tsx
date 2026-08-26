@@ -1,14 +1,10 @@
-import { EmptyState, ScrollArea, Stack, TextInput } from '@mantine/core';
+import { ScrollArea, Stack, TextInput } from '@mantine/core';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
-import { generatePath } from 'react-router';
 import type { Dispatch } from 'react';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
-import SourceIcon from '@/entities/source/components/SourceIcon';
 import type { ActiveSelection } from '../models';
-import { ACTIVE_SELECTION_KINDS, getFilteredSources } from '../models';
-import SourceSelectOption from './SourceSelectOption';
-import AllElementsIcon from './AllElementsIcon';
+import { getFilteredSources } from '../models';
 import type { SourcesResponse } from '@tanuki/contracts';
+import SourceSelectOptionsList from './SourceSelectOptionsList';
 
 type Props = {
   query: string;
@@ -29,34 +25,6 @@ function SourceSelectMenu({
 }: Props) {
   const filteredSources = getFilteredSources(sources, query);
 
-  const optionsList = (
-    <Stack gap="md">
-      <Stack gap={4}>
-        <SourceSelectOption
-          to={ROUTE_PATHS.SOURCES}
-          label={'Все источники'}
-          onClick={() => handleOpenedChange(false)}
-          leftSection={<AllElementsIcon size={22} />}
-          isActive={activeSelection.kind === ACTIVE_SELECTION_KINDS.ALL}
-        />
-        {filteredSources.map(({ id, title }) => (
-          <SourceSelectOption
-            key={id}
-            to={generatePath(ROUTE_PATHS.CATALOG, { sourceId: id })}
-            onClick={() => handleOpenedChange(false)}
-            leftSection={<SourceIcon id={id} title={title} size={22} bdrs="sm" />}
-            label={title}
-            isActive={
-              activeSelection.kind === ACTIVE_SELECTION_KINDS.SOURCE &&
-              activeSelection.sourceId === id
-            }
-          />
-        ))}
-      </Stack>
-      {filteredSources.length === 0 && <EmptyState size="xs" />}
-    </Stack>
-  );
-
   return (
     <Stack gap="xs" h={fillHeight ? '100%' : undefined}>
       <TextInput
@@ -66,12 +34,20 @@ function SourceSelectMenu({
         onChange={(event) => setQuery(event.currentTarget.value)}
       />
       {fillHeight ? (
-        <ScrollArea type="auto" offsetScrollbars="y" style={{ flex: 1, minHeight: 0 }}>
-          {optionsList}
+        <ScrollArea type="auto" flex={1} mih={0} offsetScrollbars="y">
+          <SourceSelectOptionsList
+            onClose={() => handleOpenedChange(false)}
+            filteredSources={filteredSources}
+            activeSelection={activeSelection}
+          />
         </ScrollArea>
       ) : (
         <ScrollArea.Autosize mah={420} type="auto" offsetScrollbars="y">
-          {optionsList}
+          <SourceSelectOptionsList
+            onClose={() => handleOpenedChange(false)}
+            filteredSources={filteredSources}
+            activeSelection={activeSelection}
+          />
         </ScrollArea.Autosize>
       )}
     </Stack>

@@ -2,6 +2,7 @@
   :global(.mantine-TextInput-section) {
     &[data-position='right'] {
       cursor: pointer;
+      transition: color 200ms ease;
 
       &:hover {
         color: var(--mantine-color-gray-filled-hover);

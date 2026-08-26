@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Parser, ParsersRegistry } from '@tanuki/parsers';
+import type { FilterSelection, Parser, ParsersRegistry } from '@tanuki/parsers';
 import { CacheService } from '../cache/cache.service';
 import { CACHE_TTL, type CacheTtlSpec } from '../cache/cache.constants';
 import { cacheKey } from '../cache/cache-keys';
@@ -15,7 +15,7 @@ import {
 } from '../common/errors';
 import { toApiException } from './parser-error.mapper';
 import { PARSERS } from './parsers.provider';
-import type { RawManga, RawPage, RawSourceInfo } from './parsers-client.types';
+import type { RawFilterGroup, RawManga, RawPage, RawSourceInfo } from './parsers-client.types';
 
 const PAGE_SIZE = 30;
 
@@ -48,9 +48,26 @@ export class ParsersClientService {
 
   async listManga(
     sourceId: string,
-    params: { page: number; order?: string; query?: string; force?: boolean },
+    params: {
+      page: number;
+      order?: string;
+      query?: string;
+      force?: boolean;
+      filters?: FilterSelection[];
+    },
   ): Promise<CachedResult<{ items: RawManga[] }>> {
-    const key = cacheKey('catalog', sourceId, params.page, params.order ?? '', params.query ?? '');
+    const filtersKey = (params.filters ?? [])
+      .map((f) => `${f.groupId}:${f.exclude ? '!' : ''}${f.key}`)
+      .sort()
+      .join(',');
+    const key = cacheKey(
+      'catalog',
+      sourceId,
+      params.page,
+      params.order ?? '',
+      params.query ?? '',
+      filtersKey,
+    );
     return this.fetchCached(
       key,
       CACHE_TTL.catalog,
@@ -61,10 +78,18 @@ export class ParsersClientService {
           limit: PAGE_SIZE,
           order: params.order,
           query: params.query,
+          filters: params.filters,
         }),
       }),
       { force: params.force },
     );
+  }
+
+  async getFilters(sourceId: string): Promise<CachedResult<{ groups: RawFilterGroup[] }>> {
+    const key = cacheKey('filters', sourceId);
+    return this.fetchCached(key, CACHE_TTL.filters, sourceId, async (parser) => ({
+      groups: (await parser.getFilters?.()) ?? [],
+    }));
   }
 
   async getDetails(sourceId: string, url: string): Promise<CachedResult<RawManga>> {

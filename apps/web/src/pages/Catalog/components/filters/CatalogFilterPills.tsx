@@ -1,0 +1,71 @@
+import { Box, Button, Grid, Group, Pill, Text } from '@mantine/core';
+import type { FilterGroup } from '@tanuki/contracts';
+import type { FilterSelection } from '../../../../../../../packages/contracts/dist/cjs';
+import { clearGroupSelection, getGroupSelectionOptions } from '../../utils/filterSelection';
+import styles from './CatalogFilter.module.scss';
+
+type Props = {
+  groups: FilterGroup[] | undefined;
+  selection: FilterSelection[];
+  onChange: (selection: FilterSelection[]) => void;
+};
+
+function CatalogFilterPills({ groups, selection, onChange }: Props) {
+  if (!groups) {
+    return null;
+  }
+
+  const groupOptions = groups.map((group) => ({
+    group,
+    options: getGroupSelectionOptions(group, selection),
+  }));
+
+  if (groupOptions.every(({ options }) => !options)) {
+    return null;
+  }
+
+  return (
+    <Grid.Col span={12} order={{ base: 2, xs: 3 }}>
+      <Group gap="xs">
+        {groupOptions.map(({ group, options }) => {
+          return (
+            options && (
+              <Pill
+                className={styles.pill}
+                size="md"
+                key={group.id}
+                withRemoveButton
+                onRemove={() => onChange(clearGroupSelection(selection, group.id))}
+                styles={{
+                  label: {
+                    display: 'flex',
+                    alignItems: 'center',
+                  },
+                }}
+              >
+                <Text fz={14}>{options.title}:</Text>
+                <Text fz={14} ml={4} td={options.firstItem.exclude ? 'line-through' : 'none'}>
+                  {options.firstItem.label}
+                </Text>
+                {options.otherItemsLength ? (
+                  <Box bdrs="sm" p={4} ml={6} className={styles.tag} fz={12}>
+                    +{options.otherItemsLength}
+                  </Box>
+                ) : (
+                  ''
+                )}
+              </Pill>
+            )
+          );
+        })}
+        {!!selection.length && (
+          <Button variant="subtle" color="gray" onClick={() => onChange([])}>
+            Сбросить
+          </Button>
+        )}
+      </Group>
+    </Grid.Col>
+  );
+}
+
+export default CatalogFilterPills;

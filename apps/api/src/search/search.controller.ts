@@ -1,13 +1,25 @@
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { SearchResponse } from '@tanuki/contracts';
+import { SearchResponseDto } from './search.dto';
 import { SearchService } from './search.service';
 
 const DEFAULT_LIMIT = 10;
 
+@ApiTags('search')
 @Controller('search')
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
+  @ApiQuery({ name: 'query', required: true, type: String })
+  @ApiQuery({
+    name: 'sources',
+    required: false,
+    type: String,
+    description: 'Список sourceId через запятую; по умолчанию — все источники',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiOkResponse({ type: SearchResponseDto })
   @Get()
   async search(
     @Query('query') query: string | undefined,

@@ -6,6 +6,8 @@ export type {
   RawSourceInfo,
   RawContentRating,
   RawMangaState,
+  RawFilterGroup,
+  RawFilterOption,
 } from './types';
 export { RATING_UNKNOWN, RAW_MANGA_STATE } from './types';
 
@@ -29,7 +31,7 @@ export type {
   LibSocialCredentials,
   Logger,
 } from './core/parser';
-export type { ListParams } from './core/paging';
+export type { ListParams, FilterSelection } from './core/paging';
 
 export {
   SOURCE_ID,

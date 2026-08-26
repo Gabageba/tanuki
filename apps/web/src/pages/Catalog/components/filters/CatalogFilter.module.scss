@@ -1,0 +1,29 @@
+.tab {
+  &[data-active] {
+    background-color: var(--mantine-color-gray-light-hover);
+  }
+}
+
+.checkboxFilterOption {
+  &:hover {
+    input {
+      border-color: var(--mantine-primary-color-filled-hover);
+    }
+  }
+}
+
+.pill {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  background-color: transparent;
+  border: 1px solid var(--mantine-primary-color-filled);
+  color: var(--mantine-primary-color-filled);
+}
+
+.tag {
+  display: inline-flex;
+  background-color: var(--mantine-primary-color-filled);
+  color: var(--mantine-primary-color-contrast);
+  line-height: 1;
+}

@@ -15,6 +15,8 @@ import {
   MANGA_STATE,
   type ContentRating,
   type EnumLiteralsOf,
+  type FilterType,
+  type SortOrder,
   type SourceContentType,
 } from '@tanuki/contracts';
 
@@ -78,6 +80,23 @@ export type RawPage = {
   source: string;
 };
 
+export type RawFilterOption = {
+  /** Opaque value the parser understands — round-trips back via ListParams.filters unchanged. */
+  key: string;
+  title: string;
+  /** Titles matching this option on the source, if it advertises one. */
+  count: number | null;
+};
+
+export type RawFilterGroup = {
+  /** Stable within one source — e.g. "genre", "status" — namespaces FilterSelection.groupId. */
+  id: string;
+  title: string;
+  /** Selection semantics + widget in one field — see FILTER_TYPE. */
+  type: FilterType;
+  options: RawFilterOption[];
+};
+
 export type RawSourceInfo = {
   id: string;
   title: string;
@@ -87,7 +106,9 @@ export type RawSourceInfo = {
   contentType: SourceContentType;
   isBroken: boolean;
   isAdult: boolean;
-  sortOrders: string[];
+  sortOrders: SortOrder[];
   isSearchSupported: boolean;
+  /** Mirrors whether the parser implements getFilters() — see Parser.getFilters. */
+  isFiltersSupported: boolean;
   isMultipleTagsSupported: boolean;
 };

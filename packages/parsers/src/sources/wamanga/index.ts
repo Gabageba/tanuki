@@ -195,6 +195,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       sortOrders: ['UPDATED', 'NEWEST', 'POPULARITY', 'ALPHABETICAL'],
       isSearchSupported: true,
       isMultipleTagsSupported: false,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

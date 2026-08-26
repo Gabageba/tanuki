@@ -1,19 +1,20 @@
 import { Center, Container, Group, Loader, Title } from '@mantine/core';
 import { useMemo, type ReactNode } from 'react';
 import ApiErrorText from '../../ApiErrorText';
-import usePageLayoutQuery from '../hooks/usePageLayoutQuery';
+import useQuery from '../hooks/useQuery';
 
 type Props = {
   children: ReactNode;
   title?: ReactNode;
   actions?: ReactNode;
+  showLoading?: boolean;
 };
 
-function Content({ children, title, actions }: Props) {
-  const { isLoading, isError, error } = usePageLayoutQuery();
+function Content({ children, title, actions, showLoading = true }: Props) {
+  const { isPending, isError, error } = useQuery();
 
   const renderContent = useMemo(() => {
-    if (isLoading) {
+    if (isPending && showLoading) {
       return (
         <Center>
           <Loader />
@@ -26,7 +27,7 @@ function Content({ children, title, actions }: Props) {
     }
 
     return children;
-  }, [children, error, isError, isLoading]);
+  }, [children, error, isError, isPending, showLoading]);
 
   return (
     <Container py="md" size="xl">

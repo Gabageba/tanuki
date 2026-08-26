@@ -401,6 +401,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       sortOrders: cfg.sortOrders,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

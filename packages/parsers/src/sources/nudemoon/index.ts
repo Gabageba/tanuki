@@ -287,6 +287,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

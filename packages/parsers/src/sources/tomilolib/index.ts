@@ -318,6 +318,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       ],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

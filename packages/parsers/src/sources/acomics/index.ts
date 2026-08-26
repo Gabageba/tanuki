@@ -204,6 +204,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
       sortOrders: ['UPDATED', 'ALPHABETICAL', 'POPULARITY'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

@@ -10,12 +10,12 @@
   }
 
   &[data-active] {
-    background: var(--mantine-color-terracotta-light);
+    background: var(--mantine-primary-color-light);
     border-color: var(--mantine-primary-color-filled) !important;
     cursor: default;
 
     &:hover {
-      background: var(--mantine-color-terracotta-light);
+      background: var(--mantine-primary-color-light);
     }
   }
 }

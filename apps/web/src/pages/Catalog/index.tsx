@@ -1,29 +1,34 @@
-import { useParams } from 'react-router';
-import { useState } from 'react';
+import { useParams, useSearchParams } from 'react-router';
 import useCatalog from './hooks/useCatalog';
-import CatalogGrid from './CatalogGrid';
 import PageLayout from '@/shared/ui/PageLayout';
 import CatalogHeader from './components/header/CatalogHeader';
+import useSource from '@/entities/source/hooks/useSource';
+import CatalogContent from './components/content/CatalogContent';
+import { parseFilters } from './utils/filterSelection';
+import { parseSortOrder } from './utils/sortOrder';
 
 function Catalog() {
   const { sourceId } = useParams<{ sourceId: string }>();
-  const [query, setQuery] = useState('');
+  const { data: source, isLoading: isSourceLoading } = useSource({ sourceId });
+  const [searchParams] = useSearchParams();
 
   return (
-    <PageLayout useQuery={useCatalog} params={[{ sourceId: sourceId ?? '', query }]}>
-      <PageLayout.Header>
-        <CatalogHeader sourceId={sourceId} handleSearch={setQuery} />
-      </PageLayout.Header>
+    <PageLayout
+      key={sourceId}
+      useQuery={useCatalog}
+      params={{
+        sourceId: sourceId ?? '',
+        order: parseSortOrder(searchParams.get('order')),
+        filters: parseFilters(searchParams.getAll('filters')),
+      }}
+    >
+      <CatalogHeader source={source} isLoading={isSourceLoading} />
       <PageLayout.ErrorNotification
         title="Не удалось загрузить каталог"
         fallbackMessage="Источник недоступен. Попробуйте позже."
       />
       <PageLayout.PullToRefresh />
-
-      <PageLayout.Content>
-        <CatalogGrid />
-        <PageLayout.InfiniteScrollTrigger />
-      </PageLayout.Content>
+      <CatalogContent sourceId={sourceId} />
     </PageLayout>
   );
 }

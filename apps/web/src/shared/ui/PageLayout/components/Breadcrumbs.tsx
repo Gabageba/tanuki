@@ -2,7 +2,7 @@ import { Anchor, Breadcrumbs as MantineBreadcrumbs } from '@mantine/core';
 import { Link } from 'react-router';
 import type { ReactNode } from 'react';
 
-export type BreadcrumbItem = {
+type BreadcrumbItem = {
   label: ReactNode;
   to?: string;
 };

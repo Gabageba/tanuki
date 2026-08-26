@@ -7,10 +7,12 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "docker": "docker compose up -d --build",
     "lint": "turbo run lint && pnpm run lint:styles && pnpm run lint:format",
     "lint:format": "prettier --check .",
     "lint:styles": "stylelint \"apps/**/*.scss\" --allow-empty-input",
     "prepare": "husky",
+    "start": "docker compose up -d --build && turbo run dev",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },

@@ -1,4 +1,7 @@
+import type { FilterSelection } from '@tanuki/contracts';
 import type { RawManga } from '../types';
+
+export type { FilterSelection };
 
 export type ListParams = {
   /** Offset in API items, always a multiple of `limit` (page * limit). */
@@ -7,6 +10,8 @@ export type ListParams = {
   limit: number;
   order?: string;
   query?: string;
+  /** Selections from a getFilters() group — sources without getFilters just ignore this. */
+  filters?: FilterSelection[];
 };
 
 export type PagingWindow = {

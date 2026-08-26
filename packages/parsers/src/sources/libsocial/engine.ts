@@ -421,6 +421,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       ],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
+      isFiltersSupported: false,
     },
     getList,
     getDetails,

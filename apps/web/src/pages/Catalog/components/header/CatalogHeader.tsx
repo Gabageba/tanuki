@@ -1,21 +1,25 @@
-import { ActionIcon, Alert, Group } from '@mantine/core';
+import { ActionIcon, Alert, Flex, Group } from '@mantine/core';
 import { CaretLeftIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
-import type { Dispatch, SetStateAction } from 'react';
-import useSource from '@/entities/source/hooks/useSource';
 import CatalogHeaderSkeleton from './CatalogHeaderSkeleton';
 import SourceTitle from '@/entities/source/components/SourceTitle';
 import SearchInput from '@/shared/ui/SearcInput';
+import PageLayout from '@/shared/ui/PageLayout';
+import type { CatalogParams } from '../../models';
+import type { Source } from '@tanuki/contracts';
 
 type Props = {
-  sourceId: string | undefined;
-  handleSearch: Dispatch<SetStateAction<string>>;
+  source: Source | undefined;
+  isLoading: boolean;
 };
 
-function CatalogHeader({ sourceId, handleSearch }: Props) {
+function CatalogHeader({ source, isLoading }: Props) {
   const navigate = useNavigate();
+  const { params, setParams } = PageLayout.useParams<CatalogParams>();
 
-  const { data: source, isLoading } = useSource({ sourceId });
+  const handleSearch = (query: string) => {
+    setParams({ ...params, query });
+  };
 
   if (isLoading) {
     return <CatalogHeaderSkeleton />;
@@ -26,8 +30,8 @@ function CatalogHeader({ sourceId, handleSearch }: Props) {
   }
 
   return (
-    <>
-      <Group justify="space-between">
+    <PageLayout.Header>
+      <Flex justify="space-between" direction={{ base: 'column', sm: 'row' }} gap="sm">
         <Group gap="xs">
           <ActionIcon variant="subtle" color="gray" onClick={() => navigate(-1)}>
             <CaretLeftIcon />
@@ -35,14 +39,14 @@ function CatalogHeader({ sourceId, handleSearch }: Props) {
           <SourceTitle source={source} showStatus />
         </Group>
         <SearchInput
+          w={{ base: '100%', sm: 300 }}
           allowClear
           handleSearch={handleSearch}
           placeholder={`Искать в ${source.title}`}
           debounceMs={400}
-          w={300}
         />
-      </Group>
-    </>
+      </Flex>
+    </PageLayout.Header>
   );
 }
 

@@ -1,12 +1,12 @@
 import { Divider, SimpleGrid, Stack, Title } from '@mantine/core';
 import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import { getLabelByContentType } from '@/entities/source/lib';
-import usePageLayoutQuery from '@/shared/ui/PageLayout/hooks/usePageLayoutQuery';
+import PageLayout from '@/shared/ui/PageLayout';
 import type { SourcesQuery } from './models';
 import SourceCard from '@/entities/source/components/SourceCard';
 
 function SourcesList() {
-  const { data } = usePageLayoutQuery<SourcesQuery>();
+  const { data } = PageLayout.useQuery<SourcesQuery>();
 
   return (
     <Stack gap="xl">

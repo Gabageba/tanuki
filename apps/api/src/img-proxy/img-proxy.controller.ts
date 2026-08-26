@@ -1,4 +1,5 @@
 import { Controller, Get, HttpStatus, Inject, Query, Res } from '@nestjs/common';
+import { ApiOperation, ApiProduces, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import sharp from 'sharp';
 import { request } from 'undici';
@@ -26,6 +27,7 @@ const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
   return Buffer.concat(chunks);
 };
 
+@ApiTags('images')
 @Controller('img')
 export class ImgProxyController {
   constructor(
@@ -34,6 +36,24 @@ export class ImgProxyController {
     private readonly cache: CacheService,
   ) {}
 
+  @ApiOperation({ summary: 'Проксирует и опционально ресайзит подписанный URL картинки' })
+  @ApiQuery({ name: 'u', description: 'Исходный URL картинки (часть подписи)' })
+  @ApiQuery({ name: 's', description: 'sourceId (часть подписи)' })
+  @ApiQuery({ name: 'exp', description: 'Unix-время истечения подписи' })
+  @ApiQuery({ name: 'sig', description: 'HMAC-подпись' })
+  @ApiQuery({
+    name: 'w',
+    required: false,
+    type: Number,
+    description: 'Целевая ширина (только обложки)',
+  })
+  @ApiQuery({
+    name: 'f',
+    required: false,
+    enum: ['webp', 'avif'],
+    description: 'Целевой формат (только обложки)',
+  })
+  @ApiProduces('image/*')
   @Get()
   async proxy(
     @Query('u') u: string,
