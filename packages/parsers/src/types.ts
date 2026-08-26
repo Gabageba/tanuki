@@ -15,6 +15,7 @@ import {
   MANGA_STATE,
   type ContentRating,
   type EnumLiteralsOf,
+  type FilterRange,
   type FilterType,
   type SortOrder,
   type SourceContentType,
@@ -94,7 +95,10 @@ export type RawFilterGroup = {
   title: string;
   /** Selection semantics + widget in one field — see FILTER_TYPE. */
   type: FilterType;
+  /** Empty for RANGE groups — their selectable bounds go in `range` instead. */
   options: RawFilterOption[];
+  /** RANGE groups only — the source's own min/max, e.g. a 0..10 rating or 1950..thisYear. */
+  range?: FilterRange;
 };
 
 export type RawSourceInfo = {

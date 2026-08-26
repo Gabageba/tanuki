@@ -89,7 +89,7 @@ function CatalogSettings({ sourceId }: Props) {
     <Stack gap="xs" w="100%" mb="md">
       <Grid gap="sm">
         <Grid.Col span={{ base: 12, xs: 'auto' }} order={1}>
-          {filters?.groups.length && (
+          {!!filters?.groups.length && (
             <Button
               w={{ base: '100%', xs: 'auto' }}
               leftSection={<FunnelIcon />}

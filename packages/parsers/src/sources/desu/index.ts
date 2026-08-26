@@ -263,9 +263,15 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
    * of one data-genre-* id space, splitting them into two groups is a fetchFilters-side display
    * distinction (see isTagOption) that doesn't exist in the request the site's own JS sends.
    */
-  const applyFilterParams = (url: URL, filters: FilterSelection[] | undefined): void => {
-    if (!filters || filters.length === 0) return;
-    const byGroup = new Map<string, FilterSelection[]>();
+  const applyFilterParams = (url: URL, selections: FilterSelection[] | undefined): void => {
+    if (!selections || selections.length === 0) return;
+    // Desu has no RANGE groups — getFilters() never emits one, so a range selection here would
+    // be a caller bug, not a real request. Narrowing up front keeps the rest of this function on
+    // the plain key/exclude shape instead of re-checking 'range' in filter at every access below.
+    const filters = selections.filter(
+      (f): f is Extract<FilterSelection, { key: string }> => 'key' in f,
+    );
+    const byGroup = new Map<string, typeof filters>();
     for (const filter of filters) {
       const list = byGroup.get(filter.groupId) ?? [];
       list.push(filter);

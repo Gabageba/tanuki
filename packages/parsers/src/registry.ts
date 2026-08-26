@@ -58,7 +58,7 @@ const GROUPLE_IDS = new Set(GROUPLE_CONFIGS.map((c) => c.id));
 /** MANGALIB/HENTAILIB/YAOILIB all hit the same host (api.cdnlibs.org) — see docs plan. */
 const LIBSOCIAL_IDS = new Set(['MANGALIB', 'HENTAILIB', 'YAOILIB']);
 /** Sources whose parser implements getFilters() — mirrored into RawSourceInfo.isFiltersSupported. */
-const FILTERS_SUPPORTED_IDS = new Set(['DESUME']);
+const FILTERS_SUPPORTED_IDS = new Set(['DESUME', 'INKSTORY']);
 
 const cookieScopeFor = (id: string): string => {
   if (GROUPLE_IDS.has(id)) return 'grouple';

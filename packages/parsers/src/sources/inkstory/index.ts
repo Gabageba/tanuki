@@ -1,9 +1,17 @@
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
-import type { ListParams } from '../../core/paging';
+import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawManga, RawChapter, RawPage, RawTag, RawMangaState } from '../../types';
+import type {
+  RawManga,
+  RawChapter,
+  RawPage,
+  RawTag,
+  RawMangaState,
+  RawFilterGroup,
+  RawFilterOption,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toTitleCase } from '../../core/text/strings';
@@ -61,12 +69,122 @@ type ChapterUpdateFeedItem = {
   book: MangaJson;
 };
 
+type LabelJson = {
+  slug: string;
+  name: string;
+  kind: string;
+};
+
+const LABEL_KIND_GENRE = 'GENRE';
+
+const STATUS_KEYS = ['ONGOING', 'DONE', 'FROZEN', 'ANNOUNCE'];
+const CONTENT_STATUS_KEYS = ['SAFE', 'UNSAFE', 'EROTIC', 'PORNOGRAPHIC'];
+const COUNTRY_KEYS = ['RUSSIA', 'JAPAN', 'KOREA', 'CHINA', 'OTHER'];
+const FORMAT_KEYS = [
+  'FOURTH_KOMA',
+  'COMPILATION',
+  'DOUJINSHI',
+  'WEBTOON',
+  'COLORED',
+  'ARTBOOK',
+  'SINGLE',
+  'LIGHT',
+  'WEB',
+];
+
+/** Mirrors the site's own hardcoded RU translations (constants chunk of the catalog filter UI) —
+ *  the API only ever returns the bare enum key, never a display name, for these four groups. */
+const getStatusTitle = (status: string): string => {
+  switch (status) {
+    case 'ONGOING':
+      return 'Онгоинг';
+    case 'DONE':
+      return 'Завершён';
+    case 'FROZEN':
+      return 'Заморожен';
+    case 'ANNOUNCE':
+      return 'Анонс';
+    default:
+      return status;
+  }
+};
+
+const getContentStatusTitle = (status: string): string => {
+  switch (status) {
+    case 'SAFE':
+      return 'Безопасный';
+    case 'UNSAFE':
+      return 'Неприемлемый';
+    case 'EROTIC':
+      return 'Эротика';
+    case 'PORNOGRAPHIC':
+      return 'Порнография';
+    default:
+      return status;
+  }
+};
+
+const getCountryTitle = (country: string): string => {
+  switch (country) {
+    case 'RUSSIA':
+      return 'Россия';
+    case 'JAPAN':
+      return 'Япония';
+    case 'KOREA':
+      return 'Корея';
+    case 'CHINA':
+      return 'Китай';
+    case 'OTHER':
+      return 'Другая';
+    default:
+      return country;
+  }
+};
+
+const getFormatTitle = (format: string): string => {
+  switch (format) {
+    case 'FOURTH_KOMA':
+      return 'Ёнкома (4-кома)';
+    case 'COMPILATION':
+      return 'Сборник';
+    case 'DOUJINSHI':
+      return 'Додзинси';
+    case 'WEBTOON':
+      return 'Вебтун';
+    case 'COLORED':
+      return 'Цветной';
+    case 'ARTBOOK':
+      return 'Артбук';
+    case 'SINGLE':
+      return 'Сингл';
+    case 'LIGHT':
+      return 'Печать';
+    case 'WEB':
+      return 'Веб';
+    default:
+      return format;
+  }
+};
+
+const toStaticOptions = (keys: string[], getTitle: (key: string) => string): RawFilterOption[] => {
+  return keys.map((key) => ({ key, title: getTitle(key), count: null }));
+};
+
+/** Mirrors the site's own catalog sort dropdown (6 native `/v2/books` sort fields) — RATING
+ *  is the site's real averageRating field, not likesCount, which is its own separate LIKES
+ *  option. bookmarksCount is inferred from the same `<noun>Count` naming as views/likes/chapters. */
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
     case 'POPULARITY':
       return 'viewsCount,desc';
-    case 'RATING':
+    case 'LIKES':
       return 'likesCount,desc';
+    case 'CHAPTERS':
+      return 'chaptersCount,desc';
+    case 'BOOKMARKS':
+      return 'bookmarksCount,desc';
+    case 'RATING':
+      return 'averageRating,desc';
     case 'NEWEST':
       return 'createdAt,desc';
     default:
@@ -212,12 +330,128 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     return items.map((item) => toManga(item.book));
   };
 
+  /** RANGE groups address a `<groupId>Min`/`<groupId>Max` pair — confirmed live for all three
+   *  (averageRatingMin/Max, yearMin/Max, chaptersCountMin/Max) by watching x-estimated-total-hits
+   *  drop under each bound. Either side is optional — filters.ts guarantees at least one is set. */
+  const applyRangeParam = (
+    url: URL,
+    groupId: string,
+    range: { min?: number; max?: number },
+  ): void => {
+    if (groupId !== 'averageRating' && groupId !== 'year' && groupId !== 'chaptersCount') return;
+    if (range.min !== undefined) url.searchParams.set(`${groupId}Min`, String(range.min));
+    if (range.max !== undefined) url.searchParams.set(`${groupId}Max`, String(range.max));
+  };
+
+  /**
+   * The site's own catalog UI writes filter picks straight into `/v2/books`'s query string,
+   * one repeated param per group (`status=ONGOING&status=DONE`, an OR — confirmed live: the two
+   * counts sum exactly to the combined-filter count) — no comma-packing like Desu's genres.
+   * "genre" is the one *_EXCLUDE group: labelsInclude/labelsExclude are separate params, so no
+   * marker needs packing into the key the way Desu's `id-!slug` does.
+   */
+  const applyFilterParams = (url: URL, filters: FilterSelection[] | undefined): void => {
+    if (!filters || filters.length === 0) return;
+    for (const filter of filters) {
+      if ('range' in filter) {
+        applyRangeParam(url, filter.groupId, filter.range);
+        continue;
+      }
+      switch (filter.groupId) {
+        case 'genre':
+          url.searchParams.append(filter.exclude ? 'labelsExclude' : 'labelsInclude', filter.key);
+          break;
+        case 'status':
+          url.searchParams.append('status', filter.key);
+          break;
+        case 'contentStatus':
+          url.searchParams.append('contentStatus', filter.key);
+          break;
+        case 'country':
+          url.searchParams.append('country', filter.key);
+          break;
+        case 'format':
+          url.searchParams.append('formats', filter.key);
+          break;
+      }
+    }
+  };
+
+  let filtersPromise: Promise<RawFilterGroup[]> | null = null;
+
+  const getFilters = (): Promise<RawFilterGroup[]> => {
+    if (!filtersPromise) filtersPromise = fetchFilters();
+    return filtersPromise;
+  };
+
+  const fetchFilters = async (): Promise<RawFilterGroup[]> => {
+    const labels = await ctx.http.getJson<LabelJson[]>(`https://${apiHost}/v2/labels`);
+    const genres = labels.filter((l) => l.kind === LABEL_KIND_GENRE);
+    return [
+      {
+        id: 'genre',
+        title: 'Жанры',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+        options: genres.map((l) => ({ key: l.slug, title: toTitleCase(l.name), count: null })),
+      },
+      {
+        id: 'status',
+        title: 'Статус',
+        type: FILTER_TYPE.CHECKBOX,
+        options: toStaticOptions(STATUS_KEYS, getStatusTitle),
+      },
+      {
+        id: 'contentStatus',
+        title: 'Возрастной рейтинг',
+        type: FILTER_TYPE.CHECKBOX,
+        options: toStaticOptions(CONTENT_STATUS_KEYS, getContentStatusTitle),
+      },
+      {
+        id: 'country',
+        title: 'Страна',
+        type: FILTER_TYPE.CHECKBOX,
+        options: toStaticOptions(COUNTRY_KEYS, getCountryTitle),
+      },
+      {
+        id: 'format',
+        title: 'Формат выпуска',
+        type: FILTER_TYPE.CHECKBOX,
+        options: toStaticOptions(FORMAT_KEYS, getFormatTitle),
+      },
+      // Bounds mirror the site's own filter inputs (see CatalogBase's number fields) — average
+      // rating and chapter count are hardcoded there too, only the year cap tracks the current
+      // year at each of their deploys, so it's computed here instead of pinned to today's value.
+      {
+        id: 'averageRating',
+        title: 'Рейтинг',
+        type: FILTER_TYPE.RANGE,
+        options: [],
+        range: { min: 0, max: 10 },
+      },
+      {
+        id: 'year',
+        title: 'Год выпуска',
+        type: FILTER_TYPE.RANGE,
+        options: [],
+        range: { min: 1950, max: new Date().getFullYear() },
+      },
+      {
+        id: 'chaptersCount',
+        title: 'Число глав',
+        type: FILTER_TYPE.RANGE,
+        options: [],
+        range: { min: 0, max: 10000 },
+      },
+    ];
+  };
+
   const fetchListPage = async (
     page: number,
     order: string | undefined,
     query: string | undefined,
+    filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
-    if (!query && (order === undefined || order === 'UPDATED')) {
+    if (!query && !filters?.length && (order === undefined || order === 'UPDATED')) {
       return fetchUpdatedPage(page);
     }
     const url = new URL(`https://${apiHost}/v2/books`);
@@ -229,13 +463,14 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     } else {
       url.searchParams.set('sort', getSortKey(order));
     }
+    applyFilterParams(url, filters);
     const items = await ctx.http.getJson<MangaJson[]>(url.toString());
     return items.map(toManga);
   };
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: FIRST_PAGE }, (page) =>
-      fetchListPage(page, params.order, params.query),
+      fetchListPage(page, params.order, params.query, params.filters),
     );
   };
 
@@ -328,14 +563,15 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: false,
-      sortOrders: ['UPDATED', 'POPULARITY', 'RATING', 'NEWEST'],
+      sortOrders: ['UPDATED', 'POPULARITY', 'LIKES', 'CHAPTERS', 'BOOKMARKS', 'RATING', 'NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
-      isFiltersSupported: false,
+      isFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
+    getFilters,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     decodeImage,
   };

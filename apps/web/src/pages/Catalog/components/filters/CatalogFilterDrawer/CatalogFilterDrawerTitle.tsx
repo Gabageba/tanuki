@@ -20,13 +20,13 @@ function CatalogFilterDrawerTitle({ activeGroup, setActiveGroupId, draft }: Prop
       )}
       <Flex direction={{ base: 'column', xxs: 'row' }} columnGap="md">
         <Title order={5}>{activeGroup?.id ? activeGroup.title : 'Все фильтры'}</Title>
-        {activeGroup?.id ? (
+        {activeGroup?.id !== undefined && (
           <SelectedCatalogFiltersCount
             groupId={activeGroup.id}
             draft={draft}
             mt={{ base: 0, xxs: 2 }}
           />
-        ) : null}
+        )}
       </Flex>
     </Group>
   );

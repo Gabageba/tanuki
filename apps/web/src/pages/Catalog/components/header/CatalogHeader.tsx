@@ -7,6 +7,7 @@ import SearchInput from '@/shared/ui/SearcInput';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { CatalogParams } from '../../models';
 import type { Source } from '@tanuki/contracts';
+import { ROUTE_PATHS } from '@/shared/consts/routes';
 
 type Props = {
   source: Source | undefined;
@@ -33,7 +34,7 @@ function CatalogHeader({ source, isLoading }: Props) {
     <PageLayout.Header>
       <Flex justify="space-between" direction={{ base: 'column', sm: 'row' }} gap="sm">
         <Group gap="xs">
-          <ActionIcon variant="subtle" color="gray" onClick={() => navigate(-1)}>
+          <ActionIcon variant="subtle" color="gray" onClick={() => navigate(ROUTE_PATHS.SOURCES)}>
             <CaretLeftIcon />
           </ActionIcon>
           <SourceTitle source={source} showStatus />

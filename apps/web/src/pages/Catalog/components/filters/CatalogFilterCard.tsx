@@ -35,8 +35,8 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
                   <CatalogFilterGroupTitle group={group} />
                   {(included || excluded) && (
                     <Group mt={1} fz={12} gap={8}>
-                      {included ? <Text c="terracotta">{included}</Text> : null}
-                      {excluded ? <Text c="red">-{excluded}</Text> : null}
+                      {!!included && <Text c="terracotta">{included}</Text>}
+                      {!!excluded && <Text c="red">-{excluded}</Text>}
                     </Group>
                   )}
                 </Group>

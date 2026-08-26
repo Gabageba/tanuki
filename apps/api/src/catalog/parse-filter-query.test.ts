@@ -27,4 +27,19 @@ describe('parseFilterQuery', () => {
   it('drops malformed entries (no separator, empty groupId/key) instead of throwing', () => {
     expect(parseFilterQuery(['no-colon', ':key', 'group:', 'group:!'])).toEqual([]);
   });
+
+  it('parses "groupId:min..max" as a closed range selection', () => {
+    expect(parseFilterQuery('averageRating:8.5..10')).toEqual([
+      { groupId: 'averageRating', range: { min: 8.5, max: 10 } },
+    ]);
+  });
+
+  it('parses an open-ended range when one side is blank', () => {
+    expect(parseFilterQuery('year:2020..')).toEqual([{ groupId: 'year', range: { min: 2020 } }]);
+    expect(parseFilterQuery('year:..2020')).toEqual([{ groupId: 'year', range: { max: 2020 } }]);
+  });
+
+  it('drops a range with both sides blank or non-numeric', () => {
+    expect(parseFilterQuery(['group:..', 'group:foo..10'])).toEqual([]);
+  });
 });

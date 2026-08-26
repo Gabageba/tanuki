@@ -56,8 +56,15 @@ export class ParsersClientService {
       filters?: FilterSelection[];
     },
   ): Promise<CachedResult<{ items: RawManga[] }>> {
+    // Mirrors parse-filter-query's own wire format (including its `min..max` range syntax) —
+    // not parsed back, just kept consistent so a cache key is recognizable next to the request
+    // that produced it.
     const filtersKey = (params.filters ?? [])
-      .map((f) => `${f.groupId}:${f.exclude ? '!' : ''}${f.key}`)
+      .map((f) =>
+        'range' in f
+          ? `${f.groupId}:${f.range.min ?? ''}..${f.range.max ?? ''}`
+          : `${f.groupId}:${f.exclude ? '!' : ''}${f.key}`,
+      )
       .sort()
       .join(',');
     const key = cacheKey(

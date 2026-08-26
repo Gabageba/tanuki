@@ -20,7 +20,8 @@ export class CatalogController {
     required: false,
     type: [String],
     description:
-      'Повторяемый параметр вида `groupId:key` (включить) или `groupId:!key` (исключить)',
+      'Повторяемый параметр вида `groupId:key` (включить), `groupId:!key` (исключить) или ' +
+      '`groupId:min..max` для RANGE-групп (любая граница может быть пустой)',
   })
   @ApiOkResponse({ type: CatalogResponseDto })
   @Get('manga')

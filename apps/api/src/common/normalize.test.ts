@@ -112,6 +112,23 @@ describe('normalizeFilterGroup', () => {
       options: [{ key: '12-action', title: 'Боевик', count: 130 }],
     });
   });
+
+  it('passes range through for RANGE groups', () => {
+    const raw: RawFilterGroup = {
+      id: 'year',
+      title: 'Год выпуска',
+      type: 'RANGE',
+      options: [],
+      range: { min: 1950, max: 2026 },
+    };
+    expect(normalizeFilterGroup(raw)).toEqual({
+      id: 'year',
+      title: 'Год выпуска',
+      type: 'RANGE',
+      options: [],
+      range: { min: 1950, max: 2026 },
+    });
+  });
 });
 
 describe('branch grouping', () => {

@@ -51,6 +51,12 @@ const PAGES_JSON = JSON.stringify({
   ],
 });
 
+const LABELS_JSON = JSON.stringify([
+  { id: 'l-1', slug: 'vampires', name: 'вампиры', kind: 'GENRE' },
+  { id: 'l-2', slug: 'harem', name: 'гарем', kind: 'GENRE' },
+  { id: 'l-3', slug: 'staff-pick', name: 'выбор редакции', kind: 'COLLECTION' },
+]);
+
 const SECRET_KEY = 'UySkp0BzPhwlvP2V';
 const SSR_STATE_HTML = `<script id="it-astro-state">["secret-key","${SECRET_KEY}"]</script>`;
 
@@ -84,6 +90,11 @@ const setUpFixtures = (): FakeHttpClient => {
   http.register((url) => url.includes('/v2/branches/'), {
     status: 200,
     body: BRANCH_JSON,
+    contentType: 'application/json',
+  });
+  http.register((url) => url.startsWith(`https://${API_HOST}/v2/labels`), {
+    status: 200,
+    body: LABELS_JSON,
     contentType: 'application/json',
   });
   http.register((url) => url.startsWith(`https://${API_HOST}/v2/books/${MANGA_ID}`), {
@@ -131,6 +142,160 @@ describe('Inkstory parser conformance', () => {
     const items = await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY' });
     expect(items).toHaveLength(1);
     expect(items[0]!.title).toBe('Ван-Пис');
+  });
+
+  it.each([
+    ['POPULARITY', 'viewsCount,desc'],
+    ['LIKES', 'likesCount,desc'],
+    ['CHAPTERS', 'chaptersCount,desc'],
+    ['BOOKMARKS', 'bookmarksCount,desc'],
+    ['RATING', 'averageRating,desc'],
+    ['NEWEST', 'createdAt,desc'],
+  ])('getList: order %s maps to sort=%s', async (order, sortKey) => {
+    await parser.getList({ offset: 0, limit: 20, order });
+    const booksRequest = http.requests
+      .filter((r) => r.url.startsWith(`https://${API_HOST}/v2/books?`))
+      .at(-1);
+    expect(booksRequest).toBeDefined();
+    const url = new URL(booksRequest!.url);
+    expect(url.searchParams.get('sort')).toBe(sortKey);
+  });
+
+  it('getFilters: genre from /v2/labels (COLLECTION kind excluded) plus static and range groups', async () => {
+    const groups = await parser.getFilters!();
+    expect(groups.map((g) => g.id)).toEqual([
+      'genre',
+      'status',
+      'contentStatus',
+      'country',
+      'format',
+      'averageRating',
+      'year',
+      'chaptersCount',
+    ]);
+
+    const genre = groups.find((g) => g.id === 'genre')!;
+    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(genre.options).toEqual([
+      { key: 'vampires', title: 'Вампиры', count: null },
+      { key: 'harem', title: 'Гарем', count: null },
+    ]);
+
+    const status = groups.find((g) => g.id === 'status')!;
+    expect(status.type).toBe('CHECKBOX');
+    expect(status.options).toEqual([
+      { key: 'ONGOING', title: 'Онгоинг', count: null },
+      { key: 'DONE', title: 'Завершён', count: null },
+      { key: 'FROZEN', title: 'Заморожен', count: null },
+      { key: 'ANNOUNCE', title: 'Анонс', count: null },
+    ]);
+
+    const contentStatus = groups.find((g) => g.id === 'contentStatus')!;
+    expect(contentStatus.options.map((o) => o.key)).toEqual([
+      'SAFE',
+      'UNSAFE',
+      'EROTIC',
+      'PORNOGRAPHIC',
+    ]);
+
+    const country = groups.find((g) => g.id === 'country')!;
+    expect(country.options).toEqual([
+      { key: 'RUSSIA', title: 'Россия', count: null },
+      { key: 'JAPAN', title: 'Япония', count: null },
+      { key: 'KOREA', title: 'Корея', count: null },
+      { key: 'CHINA', title: 'Китай', count: null },
+      { key: 'OTHER', title: 'Другая', count: null },
+    ]);
+
+    const format = groups.find((g) => g.id === 'format')!;
+    expect(format.options.map((o) => o.key)).toEqual([
+      'FOURTH_KOMA',
+      'COMPILATION',
+      'DOUJINSHI',
+      'WEBTOON',
+      'COLORED',
+      'ARTBOOK',
+      'SINGLE',
+      'LIGHT',
+      'WEB',
+    ]);
+
+    const averageRating = groups.find((g) => g.id === 'averageRating')!;
+    expect(averageRating.type).toBe('RANGE');
+    expect(averageRating.options).toEqual([]);
+    expect(averageRating.range).toEqual({ min: 0, max: 10 });
+
+    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
+    expect(chaptersCount.type).toBe('RANGE');
+    expect(chaptersCount.range).toEqual({ min: 0, max: 10000 });
+
+    const year = groups.find((g) => g.id === 'year')!;
+    expect(year.type).toBe('RANGE');
+    expect(year.range!.min).toBe(1950);
+    expect(year.range!.max).toBe(new Date().getFullYear());
+  });
+
+  it('getList with filters: repeated params per group, genre include/exclude are separate params', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'status', key: 'ONGOING' },
+        { groupId: 'status', key: 'DONE' },
+        { groupId: 'genre', key: 'vampires' },
+        { groupId: 'genre', key: 'harem', exclude: true },
+        { groupId: 'contentStatus', key: 'SAFE' },
+        { groupId: 'country', key: 'JAPAN' },
+        { groupId: 'format', key: 'WEBTOON' },
+      ],
+    });
+    const booksRequest = http.requests
+      .filter((r) => r.url.startsWith(`https://${API_HOST}/v2/books?`))
+      .at(-1);
+    expect(booksRequest).toBeDefined();
+    const url = new URL(booksRequest!.url);
+    expect(url.searchParams.getAll('status')).toEqual(['ONGOING', 'DONE']);
+    expect(url.searchParams.getAll('labelsInclude')).toEqual(['vampires']);
+    expect(url.searchParams.getAll('labelsExclude')).toEqual(['harem']);
+    expect(url.searchParams.get('contentStatus')).toBe('SAFE');
+    expect(url.searchParams.get('country')).toBe('JAPAN');
+    expect(url.searchParams.get('formats')).toBe('WEBTOON');
+  });
+
+  it('getList with filters: RANGE selections map to <groupId>Min/<groupId>Max, open-ended sides omitted', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'averageRating', range: { min: 8.5, max: 10 } },
+        { groupId: 'year', range: { min: 2020 } },
+        { groupId: 'chaptersCount', range: { max: 500 } },
+      ],
+    });
+    const booksRequest = http.requests
+      .filter((r) => r.url.startsWith(`https://${API_HOST}/v2/books?`))
+      .at(-1);
+    expect(booksRequest).toBeDefined();
+    const url = new URL(booksRequest!.url);
+    expect(url.searchParams.get('averageRatingMin')).toBe('8.5');
+    expect(url.searchParams.get('averageRatingMax')).toBe('10');
+    expect(url.searchParams.get('yearMin')).toBe('2020');
+    expect(url.searchParams.has('yearMax')).toBe(false);
+    expect(url.searchParams.has('chaptersCountMin')).toBe(false);
+    expect(url.searchParams.get('chaptersCountMax')).toBe('500');
+  });
+
+  it('getList with filters: bypasses the chapter-update-feed default even with no explicit order', async () => {
+    const items = await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [{ groupId: 'status', key: 'ONGOING' }],
+    });
+    expect(items).toHaveLength(1);
+    const booksRequest = http.requests
+      .filter((r) => r.url.startsWith(`https://${API_HOST}/v2/books?`))
+      .at(-1);
+    expect(booksRequest).toBeDefined();
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {

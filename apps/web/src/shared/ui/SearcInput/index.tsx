@@ -49,7 +49,7 @@ function SearchInput({
         enterKeyHint="search"
         leftSection={<MagnifyingGlassIcon />}
         rightSection={
-          query && allowClear ? <XCircleIcon onClick={clear} aria-label="Очистить поиск" /> : null
+          !!query && allowClear && <XCircleIcon onClick={clear} aria-label="Очистить поиск" />
         }
         value={query}
         onChange={(event) => {

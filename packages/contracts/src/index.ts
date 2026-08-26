@@ -33,10 +33,12 @@ export {
   FilterTypeSchema,
   FilterOptionSchema,
   FilterGroupSchema,
+  FilterRangeSchema,
   FILTER_TYPE,
   type FilterType,
   type FilterOption,
   type FilterGroup,
+  type FilterRange,
   type FilterSelection,
 } from './filter';
 export {
