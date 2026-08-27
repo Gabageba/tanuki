@@ -45,7 +45,7 @@ jobs:
         if: always()
         run: |
           if [ -s "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json" ] && [ -n "$GH_TOKEN" ]; then
-            gh secret set LIBSOCIAL_HENTAILIB_TOKEN --body-file "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json"
+            gh secret set LIBSOCIAL_HENTAILIB_TOKEN < "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json"
           fi
         env:
           GH_TOKEN: ${{ secrets.GH_SECRETS_PAT }}
