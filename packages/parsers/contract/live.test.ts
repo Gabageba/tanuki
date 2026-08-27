@@ -43,6 +43,9 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   'HENCHAN',
   // YAOICHAN intentionally excluded: marked broken (`isBroken: true` in source-catalog.ts) —
   // every request times out at the connect/TLS stage, reproduces from multiple networks.
+  //
+  // REMANGA/MANGABUFF/INKSTORY are here too — see CI_ANTIBOT_FLAKY_SOURCE_IDS below for why
+  // they're filtered out of the CI run specifically instead of being excluded outright.
   'REMANGA',
   'MANGABUFF',
   'INKSTORY',
@@ -63,6 +66,20 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   'MULTPORN',
   'MULTPORN_HENTAI',
 ];
+
+// REMANGA/MANGABUFF/INKSTORY: known-flaky in the nightly workflow specifically — their
+// Cloudflare/DDoS-Guard antibot (see looksLikeAntibotChallenge in core/http/classify.ts)
+// challenges GitHub Actions' shared runner IP ranges with a 403, but the exact same requests
+// pass from a residential IP. The parser logic itself is correct — a red run for one of these
+// three most likely means "GitHub's IPs got flagged again," not a parsing regression — so they
+// run locally (any residential/non-CI IP) but are skipped when GITHUB_ACTIONS is set, instead of
+// being excluded outright like YAOICHAN/COMX/ACOMICS.
+const CI_ANTIBOT_FLAKY_SOURCE_IDS: SourceId[] = ['REMANGA', 'MANGABUFF', 'INKSTORY'];
+
+const RUN_SOURCE_IDS =
+  process.env['GITHUB_ACTIONS'] === 'true'
+    ? IMPLEMENTED_SOURCE_IDS.filter((id) => !CI_ANTIBOT_FLAKY_SOURCE_IDS.includes(id))
+    : IMPLEMENTED_SOURCE_IDS;
 
 const registry = createRegistry({
   credentials: {
@@ -88,7 +105,7 @@ const registry = createRegistry({
   logger: { info: () => {}, warn: (msg) => console.warn(msg), error: (msg) => console.error(msg) },
 });
 
-describe.each(IMPLEMENTED_SOURCE_IDS)('contract: %s', (sourceId) => {
+describe.each(RUN_SOURCE_IDS)('contract: %s', (sourceId) => {
   it('getList -> getDetails -> getPages resolves a full read path', async () => {
     await registry.init();
     const parser = registry.get(sourceId);
