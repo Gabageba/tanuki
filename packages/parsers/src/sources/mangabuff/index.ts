@@ -1,11 +1,19 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { FILTER_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
-import type { ListParams } from '../../core/paging';
+import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawManga, RawChapter, RawPage, RawTag, RawMangaState } from '../../types';
+import type {
+  RawManga,
+  RawChapter,
+  RawPage,
+  RawTag,
+  RawMangaState,
+  RawFilterGroup,
+  RawFilterOption,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { parseHtml } from '../../core/html/dom';
@@ -22,7 +30,16 @@ const CHAPTER_SELECTOR = 'a.chapters__item';
 const CHAPTER_NUMBER_REGEX = /\d+(?:[.,]\d+)?/;
 
 const getSortKey = (order: string | undefined): string => {
-  return order === 'POPULARITY' ? 'real_views' : 'updated_at';
+  switch (order) {
+    case 'POPULARITY':
+      return 'real_views';
+    case 'RATING':
+      return 'rating';
+    case 'NEWEST':
+      return 'created_at';
+    default:
+      return 'updated_at';
+  }
 };
 
 const parseStatus = (value: string): RawMangaState | null => {
@@ -38,6 +55,36 @@ const parseStatus = (value: string): RawMangaState | null => {
     default:
       return null;
   }
+};
+
+/** `<select name="X[]"><option value=...>Title</option>...</select>` — genres/type/tags/status/
+ *  age_rating/rating/year all share this same shape on the catalog's filter form. */
+const parseSelectOptions = ($: CheerioAPI, selectName: string): RawFilterOption[] => {
+  return $(`select[name="${selectName}"] option`)
+    .toArray()
+    .map((el): RawFilterOption | null => {
+      const $option = $(el);
+      const key = attrOrNull($option, 'value');
+      const title = textOrNull($option);
+      if (!key || !title) return null;
+      return { key, title, count: null };
+    })
+    .filter((o): o is RawFilterOption => o !== null);
+};
+
+/** "Количество глав" isn't a <select> like the rest — it's four plain checkboxes, each labelling
+ *  a bucket boundary (<50, 50-100, 100-200, >200) via a sibling <span>, not the input's own text. */
+const parseChaptersCountOptions = ($: CheerioAPI): RawFilterOption[] => {
+  return $('.catalog__chapters input[name="chapters[]"]')
+    .toArray()
+    .map((el): RawFilterOption | null => {
+      const $input = $(el);
+      const key = attrOrNull($input, 'value');
+      const title = textOrNull($input.next('span'));
+      if (!key || !title) return null;
+      return { key, title, count: null };
+    })
+    .filter((o): o is RawFilterOption => o !== null);
 };
 
 export const createMangaBuffParser = (ctx: ParserContext): Parser => {
@@ -93,12 +140,14 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     page: number,
     order: string | undefined,
     query: string | undefined,
+    filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
     const url = new URL(query ? `https://${domain}/search` : `https://${domain}/manga`);
     if (query) {
       url.searchParams.set('q', query);
     } else {
       url.searchParams.set('sort', getSortKey(order));
+      applyFilterParams(url, filters);
     }
     if (page !== 1) url.searchParams.set('page', String(page));
 
@@ -108,8 +157,114 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
-      fetchListPage(page, params.order, params.query),
+      fetchListPage(page, params.order, params.query, params.filters),
     );
+  };
+
+  /**
+   * genre/type/tag are the only groups with an exclude side — the site addresses it as a wholly
+   * separate `without_*[]` param, not a marker packed into the same value (unlike Desu's
+   * `id-!slug`), because its own filter form renders them as two side-by-side <select>s ("Фильтр"
+   * vs "Исключить"). The rest are plain multi-selects/checkboxes with no exclude concept.
+   */
+  const applyFilterParams = (url: URL, filters: FilterSelection[] | undefined): void => {
+    if (!filters || filters.length === 0) return;
+    for (const filter of filters) {
+      if ('range' in filter) continue; // MangaBuff has no RANGE groups.
+      switch (filter.groupId) {
+        case 'genre':
+          url.searchParams.append(filter.exclude ? 'without_genres[]' : 'genres[]', filter.key);
+          break;
+        case 'type':
+          url.searchParams.append(filter.exclude ? 'without_type_id[]' : 'type_id[]', filter.key);
+          break;
+        case 'tag':
+          url.searchParams.append(filter.exclude ? 'without_tags[]' : 'tags[]', filter.key);
+          break;
+        case 'status':
+          url.searchParams.append('status_id[]', filter.key);
+          break;
+        case 'ageRating':
+          url.searchParams.append('age_rating[]', filter.key);
+          break;
+        case 'rating':
+          url.searchParams.append('rating[]', filter.key);
+          break;
+        case 'year':
+          url.searchParams.append('year[]', filter.key);
+          break;
+        case 'chaptersCount':
+          url.searchParams.append('chapters[]', filter.key);
+          break;
+      }
+    }
+  };
+
+  let filtersPromise: Promise<RawFilterGroup[]> | null = null;
+
+  const getFilters = (): Promise<RawFilterGroup[]> => {
+    if (!filtersPromise) filtersPromise = fetchFilters();
+    return filtersPromise;
+  };
+
+  const fetchFilters = async (): Promise<RawFilterGroup[]> => {
+    const doc = await ctx.http.getHtml(`https://${domain}/manga`);
+    const $ = doc.$;
+
+    const groups: RawFilterGroup[] = [];
+    const genres = parseSelectOptions($, 'genres[]');
+    if (genres.length > 0) {
+      groups.push({
+        id: 'genre',
+        title: 'Жанры',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+        options: genres,
+      });
+    }
+    const types = parseSelectOptions($, 'type_id[]');
+    if (types.length > 0) {
+      groups.push({ id: 'type', title: 'Тип', type: FILTER_TYPE.CHECKBOX_EXCLUDE, options: types });
+    }
+    const tags = parseSelectOptions($, 'tags[]');
+    if (tags.length > 0) {
+      groups.push({
+        id: 'tag',
+        title: 'Теги',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+        options: tags,
+      });
+    }
+    const statuses = parseSelectOptions($, 'status_id[]');
+    if (statuses.length > 0) {
+      groups.push({ id: 'status', title: 'Статус', type: FILTER_TYPE.CHECKBOX, options: statuses });
+    }
+    const ageRatings = parseSelectOptions($, 'age_rating[]');
+    if (ageRatings.length > 0) {
+      groups.push({
+        id: 'ageRating',
+        title: 'Возрастной рейтинг',
+        type: FILTER_TYPE.CHECKBOX,
+        options: ageRatings,
+      });
+    }
+    const ratings = parseSelectOptions($, 'rating[]');
+    if (ratings.length > 0) {
+      groups.push({ id: 'rating', title: 'Рейтинг', type: FILTER_TYPE.CHECKBOX, options: ratings });
+    }
+    const years = parseSelectOptions($, 'year[]');
+    if (years.length > 0) {
+      groups.push({ id: 'year', title: 'Год выпуска', type: FILTER_TYPE.CHECKBOX, options: years });
+    }
+    const chaptersCount = parseChaptersCountOptions($);
+    if (chaptersCount.length > 0) {
+      groups.push({
+        id: 'chaptersCount',
+        title: 'Количество глав',
+        type: FILTER_TYPE.CHECKBOX,
+        options: chaptersCount,
+      });
+    }
+    return groups;
   };
 
   const fetchCsrfToken = async (): Promise<string> => {
@@ -312,14 +467,15 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: false,
-      sortOrders: ['UPDATED', 'POPULARITY'],
+      sortOrders: ['UPDATED', 'POPULARITY', 'RATING', 'NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
-      isFiltersSupported: false,
+      isFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
+    getFilters,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

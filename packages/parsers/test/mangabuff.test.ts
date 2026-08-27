@@ -44,6 +44,88 @@ const PAGES_HTML = `<!doctype html><html><body>
   </div>
 </body></html>`;
 
+// The catalog's filter sidebar (.catalog__right) — a trimmed slice of the real /manga markup.
+// genre/type/tag are the only groups mirrored by a without_* select (exclude side); the rest have
+// none on the real site either.
+const FILTERS_HTML = `<!doctype html><html><body>
+  <div class="catalog__right">
+    <form action="/manga" method="GET">
+      <div class="catalog__field">
+        <select name="genres[]" multiple data-placeholder="Жанр манги">
+          <option value="1">Арт</option>
+          <option value="4">Боевые искусства</option>
+        </select>
+      </div>
+      <div class="catalog__field">
+        <select name="type_id[]" multiple data-placeholder="Тип манги">
+          <option value="1">Манга</option>
+          <option value="3">Манхва</option>
+        </select>
+      </div>
+      <div class="catalog__field">
+        <select name="tags[]" multiple data-placeholder="Выбрать теги">
+          <option value="7759">Азартные игры</option>
+          <option value="7750">Алхимия</option>
+        </select>
+      </div>
+      <div class="catalog__field">
+        <select name="status_id[]" multiple data-placeholder="Статус">
+          <option value="1">Завершен</option>
+          <option value="2">Продолжается</option>
+        </select>
+      </div>
+      <div class="catalog__field">
+        <select name="age_rating[]" multiple data-placeholder="Возрастной рейтинг">
+          <option value="18+">18+</option>
+          <option value="16+">16+</option>
+        </select>
+      </div>
+      <div class="catalog__field">
+        <select name="rating[]" multiple data-placeholder="Рейтинг">
+          <option value="5">Рейтинг 5+</option>
+          <option value="9">Рейтинг 9+</option>
+        </select>
+      </div>
+      <div class="catalog__field">
+        <select name="year[]" multiple data-placeholder="Год выпуска">
+          <option value="2026">2026</option>
+          <option value="2018">2018</option>
+        </select>
+      </div>
+      <h3 class="small-title">Колличество глав</h3>
+      <div class="catalog__chapters">
+        <label>
+          <input type="checkbox" name="chapters[]" id="catalog__chapter" value="0">
+          <span>&lt;50</span>
+        </label>
+        <label>
+          <input type="checkbox" name="chapters[]" id="catalog__chapter" value="200">
+          <span>&gt;200</span>
+        </label>
+      </div>
+      <h3 class="small-title">Исключить</h3>
+      <div class="catalog__field">
+        <select name="without_genres[]" multiple data-placeholder="Жанр манги">
+          <option value="1">Арт</option>
+          <option value="4">Боевые искусства</option>
+        </select>
+      </div>
+      <div class="catalog__field">
+        <select name="without_type_id[]" multiple data-placeholder="Тип манги">
+          <option value="1">Манга</option>
+          <option value="3">Манхва</option>
+        </select>
+      </div>
+      <div class="catalog__field">
+        <select name="without_tags[]" multiple data-placeholder="Выбрать теги">
+          <option value="7759">Азартные игры</option>
+          <option value="7750">Алхимия</option>
+        </select>
+      </div>
+    </form>
+  </div>
+</body></html>`;
+
 const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
@@ -58,6 +140,9 @@ const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.includes('/manga/one-piece/2'), { status: 200, body: PAGES_HTML });
   http.register((url) => url.endsWith('/manga/one-piece'), { status: 200, body: DETAILS_HTML });
+  // fetchFilters requests the bare catalog page (no query string) — fetchListPage always adds at
+  // least ?sort=..., so the two never collide on the same rule.
+  http.register((url) => url === `https://${DOMAIN}/manga`, { status: 200, body: FILTERS_HTML });
   http.register((url) => url.includes('/manga?'), { status: 200, body: LIST_HTML });
   return http;
 };
@@ -107,5 +192,92 @@ describe('MangaBuff parser conformance', () => {
       expect(page.url).toMatch(/^https?:\/\//);
     }
     expect(pages[0]!.url).toBe(`https://${DOMAIN}/pages/001.jpg`);
+  });
+
+  it('getFilters: all eight groups with their options', async () => {
+    const groups = await parser.getFilters!();
+    expect(groups.map((g) => g.id)).toEqual([
+      'genre',
+      'type',
+      'tag',
+      'status',
+      'ageRating',
+      'rating',
+      'year',
+      'chaptersCount',
+    ]);
+
+    const genre = groups.find((g) => g.id === 'genre')!;
+    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(genre.options).toEqual([
+      { key: '1', title: 'Арт', count: null },
+      { key: '4', title: 'Боевые искусства', count: null },
+    ]);
+
+    const type = groups.find((g) => g.id === 'type')!;
+    expect(type.type).toBe('CHECKBOX_EXCLUDE');
+    expect(type.options).toEqual([
+      { key: '1', title: 'Манга', count: null },
+      { key: '3', title: 'Манхва', count: null },
+    ]);
+
+    const tag = groups.find((g) => g.id === 'tag')!;
+    expect(tag.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(tag.options).toEqual([
+      { key: '7759', title: 'Азартные игры', count: null },
+      { key: '7750', title: 'Алхимия', count: null },
+    ]);
+
+    const status = groups.find((g) => g.id === 'status')!;
+    expect(status.type).toBe('CHECKBOX');
+    expect(status.options).toEqual([
+      { key: '1', title: 'Завершен', count: null },
+      { key: '2', title: 'Продолжается', count: null },
+    ]);
+
+    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
+    expect(chaptersCount.title).toBe('Количество глав');
+    expect(chaptersCount.type).toBe('CHECKBOX');
+    expect(chaptersCount.options).toEqual([
+      { key: '0', title: '<50', count: null },
+      { key: '200', title: '>200', count: null },
+    ]);
+  });
+
+  it('getList with filters: genre/type/tag route through without_* when excluded', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'genre', key: '1' },
+        { groupId: 'genre', key: '4', exclude: true },
+        { groupId: 'type', key: '3', exclude: true },
+        { groupId: 'status', key: '2' },
+        { groupId: 'chaptersCount', key: '200' },
+      ],
+    });
+    const catalogRequest = http.requests.filter((r) => r.url.includes('/manga?')).at(-1)!;
+    const url = new URL(catalogRequest.url);
+    expect(url.searchParams.getAll('genres[]')).toEqual(['1']);
+    expect(url.searchParams.getAll('without_genres[]')).toEqual(['4']);
+    expect(url.searchParams.getAll('without_type_id[]')).toEqual(['3']);
+    expect(url.searchParams.getAll('status_id[]')).toEqual(['2']);
+    expect(url.searchParams.getAll('chapters[]')).toEqual(['200']);
+  });
+
+  it("getList: order maps to the site's actual sort= values", async () => {
+    const cases: [string | undefined, string][] = [
+      [undefined, 'updated_at'],
+      ['UPDATED', 'updated_at'],
+      ['POPULARITY', 'real_views'],
+      ['RATING', 'rating'],
+      ['NEWEST', 'created_at'],
+    ];
+    for (const [order, sort] of cases) {
+      await parser.getList({ offset: 0, limit: 20, order });
+      const catalogRequest = http.requests.filter((r) => r.url.includes('/manga?')).at(-1)!;
+      const url = new URL(catalogRequest.url);
+      expect(url.searchParams.get('sort')).toBe(sort);
+    }
   });
 });
