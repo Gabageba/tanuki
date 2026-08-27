@@ -17,12 +17,38 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build --filter=@tanuki/parsers
+      # HENTAILIB's login is reCAPTCHA-gated (scripts/libsocial-login.ts) — a human runs it once,
+      # after which the engine refreshes the access token from the stored refresh_token on its
+      # own. This seeds that file from LIBSOCIAL_HENTAILIB_TOKEN (set once from the output of
+      # that script); no-ops if the secret isn't configured.
+      - name: Set up HENTAILIB token store
+        run: |
+          mkdir -p "$RUNNER_TEMP/libsocial-tokens"
+          if [ -n "$LIBSOCIAL_HENTAILIB_TOKEN" ]; then
+            printf '%s' "$LIBSOCIAL_HENTAILIB_TOKEN" > "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json"
+          fi
+        env:
+          LIBSOCIAL_HENTAILIB_TOKEN: ${{ secrets.LIBSOCIAL_HENTAILIB_TOKEN }}
       - run: pnpm --filter @tanuki/parsers test:contract
         env:
           GROUPLE_USERNAME: ${{ secrets.GROUPLE_USERNAME }}
           GROUPLE_PASSWORD: ${{ secrets.GROUPLE_PASSWORD }}
           ALLHENTAI_USERNAME: ${{ secrets.ALLHENTAI_USERNAME }}
           ALLHENTAI_PASSWORD: ${{ secrets.ALLHENTAI_PASSWORD }}
+          LIBSOCIAL_TOKEN_STORE_DIR: ${{ runner.temp }}/libsocial-tokens
+      # The site rotates refresh_token on every use, invalidating the one just spent — without
+      # writing the new one back, next run's stored token would already be dead. Runs regardless
+      # of test outcome (the refresh itself happens up front in registry.init(), independent of
+      # which sources later pass/fail) and no-ops if the token wasn't refreshed or
+      # GH_SECRETS_PAT isn't configured (default GITHUB_TOKEN can't write repo secrets).
+      - name: Persist refreshed HENTAILIB token
+        if: always()
+        run: |
+          if [ -s "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json" ] && [ -n "$GH_TOKEN" ]; then
+            gh secret set LIBSOCIAL_HENTAILIB_TOKEN --body-file "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_SECRETS_PAT }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

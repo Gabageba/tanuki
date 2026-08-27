@@ -68,15 +68,27 @@ const DETAILS_HTML = `<!doctype html><html><body>
   </ul>
 </body></html>`;
 
+// The reader page only bootstraps a chapter id + api base path now — the page list itself comes
+// from a follow-up JSON call to `${apiBaseUrl}/chapters/${chapter.id}` (ClassicReaderApi.init
+// replaced the old Reader.init(dir/prefix/pages) inline payload).
 const PAGES_HTML = `<!doctype html><html><body>
   <script>
-    Reader.init({
-      dir: "https://static.desu.uno/manga/123/vol1/ch1/",
-      prefix: "",
-      pages: [["001.jpg", 800, 1200], ["002.jpg", 800, 1200], ["003.jpg", 800, 1200]]
+    window.MangaReader = {"manga":{"id":123,"name":"Solo Leveling"},"chapter":{"id":9001,"volume":"1","number":"1"},"apiBaseUrl":"/api/manga/123"};
+    $(document).ready(function() {
+        ClassicReaderApi.init(window.MangaReader);
     });
   </script>
 </body></html>`;
+
+const PAGES_API_JSON = JSON.stringify({
+  chapter: {
+    pages: [
+      { page: 1, url: 'https://static.desu.uno/manga/123/vol1/ch1/001.jpg' },
+      { page: 2, url: 'https://static.desu.uno/manga/123/vol1/ch1/002.jpg' },
+      { page: 3, url: 'https://static.desu.uno/manga/123/vol1/ch1/003.jpg' },
+    ],
+  },
+});
 
 // Real XenForo search response shape — templateHtml embeds AniMangaSearchCard markup, not the
 // blockLinksList/itemTitle classes an older site layout used.
@@ -117,6 +129,11 @@ const setUpFixtures = (): FakeHttpClient => {
     { status: 200, body: DETAILS_HTML },
   );
   http.register((url) => url.includes('/vol1/ch1/'), { status: 200, body: PAGES_HTML });
+  http.register((url) => url === `https://${DOMAIN}/api/manga/123/chapters/9001`, {
+    status: 200,
+    body: PAGES_API_JSON,
+    contentType: 'application/json',
+  });
   http.register((url) => url === `https://${DOMAIN}/manga/search/`, {
     status: 200,
     body: SEARCH_JSON,

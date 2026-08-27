@@ -30,10 +30,22 @@ const IMAGE_REFERER = 'https://x.desu.city/';
 
 const CHAPTER_ID_REGEX = /\.(\d+)\/?$/;
 const CHAPTER_PATH_REGEX = /\/vol(\d+)\/ch([0-9.]+)\//;
-const READER_DIR_REGEX = /dir:\s*"([^"]*)"/;
-const READER_PREFIX_REGEX = /prefix:\s*"([^"]*)"/;
-const READER_IMAGE_REGEX = /\[\s*"([^"]+)"\s*,\s*\d+\s*,\s*\d+\s*]/g;
+// The reader page no longer embeds a dir/prefix/image-array script (ClassicReaderApi.init
+// replaced the old Reader.init) — it now only bootstraps a chapter id + api base path, and the
+// page list comes from a follow-up JSON call built from those.
+const READER_BOOTSTRAP_REGEX = /window\.MangaReader\s*=\s*(\{.*?\});/;
 const CSS_URL_REGEX = /url\((['"]?)([^'")]+)\1\)/;
+
+type ReaderBootstrapJson = {
+  chapter: { id: number };
+  apiBaseUrl: string;
+};
+
+type ReaderApiChapterJson = {
+  chapter: {
+    pages: { page: number; url: string }[];
+  };
+};
 
 const toRelativePath = (href: string): string => {
   return href.startsWith('/') ? href : `/${href}`;
@@ -538,26 +550,29 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .$('script')
       .toArray()
       .map((el) => doc.$(el).html() ?? '')
-      .find((s) => s.includes('Reader.init'));
-    if (!script) throw new ParseError('Reader script not found', SOURCE_ID);
+      .find((s) => s.includes('window.MangaReader'));
+    if (!script) throw new ParseError('Reader bootstrap not found', SOURCE_ID);
 
-    const dir = READER_DIR_REGEX.exec(script)?.[1];
-    if (dir === undefined) throw new ParseError('Invalid reader response', SOURCE_ID);
-    const prefix = READER_PREFIX_REGEX.exec(script)?.[1] ?? '';
-    const baseUrl = dir.startsWith('http') ? dir : `https:${dir}`;
+    const bootstrapJson = READER_BOOTSTRAP_REGEX.exec(script)?.[1];
+    if (!bootstrapJson) throw new ParseError('Invalid reader response', SOURCE_ID);
+    let bootstrap: ReaderBootstrapJson;
+    try {
+      bootstrap = JSON.parse(bootstrapJson) as ReaderBootstrapJson;
+    } catch {
+      throw new ParseError('Invalid reader response', SOURCE_ID);
+    }
 
-    const images = [...script.matchAll(READER_IMAGE_REGEX)].map((m) => m[1]!);
-    if (images.length === 0) throw new ParseError('No pages found', SOURCE_ID);
+    const { chapter } = await ctx.http.getJson<ReaderApiChapterJson>(
+      `https://${domain}${bootstrap.apiBaseUrl}/chapters/${bootstrap.chapter.id}`,
+    );
+    if (chapter.pages.length === 0) throw new ParseError('No pages found', SOURCE_ID);
 
-    return images.map((file) => {
-      const pageUrl = baseUrl + prefix + file;
-      return {
-        id: generateUid(SOURCE_ID, pageUrl),
-        url: pageUrl,
-        preview: null,
-        source: SOURCE_ID,
-      };
-    });
+    return chapter.pages.map((page) => ({
+      id: generateUid(SOURCE_ID, page.url),
+      url: page.url,
+      preview: null,
+      source: SOURCE_ID,
+    }));
   };
 
   return {
