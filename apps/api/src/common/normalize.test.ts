@@ -113,20 +113,20 @@ describe('normalizeFilterGroup', () => {
     });
   });
 
-  it('passes range through for RANGE groups', () => {
+  it('passes settings through for RANGE groups', () => {
     const raw: RawFilterGroup = {
       id: 'year',
       title: 'Год выпуска',
       type: 'RANGE',
       options: [],
-      range: { min: 1950, max: 2026 },
+      settings: { range: { min: 1950, max: 2026 } },
     };
     expect(normalizeFilterGroup(raw)).toEqual({
       id: 'year',
       title: 'Год выпуска',
       type: 'RANGE',
       options: [],
-      range: { min: 1950, max: 2026 },
+      settings: { range: { min: 1950, max: 2026 } },
     });
   });
 });

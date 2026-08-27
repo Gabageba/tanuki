@@ -24,6 +24,7 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
         orientation="vertical"
         classNames={{ tab: styles.tab }}
         radius={0}
+        keepMounted={false}
       >
         <Tabs.List w={{ base: 200, md: 250 }}>
           {groups.map((group) => {
@@ -46,7 +47,7 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
         </Tabs.List>
         {groups?.map((group) => (
           <Tabs.Panel key={group.id} value={group.id} p={'var(--mantine-spacing-sm)'}>
-            <Stack>
+            <Stack h="100%">
               <Group>
                 <Title order={4}>{group.title}</Title>
                 <SelectedCatalogFiltersCount groupId={group.id} draft={draft} mt={2} />

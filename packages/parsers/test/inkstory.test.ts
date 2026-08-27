@@ -223,16 +223,49 @@ describe('Inkstory parser conformance', () => {
     const averageRating = groups.find((g) => g.id === 'averageRating')!;
     expect(averageRating.type).toBe('RANGE');
     expect(averageRating.options).toEqual([]);
-    expect(averageRating.range).toEqual({ min: 0, max: 10 });
+    expect(averageRating.settings?.range).toEqual({ min: 0, max: 10 });
+    expect(averageRating.settings?.presets).toEqual([
+      { id: '9-plus', label: '9+', min: 9 },
+      { id: '8-plus', label: '8+', min: 8 },
+      { id: '7-plus', label: '7+', min: 7 },
+    ]);
 
     const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
     expect(chaptersCount.type).toBe('RANGE');
-    expect(chaptersCount.range).toEqual({ min: 0, max: 10000 });
+    expect(chaptersCount.settings?.range).toEqual({ min: 0, max: 10000 });
+    expect(chaptersCount.settings?.presets).toEqual([
+      { id: 'lt-20', label: '< 20', max: 20 },
+      { id: 'lt-50', label: '< 50', max: 50 },
+      { id: '100-plus', label: '100+', min: 100 },
+      { id: '300-plus', label: '300+', min: 300 },
+      { id: '500-plus', label: '500+', min: 500 },
+    ]);
 
+    const currentYear = new Date().getFullYear();
+    const currentDecadeStart = Math.floor(currentYear / 10) * 10;
     const year = groups.find((g) => g.id === 'year')!;
     expect(year.type).toBe('RANGE');
-    expect(year.range!.min).toBe(1950);
-    expect(year.range!.max).toBe(new Date().getFullYear());
+    expect(year.settings!.range.min).toBe(1950);
+    expect(year.settings!.range.max).toBe(currentYear);
+    expect(year.settings!.presets![0]).toEqual({
+      id: 'current-year',
+      label: 'Текущий год',
+      min: currentYear,
+      max: currentYear,
+    });
+    expect(year.settings!.presets![1]).toEqual({
+      id: `decade-${currentDecadeStart}`,
+      label: `${currentDecadeStart}–${currentYear}`,
+      min: currentDecadeStart,
+      max: currentYear,
+    });
+    expect(year.settings!.presets!.at(-1)).toEqual({
+      id: 'before-2000',
+      label: 'Раньше 2000',
+      min: 1950,
+      max: 1999,
+    });
+    expect(year.settings!.presets!.every((p) => (p.min ?? 1950) >= 1950)).toBe(true);
   });
 
   it('getList with filters: repeated params per group, genre include/exclude are separate params', async () => {

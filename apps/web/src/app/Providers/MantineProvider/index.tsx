@@ -181,6 +181,11 @@ const THEME = createTheme({
         },
       },
     },
+    RangeSlider: {
+      defaultProps: {
+        size: 'sm',
+      },
+    },
   },
 });
 

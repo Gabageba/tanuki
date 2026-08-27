@@ -34,11 +34,15 @@ export {
   FilterOptionSchema,
   FilterGroupSchema,
   FilterRangeSchema,
+  FilterRangePresetSchema,
+  FilterGroupSettingsSchema,
   FILTER_TYPE,
   type FilterType,
   type FilterOption,
   type FilterGroup,
   type FilterRange,
+  type FilterRangePreset,
+  type FilterGroupSettings,
   type FilterSelection,
 } from './filter';
 export {

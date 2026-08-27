@@ -1,4 +1,9 @@
-import type { EnumLiteralsOf, FilterGroup, FilterSelection } from '@tanuki/contracts';
+import {
+  FILTER_TYPE,
+  type EnumLiteralsOf,
+  type FilterGroup,
+  type FilterSelection,
+} from '@tanuki/contracts';
 
 /** `"8".."10"`, `"8.5".."`, `".."2024"` — either bound may be blank, but not both. */
 const RANGE_SEPARATOR = '..';
@@ -81,11 +86,35 @@ export const countGroupSelections = (
   const selected = selection.filter(
     (s): s is Extract<FilterSelection, { key: string }> => 'key' in s && s.groupId === groupId,
   );
+  const range = getRangeSelection(selection, groupId);
 
   return {
-    included: selected.filter(({ exclude }) => !exclude).length,
+    included: selected.filter(({ exclude }) => !exclude).length + (range ? 1 : 0),
     excluded: selected.filter(({ exclude }) => exclude).length,
   };
+};
+
+export const getRangeSelection = (
+  selection: FilterSelection[],
+  groupId: string,
+): { min?: number; max?: number } | undefined => {
+  const found = selection.find(
+    (s): s is Extract<FilterSelection, { range: { min?: number; max?: number } }> =>
+      'range' in s && s.groupId === groupId,
+  );
+  return found?.range;
+};
+
+export const setRangeSelection = (
+  selection: FilterSelection[],
+  groupId: string,
+  range: { min?: number; max?: number },
+): FilterSelection[] => {
+  const next = selection.filter((s) => !('range' in s && s.groupId === groupId));
+  if (range.min === undefined && range.max === undefined) {
+    return next;
+  }
+  return [...next, { groupId, range }];
 };
 
 export const clearGroupSelection = (
@@ -93,18 +122,47 @@ export const clearGroupSelection = (
   groupId: string,
 ): FilterSelection[] => selection.filter((s) => s.groupId !== groupId);
 
-/** "Жанр: Вампиры +3" для бейджа применённых фильтров — null, если в группе ничего не выбрано. */
-export const getGroupSelectionOptions = (
-  group: FilterGroup,
-  selection: FilterSelection[],
-): {
+type GroupSelectionOptions = {
   title: string;
   firstItem: {
     label: string;
     exclude?: boolean;
   };
   otherItemsLength: number;
-} | null => {
+} | null;
+
+const getRangeGroupSelectionOptions = (
+  group: FilterGroup,
+  selection: FilterSelection[],
+): GroupSelectionOptions => {
+  const range = getRangeSelection(selection, group.id);
+  if (!range) {
+    return null;
+  }
+  const preset = group.settings?.presets?.find((p) => p.min === range.min && p.max === range.max);
+  let label = preset?.label ?? '';
+
+  if (!label) {
+    if (range.min !== undefined && range.max !== undefined) {
+      label = `${range.min}–${range.max}`;
+    } else if (range.min !== undefined) {
+      label = `от ${range.min}`;
+    } else if (range.max !== undefined) {
+      label = `до ${range.max}`;
+    }
+  }
+
+  return {
+    title: group.title,
+    firstItem: { label },
+    otherItemsLength: 0,
+  };
+};
+
+const getCheckboxGroupSelectionOptions = (
+  group: FilterGroup,
+  selection: FilterSelection[],
+): GroupSelectionOptions => {
   const [first, ...rest] = selection.filter(
     (s): s is Extract<FilterSelection, { key: string }> => 'key' in s && s.groupId === group.id,
   );
@@ -120,4 +178,15 @@ export const getGroupSelectionOptions = (
     },
     otherItemsLength: rest.length,
   };
+};
+
+/** "Жанр: Вампиры +3" для бейджа применённых фильтров — null, если в группе ничего не выбрано. */
+export const getGroupSelectionOptions = (
+  group: FilterGroup,
+  selection: FilterSelection[],
+): GroupSelectionOptions => {
+  if (group.type === FILTER_TYPE.RANGE) {
+    return getRangeGroupSelectionOptions(group, selection);
+  }
+  return getCheckboxGroupSelectionOptions(group, selection);
 };

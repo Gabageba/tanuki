@@ -1,5 +1,10 @@
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, FILTER_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  SOURCE_CONTENT_TYPE,
+  type FilterRangePreset,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -22,6 +27,61 @@ const SOURCE_ID = 'INKSTORY';
 const PAGE_SIZE = 20;
 const FIRST_PAGE = 0;
 const SECRET_KEY_TTL_MS = 10 * 60 * 1000;
+const DECADE_SIZE = 10;
+
+const CHAPTERS_COUNT_PRESETS: FilterRangePreset[] = [
+  { id: 'lt-20', label: '< 20', max: 20 },
+  { id: 'lt-50', label: '< 50', max: 50 },
+  { id: '100-plus', label: '100+', min: 100 },
+  { id: '300-plus', label: '300+', min: 300 },
+  { id: '500-plus', label: '500+', min: 500 },
+];
+
+const AVERAGE_RATING_PRESETS: FilterRangePreset[] = [
+  { id: '9-plus', label: '9+', min: 9 },
+  { id: '8-plus', label: '8+', min: 8 },
+  { id: '7-plus', label: '7+', min: 7 },
+];
+
+const YEAR_RANGE_CUTOFF = 2000;
+
+/** "Текущий год", the current-decade-so-far, a preset per full decade back to `YEAR_RANGE_CUTOFF`,
+ *  then one trailing preset lumping everything older than that into "Раньше 2000". */
+const getYearRangePresets = (minYear: number, maxYear: number): FilterRangePreset[] => {
+  const presets: FilterRangePreset[] = [
+    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
+  ];
+  const currentDecadeStart = Math.floor(maxYear / DECADE_SIZE) * DECADE_SIZE;
+  if (currentDecadeStart < maxYear) {
+    presets.push({
+      id: `decade-${currentDecadeStart}`,
+      label: `${currentDecadeStart}–${maxYear}`,
+      min: currentDecadeStart,
+      max: maxYear,
+    });
+  }
+  for (
+    let decadeStart = currentDecadeStart - DECADE_SIZE;
+    decadeStart >= YEAR_RANGE_CUTOFF;
+    decadeStart -= DECADE_SIZE
+  ) {
+    presets.push({
+      id: `decade-${decadeStart}`,
+      label: `${decadeStart}-е`,
+      min: decadeStart,
+      max: decadeStart + DECADE_SIZE - 1,
+    });
+  }
+  if (minYear < YEAR_RANGE_CUTOFF) {
+    presets.push({
+      id: `before-${YEAR_RANGE_CUTOFF}`,
+      label: `Раньше ${YEAR_RANGE_CUTOFF}`,
+      min: minYear,
+      max: YEAR_RANGE_CUTOFF - 1,
+    });
+  }
+  return presets;
+};
 
 type NameJson = {
   ru: string;
@@ -387,6 +447,8 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
   const fetchFilters = async (): Promise<RawFilterGroup[]> => {
     const labels = await ctx.http.getJson<LabelJson[]>(`https://${apiHost}/v2/labels`);
     const genres = labels.filter((l) => l.kind === LABEL_KIND_GENRE);
+    const yearMin = 1950;
+    const yearMax = new Date().getFullYear();
     return [
       {
         id: 'genre',
@@ -426,21 +488,24 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         title: 'Рейтинг',
         type: FILTER_TYPE.RANGE,
         options: [],
-        range: { min: 0, max: 10 },
+        settings: { range: { min: 0, max: 10 }, presets: AVERAGE_RATING_PRESETS },
       },
       {
         id: 'year',
         title: 'Год выпуска',
         type: FILTER_TYPE.RANGE,
         options: [],
-        range: { min: 1950, max: new Date().getFullYear() },
+        settings: {
+          range: { min: yearMin, max: yearMax },
+          presets: getYearRangePresets(yearMin, yearMax),
+        },
       },
       {
         id: 'chaptersCount',
         title: 'Число глав',
         type: FILTER_TYPE.RANGE,
         options: [],
-        range: { min: 0, max: 10000 },
+        settings: { range: { min: 0, max: 10000 }, presets: CHAPTERS_COUNT_PRESETS },
       },
     ];
   };

@@ -10,12 +10,12 @@
   }
 
   &[data-active] {
-    background: var(--mantine-primary-color-light);
+    background: var(--tanuki-color-primary-light-transparent);
     border-color: var(--mantine-primary-color-filled) !important;
     cursor: default;
 
     &:hover {
-      background: var(--mantine-primary-color-light);
+      background: var(--tanuki-color-primary-light-transparent);
     }
   }
 }

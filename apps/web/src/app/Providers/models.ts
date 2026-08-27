@@ -1,5 +1,6 @@
 import type { CSSVariablesResolver, MantineColorScheme, MantineColorsTuple } from '@mantine/core';
 import type { EnumLiteralsOf } from '@tanuki/contracts';
+import { PRIMARY_COLOR, PRIMARY_SHADE } from '@/shared/lib/palette';
 
 /**
  * Два шрифта под весь интерфейс (см. `CLAUDE.md` → «Типографика»): Golos Text — весь текст без
@@ -74,6 +75,9 @@ export const CSS_VARIABLES_RESOLVER: CSSVariablesResolver = () => ({
     // единственном месте с Unbounded, тогда как `fontFamily`/`fontFamilyMonospace` темы уже
     // покрывают Golos Text и JetBrains Mono через стандартные `--mantine-font-family*`.
     '--tanuki-font-brand': FONT_FAMILY_BRAND,
+    // Не завязана на схему — берёт готовый `--mantine-primary-color-light` и просто снижает alpha.
+    '--tanuki-color-primary-light-transparent':
+      'color-mix(in srgb, var(--mantine-primary-color-light) 25%, transparent)',
   },
   light: {
     // В Mantine `--mantine-color-text` в светлой теме зашит как `#000`, а фон — как `#fff`.
@@ -85,6 +89,12 @@ export const CSS_VARIABLES_RESOLVER: CSSVariablesResolver = () => ({
     // тёмной — со светлого (shade 4). Брендовый `-filled` при этом один и тот же в обеих схемах:
     // его контраст считается против собственного текста, и фон страницы в нём не участвует.
     '--mantine-color-anchor': '#ae4f3a',
+    // `-outline`/`-outline-hover` Mantine сам кладёт в light/dark-блоки (см. `getCSSColorVariables`),
+    // поэтому переопределять их нужно в тех же блоках — иначе scheme-scoped селектор Mantine
+    // (`:root[data-mantine-color-scheme]`, выше специфичность) перебивает наш `:root`-оверрайд из
+    // `variables`. В светлой теме outline и так совпадает с shade 6, фиксируем для симметрии.
+    [`--mantine-color-${PRIMARY_COLOR}-outline`]: `var(--mantine-color-${PRIMARY_COLOR}-${PRIMARY_SHADE})`,
+    [`--mantine-color-${PRIMARY_COLOR}-outline-hover`]: `color-mix(in srgb, var(--mantine-color-${PRIMARY_COLOR}-${PRIMARY_SHADE}) 5%, transparent)`,
 
     '--tanuki-color-surface': '#ffffff',
     '--tanuki-color-header': '#ffffff',
@@ -106,6 +116,8 @@ export const CSS_VARIABLES_RESOLVER: CSSVariablesResolver = () => ({
   },
   dark: {
     '--mantine-color-anchor': '#fa9a84',
+    [`--mantine-color-${PRIMARY_COLOR}-outline`]: `var(--mantine-color-${PRIMARY_COLOR}-${PRIMARY_SHADE})`,
+    [`--mantine-color-${PRIMARY_COLOR}-outline-hover`]: `color-mix(in srgb, var(--mantine-color-${PRIMARY_COLOR}-${PRIMARY_SHADE}) 5%, transparent)`,
 
     '--tanuki-color-surface': '#14171b',
     '--tanuki-color-header': '#0c0e10',

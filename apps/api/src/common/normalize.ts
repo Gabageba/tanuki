@@ -38,7 +38,7 @@ export const normalizeFilterGroup = (raw: RawFilterGroup): FilterGroup => {
     title: raw.title,
     type: raw.type,
     options: raw.options.map(normalizeFilterOption),
-    range: raw.range,
+    settings: raw.settings,
   };
 };
 

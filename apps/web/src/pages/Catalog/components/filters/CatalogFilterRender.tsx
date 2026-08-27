@@ -1,8 +1,8 @@
 import type { ScrollAreaAutosizeProps } from '@mantine/core';
-import { FILTER_TYPE, type FilterGroup } from '@tanuki/contracts';
-import type { FilterSelection } from '../../../../../../../packages/contracts/dist/cjs';
+import { FILTER_TYPE, type FilterGroup, type FilterSelection } from '@tanuki/contracts';
 import CheckboxFilterListGroup from './CheckboxFilterListGroup';
 import SearchableCheckboxListFilterGroup from './SearchableCheckboxListFilterGroup';
+import RangeFilterGroup from './RangeFilterGroup';
 
 type Props = {
   group: FilterGroup;
@@ -38,7 +38,7 @@ function CatalogFilterRender({ group, selection, onChange, scrollAreaProps }: Pr
   }
 
   if (group.type === FILTER_TYPE.RANGE) {
-    return <></>;
+    return <RangeFilterGroup group={group} selection={selection} onChange={onChange} />;
   }
 
   return null;

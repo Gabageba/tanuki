@@ -1,5 +1,5 @@
 import { Group, Text } from '@mantine/core';
-import type { FilterGroup } from '@tanuki/contracts';
+import { FILTER_TYPE, type FilterGroup } from '@tanuki/contracts';
 
 type Props = {
   group: FilterGroup;
@@ -10,7 +10,9 @@ function CatalogFilterGroupTitle({ group }: Props) {
     <Group gap={8} align="center">
       <Text fz={14}>{group.title}</Text>
       <Text c="dimmed" fz={12} mt={1}>
-        {group.options.length}
+        {group.type === FILTER_TYPE.RANGE
+          ? `${group.settings?.range.min} - ${group.settings?.range.max}`
+          : group.options.length}
       </Text>
     </Group>
   );
