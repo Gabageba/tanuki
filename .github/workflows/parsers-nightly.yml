@@ -16,7 +16,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @tanuki/parsers build
+      - run: pnpm turbo run build --filter=@tanuki/parsers
       - run: pnpm --filter @tanuki/parsers test:contract
         env:
           GROUPLE_USERNAME: ${{ secrets.GROUPLE_USERNAME }}

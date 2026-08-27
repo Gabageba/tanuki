@@ -1,173 +1,385 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tanuki · Источники</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
-<style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0e0f11; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
-  a { color: oklch(0.78 0.12 34); text-decoration: none; }
-  a:hover { color: oklch(0.86 0.10 34); }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-thumb { background: #33383f; border-radius: 8px; }
-  .card:hover { filter: brightness(1.05); }
-  .row { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
-  .mono { font-family: 'IBM Plex Mono', monospace; }
-</style>
-</head>
-<body>
-<section style="padding: 56px 64px 96px; display: flex; flex-direction: column; gap: 34px">
-  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 940px">
-    <div class="mono" style="font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b7280">Tanuki · страница «Источники»</div>
-    <div style="font-size: 32px; font-weight: 700; color: #f2f4f6; letter-spacing: -0.02em">Источники · шапка 7a, гаммы 1a и 2b</div>
-    <div style="font-size: 16px; line-height: 1.55; color: #9aa3ad">Тёмная (1a) и светлая (2b) темы в трёх ширинах: десктоп 1280, планшет 834, мобильный 390 — плюс основные состояния.</div>
-  </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tanuki · Источники</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"
+    />
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #0e0f11;
+        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+      }
+      a {
+        color: oklch(0.78 0.12 34);
+        text-decoration: none;
+      }
+      a:hover {
+        color: oklch(0.86 0.1 34);
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #33383f;
+        border-radius: 8px;
+      }
+      .card:hover {
+        filter: brightness(1.05);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        align-items: flex-start;
+      }
+      .mono {
+        font-family: 'IBM Plex Mono', monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <section style="padding: 56px 64px 96px; display: flex; flex-direction: column; gap: 34px">
+      <div style="display: flex; flex-direction: column; gap: 10px; max-width: 940px">
+        <div
+          class="mono"
+          style="font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b7280"
+        >
+          Tanuki · страница «Источники»
+        </div>
+        <div style="font-size: 32px; font-weight: 700; color: #f2f4f6; letter-spacing: -0.02em">
+          Источники · шапка 7a, гаммы 1a и 2b
+        </div>
+        <div style="font-size: 16px; line-height: 1.55; color: #9aa3ad">
+          Тёмная (1a) и светлая (2b) темы в трёх ширинах: десктоп 1280, планшет 834, мобильный 390 —
+          плюс основные состояния.
+        </div>
+      </div>
 
-  <div style="display: flex; flex-direction: column; gap: 16px">
-    <div style="display: flex; align-items: center; gap: 12px">
-      <div class="mono" style="font-size: 12px; font-weight: 500; color: #0e0f11; background: #d6dbe1; padding: 4px 9px; border-radius: 5px">desktop · 1280</div>
-      <div style="font-size: 17px; font-weight: 600; color: #e7eaee">Тёмная (1a) и светлая (2b)</div>
-    </div>
-    <div class="row" id="desktopRow"></div>
-  </div>
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div
+            class="mono"
+            style="
+              font-size: 12px;
+              font-weight: 500;
+              color: #0e0f11;
+              background: #d6dbe1;
+              padding: 4px 9px;
+              border-radius: 5px;
+            "
+          >
+            desktop · 1280
+          </div>
+          <div style="font-size: 17px; font-weight: 600; color: #e7eaee">
+            Тёмная (1a) и светлая (2b)
+          </div>
+        </div>
+        <div class="row" id="desktopRow"></div>
+      </div>
 
-  <div style="display: flex; flex-direction: column; gap: 16px">
-    <div style="display: flex; align-items: center; gap: 12px">
-      <div class="mono" style="font-size: 12px; font-weight: 500; color: #0e0f11; background: #d6dbe1; padding: 4px 9px; border-radius: 5px">tablet · 834</div>
-      <div style="font-size: 17px; font-weight: 600; color: #e7eaee">Две колонки, поиск в шапке сжат до иконки</div>
-    </div>
-    <div class="row" id="tabletRow"></div>
-  </div>
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div
+            class="mono"
+            style="
+              font-size: 12px;
+              font-weight: 500;
+              color: #0e0f11;
+              background: #d6dbe1;
+              padding: 4px 9px;
+              border-radius: 5px;
+            "
+          >
+            tablet · 834
+          </div>
+          <div style="font-size: 17px; font-weight: 600; color: #e7eaee">
+            Две колонки, поиск в шапке сжат до иконки
+          </div>
+        </div>
+        <div class="row" id="tabletRow"></div>
+      </div>
 
-  <div style="display: flex; flex-direction: column; gap: 16px">
-    <div style="display: flex; align-items: center; gap: 12px">
-      <div class="mono" style="font-size: 12px; font-weight: 500; color: #0e0f11; background: #d6dbe1; padding: 4px 9px; border-radius: 5px">mobile · 390</div>
-      <div style="font-size: 17px; font-weight: 600; color: #e7eaee">Одна колонка, чип источника переносится под логотип</div>
-    </div>
-    <div class="row" id="mobileRow"></div>
-  </div>
-</section>
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div
+            class="mono"
+            style="
+              font-size: 12px;
+              font-weight: 500;
+              color: #0e0f11;
+              background: #d6dbe1;
+              padding: 4px 9px;
+              border-radius: 5px;
+            "
+          >
+            mobile · 390
+          </div>
+          <div style="font-size: 17px; font-weight: 600; color: #e7eaee">
+            Одна колонка, чип источника переносится под логотип
+          </div>
+        </div>
+        <div class="row" id="mobileRow"></div>
+      </div>
+    </section>
 
-<section style="padding: 0 64px 96px; display: flex; flex-direction: column; gap: 28px">
-  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 940px">
-    <div style="font-size: 24px; font-weight: 700; color: #f2f4f6; letter-spacing: -0.02em">Состояния</div>
-    <div style="font-size: 15px; line-height: 1.55; color: #9aa3ad">Дропдаун чипа шапки, ввод в фильтр по названию, пустой результат и источник, который не отвечает.</div>
-  </div>
-  <div style="display: flex; flex-direction: column; gap: 14px">
-    <div style="display: flex; align-items: center; gap: 12px">
-      <div class="mono" style="font-size: 12px; color: #0e0f11; background: #d6dbe1; padding: 4px 9px; border-radius: 5px">state · dropdown</div>
-      <div style="font-size: 16px; font-weight: 600; color: #e7eaee">Чип шапки раскрыт: переход в конкретный источник</div>
-    </div>
-    <div id="stateDropdown"></div>
-  </div>
-  <div style="display: flex; flex-direction: column; gap: 14px">
-    <div style="display: flex; align-items: center; gap: 12px">
-      <div class="mono" style="font-size: 12px; color: #0e0f11; background: #d6dbe1; padding: 4px 9px; border-radius: 5px">state · search</div>
-      <div style="font-size: 16px; font-weight: 600; color: #e7eaee">Фильтр по названию: группы схлопываются до совпадений</div>
-    </div>
-    <div id="stateSearch"></div>
-  </div>
-  <div style="display: flex; flex-direction: column; gap: 14px">
-    <div style="display: flex; align-items: center; gap: 12px">
-      <div class="mono" style="font-size: 12px; color: #0e0f11; background: #d6dbe1; padding: 4px 9px; border-radius: 5px">state · empty</div>
-      <div style="font-size: 16px; font-weight: 600; color: #e7eaee">Ничего не найдено</div>
-    </div>
-    <div id="stateEmpty"></div>
-  </div>
-  <div style="display: flex; flex-direction: column; gap: 14px">
-    <div style="display: flex; align-items: center; gap: 12px">
-      <div class="mono" style="font-size: 12px; color: #0e0f11; background: #d6dbe1; padding: 4px 9px; border-radius: 5px">state · offline</div>
-      <div style="font-size: 16px; font-weight: 600; color: #e7eaee">Источник не отвечает: причина и повтор прямо в карточке</div>
-    </div>
-    <div id="stateOffline"></div>
-  </div>
-</section>
+    <section style="padding: 0 64px 96px; display: flex; flex-direction: column; gap: 28px">
+      <div style="display: flex; flex-direction: column; gap: 8px; max-width: 940px">
+        <div style="font-size: 24px; font-weight: 700; color: #f2f4f6; letter-spacing: -0.02em">
+          Состояния
+        </div>
+        <div style="font-size: 15px; line-height: 1.55; color: #9aa3ad">
+          Дропдаун чипа шапки, ввод в фильтр по названию, пустой результат и источник, который не
+          отвечает.
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div
+            class="mono"
+            style="
+              font-size: 12px;
+              color: #0e0f11;
+              background: #d6dbe1;
+              padding: 4px 9px;
+              border-radius: 5px;
+            "
+          >
+            state · dropdown
+          </div>
+          <div style="font-size: 16px; font-weight: 600; color: #e7eaee">
+            Чип шапки раскрыт: переход в конкретный источник
+          </div>
+        </div>
+        <div id="stateDropdown"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div
+            class="mono"
+            style="
+              font-size: 12px;
+              color: #0e0f11;
+              background: #d6dbe1;
+              padding: 4px 9px;
+              border-radius: 5px;
+            "
+          >
+            state · search
+          </div>
+          <div style="font-size: 16px; font-weight: 600; color: #e7eaee">
+            Фильтр по названию: группы схлопываются до совпадений
+          </div>
+        </div>
+        <div id="stateSearch"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div
+            class="mono"
+            style="
+              font-size: 12px;
+              color: #0e0f11;
+              background: #d6dbe1;
+              padding: 4px 9px;
+              border-radius: 5px;
+            "
+          >
+            state · empty
+          </div>
+          <div style="font-size: 16px; font-weight: 600; color: #e7eaee">Ничего не найдено</div>
+        </div>
+        <div id="stateEmpty"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div
+            class="mono"
+            style="
+              font-size: 12px;
+              color: #0e0f11;
+              background: #d6dbe1;
+              padding: 4px 9px;
+              border-radius: 5px;
+            "
+          >
+            state · offline
+          </div>
+          <div style="font-size: 16px; font-weight: 600; color: #e7eaee">
+            Источник не отвечает: причина и повтор прямо в карточке
+          </div>
+        </div>
+        <div id="stateOffline"></div>
+      </div>
+    </section>
 
-<script>
-const hues = [172, 42, 258, 322, 22, 198, 138, 288, 66, 240, 356, 108];
-const darkC = h => `oklch(0.72 0.11 ${h})`;
-const lightC = h => `oklch(0.55 0.13 ${h})`;
-const MONO = { 'ReadManga':'RM','MintManga':'MM','SelfManga':'SF','SeiManga':'SEI','Usagi':'US','MangaLib':'ML','Манга-тян':'МЧ','Senkuro':'SK','Senkognito':'SG','Desu':'DS','Реманга':'РМ','MangaBuff':'MB','Inkstory':'IN','TomiloLib':'TL','WaManga':'WA','AComics':'AC','Com-X':'CX','AllHentai':'AH','HentaiLib':'HL','SlashLib':'SL','Хентай-тян':'ХЧ','Яой-тян':'ЯЧ','MultPorn':'MP','MultPorn Hentai':'MPH','Nude-Moon':'NM','HentaiChan':'HC','SexKomix2':'SX' };
-const mono = n => MONO[n] || n.slice(0,2);
-const raw = [
-  ['ReadManga','readmanga.io','манга','online','78 400'],
-  ['MintManga','mintmanga.live','манга','online','41 260'],
-  ['SelfManga','selfmanga.live','манга','online','12 880'],
-  ['SeiManga','seimanga.me','манга','online','9 340'],
-  ['Usagi','usagi.one','манга','unstable','18 720'],
-  ['MangaLib','mangalib.me','манга','online','64 015'],
-  ['Манга-тян','manga-chan.me','манга','online','33 190'],
-  ['Senkuro','senkuro.com','манга','online','14 505'],
-  ['Senkognito','senkognito.com','манга','online','6 210'],
-  ['Desu','desu.me','манга','online','11 970'],
-  ['Реманга','remanga.org','манга','online','29 880'],
-  ['MangaBuff','mangabuff.ru','манга','online','21 440'],
-  ['Inkstory','inkstory.ru','манга','online','4 860'],
-  ['TomiloLib','tomilolib.com','манга','online','7 305'],
-  ['WaManga','wamanga.me','манга','unstable','5 120'],
-  ['AComics','acomics.ru','комиксы','unstable','3 640'],
-  ['Com-X','com-x.life','комиксы','unstable','8 970'],
-  ['AllHentai','allhentai.ru','18+','online','27 310'],
-  ['HentaiLib','hentailib.me','18+','online','19 480'],
-  ['SlashLib','slashlib.me','18+','unstable','6 740'],
-  ['Хентай-тян','hentaichan.live','18+','online','22 065'],
-  ['Яой-тян','yaoi-chan.me','18+','unstable','9 115'],
-  ['MultPorn','multporn.net','18+','online','14 220'],
-  ['MultPorn Hentai','multporn.net/hentai','18+','online','11 040'],
-  ['Nude-Moon','nude-moon.org','18+','online','16 890'],
-  ['HentaiChan','hentaichan.pro','18+','online','20 730'],
-  ['SexKomix2','sexkomix2.com','18+','online','7 950']
-];
-const allSources = raw.map(([name,domain,cat,status,titles],i) => ({
-  name, domain, cat, status, titles,
-  letter: mono(name),
-  color: darkC(hues[i % hues.length]),
-  colorB: lightC(hues[i % hues.length]),
-  adult: cat === '18+',
-  dot: status === 'online' ? '#4ade80' : '#e0a83c',
-  statusText: status === 'online' ? 'онлайн' : 'нестабилен',
-  statusTextColorB: status === 'online' ? '#1f8a7c' : '#a8701a',
-  statusColorA: status === 'online' ? '#8b939c' : '#e0a83c'
-}));
-const group = (label, hint, cat) => {
-  const items = allSources.filter(s => s.cat === cat);
-  return { label, hint, cat, items, count: items.length };
-};
-const sourceGroups = [
-  group('Манга и манхва', 'основные парсеры каталога', 'манга'),
-  group('Комиксы', 'вебкомиксы и переводы', 'комиксы'),
-  group('18+', 'скрыто по умолчанию, включается в профиле', '18+')
-];
-const shown = sourceGroups.reduce((n,g) => n + g.count, 0);
-const online = sourceGroups.reduce((n,g) => n + g.items.filter(s => s.status === 'online').length, 0);
-const stats = `${shown} парсеров · ${online} онлайн · ${shown - online} нестабильны`;
-const currentLabel = 'Все источники';
+    <script>
+      const hues = [172, 42, 258, 322, 22, 198, 138, 288, 66, 240, 356, 108];
+      const darkC = (h) => `oklch(0.72 0.11 ${h})`;
+      const lightC = (h) => `oklch(0.55 0.13 ${h})`;
+      const MONO = {
+        ReadManga: 'RM',
+        MintManga: 'MM',
+        SelfManga: 'SF',
+        SeiManga: 'SEI',
+        Usagi: 'US',
+        MangaLib: 'ML',
+        'Манга-тян': 'МЧ',
+        Senkuro: 'SK',
+        Senkognito: 'SG',
+        Desu: 'DS',
+        Реманга: 'РМ',
+        MangaBuff: 'MB',
+        Inkstory: 'IN',
+        TomiloLib: 'TL',
+        WaManga: 'WA',
+        AComics: 'AC',
+        'Com-X': 'CX',
+        AllHentai: 'AH',
+        HentaiLib: 'HL',
+        SlashLib: 'SL',
+        'Хентай-тян': 'ХЧ',
+        'Яой-тян': 'ЯЧ',
+        MultPorn: 'MP',
+        'MultPorn Hentai': 'MPH',
+        'Nude-Moon': 'NM',
+        HentaiChan: 'HC',
+        SexKomix2: 'SX',
+      };
+      const mono = (n) => MONO[n] || n.slice(0, 2);
+      const raw = [
+        ['ReadManga', 'readmanga.io', 'манга', 'online', '78 400'],
+        ['MintManga', 'mintmanga.live', 'манга', 'online', '41 260'],
+        ['SelfManga', 'selfmanga.live', 'манга', 'online', '12 880'],
+        ['SeiManga', 'seimanga.me', 'манга', 'online', '9 340'],
+        ['Usagi', 'usagi.one', 'манга', 'unstable', '18 720'],
+        ['MangaLib', 'mangalib.me', 'манга', 'online', '64 015'],
+        ['Манга-тян', 'manga-chan.me', 'манга', 'online', '33 190'],
+        ['Senkuro', 'senkuro.com', 'манга', 'online', '14 505'],
+        ['Senkognito', 'senkognito.com', 'манга', 'online', '6 210'],
+        ['Desu', 'desu.me', 'манга', 'online', '11 970'],
+        ['Реманга', 'remanga.org', 'манга', 'online', '29 880'],
+        ['MangaBuff', 'mangabuff.ru', 'манга', 'online', '21 440'],
+        ['Inkstory', 'inkstory.ru', 'манга', 'online', '4 860'],
+        ['TomiloLib', 'tomilolib.com', 'манга', 'online', '7 305'],
+        ['WaManga', 'wamanga.me', 'манга', 'unstable', '5 120'],
+        ['AComics', 'acomics.ru', 'комиксы', 'unstable', '3 640'],
+        ['Com-X', 'com-x.life', 'комиксы', 'unstable', '8 970'],
+        ['AllHentai', 'allhentai.ru', '18+', 'online', '27 310'],
+        ['HentaiLib', 'hentailib.me', '18+', 'online', '19 480'],
+        ['SlashLib', 'slashlib.me', '18+', 'unstable', '6 740'],
+        ['Хентай-тян', 'hentaichan.live', '18+', 'online', '22 065'],
+        ['Яой-тян', 'yaoi-chan.me', '18+', 'unstable', '9 115'],
+        ['MultPorn', 'multporn.net', '18+', 'online', '14 220'],
+        ['MultPorn Hentai', 'multporn.net/hentai', '18+', 'online', '11 040'],
+        ['Nude-Moon', 'nude-moon.org', '18+', 'online', '16 890'],
+        ['HentaiChan', 'hentaichan.pro', '18+', 'online', '20 730'],
+        ['SexKomix2', 'sexkomix2.com', '18+', 'online', '7 950'],
+      ];
+      const allSources = raw.map(([name, domain, cat, status, titles], i) => ({
+        name,
+        domain,
+        cat,
+        status,
+        titles,
+        letter: mono(name),
+        color: darkC(hues[i % hues.length]),
+        colorB: lightC(hues[i % hues.length]),
+        adult: cat === '18+',
+        dot: status === 'online' ? '#4ade80' : '#e0a83c',
+        statusText: status === 'online' ? 'онлайн' : 'нестабилен',
+        statusTextColorB: status === 'online' ? '#1f8a7c' : '#a8701a',
+        statusColorA: status === 'online' ? '#8b939c' : '#e0a83c',
+      }));
+      const group = (label, hint, cat) => {
+        const items = allSources.filter((s) => s.cat === cat);
+        return { label, hint, cat, items, count: items.length };
+      };
+      const sourceGroups = [
+        group('Манга и манхва', 'основные парсеры каталога', 'манга'),
+        group('Комиксы', 'вебкомиксы и переводы', 'комиксы'),
+        group('18+', 'скрыто по умолчанию, включается в профиле', '18+'),
+      ];
+      const shown = sourceGroups.reduce((n, g) => n + g.count, 0);
+      const online = sourceGroups.reduce(
+        (n, g) => n + g.items.filter((s) => s.status === 'online').length,
+        0,
+      );
+      const stats = `${shown} парсеров · ${online} онлайн · ${shown - online} нестабильны`;
+      const currentLabel = 'Все источники';
 
-const T = {
-  dark: { bg:'#101215', border:'#22262c', text:'#e7eaee', headerBg:'#0c0e10', headerBorder:'#1c2026',
-    chipBg:'#16191d', chipBorder:'#262b32', muted:'#6b7280', mutedLight:'#8b939c', sub:'#5b636c',
-    cardBg:'#14171b', cardBorder:'#22262c', cardHoverBorder:'#3d444d', cardHoverBg:'#171b20',
-    avatarText:'#0e0f11', avatarRing:'#2a2f36', avatarTextRing:'#cfd5dc', divider:'#1c2026',
-    adultBg:'#3a1f22', adultText:'#e08a8a', groupText:'#8b939c', countText:'#4f575f' },
-  light: { bg:'#f6f7f9', border:'#dfe3e8', text:'#16181c', headerBg:'#ffffff', headerBorder:'#e3e6ea',
-    chipBg:'#f1f3f6', chipBorder:'#e3e6ea', muted:'#767e88', mutedLight:'#767e88', sub:'#9aa2ac',
-    cardBg:'#ffffff', cardBorder:'#e3e6ea', cardHoverBorder:'#c9cfd7', cardHoverBg:'#ffffff',
-    avatarText:'#ffffff', avatarRing:'#e6e9ee', avatarTextRing:'#4b525b', divider:'#e3e6ea',
-    adultBg:'#fbe9e9', adultText:'#a34242', groupText:'#5d656f', countText:'#9aa2ac' }
-};
-const ACCENT = 'oklch(0.72 0.14 34)';
+      const T = {
+        dark: {
+          bg: '#101215',
+          border: '#22262c',
+          text: '#e7eaee',
+          headerBg: '#0c0e10',
+          headerBorder: '#1c2026',
+          chipBg: '#16191d',
+          chipBorder: '#262b32',
+          muted: '#6b7280',
+          mutedLight: '#8b939c',
+          sub: '#5b636c',
+          cardBg: '#14171b',
+          cardBorder: '#22262c',
+          cardHoverBorder: '#3d444d',
+          cardHoverBg: '#171b20',
+          avatarText: '#0e0f11',
+          avatarRing: '#2a2f36',
+          avatarTextRing: '#cfd5dc',
+          divider: '#1c2026',
+          adultBg: '#3a1f22',
+          adultText: '#e08a8a',
+          groupText: '#8b939c',
+          countText: '#4f575f',
+        },
+        light: {
+          bg: '#f6f7f9',
+          border: '#dfe3e8',
+          text: '#16181c',
+          headerBg: '#ffffff',
+          headerBorder: '#e3e6ea',
+          chipBg: '#f1f3f6',
+          chipBorder: '#e3e6ea',
+          muted: '#767e88',
+          mutedLight: '#767e88',
+          sub: '#9aa2ac',
+          cardBg: '#ffffff',
+          cardBorder: '#e3e6ea',
+          cardHoverBorder: '#c9cfd7',
+          cardHoverBg: '#ffffff',
+          avatarText: '#ffffff',
+          avatarRing: '#e6e9ee',
+          avatarTextRing: '#4b525b',
+          divider: '#e3e6ea',
+          adultBg: '#fbe9e9',
+          adultText: '#a34242',
+          groupText: '#5d656f',
+          countText: '#9aa2ac',
+        },
+      };
+      const ACCENT = 'oklch(0.72 0.14 34)';
 
-function header(t, compact) {
-  const searchBox = compact
-    ? `<div style="width:34px;height:34px;display:grid;place-items:center;border-radius:8px"><i class="ph ph-magnifying-glass" style="font-size:19px;color:${t.muted}"></i></div>`
-    : `<div style="display:flex;align-items:center;gap:10px;height:32px;padding:0 12px;background:${t.chipBg};border:1px solid ${t.chipBorder};border-radius:8px;width:280px;color:${t.muted};font-size:13px"><i class="ph ph-magnifying-glass" style="font-size:16px"></i>По всем источникам<div style="margin-left:auto" class="mono" style="font-size:11px;border:1px solid ${t.chipBorder};border-radius:4px;padding:0 5px">/</div></div>`;
-  return `
+      function header(t, compact) {
+        const searchBox = compact
+          ? `<div style="width:34px;height:34px;display:grid;place-items:center;border-radius:8px"><i class="ph ph-magnifying-glass" style="font-size:19px;color:${t.muted}"></i></div>`
+          : `<div style="display:flex;align-items:center;gap:10px;height:32px;padding:0 12px;background:${t.chipBg};border:1px solid ${t.chipBorder};border-radius:8px;width:280px;color:${t.muted};font-size:13px"><i class="ph ph-magnifying-glass" style="font-size:16px"></i>По всем источникам<div style="margin-left:auto" class="mono" style="font-size:11px;border:1px solid ${t.chipBorder};border-radius:4px;padding:0 5px">/</div></div>`;
+        return `
   <div style="display:flex;align-items:center;gap:12px;padding:0 20px;height:52px;background:${t.headerBg};border-bottom:1px solid ${t.headerBorder}">
     <div style="display:flex;align-items:center;gap:9px;font-size:16px;font-weight:700;color:${t.text}"><i class="ph-fill ph-paw-print" style="font-size:20px;color:${ACCENT}"></i>Tanuki</div>
     <div style="font-size:16px;color:${t.chipBorder}">/</div>
@@ -183,15 +395,17 @@ function header(t, compact) {
       <div style="width:28px;height:28px;margin-left:4px;border-radius:50%;background:${t.avatarRing};display:grid;place-items:center;font-size:12px;font-weight:600;color:${t.avatarTextRing}">RK</div>
     </div>
   </div>`;
-}
+      }
 
-function sourceCard(s, t, size) {
-  const avSize = size === 'mobile' ? 36 : size === 'tablet' ? 32 : 30;
-  const nameSize = size === 'mobile' ? 15 : 14;
-  const bg = t === T.dark ? s.color : s.colorB;
-  const adult = s.adult ? `<div class="mono" style="font-size:9px;padding:1px 5px;border-radius:3px;background:${t.adultBg};color:${t.adultText}">18+</div>` : '';
-  const statusColor = t === T.dark ? s.statusColorA : s.statusTextColorB;
-  return `
+      function sourceCard(s, t, size) {
+        const avSize = size === 'mobile' ? 36 : size === 'tablet' ? 32 : 30;
+        const nameSize = size === 'mobile' ? 15 : 14;
+        const bg = t === T.dark ? s.color : s.colorB;
+        const adult = s.adult
+          ? `<div class="mono" style="font-size:9px;padding:1px 5px;border-radius:3px;background:${t.adultBg};color:${t.adultText}">18+</div>`
+          : '';
+        const statusColor = t === T.dark ? s.statusColorA : s.statusTextColorB;
+        return `
   <div class="card" style="display:flex;align-items:center;gap:11px;padding:10px 12px;background:${t.cardBg};border:1px solid ${t.cardBorder};border-radius:9px">
     <div style="width:${avSize}px;height:${avSize}px;flex:none;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:700;color:${t.avatarText};background:${bg}">${s.letter}</div>
     <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
@@ -205,10 +419,10 @@ function sourceCard(s, t, size) {
       <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:${statusColor}"><div style="width:5px;height:5px;border-radius:50%;background:${s.dot}"></div>${s.statusText}</div>
     </div>
   </div>`;
-}
+      }
 
-function groupBlock(g, t, cols, size) {
-  return `
+      function groupBlock(g, t, cols, size) {
+        return `
   <div style="display:flex;flex-direction:column;gap:11px">
     <div style="display:flex;align-items:center;gap:10px">
       <div style="font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:${t.groupText}">${g.label}</div>
@@ -216,13 +430,13 @@ function groupBlock(g, t, cols, size) {
       <div style="flex:1;height:1px;background:${t.divider}"></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px">
-      ${g.items.map(s => sourceCard(s, t, size)).join('')}
+      ${g.items.map((s) => sourceCard(s, t, size)).join('')}
     </div>
   </div>`;
-}
+      }
 
-function toolbar(t) {
-  return `
+      function toolbar(t) {
+        return `
   <div style="display:flex;align-items:center;gap:14px">
     <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em;color:${t.text}">Источники</div>
     <div class="mono" style="font-size:13px;color:${t.muted}">${stats}</div>
@@ -231,21 +445,21 @@ function toolbar(t) {
       <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:${t.text};padding:6px 11px;border:1px solid ${t.chipBorder};border-radius:7px;background:${t.chipBg}"><i class="ph-fill ph-toggle-right" style="font-size:18px;color:${t === T.dark ? '#2f9e8f' : ACCENT}"></i>Показывать 18+</div>
     </div>
   </div>`;
-}
+      }
 
-function desktopScreen(t) {
-  return `
+      function desktopScreen(t) {
+        return `
   <div data-screen-label="Источники · десктоп" style="width:1280px;flex:none;background:${t.bg};border:1px solid ${t.border};border-radius:12px;overflow:hidden;color:${t.text}">
     ${header(t, false)}
     <div style="padding:26px 24px 32px;display:flex;flex-direction:column;gap:22px">
       ${toolbar(t)}
-      ${sourceGroups.map(g => groupBlock(g, t, 3, 'desktop')).join('')}
+      ${sourceGroups.map((g) => groupBlock(g, t, 3, 'desktop')).join('')}
     </div>
   </div>`;
-}
+      }
 
-function tabletScreen(t) {
-  return `
+      function tabletScreen(t) {
+        return `
   <div data-screen-label="Источники · планшет" style="width:834px;flex:none;background:${t.bg};border:1px solid ${t.border};border-radius:12px;overflow:hidden;color:${t.text}">
     ${header(t, true)}
     <div style="padding:22px 18px 28px;display:flex;flex-direction:column;gap:20px">
@@ -259,14 +473,14 @@ function tabletScreen(t) {
           <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:${t.text};height:34px;padding:0 11px;border:1px solid ${t.chipBorder};border-radius:7px;background:${t.chipBg}"><i class="ph-fill ph-toggle-right" style="font-size:18px;color:${t === T.dark ? '#2f9e8f' : ACCENT}"></i>18+</div>
         </div>
       </div>
-      ${sourceGroups.map(g => groupBlock(g, t, 2, 'tablet')).join('')}
+      ${sourceGroups.map((g) => groupBlock(g, t, 2, 'tablet')).join('')}
     </div>
   </div>`;
-}
+      }
 
-function mobileScreen(t) {
-  const mGroups = sourceGroups.map(g => ({ ...g, items: g.items.slice(0, 4) }));
-  return `
+      function mobileScreen(t) {
+        const mGroups = sourceGroups.map((g) => ({ ...g, items: g.items.slice(0, 4) }));
+        return `
   <div data-screen-label="Источники · мобильный" style="width:390px;flex:none;background:${t.bg};border:1px solid ${t.border};border-radius:12px;overflow:hidden;color:${t.text}">
     <div style="display:flex;flex-direction:column;background:${t.headerBg};border-bottom:1px solid ${t.headerBorder}">
       <div style="display:flex;align-items:center;gap:10px;padding:0 12px;height:52px">
@@ -295,7 +509,9 @@ function mobileScreen(t) {
           <div style="width:44px;height:40px;display:grid;place-items:center;border-radius:8px;background:${t.chipBg};border:1px solid ${t.chipBorder}"><i class="ph-fill ph-toggle-right" style="font-size:20px;color:${t === T.dark ? '#2f9e8f' : ACCENT}"></i></div>
         </div>
       </div>
-      ${mGroups.map(g => `
+      ${mGroups
+        .map(
+          (g) => `
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;gap:9px">
           <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:${t.groupText}">${g.label}</div>
@@ -303,11 +519,14 @@ function mobileScreen(t) {
           <div style="flex:1;height:1px;background:${t.divider}"></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          ${g.items.map(s => {
-            const bg = t === T.dark ? s.color : s.colorB;
-            const adult = s.adult ? `<div class="mono" style="font-size:9px;padding:1px 5px;border-radius:3px;background:${t.adultBg};color:${t.adultText}">18+</div>` : '';
-            const statusColor = t === T.dark ? s.statusColorA : s.statusTextColorB;
-            return `
+          ${g.items
+            .map((s) => {
+              const bg = t === T.dark ? s.color : s.colorB;
+              const adult = s.adult
+                ? `<div class="mono" style="font-size:9px;padding:1px 5px;border-radius:3px;background:${t.adultBg};color:${t.adultText}">18+</div>`
+                : '';
+              const statusColor = t === T.dark ? s.statusColorA : s.statusTextColorB;
+              return `
           <div class="card" style="display:flex;align-items:center;gap:11px;padding:11px 12px;background:${t.cardBg};border:1px solid ${t.cardBorder};border-radius:10px">
             <div style="width:36px;height:36px;flex:none;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:700;color:${t.avatarText};background:${bg}">${s.letter}</div>
             <div style="min-width:0;display:flex;flex-direction:column;gap:3px">
@@ -321,31 +540,36 @@ function mobileScreen(t) {
             </div>
             <i class="ph ph-caret-right" style="margin-left:auto;font-size:16px;color:${t.countText}"></i>
           </div>`;
-          }).join('')}
+            })
+            .join('')}
           <div style="display:flex;align-items:center;justify-content:center;gap:7px;height:40px;border-radius:10px;border:1px dashed ${t.chipBorder};font-size:13px;color:${t.muted}">Показать все ${g.count}<i class="ph ph-caret-down" style="font-size:13px"></i></div>
         </div>
-      </div>`).join('')}
+      </div>`,
+        )
+        .join('')}
     </div>
   </div>`;
-}
+      }
 
-document.getElementById('desktopRow').innerHTML = desktopScreen(T.dark) + desktopScreen(T.light);
-document.getElementById('tabletRow').innerHTML = tabletScreen(T.dark) + tabletScreen(T.light);
-document.getElementById('mobileRow').innerHTML = mobileScreen(T.dark) + mobileScreen(T.light);
+      document.getElementById('desktopRow').innerHTML =
+        desktopScreen(T.dark) + desktopScreen(T.light);
+      document.getElementById('tabletRow').innerHTML = tabletScreen(T.dark) + tabletScreen(T.light);
+      document.getElementById('mobileRow').innerHTML = mobileScreen(T.dark) + mobileScreen(T.light);
 
-// state: dropdown
-const dark = T.dark;
-const dropdownNames = ['ReadManga','MangaLib','Реманга','Манга-тян','Desu','MangaBuff'];
-const dropdownItems = dropdownNames.map(n => allSources.find(x => x.name === n));
-const recent = dropdownItems.slice(0,3), rest = dropdownItems.slice(3);
-function dropdownRow(s) {
-  return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px">
+      // state: dropdown
+      const dark = T.dark;
+      const dropdownNames = ['ReadManga', 'MangaLib', 'Реманга', 'Манга-тян', 'Desu', 'MangaBuff'];
+      const dropdownItems = dropdownNames.map((n) => allSources.find((x) => x.name === n));
+      const recent = dropdownItems.slice(0, 3),
+        rest = dropdownItems.slice(3);
+      function dropdownRow(s) {
+        return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px">
     <div style="width:22px;height:22px;flex:none;border-radius:5px;display:grid;place-items:center;font-size:9px;font-weight:700;color:#0e0f11;background:${s.color}">${s.letter}</div>
     <div style="font-size:14px;color:#cfd5dc">${s.name}</div>
     <div style="margin-left:auto" class="mono" style="font-size:10px;color:#5b636c">${s.titles}</div>
   </div>`;
-}
-document.getElementById('stateDropdown').innerHTML = `
+      }
+      document.getElementById('stateDropdown').innerHTML = `
 <div data-screen-label="Источники · дропдаун чипа" style="width:1280px;flex:none;background:${dark.bg};border:1px solid ${dark.border};border-radius:12px;overflow:hidden;color:${dark.text}">
   <div style="display:flex;align-items:center;gap:12px;padding:0 20px;height:52px;background:${dark.headerBg};border-bottom:1px solid ${dark.headerBorder}">
     <div style="display:flex;align-items:center;gap:9px;font-size:16px;font-weight:700"><i class="ph-fill ph-paw-print" style="font-size:20px;color:${ACCENT}"></i>Tanuki</div>
@@ -374,16 +598,18 @@ document.getElementById('stateDropdown').innerHTML = `
       </div>
     </div>
     <div style="opacity:0.45">${toolbar(dark)}</div>
-    <div style="opacity:0.45;display:flex;flex-direction:column;gap:22px">${sourceGroups.map(g => groupBlock(g, dark, 3, 'desktop')).join('')}</div>
+    <div style="opacity:0.45;display:flex;flex-direction:column;gap:22px">${sourceGroups.map((g) => groupBlock(g, dark, 3, 'desktop')).join('')}</div>
   </div>
 </div>`;
 
-// state: search
-const q = 'манга';
-const match = s => (s.name + ' ' + s.domain).toLowerCase().includes(q);
-const filteredGroups = sourceGroups.map(g => ({ ...g, items: g.items.filter(match), count: g.items.filter(match).length })).filter(g => g.count > 0);
-const foundCount = filteredGroups.reduce((n,g) => n + g.count, 0);
-document.getElementById('stateSearch').innerHTML = `
+      // state: search
+      const q = 'манга';
+      const match = (s) => (s.name + ' ' + s.domain).toLowerCase().includes(q);
+      const filteredGroups = sourceGroups
+        .map((g) => ({ ...g, items: g.items.filter(match), count: g.items.filter(match).length }))
+        .filter((g) => g.count > 0);
+      const foundCount = filteredGroups.reduce((n, g) => n + g.count, 0);
+      document.getElementById('stateSearch').innerHTML = `
 <div data-screen-label="Источники · поиск" style="width:1280px;flex:none;background:${dark.bg};border:1px solid ${dark.border};border-radius:12px;overflow:hidden;color:${dark.text}">
   <div style="padding:26px 24px 32px;display:flex;flex-direction:column;gap:22px">
     <div style="display:flex;align-items:center;gap:14px">
@@ -394,12 +620,12 @@ document.getElementById('stateSearch').innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#cfd5dc;padding:6px 11px;border:1px solid ${dark.chipBorder};border-radius:7px;background:${dark.chipBg}"><i class="ph-fill ph-toggle-right" style="font-size:18px;color:#2f9e8f"></i>Показывать 18+</div>
       </div>
     </div>
-    ${filteredGroups.map(g => groupBlock(g, dark, 3, 'desktop')).join('')}
+    ${filteredGroups.map((g) => groupBlock(g, dark, 3, 'desktop')).join('')}
   </div>
 </div>`;
 
-// state: empty
-document.getElementById('stateEmpty').innerHTML = `
+      // state: empty
+      document.getElementById('stateEmpty').innerHTML = `
 <div data-screen-label="Источники · пусто" style="width:1280px;flex:none;background:${dark.bg};border:1px solid ${dark.border};border-radius:12px;overflow:hidden;color:${dark.text}">
   <div style="padding:26px 24px 32px;display:flex;flex-direction:column;gap:22px">
     <div style="display:flex;align-items:center;gap:14px">
@@ -424,11 +650,18 @@ document.getElementById('stateEmpty').innerHTML = `
   </div>
 </div>`;
 
-// state: offline
-const offlineNames = ['Usagi','AComics','WaManga'];
-const offlineErrors = { 'Usagi':'таймаут 12 с · 3 попытки', 'AComics':'ответ 503', 'WaManga':'разметка изменилась' };
-const offlineSources = offlineNames.map(n => ({ ...allSources.find(x => x.name === n), error: offlineErrors[n] }));
-document.getElementById('stateOffline').innerHTML = `
+      // state: offline
+      const offlineNames = ['Usagi', 'AComics', 'WaManga'];
+      const offlineErrors = {
+        Usagi: 'таймаут 12 с · 3 попытки',
+        AComics: 'ответ 503',
+        WaManga: 'разметка изменилась',
+      };
+      const offlineSources = offlineNames.map((n) => ({
+        ...allSources.find((x) => x.name === n),
+        error: offlineErrors[n],
+      }));
+      document.getElementById('stateOffline').innerHTML = `
 <div data-screen-label="Источники · оффлайн" style="width:1280px;flex:none;background:${dark.bg};border:1px solid ${dark.border};border-radius:12px;overflow:hidden;color:${dark.text}">
   <div style="padding:26px 24px 32px;display:flex;flex-direction:column;gap:22px">
     <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:9px;background:#2a1a1a;border:1px solid #5b2b2b">
@@ -443,7 +676,9 @@ document.getElementById('stateOffline').innerHTML = `
         <div style="flex:1;height:1px;background:${dark.divider}"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        ${offlineSources.map(s => `
+        ${offlineSources
+          .map(
+            (s) => `
         <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;background:#171313;border:1px solid #452626;border-radius:9px">
           <div style="width:30px;height:30px;flex:none;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#8a7d7d;background:#2b2020">${s.letter}</div>
           <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
@@ -451,12 +686,17 @@ document.getElementById('stateOffline').innerHTML = `
             <div class="mono" style="font-size:10px;color:#b07070">${s.error}</div>
           </div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:#e08a8a;padding:5px 9px;border-radius:6px;border:1px solid #5b2b2b"><i class="ph ph-arrows-clockwise" style="font-size:13px"></i>Повторить</div>
-        </div>`).join('')}
+        </div>`,
+          )
+          .join('')}
       </div>
     </div>
-    ${sourceGroups.slice(0,1).map(g => groupBlock(g, dark, 3, 'desktop')).join('')}
+    ${sourceGroups
+      .slice(0, 1)
+      .map((g) => groupBlock(g, dark, 3, 'desktop'))
+      .join('')}
   </div>
 </div>`;
-</script>
-</body>
+    </script>
+  </body>
 </html>
