@@ -12,7 +12,7 @@ type Props = {
 };
 
 function CatalogFilterRender({ group, selection, onChange, scrollAreaProps }: Props) {
-  if (group.type === FILTER_TYPE.CHECKBOX || group.title === FILTER_TYPE.CHECKBOX_EXCLUDE) {
+  if (group.type === FILTER_TYPE.CHECKBOX || group.type === FILTER_TYPE.CHECKBOX_EXCLUDE) {
     return (
       <CheckboxFilterListGroup
         group={group}
