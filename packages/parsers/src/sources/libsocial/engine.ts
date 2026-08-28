@@ -411,6 +411,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.hentai : SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
+      requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
       sortOrders: [
         'UPDATED',
         'POPULARITY',

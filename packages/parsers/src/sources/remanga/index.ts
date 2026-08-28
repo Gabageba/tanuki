@@ -268,6 +268,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: false,
+      requiresVpn: false,
       sortOrders: ['UPDATED', 'POPULARITY', 'RATING', 'NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

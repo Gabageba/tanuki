@@ -1,7 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { FILTER_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, MANGA_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -11,6 +11,8 @@ import type {
   RawPage,
   RawTag,
   RawMangaState,
+  RawMangaType,
+  RawContentRating,
   RawFilterGroup,
   RawFilterOption,
 } from '../../types';
@@ -19,7 +21,7 @@ import { generateUid } from '../../core/uid';
 import { parseHtml } from '../../core/html/dom';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
 import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
-import { parseFloatOrNull } from '../../core/text/numbers';
+import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { nullIfEmpty } from '../../core/text/strings';
 import { parseDdMmYyyy } from '../../core/text/dates';
 import { ParseError, SourceUnavailableError } from '../../errors';
@@ -55,6 +57,62 @@ const parseStatus = (value: string): RawMangaState | null => {
     default:
       return null;
   }
+};
+
+/** Catalog "Тип:" badge (`.cards__info` on list cards, the `/types/<slug>` link on the details
+ *  page) — mirrors the type_id[] filter's own vocabulary (Манга, OEL-манга, Манхва, Маньхуа,
+ *  Сингл, Руманга, Комикс западный). Only the unambiguous ones get their own case. */
+const mangaTypeByLabel = (label: string | null): RawMangaType | null => {
+  switch (label) {
+    case 'Манга':
+      return MANGA_TYPE.MANGA;
+    case 'Манхва':
+      return MANGA_TYPE.MANHWA;
+    case 'Маньхуа':
+      return MANGA_TYPE.MANHUA;
+    case 'Комикс западный':
+      return MANGA_TYPE.COMICS;
+    case null:
+      return null;
+    default:
+      return MANGA_TYPE.OTHER;
+  }
+};
+
+/** "18+"/"16+" badge next to the genre tags (`.tags__item--warning`) — the only content-rating
+ *  signal the site exposes, mirrors the age_rating[] filter's own vocabulary. */
+const contentRatingByLabel = (label: string | null): RawContentRating | null => {
+  switch (label) {
+    case '18+':
+      return CONTENT_RATING.ADULT;
+    case '16+':
+      return CONTENT_RATING.SUGGESTIVE;
+    default:
+      return null;
+  }
+};
+
+type MiddleLinks = { type: RawMangaType | null; year: number | null; stateText: string | null };
+
+/**
+ * `.manga__middle-links`/`.manga-mobile__info` packs the type/year/status links together, but
+ * a title can be missing one (year isn't always known) — so they're told apart by href shape
+ * (`/types/<slug>`, `/types/<slug>/<year>`, `/manga?status_id[]=`), not by position.
+ */
+const parseMiddleLinks = ($: CheerioAPI): MiddleLinks => {
+  const result: MiddleLinks = { type: null, year: null, stateText: null };
+  $('.manga__middle-links > a, .manga-mobile__info > a').each((_, el) => {
+    const $a = $(el);
+    const path = (attrOrNull($a, 'href') ?? '').replace(/^https?:\/\/[^/]+/, '');
+    if (/^\/types\/[^/]+\/\d{4}$/.test(path)) {
+      result.year = parseIntOrNull(textOrNull($a));
+    } else if (/^\/types\/[^/]+$/.test(path)) {
+      result.type = mangaTypeByLabel(textOrNull($a));
+    } else if (path.startsWith('/manga?status_id')) {
+      result.stateText = textOrNull($a);
+    }
+  });
+  return result;
 };
 
 /** `<select name="X[]"><option value=...>Title</option>...</select>` — genres/type/tags/status/
@@ -109,13 +167,18 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       ? new URL(bgMatch[2] ?? '', baseUrl).toString()
       : `https://${domain}/img/manga/posters/${slug}.jpg`;
 
+    const ratingRaw = textOrNull($item.find('.cards__rating').first());
+    const ratingPct = ratingRaw ? parseFloatOrNull(ratingRaw.replace(',', '.')) : null;
+    // ".cards__info" is "<Тип>, <Жанр>" — only the type half matches the type_id[] vocabulary.
+    const infoType = textOrNull($item.find('.cards__info').first())?.split(',')[0]?.trim() ?? null;
+
     return {
       id: generateUid(SOURCE_ID, relUrl),
       title,
       altTitles: [],
       url: relUrl,
       publicUrl,
-      rating: RATING_UNKNOWN,
+      rating: ratingPct !== null ? ratingPct / 10 : RATING_UNKNOWN,
       contentRating: null,
       coverUrl,
       tags: [],
@@ -125,6 +188,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       description: null,
       chapters: null,
       source: SOURCE_ID,
+      type: mangaTypeByLabel(infoType),
     };
   };
 
@@ -335,9 +399,9 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
   };
 
   const collectTags = ($: CheerioAPI): RawTag[] => {
-    const elements = $(
-      '.manga__middle-links > a:not(:last-child), .manga-mobile__info > a:not(:last-child), .tags > .tags__item',
-    ).toArray();
+    // .tags also carries the age-rating badge (.tags__item--warning) — that's contentRating, not
+    // a genre/tag, so it's excluded here and read separately in getDetails.
+    const elements = $('.tags > .tags__item:not(.tags__item--warning)').toArray();
     const seen = new Set<string>();
     const tags: RawTag[] = [];
     for (const el of elements) {
@@ -404,9 +468,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       .map((el, i) => parseChapterElement(el, $, i))
       .filter((c): c is RawChapter => c !== null);
 
-    const stateText = textOrNull(
-      $('.manga__middle-links > a:last-child, .manga-mobile__info > a:last-child').first(),
-    );
+    const { type, year, stateText } = parseMiddleLinks($);
     const altTitles = $('.manga__name-alt > span, .manga-mobile__name-alt > span')
       .toArray()
       .map((el) => textOrNull($(el)))
@@ -414,6 +476,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
 
     const ratingRaw = textOrNull($('.manga__rating').first());
     const ratingPct = ratingRaw ? parseFloatOrNull(ratingRaw.replace(',', '.')) : null;
+    const contentRating = contentRatingByLabel(textOrNull($('.tags__item--warning').first()));
 
     const title =
       nullIfEmpty(textOrNull($('h1, .manga__name, .manga-mobile__name').first())) ??
@@ -429,7 +492,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       url: mangaUrl,
       publicUrl: absoluteUrl,
       rating: ratingPct !== null ? ratingPct / 10 : RATING_UNKNOWN,
-      contentRating: null,
+      contentRating,
       coverUrl,
       largeCoverUrl: null,
       tags: collectTags($),
@@ -438,6 +501,8 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       description: nullIfEmpty(buildDetailsDescription($)),
       chapters,
       source: SOURCE_ID,
+      type,
+      year,
     };
   };
 
@@ -467,6 +532,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: false,
+      requiresVpn: false,
       sortOrders: ['UPDATED', 'POPULARITY', 'RATING', 'NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

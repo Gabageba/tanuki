@@ -406,6 +406,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       contentType: catalogEntryFor(SOURCE_ID).contentType,
       isBroken: catalogEntryFor(SOURCE_ID).isBroken,
       isAdult: catalogEntryFor(SOURCE_ID).isAdult,
+      requiresVpn: catalogEntryFor(SOURCE_ID).requiresVpn,
       sortOrders: ['POPULARITY', 'UPDATED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

@@ -305,6 +305,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: false,
+      requiresVpn: false,
       sortOrders: [
         'POPULARITY',
         'POPULARITY_TODAY',

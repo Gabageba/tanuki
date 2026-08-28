@@ -1,4 +1,6 @@
+import type { MangaType } from '@tanuki/contracts';
 import {
+  MANGA_TYPE,
   SOURCE_CONTENT_TYPE,
   SOURCE_STATUS,
   type Source,
@@ -45,5 +47,20 @@ export const getLabelByContentType = (contentType: SourceContentType) => {
       return 'Комиксы';
     case SOURCE_CONTENT_TYPE.other:
       return 'Прочее';
+  }
+};
+
+export const getLabelByMangaType = (mangaType: MangaType) => {
+  switch (mangaType) {
+    case MANGA_TYPE.MANGA:
+      return 'Манга';
+    case MANGA_TYPE.MANHUA:
+      return 'Маньхуа';
+    case MANGA_TYPE.MANHWA:
+      return 'Манхва';
+    case MANGA_TYPE.COMICS:
+      return 'Комикс';
+    case MANGA_TYPE.OTHER:
+      return 'Другое';
   }
 };

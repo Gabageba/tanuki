@@ -1,7 +1,7 @@
 import type { Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, FILTER_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, MANGA_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -11,6 +11,7 @@ import type {
   RawPage,
   RawTag,
   RawMangaState,
+  RawMangaType,
   RawFilterGroup,
   RawFilterOption,
 } from '../../types';
@@ -65,6 +66,25 @@ const mangaStateByClass = (cls: string | null): RawMangaState | null => {
   return null;
 };
 
+/** Catalog "Тип:" label — mirrors the .catalog-kinds filter's own vocabulary (data-kind values). */
+const mangaTypeByLabel = (label: string | null): RawMangaType | null => {
+  switch (label) {
+    case 'Манга':
+      return MANGA_TYPE.MANGA;
+    case 'Манхва':
+      return MANGA_TYPE.MANHWA;
+    case 'Манхуа':
+    case 'Маньхуа':
+      return MANGA_TYPE.MANHUA;
+    case 'Комикс':
+      return MANGA_TYPE.COMICS;
+    case null:
+      return null;
+    default:
+      return MANGA_TYPE.OTHER;
+  }
+};
+
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
     case 'ALPHABETICAL':
@@ -78,13 +98,21 @@ const getSortKey = (order: string | undefined): string => {
   }
 };
 
-/** dl.pairsInline label/value pairs, e.g. "Жанры:" / "Рейтинг:" on catalog cards. */
+/**
+ * dl.pairsInline label/value pairs on catalog cards. A single dl can pack more than one pair —
+ * e.g. "Тип:"/"Год:" and "Рейтинг:"/"Подписчики:" each share one dl — so every dt/dd inside a dl
+ * must be checked, not just the first.
+ */
 const pairValue = ($li: Cheerio<AnyNode>, label: string): string | null => {
-  const pairs = $li.find('dl.pairsInline').toArray();
-  for (const el of pairs) {
-    const $pair = $li.find(el);
-    if (textOrNull($pair.find('dt').first()) === label) {
-      return textOrNull($pair.find('dd').first());
+  const dls = $li.find('dl.pairsInline').toArray();
+  for (const dl of dls) {
+    const $dl = $li.find(dl);
+    const dts = $dl.find('dt').toArray();
+    const dds = $dl.find('dd').toArray();
+    for (let i = 0; i < dts.length; i++) {
+      if (textOrNull($li.find(dts[i]!)) === label) {
+        return textOrNull($li.find(dds[i]!));
+      }
     }
   }
   return null;
@@ -344,6 +372,8 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .filter((t): t is RawTag => t !== undefined);
     const ratingText = pairValue($li, 'Рейтинг:');
     const rating = parseFloatOrNull(ratingText);
+    const type = mangaTypeByLabel(pairValue($li, 'Тип:'));
+    const year = parseIntOrNull(pairValue($li, 'Год:'));
     return {
       id: generateUid(SOURCE_ID, id),
       title: russianTitle ?? originalTitle,
@@ -360,6 +390,8 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       description: null,
       chapters: null,
       source: SOURCE_ID,
+      type,
+      year,
     };
   };
 
@@ -585,6 +617,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: false,
+      requiresVpn: false,
       sortOrders: ['UPDATED', 'POPULARITY', 'NEWEST', 'ALPHABETICAL'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

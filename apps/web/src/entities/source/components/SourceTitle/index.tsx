@@ -19,13 +19,10 @@ function SourceTitle({ source, showStatus = false, isLoading = false }: Props) {
     <Group flex={1}>
       <SourceIcon id={source.id} title={source.title} />
       <Box>
-        <Group gap="xs">
+        <Group gap={8}>
           <Title order={5}>{source.title}</Title>
-          {source.isAdult && (
-            <Badge color="red" variant="light">
-              18+
-            </Badge>
-          )}
+          {source.isAdult && <Badge color="red">18+</Badge>}
+          {source.requiresVpn && <Badge color="cyan">VPN</Badge>}
           {showStatus && <SourceStatusBadge status={source.status} />}
         </Group>
         <Text size="sm" c="dimmed" ff="monospace" truncate>

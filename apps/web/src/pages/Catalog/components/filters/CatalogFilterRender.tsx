@@ -3,6 +3,7 @@ import { FILTER_TYPE, type FilterGroup, type FilterSelection } from '@tanuki/con
 import CheckboxFilterListGroup from './CheckboxFilterListGroup';
 import SearchableCheckboxListFilterGroup from './SearchableCheckboxListFilterGroup';
 import RangeFilterGroup from './RangeFilterGroup';
+import RadioFilterGroup from './RadioFilterGroup';
 
 type Props = {
   group: FilterGroup;
@@ -39,6 +40,17 @@ function CatalogFilterRender({ group, selection, onChange, scrollAreaProps }: Pr
 
   if (group.type === FILTER_TYPE.RANGE) {
     return <RangeFilterGroup group={group} selection={selection} onChange={onChange} />;
+  }
+
+  if (group.type === FILTER_TYPE.RADIO) {
+    return (
+      <RadioFilterGroup
+        group={group}
+        selection={selection}
+        onChange={onChange}
+        scrollAreaProps={scrollAreaProps}
+      />
+    );
   }
 
   return null;

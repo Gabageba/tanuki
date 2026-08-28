@@ -2,6 +2,7 @@ import { RAW_MANGA_STATE } from '../../types';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_TYPE,
   SOURCE_CONTENT_TYPE,
   type FilterRangePreset,
 } from '@tanuki/contracts';
@@ -14,6 +15,7 @@ import type {
   RawPage,
   RawTag,
   RawMangaState,
+  RawMangaType,
   RawFilterGroup,
   RawFilterOption,
 } from '../../types';
@@ -109,6 +111,9 @@ type MangaJson = {
   status?: string;
   relations?: RelationJson[];
   description?: string;
+  country?: string;
+  year?: number;
+  chaptersCount?: number;
 };
 
 type ChapterJson = {
@@ -267,6 +272,25 @@ const toMangaState = (status: string | undefined): RawMangaState | null => {
   }
 };
 
+/** The API has no direct manga-type field — `country` (same vocabulary as the "Страна" filter)
+ *  is what the site's own catalog derives its type badge from. */
+const toMangaType = (country: string | undefined): RawMangaType | null => {
+  switch (country) {
+    case 'JAPAN':
+      return MANGA_TYPE.MANGA;
+    case 'KOREA':
+      return MANGA_TYPE.MANHWA;
+    case 'CHINA':
+      return MANGA_TYPE.MANHUA;
+    case 'RUSSIA':
+      return MANGA_TYPE.COMICS;
+    case 'OTHER':
+      return MANGA_TYPE.OTHER;
+    default:
+      return null;
+  }
+};
+
 const isNsfw = (contentStatus: string | undefined): boolean => {
   const upper = contentStatus?.toUpperCase();
   return upper === 'EROTIC' || upper === 'PORNOGRAPHIC';
@@ -375,6 +399,9 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       description: null,
       chapters: null,
       source: SOURCE_ID,
+      type: toMangaType(jo.country),
+      year: jo.year ?? null,
+      chaptersCount: jo.chaptersCount ?? null,
     };
   };
 
@@ -603,6 +630,8 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       description: jo.description ?? null,
       chapters,
       source: SOURCE_ID,
+      type: toMangaType(jo.country),
+      year: jo.year ?? null,
     };
   };
 
@@ -628,6 +657,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: false,
+      requiresVpn: false,
       sortOrders: ['UPDATED', 'POPULARITY', 'LIKES', 'CHAPTERS', 'BOOKMARKS', 'RATING', 'NEWEST'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

@@ -39,6 +39,7 @@ export const normalizeFilterGroup = (raw: RawFilterGroup): FilterGroup => {
     type: raw.type,
     options: raw.options.map(normalizeFilterOption),
     settings: raw.settings,
+    exclusiveGroup: raw.exclusiveGroup,
   };
 };
 
@@ -84,9 +85,14 @@ export const normalizeManga = (
     tags: raw.tags.map(normalizeTag),
     state: normalizeState(raw.state),
     contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
-    type: null,
-    rating: raw.rating >= 0 ? raw.rating : null,
-    chaptersCount: raw.chapters?.length ?? null,
+    type: raw.type ?? null,
+    year: raw.year ?? null,
+    // raw.rating is normalized to 0..1 by every parser (see RawManga in @tanuki/parsers) —
+    // scale it up to the 0..10 the API exposes, rounded to 2 decimals to shake off float noise
+    // from the division parsers do to reach 0..1 in the first place.
+    rating: raw.rating >= 0 ? Math.round(raw.rating * 1000) / 100 : null,
+    likes: raw.likes ?? null,
+    chaptersCount: raw.chapters?.length ?? raw.chaptersCount ?? null,
     publicUrl: raw.publicUrl,
   };
 };

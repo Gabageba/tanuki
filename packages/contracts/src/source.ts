@@ -61,6 +61,8 @@ export const SourceSchema = z.object({
   contentType: SourceContentTypeSchema,
   status: SourceStatusSchema,
   isAdult: z.boolean(),
+  /** Source is blocked for RU IPs and needs a VPN to reach. */
+  requiresVpn: z.boolean(),
   /** Empty when the source doesn't support choosing an order — ListParams.order is then ignored. */
   sortOrders: z.array(SortOrderSchema),
 });

@@ -17,6 +17,7 @@ import {
   type EnumLiteralsOf,
   type FilterGroupSettings,
   type FilterType,
+  type MangaType,
   type SortOrder,
   type SourceContentType,
 } from '@tanuki/contracts';
@@ -24,6 +25,7 @@ import {
 export const RATING_UNKNOWN = -1;
 
 export type RawContentRating = ContentRating;
+export type RawMangaType = MangaType;
 
 /**
  * Публичные статусы (@tanuki/contracts MANGA_STATE) плюс RESTRICTED — гео-ограничение или
@@ -59,6 +61,19 @@ export type RawManga = {
   /** null on list items, populated (possibly []) on getDetails. */
   chapters: RawChapter[] | null;
   source: string;
+  /** Publication format. Omitted where the source page being parsed doesn't expose it. */
+  type?: RawMangaType | null;
+  /** Publication year. Omitted where the source page being parsed doesn't expose it. */
+  year?: number | null;
+  /** Chapter total as reported by the source itself, for list items whose page doesn't carry
+   *  the full chapter list (`chapters` stays null there). Falls back to `chapters.length` in
+   *  normalize.ts, so details-page parsing doesn't need to set this too. */
+  chaptersCount?: number | null;
+  /** Unbounded "likes"/"favorites" counter some sources expose instead of a real 0..10 rating
+   *  (e.g. the chan-engine DLE sites' "Плюсиков: N"). Distinct from `rating` — it has no fixed
+   *  ceiling, so it can't be normalized onto the 0..10 scale. Omitted where the source has no
+   *  such counter. */
+  likes?: number | null;
 };
 
 export type RawChapter = {
@@ -100,6 +115,9 @@ export type RawFilterGroup = {
   /** RANGE groups only — the source's own min/max, e.g. a 0..10 rating or 1950..thisYear, plus
    *  any quick-pick presets. */
   settings?: FilterGroupSettings;
+  /** Groups sharing this tag are alternative browsing routes on the source, not combinable —
+   *  see FilterGroup.exclusiveGroup in @tanuki/contracts. */
+  exclusiveGroup?: string;
 };
 
 export type RawSourceInfo = {
@@ -111,6 +129,7 @@ export type RawSourceInfo = {
   contentType: SourceContentType;
   isBroken: boolean;
   isAdult: boolean;
+  requiresVpn: boolean;
   sortOrders: SortOrder[];
   isSearchSupported: boolean;
   /** Mirrors whether the parser implements getFilters() — see Parser.getFilters. */

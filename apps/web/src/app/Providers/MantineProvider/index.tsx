@@ -186,6 +186,11 @@ const THEME = createTheme({
         size: 'sm',
       },
     },
+    Image: {
+      defaultProps: {
+        radius: 'md',
+      },
+    },
   },
 });
 

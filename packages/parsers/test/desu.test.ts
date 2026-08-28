@@ -34,6 +34,7 @@ const CATALOG_HTML = `<!doctype html><html><body>
       <span class="dimmed oTitle">Поднятие уровня в одиночку</span>
       <a class="avatar"><span class="img" style="background-image:url('https://desu.uno/img/123-preview.jpg')"></span></a>
       <dl class="pairsInline"><dt>Жанры:</dt><dd>Боевик, Фэнтези</dd></dl>
+      <dl class="pairsInline"><dt>Тип:</dt><dd>Манхва</dd><dt>Год:</dt><dd>2018</dd></dl>
       <dl class="pairsInline"><dt>Рейтинг:</dt><dd>8.5</dd></dl>
     </li>
   </ul>
@@ -158,6 +159,8 @@ describe('Desu parser conformance', () => {
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.tags.map((t) => t.title).sort()).toEqual(['Боевик', 'Фэнтези']);
+    expect(item!.type).toBe('MANHWA');
+    expect(item!.year).toBe(2018);
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {

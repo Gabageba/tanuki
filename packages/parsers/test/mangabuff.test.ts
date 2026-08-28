@@ -10,11 +10,16 @@ const LIST_HTML = `<!doctype html><html><body>
   <div class="cards">
     <a href="/manga/one-piece" class="cards__item">
       <div class="cards__img" style="background-image: url('/img/manga/posters/one-piece.jpg')"></div>
+      <span class="cards__rating cards__rating--green">9,4</span>
       <div class="cards__name">Ван-Пис</div>
+      <div class="cards__info">Манга, Экшен</div>
     </a>
   </div>
 </body></html>`;
 
+// .manga__middle-links packs type/year/status as three <a>s told apart by href shape, not
+// position — /types/<slug> is the type, /types/<slug>/<year> the year, /manga?status_id[]= the
+// status. Genres live separately, under .tags, alongside the age-rating badge.
 const DETAILS_HTML = `<!doctype html><html><body>
   <h1>Ван-Пис</h1>
   <div class="manga" data-id="42" data-fav-count="1234"></div>
@@ -24,8 +29,13 @@ const DETAILS_HTML = `<!doctype html><html><body>
   <div class="manga__description">Описание тайтла.</div>
   <div class="manga__name-alt"><span>One Piece</span></div>
   <div class="manga__middle-links">
-    <a href="/genres/priklyucheniya">Приключения</a>
-    <a href="/status/ongoing">продолжается</a>
+    <a href="/types/manga">Манга</a>
+    <a href="/types/manga/1997">1997</a>
+    <a href="/manga?status_id[]=2">продолжается</a>
+  </div>
+  <div class="tags">
+    <div class="tags__item tags__item--warning">16+</div>
+    <a href="/genres/priklyucheniya" class="tags__item">Приключения</a>
   </div>
   <a class="chapters__item" href="/manga/one-piece/2">
     <span class="chapters__value">Глава 2</span>
@@ -151,13 +161,14 @@ describe('MangaBuff parser conformance', () => {
   const http = setUpFixtures();
   const parser = createMangaBuffParser(makeContext(http));
 
-  it('getList: chapters null, rating -1, url relative, id a safe integer', async () => {
+  it('getList: chapters null, rating/type from the card, url relative, id a safe integer', async () => {
     const items = await parser.getList({ offset: 0, limit: 20 });
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
     expect(item!.source).toBe('MANGABUFF');
-    expect(item!.rating).toBe(-1);
+    expect(item!.rating).toBeCloseTo(0.94, 5);
+    expect(item!.type).toBe('MANGA');
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
@@ -178,6 +189,9 @@ describe('MangaBuff parser conformance', () => {
     expect(manga.chapters![1]!.number).toBe(2);
     expect(manga.rating).toBeCloseTo(0.87, 5);
     expect(manga.state).toBe('ONGOING');
+    expect(manga.type).toBe('MANGA');
+    expect(manga.year).toBe(1997);
+    expect(manga.contentRating).toBe('SUGGESTIVE');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.description).toContain('Описание тайтла.');
     expect(manga.description).toContain('Рейтинг: 87%');

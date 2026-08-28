@@ -1,4 +1,4 @@
-import { Loader } from '@mantine/core';
+import { Center, Loader } from '@mantine/core';
 import { useIntersection } from '@mantine/hooks';
 import { useEffect } from 'react';
 import useQuery from '../hooks/useQuery';
@@ -20,7 +20,11 @@ function InfiniteScrollTrigger() {
   return (
     <>
       <div ref={ref} style={{ height: 1 }} />
-      {isFetchingNextPage && <Loader mt="md" />}
+      {isFetchingNextPage && (
+        <Center>
+          <Loader mt="md" />
+        </Center>
+      )}
     </>
   );
 }

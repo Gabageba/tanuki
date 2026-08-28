@@ -47,10 +47,23 @@ const chapter = (overrides: Partial<RawChapter> = {}): RawChapter => {
 };
 
 describe('normalizeManga', () => {
-  it('maps RATING_UNKNOWN (-1) to null, otherwise passes rating through unchanged', () => {
+  it('maps RATING_UNKNOWN (-1) to null, otherwise scales the 0..1 raw rating up to 0..10', () => {
     expect(normalizeManga(ENV, 'DESUME', raw({ rating: -1 })).rating).toBeNull();
-    expect(normalizeManga(ENV, 'DESUME', raw({ rating: 0.42 })).rating).toBe(0.42);
+    expect(normalizeManga(ENV, 'DESUME', raw({ rating: 0.42 })).rating).toBe(4.2);
+    expect(normalizeManga(ENV, 'DESUME', raw({ rating: 0.865 })).rating).toBe(8.65);
     expect(normalizeManga(ENV, 'DESUME', raw({ rating: 0 })).rating).toBe(0);
+  });
+
+  it('passes likes through, defaulting to null when the parser omits them', () => {
+    expect(normalizeManga(ENV, 'DESUME', raw({})).likes).toBeNull();
+    expect(normalizeManga(ENV, 'DESUME', raw({ likes: 46 })).likes).toBe(46);
+  });
+
+  it('passes type/year through, defaulting to null when the parser omits them', () => {
+    expect(normalizeManga(ENV, 'DESUME', raw({})).type).toBeNull();
+    expect(normalizeManga(ENV, 'DESUME', raw({})).year).toBeNull();
+    expect(normalizeManga(ENV, 'DESUME', raw({ type: 'MANHWA', year: 2024 })).type).toBe('MANHWA');
+    expect(normalizeManga(ENV, 'DESUME', raw({ type: 'MANHWA', year: 2024 })).year).toBe(2024);
   });
 
   it('defaults a null contentRating to SAFE', () => {

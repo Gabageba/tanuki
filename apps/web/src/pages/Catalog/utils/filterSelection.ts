@@ -122,6 +122,43 @@ export const clearGroupSelection = (
   groupId: string,
 ): FilterSelection[] => selection.filter((s) => s.groupId !== groupId);
 
+export const groupHasSelection = (selection: FilterSelection[], groupId: string): boolean =>
+  selection.some((s) => s.groupId === groupId);
+
+/** RADIO groups only ever hold at most one `{ groupId, key }` selection — no `exclude` axis. */
+export const getRadioValue = (selection: FilterSelection[], groupId: string): string | null => {
+  const found = selection.find(
+    (s): s is Extract<FilterSelection, { key: string }> => 'key' in s && s.groupId === groupId,
+  );
+  return found?.key ?? null;
+};
+
+export const setRadioValue = (
+  selection: FilterSelection[],
+  groupId: string,
+  key: string | null,
+): FilterSelection[] => {
+  const next = clearGroupSelection(selection, groupId);
+  return key === null ? next : [...next, { groupId, key }];
+};
+
+/**
+ * Enforces `FilterGroup.exclusiveGroup` — groups sharing a tag are alternative browsing routes on
+ * the source, not combinable (e.g. manga-chan.me: tags / "Тип" / "Статус" each replace the whole
+ * listing path). Called after the user confirms the swap — see useExclusiveFilterConfirm.
+ */
+export const applyExclusiveGroups = (
+  groups: FilterGroup[],
+  changedGroup: FilterGroup,
+  next: FilterSelection[],
+): FilterSelection[] => {
+  if (!changedGroup.exclusiveGroup) return next;
+  const siblingIds = groups
+    .filter((g) => g.id !== changedGroup.id && g.exclusiveGroup === changedGroup.exclusiveGroup)
+    .map((g) => g.id);
+  return siblingIds.reduce((acc, groupId) => clearGroupSelection(acc, groupId), next);
+};
+
 type GroupSelectionOptions = {
   title: string;
   firstItem: {

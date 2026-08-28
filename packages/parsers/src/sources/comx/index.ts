@@ -279,6 +279,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       // Unfixable without a real headless-browser TLS stack; not worth the infra for one source.
       isBroken: true,
       isAdult: false,
+      requiresVpn: false,
       sortOrders: ['UPDATED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

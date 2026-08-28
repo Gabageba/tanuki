@@ -1,41 +1,63 @@
-import { Badge, Card, Image, Text } from '@mantine/core';
+import { Fragment } from 'react';
+import { Box, Group, Image, Stack, Text } from '@mantine/core';
 import { Link } from 'react-router';
-import type { Manga } from '@tanuki/contracts';
+import { MANGA_TYPE, type Manga } from '@tanuki/contracts';
+import MidDot from '@/shared/ui/MidDot';
+import { getLabelByMangaType } from '../source/lib';
+import MangaScoreBadge from './MangaScoreBadge';
 import styles from './MangaCard.module.scss';
 
 type Props = {
   manga: Manga;
-  showSource?: boolean;
 };
 
-function MangaCard({ manga, showSource = false }: Props) {
+function MangaCard({ manga }: Props) {
+  const metaItems = [
+    manga.type && getLabelByMangaType(manga.type),
+    manga.year && String(manga.year),
+    manga.chaptersCount && `${manga.chaptersCount} гл.`,
+  ].filter((item): item is string => Boolean(item));
+
   return (
-    <Card
-      component={Link}
+    <Link
       to={`/manga/${manga.sourceId}/${manga.id.slice(manga.sourceId.length + 1)}`}
       className={styles.card}
-      padding="xs"
-      radius="md"
-      withBorder
     >
-      <Card.Section pos="relative">
-        <Image
-          src={manga.coverUrl}
-          alt={manga.title}
-          loading="lazy"
-          decoding="async"
-          className={styles.cover}
-        />
-        {showSource && (
-          <Badge className={styles.sourceBadge} size="sm" variant="filled" ff="monospace">
-            {manga.sourceId}
-          </Badge>
-        )}
-      </Card.Section>
-      <Text size="sm" fw={500} lineClamp={2} mt="xs">
-        {manga.title}
-      </Text>
-    </Card>
+      <Stack gap={8}>
+        <Box pos="relative">
+          <MangaScoreBadge manga={manga} />
+          <Image
+            src={manga.coverUrl}
+            alt={manga.title}
+            loading="lazy"
+            decoding="async"
+            className={styles.cover}
+          />
+        </Box>
+
+        <Stack gap={4}>
+          <Group
+            gap={manga.type === MANGA_TYPE.MANHUA && (manga.chaptersCount || 0) >= 1000 ? 2 : 4}
+          >
+            {metaItems.map((item, index) => (
+              <Fragment key={item}>
+                {index > 0 && (
+                  <Text c="dimmed" fz={12} lh={1}>
+                    <MidDot />
+                  </Text>
+                )}
+                <Text c="dimmed" fz={12} lh={1}>
+                  {item}
+                </Text>
+              </Fragment>
+            ))}
+          </Group>
+          <Text lineClamp={2} lh={1}>
+            {manga.title}
+          </Text>
+        </Stack>
+      </Stack>
+    </Link>
   );
 }
 

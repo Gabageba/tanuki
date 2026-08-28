@@ -75,7 +75,7 @@ function SearchPage() {
             )}
             <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="md">
               {group.items.map((manga) => (
-                <MangaCard key={manga.id} manga={manga} showSource />
+                <MangaCard key={manga.id} manga={manga} />
               ))}
             </SimpleGrid>
           </div>

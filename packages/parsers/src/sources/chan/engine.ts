@@ -1,10 +1,17 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
-import type { ListParams } from '../../core/paging';
+import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
-import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
+import type {
+  RawManga,
+  RawChapter,
+  RawPage,
+  RawTag,
+  RawFilterGroup,
+  RawFilterOption,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
@@ -27,6 +34,15 @@ import type { ChanConfig } from './config';
  */
 const SEARCH_NATIVE_SIZE = 40;
 const BROWSE_NATIVE_SIZE = 20;
+
+/**
+ * Tags, "Тип" and "Статус" are three separate top-level routes on this DLE engine — verified
+ * live that none of them combine (`/type/X/tags/Y`, `/tags/Y/type/X`, `/catalog/ongoing/tags/Y`
+ * all 404; a `?tags=` query tacked onto `/type/X` is silently ignored, not applied). Tagging all
+ * three RawFilterGroups with the same exclusiveGroup lets the UI enforce "pick one axis" instead
+ * of silently dropping whichever the parser doesn't route to.
+ */
+const ROUTE_EXCLUSIVE_GROUP = 'route';
 
 const toTagName = (raw: string): string => {
   const spaced = raw.replace(/_/g, ' ');
@@ -63,6 +79,58 @@ const parseTitle = (raw: string): { title: string; altTitle: string | null } => 
   return { title: raw, altTitle: null };
 };
 
+/** Last non-empty path segment of an href, percent-decoded when possible — shared by every place
+ *  that turns a tag/genre `<a>` into a `{ key, title }` pair (list rows, details, tag cloud). */
+const parseHrefKey = (hrefAttr: string | null, fallback: string): string => {
+  const rawKey = (hrefAttr ?? '').split('/').filter(Boolean).pop() ?? fallback;
+  try {
+    return decodeURIComponent(rawKey);
+  } catch {
+    return rawKey;
+  }
+};
+
+/** `title="Найдено новостей: 2070"` on the tag cloud page — the source's own per-tag count. */
+const parseCountFromTitle = (title: string | null): number | null => {
+  const match = title ? /\d+/.exec(title) : null;
+  return match ? Number.parseInt(match[0], 10) : null;
+};
+
+/**
+ * This DLE engine has no bounded rating (no 0..10 or 0..5 scale, no downvotes) — the only
+ * per-title score is an unbounded "likes" tally, rendered as "Плюсиков: N" on manga-chan.me (list
+ * row and details alike) or "N плюсиков" inline on hentaichan.live's list row. Both phrasings are
+ * checked since the wording differs by skin; RawManga.likes carries this separately from `rating`
+ * (which stays RATING_UNKNOWN — see RawManga.likes doc on why the two can't be merged).
+ */
+const parseLikesFromText = (text: string): number | null => {
+  const match = /Плюсиков:\s*(\d+)/i.exec(text) ?? /(\d+)\s*плюсик/i.exec(text);
+  return match ? Number.parseInt(match[1]!, 10) : null;
+};
+
+/**
+ * Browse/search rows carry the source's own chapter tally in a "Статус (томов)" row —
+ * `<b>89 глав</b>` or `<b>Нет глав</b>` for zero — since the row has no chapter table to count.
+ * HENCHAN's list rows have no such block (single-page reader, no chapter concept), so this
+ * returns null there rather than matching anything by accident.
+ */
+const parseListChaptersCount = ($row: Cheerio<AnyNode>, $: CheerioAPI): number | null => {
+  let count: number | null = null;
+  $row.find('div.manga_row3').each((_, el) => {
+    const $section = $(el);
+    if (!(textOrNull($section.find('div.item').first()) ?? '').includes('Статус')) return;
+    const text = textOrNull($section.find('div.item2 b').last());
+    if (!text) return;
+    if (/нет\s*глав/i.test(text)) {
+      count = 0;
+      return;
+    }
+    const match = /\d+/.exec(text);
+    if (match) count = Number.parseInt(match[0], 10);
+  });
+  return count;
+};
+
 const cutBeforeTrailingDiv = (html: string): string => {
   const idx = html.lastIndexOf('<div');
   return idx === -1 ? html : html.slice(0, idx);
@@ -95,12 +163,55 @@ const extractFullImgPaths = (scriptText: string): string[] | null => {
     .filter((s) => s.length > 0);
 };
 
+/**
+ * The only filter axis this DLE engine exposes is a tag cloud — no genre/status/rating sidebar.
+ * A tag selection replaces the whole browse path with `/tags/<key1>+<key2>+-<excludedKey>`
+ * (excluded keys `-`-prefixed, included ones listed first — ChanParser.buildUrl's ordering) plus
+ * an `n=` sort param. HenChanParser only overrides the no-filter branch upstream and YaoiChanParser
+ * doesn't override buildUrl at all, so this branch is shared unchanged across all three variants.
+ */
+const tagsPathSegment = (filters: FilterSelection[]): string | null => {
+  const included: string[] = [];
+  const excluded: string[] = [];
+  for (const filter of filters) {
+    if ('range' in filter || filter.groupId !== 'tag') continue;
+    (filter.exclude ? excluded : included).push(filter.exclude ? `-${filter.key}` : filter.key);
+  }
+  if (included.length === 0 && excluded.length === 0) return null;
+  return [...included, ...excluded].join('+');
+};
+
+/** Shared by every route-axis branch below — verified live that `n=` sorts `/tags/...`,
+ *  `/type/...` and `/catalog/<status>` identically (same DLE listing template underneath). */
+const chanSortParam = (order: string | undefined): string => {
+  switch (order) {
+    case 'RATING':
+    case 'POPULARITY':
+      return 'favdesc';
+    case 'ALPHABETICAL':
+      return 'abcasc';
+    default:
+      return ''; // SortOrder.NEWEST
+  }
+};
+
+const findSingleSelection = (
+  filters: FilterSelection[] | undefined,
+  groupId: string,
+): string | null => {
+  const found = filters?.find(
+    (f): f is Extract<FilterSelection, { key: string }> => 'key' in f && f.groupId === groupId,
+  );
+  return found?.key ?? null;
+};
+
 const buildListUrl = (
   cfg: ChanConfig,
   domain: string,
   offset: number,
   order: string | undefined,
   query: string | undefined,
+  filters: FilterSelection[] | undefined,
 ): string => {
   const url = new URL(`https://${domain}/`);
   url.searchParams.set('offset', String(offset));
@@ -114,6 +225,29 @@ const buildListUrl = (
     url.searchParams.set('result_num', String(SEARCH_NATIVE_SIZE));
     url.searchParams.set('story', query);
     url.searchParams.set('need_sort_date', 'false');
+    return url.toString();
+  }
+
+  const tagsSegment = filters ? tagsPathSegment(filters) : null;
+  if (tagsSegment !== null) {
+    url.pathname = `/tags/${tagsSegment}`;
+    url.searchParams.set('n', chanSortParam(order));
+    return url.toString();
+  }
+
+  // "Тип" and "Статус" are exclusiveGroup siblings of tags (see ROUTE_EXCLUSIVE_GROUP) — the UI
+  // only ever sends one of the three, but pick a fixed precedence defensively rather than mixing.
+  const typeKey = findSingleSelection(filters, 'type');
+  if (typeKey !== null) {
+    url.pathname = `/type/${typeKey}`;
+    url.searchParams.set('n', chanSortParam(order));
+    return url.toString();
+  }
+
+  const statusKey = findSingleSelection(filters, 'status');
+  if (statusKey !== null) {
+    url.pathname = `/catalog/${statusKey}`;
+    url.searchParams.set('n', chanSortParam(order));
     return url.toString();
   }
 
@@ -179,14 +313,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
         const $el = $(el);
         const text = textOrNull($el);
         if (!text) return null;
-        const hrefAttr = attrOrNull($el, 'href') ?? '';
-        const rawKey = hrefAttr.split('/').filter(Boolean).pop() ?? text;
-        let key = rawKey;
-        try {
-          key = decodeURIComponent(rawKey);
-        } catch {
-          /* keep raw key */
-        }
+        const key = parseHrefKey(attrOrNull($el, 'href'), text);
         return { title: toTagName(text), key, source: cfg.id };
       })
       .filter((t): t is RawTag => t !== null);
@@ -198,6 +325,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       url: relUrl,
       publicUrl,
       rating: RATING_UNKNOWN,
+      likes: parseLikesFromText($row.text()),
       contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
       coverUrl,
       tags,
@@ -206,6 +334,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       largeCoverUrl: null,
       description: null,
       chapters: null,
+      chaptersCount: parseListChaptersCount($row, $),
       source: cfg.id,
     };
   };
@@ -214,8 +343,9 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
     offset: number,
     order: string | undefined,
     query: string | undefined,
+    filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
-    const url = buildListUrl(cfg, domain, offset, order, query);
+    const url = buildListUrl(cfg, domain, offset, order, query, filters);
     const doc = await ctx.http.getHtml(url);
     const root = doc.$('div.main_fon').find('#content').first();
     if (root.length === 0) {
@@ -231,8 +361,128 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     const size = params.query ? SEARCH_NATIVE_SIZE : BROWSE_NATIVE_SIZE;
     return fetchOffsetNative(params, { size }, (offset) =>
-      fetchListPage(offset, params.order, params.query),
+      fetchListPage(offset, params.order, params.query, params.filters),
     );
+  };
+
+  /**
+   * Three independent route axes, each fetched from its own dedicated page rather than a shared
+   * catalog/browse page — every one of these was verified live rather than assumed:
+   *
+   * - Tags: `/tags/` is a standalone "tag cloud" page (not the browse sidebar) — one request
+   *   returns the full set (~90 on manga-chan.me) with no pagination, each `<a>` carrying a
+   *   `title="Найдено новостей: N"` count. `span.news a` inside `#dle-content`.
+   * - Тип ("Тип"): `/type/` lists every content-type value (Манга/Манхва/Маньхуа/Ранобэ/...) as
+   *   `div.series_wrap` cards; the href IS the raw type name (`href="Манга"`, not a slug), used
+   *   verbatim as the `/type/<name>` path segment.
+   * - Статус ("Статус"): only shown in the `/catalog` page's sidebar (`#side div.only a`), not on
+   *   `/tags/` or `/type/` — five routes (`/catalog/all_done`, `/end`, `/ongoing`, `/new_ch`,
+   *   `/without_ch`) plus a `/catalog` "show everything" reset link that isn't a distinct status
+   *   and is skipped (its href has no second path segment).
+   *
+   * Each fetch is independent and swallows its own failure (missing markup, a transient 502 —
+   * this DLE engine occasionally 502s, same flakiness already documented for NUDEMOON) so one
+   * broken axis doesn't blank out the other two.
+   */
+  let filtersPromise: Promise<RawFilterGroup[]> | null = null;
+
+  const getFilters = (): Promise<RawFilterGroup[]> => {
+    if (!filtersPromise) filtersPromise = fetchFilters();
+    return filtersPromise;
+  };
+
+  const safeFetchGroup = async (
+    fetcher: () => Promise<RawFilterGroup | null>,
+  ): Promise<RawFilterGroup | null> => {
+    try {
+      return await fetcher();
+    } catch {
+      return null;
+    }
+  };
+
+  const fetchFilters = async (): Promise<RawFilterGroup[]> => {
+    const groups = await Promise.all([
+      safeFetchGroup(fetchTagGroup),
+      safeFetchGroup(fetchTypeGroup),
+      safeFetchGroup(fetchStatusGroup),
+    ]);
+    return groups.filter((g): g is RawFilterGroup => g !== null);
+  };
+
+  const fetchTagGroup = async (): Promise<RawFilterGroup | null> => {
+    const doc = await ctx.http.getHtml(`https://${domain}/tags/`);
+    const options: RawFilterOption[] = doc
+      .$('#dle-content span.news a')
+      .toArray()
+      .map((el): RawFilterOption | null => {
+        const $a = doc.$(el);
+        const text = textOrNull($a);
+        if (!text) return null;
+        return {
+          key: parseHrefKey(attrOrNull($a, 'href'), text),
+          title: toTagName(text),
+          count: parseCountFromTitle(attrOrNull($a, 'title')),
+        };
+      })
+      .filter((o): o is RawFilterOption => o !== null);
+    if (options.length === 0) return null;
+    return {
+      id: 'tag',
+      title: 'Теги',
+      type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+      options,
+      exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+    };
+  };
+
+  const fetchTypeGroup = async (): Promise<RawFilterGroup | null> => {
+    const doc = await ctx.http.getHtml(`https://${domain}/type/`);
+    // Each card is `<a href=X><div><h2><a href=X title=X>TEXT</a></h2></div></a>` — `<a>` wrapping
+    // a `<div>` gets reconstructed by HTML5 tree-building (same quirk as li.sidetag elsewhere in
+    // this file), so the first `<a>` in the subtree is an empty echo; the text lives on the last.
+    const options: RawFilterOption[] = doc
+      .$('#content div.series_wrap')
+      .toArray()
+      .map((el): RawFilterOption | null => {
+        const text = textOrNull(doc.$(el).find('a').last());
+        return text ? { key: text, title: text, count: null } : null;
+      })
+      .filter((o): o is RawFilterOption => o !== null);
+    if (options.length === 0) return null;
+    return {
+      id: 'type',
+      title: 'Тип',
+      type: FILTER_TYPE.RADIO,
+      options,
+      exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+    };
+  };
+
+  const fetchStatusGroup = async (): Promise<RawFilterGroup | null> => {
+    const doc = await ctx.http.getHtml(`https://${domain}/catalog`);
+    const options: RawFilterOption[] = doc
+      .$('div.main_fon #side div.only a')
+      .toArray()
+      .map((el): RawFilterOption | null => {
+        const $a = doc.$(el);
+        const text = textOrNull($a);
+        const hrefAttr = attrOrNull($a, 'href');
+        if (!text || !hrefAttr) return null;
+        const segments = hrefAttr.split('/').filter(Boolean);
+        // `/catalog` itself (no second segment) is the "show everything" reset link, not a status.
+        if (segments.length < 2) return null;
+        return { key: segments[segments.length - 1]!, title: text, count: null };
+      })
+      .filter((o): o is RawFilterOption => o !== null);
+    if (options.length === 0) return null;
+    return {
+      id: 'status',
+      title: 'Статус',
+      type: FILTER_TYPE.RADIO,
+      options,
+      exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+    };
   };
 
   const parseDefaultChapters = ($root: Cheerio<AnyNode>, $: CheerioAPI): RawChapter[] => {
@@ -320,14 +570,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
         const $a = doc.$(el).children().last();
         const text = textOrNull($a);
         if (!text) return null;
-        const hrefAttr = attrOrNull($a, 'href') ?? '';
-        const rawKey = hrefAttr.split('/').filter(Boolean).pop() ?? text;
-        let key = rawKey;
-        try {
-          key = decodeURIComponent(rawKey);
-        } catch {
-          /* keep raw key */
-        }
+        const key = parseHrefKey(attrOrNull($a, 'href'), text);
         return { title: toTagName(text), key, source: cfg.id };
       })
       .filter((t): t is RawTag => t !== null);
@@ -358,6 +601,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       url: mangaUrl,
       publicUrl: absoluteUrl,
       rating: RATING_UNKNOWN,
+      likes: parseLikesFromText(root.text()),
       contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
       coverUrl,
       tags,
@@ -398,14 +642,16 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.hentai : SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
+      requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
       sortOrders: cfg.sortOrders,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
-      isFiltersSupported: false,
+      isFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
+    getFilters,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

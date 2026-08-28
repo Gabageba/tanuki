@@ -77,6 +77,7 @@ export class SourcesService {
       contentType: raw.contentType,
       status: raw.isBroken ? SOURCE_STATUS.down : this.sourceHealth.getStatus(raw.id),
       isAdult: raw.isAdult,
+      requiresVpn: raw.requiresVpn,
       sortOrders: raw.sortOrders,
     };
   }

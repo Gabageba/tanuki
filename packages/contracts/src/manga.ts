@@ -55,8 +55,10 @@ export const MangaSchema = z.object({
   state: MangaStateSchema.nullable(),
   contentRating: ContentRatingSchema,
   type: MangaTypeSchema.nullable(),
+  year: z.number().nullable(),
 
-  rating: z.number().min(0).max(1).nullable(), // нормализовано к 0..1
+  rating: z.number().min(0).max(10).nullable(), // приведено к единой шкале 0..10
+  likes: z.number().nullable(), // неограниченный счётчик лайков/плюсиков, если source не даёт rating
   chaptersCount: z.number().nullable(),
 
   publicUrl: z.string(), // ссылка на страницу источника — обязательна

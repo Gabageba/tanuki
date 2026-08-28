@@ -16,6 +16,9 @@ const LIST_MANGA_JSON = {
   contentStatus: 'SAFE',
   poster: 'https://cdn.inkstory.me/one-piece.jpg',
   status: 'ONGOING',
+  country: 'JAPAN',
+  year: 1997,
+  chaptersCount: 219,
 };
 
 // /v2/books?sort=updatedAt,desc sorts by book metadata edits, not chapter releases, so the
@@ -35,6 +38,9 @@ const DETAILS_JSON = JSON.stringify({
   status: 'ONGOING',
   relations: [{ type: 'AUTHOR', publisher: { name: 'Oda Eiichiro' } }],
   description: 'Описание тайтла.',
+  country: 'JAPAN',
+  year: 1997,
+  chaptersCount: 219,
 });
 
 const CHAPTERS_JSON = JSON.stringify([
@@ -136,6 +142,9 @@ describe('Inkstory parser conformance', () => {
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
+    expect(item!.type).toBe('MANGA');
+    expect(item!.year).toBe(1997);
+    expect(item!.chaptersCount).toBe(219);
   });
 
   it('getList: non-UPDATED order still reads /v2/books with a sort key', async () => {
@@ -343,6 +352,27 @@ describe('Inkstory parser conformance', () => {
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
+    expect(manga.type).toBe('MANGA');
+    expect(manga.year).toBe(1997);
+  });
+
+  it.each([
+    ['JAPAN', 'MANGA'],
+    ['KOREA', 'MANHWA'],
+    ['CHINA', 'MANHUA'],
+    ['RUSSIA', 'COMICS'],
+    ['OTHER', 'OTHER'],
+    [undefined, null],
+  ])('getList: country %s maps to type %s', async (country, type) => {
+    const freshHttp = new FakeHttpClient();
+    freshHttp.register((url) => url.includes('/v2/chapter-update-feed'), {
+      status: 200,
+      body: JSON.stringify([{ book: { ...LIST_MANGA_JSON, country } }]),
+      contentType: 'application/json',
+    });
+    const parser = createInkStoryParser(makeContext(freshHttp));
+    const [item] = await parser.getList({ offset: 0, limit: 20 });
+    expect(item!.type).toBe(type);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

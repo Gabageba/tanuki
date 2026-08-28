@@ -23,6 +23,8 @@ export type CatalogEntry = {
   isBroken: boolean;
   /** Source serves 18+ content — drives the isAdult flag surfaced by sources.service.ts. */
   isAdult: boolean;
+  /** Source is blocked for RU IPs — drives the requiresVpn flag surfaced by sources.service.ts. */
+  requiresVpn: boolean;
   domains: [string, ...string[]];
 };
 
@@ -35,6 +37,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['a.zazaza.me', '3.readmanga.ru'],
   },
   MINTMANGA: {
@@ -42,6 +45,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['2.mintmanga.one', '24.mintmanga.one', 'mintmanga.live', 'mintmanga.com'],
   },
   SELFMANGA: {
@@ -49,6 +53,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['1.selfmanga.live', 'selfmanga.live'],
   },
   SEIMANGA: {
@@ -56,6 +61,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['1.seimanga.me', 'seimanga.me'],
   },
   USAGI: {
@@ -63,6 +69,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['web.usagi.one'],
   },
   ALLHENTAI: {
@@ -70,6 +77,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.hentai,
     isBroken: false,
     isAdult: true,
+    requiresVpn: false,
     domains: ['20.allhen.online', 'z.ahen.me', '24.allhen.online', '2023.allhen.online'],
   },
   DESUME: {
@@ -77,6 +85,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['desu.uno', 'x.desu.city', 'desu.city', 'desu.work', 'desu.store', 'desu.win'],
   },
   MANGALIB: {
@@ -84,6 +93,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['mangalib.org', 'mangalib.me'],
   },
   HENTAILIB: {
@@ -91,6 +101,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.hentai,
     isBroken: false,
     isAdult: true,
+    requiresVpn: true,
     domains: ['v1.hentailib.org', 'hentailib.me'],
   },
   YAOILIB: {
@@ -98,6 +109,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: true,
     isAdult: false,
+    requiresVpn: false,
     domains: ['v2.slashlib.me'],
   },
   MANGACHAN: {
@@ -105,13 +117,15 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
-    domains: ['manga-chan.me'],
+    requiresVpn: true,
+    domains: ['im.manga-chan.me'],
   },
   HENCHAN: {
     title: 'Хентай-тян',
     contentType: SOURCE_CONTENT_TYPE.hentai,
     isBroken: false,
     isAdult: true,
+    requiresVpn: true,
     domains: [
       'x5.h-chan.me',
       'xxxx.henchan.pro',
@@ -128,6 +142,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: true,
     isAdult: false,
+    requiresVpn: false,
     domains: [
       'v9.yaoi-chan.me',
       'v10.yaoi-chan.me',
@@ -142,6 +157,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['remanga.org'],
   },
   NUDEMOON: {
@@ -149,6 +165,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.hentai,
     isBroken: false,
     isAdult: true,
+    requiresVpn: true,
     domains: ['g.nude-moon.fun', 'nude-moon.net', 'nude-moon.org', 'b.nude-moon.fun'],
   },
   ACOMICS: {
@@ -156,6 +173,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.comics,
     isBroken: true,
     isAdult: false,
+    requiresVpn: false,
     domains: ['acomics.ru'],
   },
   COMX: {
@@ -163,6 +181,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.comics,
     isBroken: true,
     isAdult: false,
+    requiresVpn: false,
     domains: ['com-x.life', 'comx.life'],
   },
   MANGABUFF: {
@@ -170,6 +189,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['mangabuff.ru'],
   },
   SENKURO: {
@@ -177,6 +197,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: true,
     // ne.senkuro.com is a mirror hostname for the same frontend (senkuro.com is ISP-blocked for
     // some RU users); both hit the same api.senkuro.com backend, see sources/senkuro/config.ts.
     domains: ['senkuro.me', 'ne.senkuro.com', 'senkuro.com'],
@@ -186,6 +207,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.hentai,
     isBroken: false,
     isAdult: true,
+    requiresVpn: true,
     // Senkuro's 18+ site: its own catalog, disjoint from SENKURO's, served by the shared backend
     // and selected by the `app-id` header. Same mirror pattern as senkuro.* — ne.* is the
     // unblocked hostname. See sources/senkuro/config.ts for how the two are split.
@@ -196,6 +218,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['tomilo-lib.ru'],
   },
   WAMANGA: {
@@ -203,6 +226,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['wamanga.ru'],
   },
   INKSTORY: {
@@ -210,6 +234,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.manga,
     isBroken: false,
     isAdult: false,
+    requiresVpn: false,
     domains: ['inkstory.net'],
   },
   HENTAICHAN_CC: {
@@ -217,6 +242,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.hentai,
     isBroken: false,
     isAdult: true,
+    requiresVpn: true,
     domains: ['hentaichan.cc'],
   },
   SEXKOMIX2: {
@@ -224,6 +250,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.comics,
     isBroken: false,
     isAdult: true,
+    requiresVpn: false,
     domains: ['super.sexkomix22.com', 'sexkomix2.com'],
   },
   MULTPORN: {
@@ -231,6 +258,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.comics,
     isBroken: false,
     isAdult: true,
+    requiresVpn: true,
     domains: ['multporn.net'],
   },
   MULTPORN_HENTAI: {
@@ -238,6 +266,7 @@ export const SOURCE_CATALOG = {
     contentType: SOURCE_CONTENT_TYPE.hentai,
     isBroken: false,
     isAdult: true,
+    requiresVpn: true,
     domains: ['multporn.net'],
   },
 } satisfies Record<string, CatalogEntry>;

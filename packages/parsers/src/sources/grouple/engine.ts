@@ -603,6 +603,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
           : SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
+      requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
       sortOrders: ['UPDATED', 'POPULARITY', 'NEWEST', 'RATING', 'ALPHABETICAL', 'ADDED'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

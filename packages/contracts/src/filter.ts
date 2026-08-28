@@ -16,6 +16,9 @@ import type { EnumLiteralsOf } from './utils';
  * RANGE — непрерывный диапазон (год, рейтинг, число глав) вместо перечислимых опций; `options`
  * пустой, границы и пресеты лежат в `FilterGroup.settings`, а выбор клиента — в
  * `FilterSelection.range`, не `key` (см. Inkstory: averageRating/year/chaptersCount).
+ * RADIO — ровно одна опция за раз, без исключения (как чекбокс-группы, но невзаимоисключающий
+ * выбор внутри группы бессмысленен на источнике) — см. manga-chan: "Тип" и "Статус" переключают
+ * весь путь листинга, а не добавляют query-параметр.
  */
 export const FILTER_TYPE = {
   CHECKBOX: 'CHECKBOX',
@@ -23,6 +26,7 @@ export const FILTER_TYPE = {
   SEARCHABLE_CHECKBOX: 'SEARCHABLE_CHECKBOX',
   SEARCHABLE_CHECKBOX_EXCLUDE: 'SEARCHABLE_CHECKBOX_EXCLUDE',
   RANGE: 'RANGE',
+  RADIO: 'RADIO',
 } as const;
 export type FilterType = EnumLiteralsOf<typeof FILTER_TYPE>;
 
@@ -76,6 +80,13 @@ export const FilterGroupSchema = z.object({
   /** Empty for RANGE groups — their selectable bounds live in `settings` instead. */
   options: z.array(FilterOptionSchema),
   settings: FilterGroupSettingsSchema.optional(),
+  /**
+   * Groups sharing this tag can't have a selection at the same time — the source itself only
+   * exposes them as alternative browsing routes, not combinable query params (manga-chan: picking
+   * a tag, a "Тип" or a "Статус" each replace the whole listing path, so combining any two of them
+   * 404s on the source). The UI clears sibling groups' selections when one of them gets picked.
+   */
+  exclusiveGroup: z.string().optional(),
 });
 
 export type FilterGroup = z.infer<typeof FilterGroupSchema>;

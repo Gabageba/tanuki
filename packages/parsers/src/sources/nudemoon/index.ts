@@ -284,6 +284,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.hentai,
       isBroken: false,
       isAdult: true,
+      requiresVpn: true,
       sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

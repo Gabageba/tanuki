@@ -192,6 +192,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.manga,
       isBroken: false,
       isAdult: false,
+      requiresVpn: false,
       sortOrders: ['UPDATED', 'NEWEST', 'POPULARITY', 'ALPHABETICAL'],
       isSearchSupported: true,
       isMultipleTagsSupported: false,

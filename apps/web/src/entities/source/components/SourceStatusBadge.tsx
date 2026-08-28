@@ -10,8 +10,8 @@ function SourceStatusBadge({ status }: Props) {
   const color = getSourceStatusColor(status);
 
   return (
-    <Group gap={6}>
-      <Box bg={color} bdrs="50%" w={6} h={6} />
+    <Group gap={6} align="center">
+      <Box bg={color} bdrs="50%" w={6} h={6} mt={3} />
       <Text c={color} fz={12} lh={1}>
         {getSourceStatusLabel(status)}
       </Text>

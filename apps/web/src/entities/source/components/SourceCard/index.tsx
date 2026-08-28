@@ -17,7 +17,7 @@ function SourceCard({ source }: Props) {
       className={styles.card}
       withBorder
     >
-      <Group>
+      <Group gap="xs">
         <SourceTitle source={source} />
         <SourceStatusBadge status={source.status} />
       </Group>

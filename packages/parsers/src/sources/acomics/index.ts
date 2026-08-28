@@ -201,6 +201,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
       contentType: SOURCE_CONTENT_TYPE.comics,
       isBroken: true,
       isAdult: false,
+      requiresVpn: false,
       sortOrders: ['UPDATED', 'ALPHABETICAL', 'POPULARITY'],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
