@@ -109,6 +109,38 @@ const PAGES_JSON = JSON.stringify({
   },
 });
 
+// site_ids scope these to the whole LibSocial network — only the entries carrying CFG.siteId (1)
+// belong in MANGALIB's own filter list. Served from /api/constants (not /api/genres, /api/tags —
+// those 403 anonymously with "User is not logged in").
+const CONSTANTS_FILTERS_JSON = JSON.stringify({
+  data: {
+    genres: [
+      { id: 34, name: 'Приключения', site_ids: [1, 2] },
+      { id: 99, name: 'Хентай-жанр', site_ids: [4] },
+    ],
+    tags: [
+      { id: 56, name: 'Пираты', site_ids: [1] },
+      { id: 77, name: 'Яой-тег', site_ids: [2] },
+    ],
+    types: [
+      { id: 1, label: 'Манга', site_ids: [1, 2, 4] },
+      { id: 10, label: 'Япония', site_ids: [3] },
+    ],
+    format: [
+      { id: 4, name: 'В цвете', site_ids: [1, 2, 4] },
+      { id: 16, name: 'TV Сериал', site_ids: [5] },
+    ],
+    scanlateStatus: [
+      { id: 2, label: 'Завершён', site_ids: [0, 1, 2, 3, 4] },
+      { id: 6, label: 'Выходит', site_ids: [5] },
+    ],
+    ageRestriction: [
+      { id: 4, label: '18+', site_ids: [1, 3, 5, 2] },
+      { id: 5, label: '18+ (RX)', site_ids: [4, 2, 5] },
+    ],
+  },
+});
+
 const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
@@ -121,6 +153,11 @@ const makeContext = (http: FakeHttpClient): ParserContext => {
 
 const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
+  http.register((url) => url.includes('fields[]=genres'), {
+    status: 200,
+    body: CONSTANTS_FILTERS_JSON,
+    contentType: 'application/json',
+  });
   http.register((url) => url.includes('/chapters'), {
     status: 200,
     body: CHAPTERS_JSON,
@@ -192,5 +229,115 @@ describe('LibSocial parser conformance', () => {
     }
     expect(pages[0]!.url).toBe('https://img1.example/001.jpg');
     expect(pages[0]!.preview).toBe('https://img1-thumb.example/001.jpg');
+  });
+
+  it('getFilters: genre/tag/type/format/status groups scoped to siteId', async () => {
+    const groups = await parser.getFilters!();
+    expect(groups.map((g) => g.id)).toEqual([
+      'type',
+      'genre',
+      'tag',
+      'format',
+      'translationStatus',
+      'status',
+      'ageRestriction',
+      'rating',
+      'votesCount',
+      'year',
+      'chaptersCount',
+      'other',
+    ]);
+
+    const genre = groups.find((g) => g.id === 'genre')!;
+    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(genre.options).toEqual([{ key: 'g34', title: 'Приключения', count: null }]);
+
+    const tag = groups.find((g) => g.id === 'tag')!;
+    expect(tag.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(tag.options).toEqual([{ key: 't56', title: 'Пираты', count: null }]);
+
+    const type = groups.find((g) => g.id === 'type')!;
+    expect(type.type).toBe('CHECKBOX');
+    expect(type.options).toEqual([{ key: '1', title: 'Манга', count: null }]);
+
+    const format = groups.find((g) => g.id === 'format')!;
+    expect(format.type).toBe('CHECKBOX_EXCLUDE');
+    expect(format.options).toEqual([{ key: '4', title: 'В цвете', count: null }]);
+
+    const translationStatus = groups.find((g) => g.id === 'translationStatus')!;
+    expect(translationStatus.type).toBe('CHECKBOX');
+    expect(translationStatus.options).toEqual([{ key: '2', title: 'Завершён', count: null }]);
+
+    const status = groups.find((g) => g.id === 'status')!;
+    expect(status.type).toBe('CHECKBOX');
+    expect(status.options).toHaveLength(5);
+
+    const ageRestriction = groups.find((g) => g.id === 'ageRestriction')!;
+    expect(ageRestriction.type).toBe('CHECKBOX');
+    expect(ageRestriction.options).toEqual([{ key: '4', title: '18+', count: null }]);
+
+    const other = groups.find((g) => g.id === 'other')!;
+    expect(other.type).toBe('CHECKBOX_EXCLUDE');
+    expect(other.options).toEqual([
+      { key: 'noTranslation', title: 'Нет перевода уже 2 месяца', count: null, excludable: false },
+      { key: 'licensed', title: 'Издательский контент', count: null },
+    ]);
+
+    const rating = groups.find((g) => g.id === 'rating')!;
+    expect(rating.type).toBe('RANGE');
+    expect(rating.settings?.range).toEqual({ min: 0, max: 10 });
+
+    const votesCount = groups.find((g) => g.id === 'votesCount')!;
+    expect(votesCount.type).toBe('RANGE');
+    expect(votesCount.settings?.range).toEqual({ min: 0, max: 100000 });
+
+    const year = groups.find((g) => g.id === 'year')!;
+    expect(year.type).toBe('RANGE');
+    expect(year.settings?.range.min).toBe(1900);
+
+    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
+    expect(chaptersCount.type).toBe('RANGE');
+    expect(chaptersCount.settings?.range).toEqual({ min: 0, max: 10000 });
+  });
+
+  it('getList with filters: genre/tag/format route through their _exclude side, status/type/translationStatus/ageRestriction through plain params, RANGE groups through <param>_min/max', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'genre', key: 'g34' },
+        { groupId: 'tag', key: 't56', exclude: true },
+        { groupId: 'status', key: '1' },
+        { groupId: 'type', key: '1' },
+        { groupId: 'format', key: '4', exclude: true },
+        { groupId: 'translationStatus', key: '2' },
+        { groupId: 'ageRestriction', key: '4' },
+        { groupId: 'other', key: 'noTranslation' },
+        { groupId: 'other', key: 'licensed' },
+        { groupId: 'rating', range: { min: 8 } },
+        { groupId: 'votesCount', range: { min: 1000, max: 1100 } },
+        { groupId: 'year', range: { min: 2015, max: 2020 } },
+        { groupId: 'chaptersCount', range: { max: 50 } },
+      ],
+    });
+    const req = http.requests.at(-1)!;
+    const url = new URL(req.url);
+    expect(url.searchParams.getAll('genres[]')).toEqual(['34']);
+    expect(url.searchParams.getAll('tags_exclude[]')).toEqual(['56']);
+    expect(url.searchParams.getAll('status[]')).toEqual(['1']);
+    expect(url.searchParams.getAll('types[]')).toEqual(['1']);
+    expect(url.searchParams.getAll('format_exclude[]')).toEqual(['4']);
+    expect(url.searchParams.getAll('scanlate_status[]')).toEqual(['2']);
+    expect(url.searchParams.getAll('caution[]')).toEqual(['4']);
+    expect(url.searchParams.get('long_no_translation')).toBe('1');
+    expect(url.searchParams.get('licensed')).toBe('1');
+    expect(url.searchParams.get('rating_min')).toBe('8');
+    expect(url.searchParams.get('rating_max')).toBeNull();
+    expect(url.searchParams.get('rate_min')).toBe('1000');
+    expect(url.searchParams.get('rate_max')).toBe('1100');
+    expect(url.searchParams.get('year_min')).toBe('2015');
+    expect(url.searchParams.get('year_max')).toBe('2020');
+    expect(url.searchParams.get('chap_count_max')).toBe('50');
+    expect(url.searchParams.get('chap_count_min')).toBeNull();
   });
 });

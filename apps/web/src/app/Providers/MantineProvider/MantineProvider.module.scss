@@ -16,3 +16,9 @@
     background-color: var(--mantine-color-gray-light-hover);
   }
 }
+
+.checkboxInput {
+  &:hover {
+    border-color: var(--checkbox-color);
+  }
+}

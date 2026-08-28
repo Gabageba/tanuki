@@ -30,6 +30,11 @@ const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
 @ApiTags('images')
 @Controller('img')
 export class ImgProxyController {
+  // Dedupes concurrent cache-miss requests for the same (url, width, format): a cold catalog
+  // page loading many cards at once would otherwise trigger one upstream fetch + sharp resize
+  // per in-flight request for the same cover instead of sharing a single one.
+  private readonly inFlight = new Map<string, Promise<TransformedImage>>();
+
   constructor(
     @Inject(ENV) private readonly env: Env,
     @Inject(PARSERS) private readonly parsers: ParsersRegistry,
@@ -76,7 +81,7 @@ export class ImgProxyController {
     if (width || format) {
       const key = cacheKey('images', s, u, width ?? 0, format ?? 'jpeg');
       const { value } = await this.cache.getOrSet(key, CACHE_TTL.images, () =>
-        this.fetchAndTransform(absoluteUrl, s, width, format),
+        this.dedupedFetchAndTransform(key, absoluteUrl, s, width, format),
       );
       reply.header('Content-Type', value.contentType);
       reply.status(HttpStatus.OK).send(Buffer.from(value.bodyBase64, 'base64'));
@@ -136,6 +141,25 @@ export class ImgProxyController {
         : encodingValue === 'deflate'
           ? body.pipe(createInflate())
           : body;
+  }
+
+  private dedupedFetchAndTransform(
+    key: string,
+    absoluteUrl: string,
+    sourceId: string,
+    width: number | undefined,
+    format: Exclude<ImageFormat, typeof IMAGE_FORMAT.orig> | undefined,
+  ): Promise<TransformedImage> {
+    const existing = this.inFlight.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = this.fetchAndTransform(absoluteUrl, sourceId, width, format).finally(() => {
+      this.inFlight.delete(key);
+    });
+    this.inFlight.set(key, promise);
+    return promise;
   }
 
   private async fetchAndTransform(

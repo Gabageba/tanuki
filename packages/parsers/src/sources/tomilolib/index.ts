@@ -1,5 +1,5 @@
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -49,19 +49,19 @@ type MangaJson = {
 
 const getApiSortBy = (order: string | undefined): string => {
   switch (order) {
-    case 'POPULARITY':
-    case 'POPULARITY_WEEK':
+    case SORT_ORDER.POPULARITY:
+    case SORT_ORDER.POPULARITY_WEEK:
       return 'weekViews';
-    case 'POPULARITY_TODAY':
+    case SORT_ORDER.POPULARITY_TODAY:
       return 'dayViews';
-    case 'POPULARITY_MONTH':
+    case SORT_ORDER.POPULARITY_MONTH:
       return 'monthViews';
-    case 'NEWEST':
+    case SORT_ORDER.NEWEST:
       return 'createdAt';
-    case 'RATING':
+    case SORT_ORDER.RATING:
       return 'averageRating';
-    case 'ALPHABETICAL':
-    case 'ALPHABETICAL_DESC':
+    case SORT_ORDER.ALPHABETICAL:
+    case SORT_ORDER.ALPHABETICAL_DESC:
       return 'name';
     // UPDATED and no explicit order — same as the site's default /titles?sortBy=updatedAt
     default:
@@ -70,7 +70,7 @@ const getApiSortBy = (order: string | undefined): string => {
 };
 
 const getApiSortOrder = (order: string | undefined): string => {
-  return order === 'ALPHABETICAL' ? 'asc' : 'desc';
+  return order === SORT_ORDER.ALPHABETICAL ? 'asc' : 'desc';
 };
 
 const parseContentRating = (info: MangaJson): RawContentRating => {
@@ -307,15 +307,15 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       isAdult: false,
       requiresVpn: false,
       sortOrders: [
-        'POPULARITY',
-        'POPULARITY_TODAY',
-        'POPULARITY_WEEK',
-        'POPULARITY_MONTH',
-        'UPDATED',
-        'NEWEST',
-        'RATING',
-        'ALPHABETICAL',
-        'ALPHABETICAL_DESC',
+        SORT_ORDER.POPULARITY,
+        SORT_ORDER.POPULARITY_TODAY,
+        SORT_ORDER.POPULARITY_WEEK,
+        SORT_ORDER.POPULARITY_MONTH,
+        SORT_ORDER.UPDATED,
+        SORT_ORDER.NEWEST,
+        SORT_ORDER.RATING,
+        SORT_ORDER.ALPHABETICAL,
+        SORT_ORDER.ALPHABETICAL_DESC,
       ],
       isSearchSupported: true,
       isMultipleTagsSupported: true,

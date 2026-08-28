@@ -1,4 +1,4 @@
-import type { SortOrder } from '@tanuki/contracts';
+import { SORT_ORDER, type SortOrder } from '@tanuki/contracts';
 
 export type ChanConfig = {
   id: string;
@@ -20,19 +20,24 @@ export const CHAN_CONFIGS: ChanConfig[] = [
   {
     id: 'MANGACHAN',
     isNsfw: false,
-    sortOrders: ['NEWEST', 'POPULARITY', 'ALPHABETICAL', 'RATING'],
+    sortOrders: [
+      SORT_ORDER.POPULARITY,
+      SORT_ORDER.NEWEST,
+      SORT_ORDER.ALPHABETICAL,
+      SORT_ORDER.CHAPTERS,
+    ],
     variant: 'default',
   },
   {
     id: 'HENCHAN',
     isNsfw: true,
-    sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
+    sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
     variant: 'henchan',
   },
   {
     id: 'YAOICHAN',
     isNsfw: false,
-    sortOrders: ['NEWEST'],
+    sortOrders: [SORT_ORDER.NEWEST],
     variant: 'yaoichan',
   },
 ];

@@ -37,6 +37,13 @@ export const FilterOptionSchema = z.object({
   title: z.string(),
   /** Число тайтлов с этой опцией на сайте источника, если он его показывает. */
   count: z.number().nullable(),
+  /**
+   * *_EXCLUDE groups only: forces this one option back to a plain toggle when the source itself
+   * has no exclude semantics for it. MANGALIB's "Другое" mixes a plain "Нет перевода уже 2
+   * месяца" checkbox with two include/exclude ones ("Команды в игноре", "Издательский контент")
+   * in the same visual list — same source behavior the site itself shows, not a UI quirk.
+   */
+  excludable: z.boolean().optional(),
 });
 
 export type FilterOption = z.infer<typeof FilterOptionSchema>;

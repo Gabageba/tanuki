@@ -1,4 +1,4 @@
-import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -16,9 +16,9 @@ const FIRST_PAGE = 0;
 
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
-    case 'ALPHABETICAL':
+    case SORT_ORDER.ALPHABETICAL:
       return 'serial_name';
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return 'subscr_count';
     default:
       return 'last_update';
@@ -202,7 +202,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
       isBroken: true,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: ['UPDATED', 'ALPHABETICAL', 'POPULARITY'],
+      sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.ALPHABETICAL, SORT_ORDER.POPULARITY],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

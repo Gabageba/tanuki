@@ -245,9 +245,9 @@ describe('Inkstory parser conformance', () => {
     expect(chaptersCount.settings?.presets).toEqual([
       { id: 'lt-20', label: '< 20', max: 20 },
       { id: 'lt-50', label: '< 50', max: 50 },
-      { id: '100-plus', label: '100+', min: 100 },
+      { id: '100-200', label: '100-200', min: 100, max: 200 },
+      { id: '200-300', label: '200-300', min: 200, max: 300 },
       { id: '300-plus', label: '300+', min: 300 },
-      { id: '500-plus', label: '500+', min: 500 },
     ]);
 
     const currentYear = new Date().getFullYear();

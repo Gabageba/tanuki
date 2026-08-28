@@ -1,6 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -240,7 +240,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
-      sortOrders: ['NEWEST'],
+      sortOrders: [SORT_ORDER.NEWEST],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

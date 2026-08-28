@@ -3,6 +3,7 @@ dist/
 build/
 coverage/
 .turbo/
+*.tsbuildinfo
 contract-report.json
 .env
 .env.*

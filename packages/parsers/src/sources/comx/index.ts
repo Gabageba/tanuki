@@ -1,7 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -280,7 +280,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       isBroken: true,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: ['UPDATED'],
+      sortOrders: [SORT_ORDER.UPDATED],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

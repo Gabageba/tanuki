@@ -1,5 +1,5 @@
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -76,11 +76,11 @@ type PageJson = {
 
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return '-rating';
-    case 'RATING':
+    case SORT_ORDER.RATING:
       return '-votes';
-    case 'NEWEST':
+    case SORT_ORDER.NEWEST:
       return '-id';
     default:
       return '-chapter_date';
@@ -269,7 +269,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: ['UPDATED', 'POPULARITY', 'RATING', 'NEWEST'],
+      sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.POPULARITY, SORT_ORDER.RATING, SORT_ORDER.NEWEST],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

@@ -30,7 +30,7 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
           radius={0}
           keepMounted={false}
         >
-          <Tabs.List w={{ base: 200, md: 250 }}>
+          <Tabs.List w={250}>
             {groups.map((group) => {
               const { included, excluded } = countGroupSelections(draft, group.id);
 
@@ -39,9 +39,17 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
                   <Group justify="space-between">
                     <CatalogFilterGroupTitle group={group} />
                     {(included || excluded) && (
-                      <Group mt={1} fz={12} gap={8}>
-                        {!!included && <Text c="terracotta">{included}</Text>}
-                        {!!excluded && <Text c="red">-{excluded}</Text>}
+                      <Group mt={1} gap={8}>
+                        {!!included && (
+                          <Text fz={12} c="terracotta">
+                            {included}
+                          </Text>
+                        )}
+                        {!!excluded && (
+                          <Text fz={12} c="red">
+                            -{excluded}
+                          </Text>
+                        )}
                       </Group>
                     )}
                   </Group>

@@ -10,7 +10,7 @@ const DOMAIN = 'manga-chan.example';
 const CFG: ChanConfig = {
   id: 'MANGACHAN',
   isNsfw: false,
-  sortOrders: ['NEWEST', 'POPULARITY', 'ALPHABETICAL', 'RATING'],
+  sortOrders: ['NEWEST', 'POPULARITY', 'ALPHABETICAL', 'RATING', 'CHAPTERS'],
   variant: 'default',
 };
 
@@ -177,6 +177,24 @@ describe('Chan parser conformance', () => {
   });
 });
 
+describe('Chan parser sort routing', () => {
+  const http = setUpFixtures();
+  const parser = createChanParser(CFG, makeContext(http));
+
+  it('POPULARITY and RATING both route to /mostfavorites — the site labels that endpoint "Популярность" and exposes no separate rating axis', async () => {
+    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY' });
+    expect(new URL(http.requests.at(-1)!.url).pathname).toBe('/mostfavorites');
+
+    await parser.getList({ offset: 0, limit: 20, order: 'RATING' });
+    expect(new URL(http.requests.at(-1)!.url).pathname).toBe('/mostfavorites');
+  });
+
+  it('CHAPTERS routes to /sortch', async () => {
+    await parser.getList({ offset: 0, limit: 20, order: 'CHAPTERS' });
+    expect(new URL(http.requests.at(-1)!.url).pathname).toBe('/sortch');
+  });
+});
+
 describe('Chan parser filters', () => {
   const http = new FakeHttpClient();
   // Order matters: the bare tag-cloud fetch must match before the broader tag-filtered-list rule.
@@ -226,6 +244,18 @@ describe('Chan parser filters', () => {
     const requestedUrl = http.requests.at(-1)!.url;
     expect(requestedUrl).toContain('/tags/priklyucheniya+-komediya');
     expect(requestedUrl).toContain('n=favdesc');
+  });
+
+  it('getList with a tag filter and CHAPTERS order: n=chdesc', async () => {
+    const items = await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: 'CHAPTERS',
+      filters: [{ groupId: 'tag', key: 'priklyucheniya' }],
+    });
+    expect(items).toHaveLength(1);
+    const requestedUrl = http.requests.at(-1)!.url;
+    expect(requestedUrl).toContain('n=chdesc');
   });
 
   it('getList with a type filter: builds /type/<name>', async () => {

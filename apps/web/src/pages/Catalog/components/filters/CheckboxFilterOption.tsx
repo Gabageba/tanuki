@@ -1,8 +1,10 @@
+import type { CheckboxProps } from '@mantine/core';
 import { Checkbox } from '@mantine/core';
 import { useMemo } from 'react';
 import type { FilterOption } from '@tanuki/contracts';
 import { OPTION_VALUE, type OptionValue } from '../../utils/filterSelection';
-import styles from './CatalogFilter.module.scss';
+import CheckboxMinusIcon from '@/shared/ui/icons/CheckboxMinusIcon';
+import CheckboxPlusIcon from '@/shared/ui/icons/CheckboxPlusIcon';
 
 type Props = {
   option: FilterOption;
@@ -27,16 +29,35 @@ function CheckboxFilterOption({ option, withExclude, value, onChange }: Props) {
     );
   };
 
+  const checkboxProps: Pick<CheckboxProps, 'checked' | 'color' | 'icon'> = useMemo(() => {
+    if (value === OPTION_VALUE.EXCLUDE) {
+      return {
+        checked: true,
+        color: 'red',
+        icon: CheckboxMinusIcon,
+      };
+    }
+    if (value === OPTION_VALUE.INCLUDE) {
+      return {
+        checked: true,
+        color: withExclude ? 'green' : 'terracotta',
+        icon: withExclude ? CheckboxPlusIcon : undefined,
+      };
+    }
+
+    return {
+      checked: false,
+      color: withExclude ? 'green' : 'terracotta',
+    };
+  }, [withExclude, value]);
+
   return (
     <Checkbox
-      checked={value === OPTION_VALUE.INCLUDE}
-      indeterminate={value === OPTION_VALUE.EXCLUDE}
-      color={value === OPTION_VALUE.EXCLUDE ? 'red' : 'terracotta'}
+      {...checkboxProps}
       onChange={handleChange}
       label={option.title}
       key={option.key}
       w="100%"
-      className={styles.checkboxFilterOption}
       styles={{
         labelWrapper: {
           flex: 1,

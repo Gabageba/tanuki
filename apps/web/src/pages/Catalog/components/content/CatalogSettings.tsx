@@ -89,7 +89,7 @@ function CatalogSettings({ sourceId }: Props) {
     <Stack gap="xs" w="100%" mb="md">
       <Grid gap="sm">
         <Grid.Col span={{ base: 12, xs: 'auto' }} order={1}>
-          {!!filters?.groups.length && (
+          {!!filters?.groups.length && !params.query && (
             <Button
               w={{ base: '100%', xs: 'auto' }}
               leftSection={<FunnelIcon />}
@@ -103,7 +103,7 @@ function CatalogSettings({ sourceId }: Props) {
         </Grid.Col>
         <Grid.Col span={{ base: 12, xs: 'content' }} order={{ base: 3, xs: 2 }}>
           <Group gap="xs">
-            {!!source?.sortOrders.length && (
+            {!!source?.sortOrders.length && !params.query && (
               <Select
                 data={source.sortOrders.map((value) => ({
                   value,
@@ -114,6 +114,7 @@ function CatalogSettings({ sourceId }: Props) {
                 placeholder="Сортировка"
                 allowDeselect={false}
                 w={200}
+                floatingHeight="viewport"
                 flex={{ base: 1, sm: 'none' }}
               />
             )}
@@ -125,11 +126,13 @@ function CatalogSettings({ sourceId }: Props) {
             />
           </Group>
         </Grid.Col>
-        <CatalogFilterPills
-          selection={params.filters ?? []}
-          groups={filters?.groups}
-          onChange={handleFiltersChange}
-        />
+        {!params.query && (
+          <CatalogFilterPills
+            selection={params.filters ?? []}
+            groups={filters?.groups}
+            onChange={handleFiltersChange}
+          />
+        )}
       </Grid>
       {isFilterOpened && filters?.groups.length && (
         <CatalogFilterCard

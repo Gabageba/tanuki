@@ -15,13 +15,13 @@ export const parseSortOrder = (raw: string | null): SortOrder | undefined => {
 export const getSortOrderLabel = (order: SortOrder): string => {
   switch (order) {
     case SORT_ORDER.UPDATED:
-      return 'По обновлению';
+      return 'Дате обновления';
     case SORT_ORDER.NEWEST:
-      return 'Новинки';
+      return 'Дате релиза';
     case SORT_ORDER.ADDED:
-      return 'По дате добавления';
+      return 'Дате добавления';
     case SORT_ORDER.POPULARITY:
-      return 'Популярное';
+      return 'По популярности';
     case SORT_ORDER.POPULARITY_TODAY:
       return 'Популярное за день';
     case SORT_ORDER.POPULARITY_WEEK:
@@ -32,13 +32,19 @@ export const getSortOrderLabel = (order: SortOrder): string => {
       return 'По рейтингу';
     case SORT_ORDER.LIKES:
       return 'По лайкам';
+    case SORT_ORDER.VIEWS:
+      return 'По просмотрам';
     case SORT_ORDER.CHAPTERS:
-      return 'По главам';
+      return 'Количеству глав';
     case SORT_ORDER.BOOKMARKS:
       return 'По закладкам';
     case SORT_ORDER.ALPHABETICAL:
-      return 'По алфавиту';
+      return 'По названию';
     case SORT_ORDER.ALPHABETICAL_DESC:
-      return 'По алфавиту (Я-А)';
+      return 'По названию (Я-А)';
+    case SORT_ORDER.ALPHABETICAL_EN:
+      return 'По названию (A-Z)';
+    case SORT_ORDER.ALPHABETICAL_RU:
+      return 'По названию (А-Я)';
   }
 };

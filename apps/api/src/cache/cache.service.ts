@@ -84,6 +84,24 @@ export class CacheService implements OnModuleDestroy {
     }
   }
 
+  /** Сбрасывает весь namespace `cache:*` — используется дев-инструментом сброса кеша. */
+  async flushAll(): Promise<void> {
+    const stream = this.redis.scanStream({ match: 'cache:*', count: 100 });
+    const pipeline = this.redis.pipeline();
+    let hasKeys = false;
+
+    for await (const keys of stream as AsyncIterable<string[]>) {
+      if (keys.length > 0) {
+        hasKeys = true;
+        pipeline.del(...keys);
+      }
+    }
+
+    if (hasKeys) {
+      await pipeline.exec();
+    }
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.redis.quit().catch(() => undefined);
   }

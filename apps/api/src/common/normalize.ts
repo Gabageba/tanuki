@@ -29,7 +29,7 @@ const normalizeTag = (raw: RawTag): Tag => {
 };
 
 const normalizeFilterOption = (raw: RawFilterOption): FilterOption => {
-  return { key: raw.key, title: raw.title, count: raw.count };
+  return { key: raw.key, title: raw.title, count: raw.count, excludable: raw.excludable };
 };
 
 export const normalizeFilterGroup = (raw: RawFilterGroup): FilterGroup => {

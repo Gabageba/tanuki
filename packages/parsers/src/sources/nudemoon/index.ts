@@ -1,6 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import type { RawManga, RawPage, RawTag } from '../../types';
@@ -86,11 +86,11 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
 
   const getSortKey = (order: string | undefined): string => {
     switch (order) {
-      case 'POPULARITY':
+      case SORT_ORDER.POPULARITY:
         return 'views';
-      case 'RATING':
+      case SORT_ORDER.RATING:
         return 'like';
-      case 'NEWEST':
+      case SORT_ORDER.NEWEST:
       default:
         return 'date';
     }
@@ -285,7 +285,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: true,
       requiresVpn: true,
-      sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
+      sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

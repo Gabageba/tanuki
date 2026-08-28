@@ -36,7 +36,10 @@ function SearchableCheckboxListFilterGroup({
               <CheckboxFilterOption
                 key={option.key}
                 option={option}
-                withExclude={group.type === FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE}
+                withExclude={
+                  group.type === FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE &&
+                  option.excludable !== false
+                }
                 value={getOptionValue(selection, group.id, option.key)}
                 onChange={(value) =>
                   onChange(setOptionValue(selection, group.id, option.key, value))

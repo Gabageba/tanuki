@@ -35,6 +35,15 @@ export const LIBSOCIAL_CONFIGS: LibSocialConfig[] = [
     siteId: 1,
     isNsfw: false,
     authRequiredOnMissingPages: true,
+    // Unlike HENTAILIB, MANGALIB's OAuth gateway lives on its own content domain rather than a
+    // separate auth.* host, and the token exchange goes through the shared cdnlibs.org API
+    // rather than a per-brand hapi.* host.
+    auth: {
+      authOrigin: 'https://mangalib.me',
+      tokenUrl: 'https://api.cdnlibs.org/api/auth/oauth/token',
+      clientId: '1',
+      redirectUri: 'https://mangalib.me/ru/front/auth/oauth/callback',
+    },
   },
   {
     id: 'HENTAILIB',

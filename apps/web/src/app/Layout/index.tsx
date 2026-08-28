@@ -3,6 +3,7 @@ import { Outlet } from 'react-router';
 
 import Header from './Header';
 import Footer from './Footer';
+import DevCacheResetButton from './components/DevCacheResetButton';
 
 function Layout() {
   return (
@@ -12,6 +13,7 @@ function Layout() {
         <Outlet />
       </AppShell.Main>
       <Footer />
+      {import.meta.env.DEV && <DevCacheResetButton />}
     </AppShell>
   );
 }

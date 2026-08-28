@@ -1,6 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, FILTER_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
@@ -185,11 +185,13 @@ const tagsPathSegment = (filters: FilterSelection[]): string | null => {
  *  `/type/...` and `/catalog/<status>` identically (same DLE listing template underneath). */
 const chanSortParam = (order: string | undefined): string => {
   switch (order) {
-    case 'RATING':
-    case 'POPULARITY':
+    case SORT_ORDER.RATING:
+    case SORT_ORDER.POPULARITY:
       return 'favdesc';
-    case 'ALPHABETICAL':
+    case SORT_ORDER.ALPHABETICAL:
       return 'abcasc';
+    case SORT_ORDER.CHAPTERS:
+      return 'chdesc';
     default:
       return ''; // SortOrder.NEWEST
   }
@@ -253,11 +255,11 @@ const buildListUrl = (
 
   if (cfg.variant === 'henchan') {
     switch (order) {
-      case 'POPULARITY':
+      case SORT_ORDER.POPULARITY:
         url.pathname = '/mostviews';
         url.searchParams.set('sort', 'manga');
         break;
-      case 'RATING':
+      case SORT_ORDER.RATING:
         url.pathname = '/mostfavorites';
         url.searchParams.set('sort', 'manga');
         break;
@@ -268,14 +270,22 @@ const buildListUrl = (
   }
 
   switch (order) {
-    case 'POPULARITY':
-      url.pathname = '/mostviews';
+    case SORT_ORDER.POPULARITY:
+    case SORT_ORDER.RATING:
+      // The site's own sort menu has one favorites-based ranking labelled "Популярность" —
+      // verified live it's `/mostfavorites`, not `/mostviews` ("Самая просматриваемая манга",
+      // a views count the site doesn't expose as a sort option at all). There's no separate
+      // rating axis on this DLE engine (see RawManga.likes doc), so RATING aliases POPULARITY
+      // here — same as chanSortParam already does for the tags/type/status routes below.
+      url.pathname = '/mostfavorites';
       break;
-    case 'ALPHABETICAL':
+    case SORT_ORDER.ALPHABETICAL:
       url.pathname = '/catalog';
       break;
-    case 'RATING':
-      url.pathname = '/mostfavorites';
+    case SORT_ORDER.CHAPTERS:
+      // Verified live: "Главы" ("по кол-ву глав") in the site's sort menu is `/sortch`, a
+      // standalone listing (same markup as /catalog) pre-sorted by chapter count.
+      url.pathname = '/sortch';
       break;
     default:
       url.pathname = '/manga/new';

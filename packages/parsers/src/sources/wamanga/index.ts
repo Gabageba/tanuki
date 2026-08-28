@@ -1,5 +1,5 @@
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -85,11 +85,11 @@ const collectAltTitles = (jo: MangaJson): string[] => {
  */
 const getSortKey = (order: string | undefined): { key: string; descending: boolean } => {
   switch (order) {
-    case 'ALPHABETICAL':
+    case SORT_ORDER.ALPHABETICAL:
       return { key: 'alphabetical', descending: false };
-    case 'NEWEST':
+    case SORT_ORDER.NEWEST:
       return { key: 'createdAt', descending: true };
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return { key: 'views', descending: true };
     default:
       return { key: 'updatedAt', descending: true };
@@ -193,7 +193,12 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: ['UPDATED', 'NEWEST', 'POPULARITY', 'ALPHABETICAL'],
+      sortOrders: [
+        SORT_ORDER.UPDATED,
+        SORT_ORDER.NEWEST,
+        SORT_ORDER.POPULARITY,
+        SORT_ORDER.ALPHABETICAL,
+      ],
       isSearchSupported: true,
       isMultipleTagsSupported: false,
       isFiltersSupported: false,

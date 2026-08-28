@@ -1,6 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -25,9 +25,9 @@ const PAGE_SIZE = 23;
 
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return 'prosmotr';
-    case 'RATING':
+    case SORT_ORDER.RATING:
       return 'like';
     default:
       return 'date';
@@ -219,7 +219,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: true,
       requiresVpn: false,
-      sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
+      sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

@@ -4,14 +4,6 @@
   }
 }
 
-.checkboxFilterOption {
-  &:hover {
-    input {
-      border-color: var(--mantine-primary-color-filled-hover);
-    }
-  }
-}
-
 .pill {
   height: 36px;
   display: flex;

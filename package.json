@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "turbo run build",
+    "build:contracts": "turbo run build --filter=@tanuki/contracts",
     "dev": "turbo run dev",
     "docker": "docker compose up -d --build",
     "lint": "turbo run lint && pnpm run lint:styles && pnpm run lint:format",

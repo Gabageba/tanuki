@@ -1,5 +1,5 @@
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchCursorPaged } from '../../core/paging';
@@ -229,9 +229,9 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
   // sort uses. Descending matches every other source's UPDATED/POPULARITY convention in this repo.
   const mapOrderBy = (order: string | undefined): { field: string; direction: string } => {
     switch (order) {
-      case 'POPULARITY':
+      case SORT_ORDER.POPULARITY:
         return { field: 'VIEWS', direction: 'DESC' };
-      case 'UPDATED':
+      case SORT_ORDER.UPDATED:
       default:
         return { field: 'LAST_CHAPTER_AT', direction: 'DESC' };
     }
@@ -407,7 +407,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       isBroken: catalogEntryFor(SOURCE_ID).isBroken,
       isAdult: catalogEntryFor(SOURCE_ID).isAdult,
       requiresVpn: catalogEntryFor(SOURCE_ID).requiresVpn,
-      sortOrders: ['POPULARITY', 'UPDATED'],
+      sortOrders: [SORT_ORDER.POPULARITY, SORT_ORDER.UPDATED],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

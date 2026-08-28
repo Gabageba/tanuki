@@ -1,7 +1,13 @@
 import type { Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, FILTER_TYPE, MANGA_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  MANGA_TYPE,
+  SORT_ORDER,
+  SOURCE_CONTENT_TYPE,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -87,11 +93,11 @@ const mangaTypeByLabel = (label: string | null): RawMangaType | null => {
 
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
-    case 'ALPHABETICAL':
+    case SORT_ORDER.ALPHABETICAL:
       return 'name';
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return 'popular';
-    case 'NEWEST':
+    case SORT_ORDER.NEWEST:
       return 'id';
     default:
       return 'updated';
@@ -618,7 +624,12 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: ['UPDATED', 'POPULARITY', 'NEWEST', 'ALPHABETICAL'],
+      sortOrders: [
+        SORT_ORDER.POPULARITY,
+        SORT_ORDER.UPDATED,
+        SORT_ORDER.NEWEST,
+        SORT_ORDER.ALPHABETICAL,
+      ],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

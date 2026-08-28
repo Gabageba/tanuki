@@ -19,7 +19,7 @@ function CheckboxFilterListGroup({ group, selection, onChange, scrollAreaProps =
           <CheckboxFilterOption
             option={option}
             key={option.key}
-            withExclude={group.type === FILTER_TYPE.CHECKBOX_EXCLUDE}
+            withExclude={group.type === FILTER_TYPE.CHECKBOX_EXCLUDE && option.excludable !== false}
             value={getOptionValue(selection, group.id, option.key)}
             onChange={(value) => onChange(setOptionValue(selection, group.id, option.key, value))}
           />

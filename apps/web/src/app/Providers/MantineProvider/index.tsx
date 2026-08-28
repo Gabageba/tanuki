@@ -191,6 +191,11 @@ const THEME = createTheme({
         radius: 'md',
       },
     },
+    Checkbox: {
+      classNames: {
+        input: styles.checkboxInput,
+      },
+    },
   },
 });
 

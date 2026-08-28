@@ -1,7 +1,13 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, FILTER_TYPE, MANGA_TYPE, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  MANGA_TYPE,
+  SORT_ORDER,
+  SOURCE_CONTENT_TYPE,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -33,11 +39,11 @@ const CHAPTER_NUMBER_REGEX = /\d+(?:[.,]\d+)?/;
 
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return 'real_views';
-    case 'RATING':
+    case SORT_ORDER.RATING:
       return 'rating';
-    case 'NEWEST':
+    case SORT_ORDER.NEWEST:
       return 'created_at';
     default:
       return 'updated_at';
@@ -533,7 +539,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: ['UPDATED', 'POPULARITY', 'RATING', 'NEWEST'],
+      sortOrders: [SORT_ORDER.POPULARITY, SORT_ORDER.UPDATED, SORT_ORDER.RATING, SORT_ORDER.NEWEST],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

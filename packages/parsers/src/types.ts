@@ -102,6 +102,8 @@ export type RawFilterOption = {
   title: string;
   /** Titles matching this option on the source, if it advertises one. */
   count: number | null;
+  /** See FilterOption.excludable in @tanuki/contracts. */
+  excludable?: boolean;
 };
 
 export type RawFilterGroup = {

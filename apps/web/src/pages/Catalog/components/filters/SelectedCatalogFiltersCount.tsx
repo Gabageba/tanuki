@@ -21,15 +21,21 @@ function SelectedCatalogFiltersCount({ groupId, draft, renderEmpty, mt }: Props)
 
   return (
     <Group gap={4} mt={mt}>
-      <Text fz={12} c="terracotta">
-        {included ? `${included} выбрано` : ''}
-      </Text>
-      <Text fz={12} c="terracotta">
-        {included && excluded ? <MidDot /> : ''}
-      </Text>
-      <Text fz={12} c="red">
-        {excluded ? `${excluded} исключено` : ''}
-      </Text>
+      {!!included && (
+        <Text fz={12} c="terracotta">
+          {`${included} выбрано`}
+        </Text>
+      )}
+      {!!included && !!excluded && (
+        <Text fz={12} c="terracotta">
+          <MidDot />
+        </Text>
+      )}
+      {!!excluded && (
+        <Text fz={12} c="red">
+          {`${excluded} исключено`}
+        </Text>
+      )}
     </Group>
   );
 }

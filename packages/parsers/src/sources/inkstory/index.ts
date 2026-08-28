@@ -3,6 +3,7 @@ import {
   CONTENT_RATING,
   FILTER_TYPE,
   MANGA_TYPE,
+  SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type FilterRangePreset,
 } from '@tanuki/contracts';
@@ -34,9 +35,9 @@ const DECADE_SIZE = 10;
 const CHAPTERS_COUNT_PRESETS: FilterRangePreset[] = [
   { id: 'lt-20', label: '< 20', max: 20 },
   { id: 'lt-50', label: '< 50', max: 50 },
-  { id: '100-plus', label: '100+', min: 100 },
+  { id: '100-200', label: '100-200', min: 100, max: 200 },
+  { id: '200-300', label: '200-300', min: 200, max: 300 },
   { id: '300-plus', label: '300+', min: 300 },
-  { id: '500-plus', label: '500+', min: 500 },
 ];
 
 const AVERAGE_RATING_PRESETS: FilterRangePreset[] = [
@@ -240,17 +241,17 @@ const toStaticOptions = (keys: string[], getTitle: (key: string) => string): Raw
  *  option. bookmarksCount is inferred from the same `<noun>Count` naming as views/likes/chapters. */
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return 'viewsCount,desc';
-    case 'LIKES':
+    case SORT_ORDER.LIKES:
       return 'likesCount,desc';
-    case 'CHAPTERS':
+    case SORT_ORDER.CHAPTERS:
       return 'chaptersCount,desc';
-    case 'BOOKMARKS':
+    case SORT_ORDER.BOOKMARKS:
       return 'bookmarksCount,desc';
-    case 'RATING':
+    case SORT_ORDER.RATING:
       return 'averageRating,desc';
-    case 'NEWEST':
+    case SORT_ORDER.NEWEST:
       return 'createdAt,desc';
     default:
       return 'updatedAt,desc';
@@ -543,7 +544,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     query: string | undefined,
     filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
-    if (!query && !filters?.length && (order === undefined || order === 'UPDATED')) {
+    if (!query && !filters?.length && (order === undefined || order === SORT_ORDER.UPDATED)) {
       return fetchUpdatedPage(page);
     }
     const url = new URL(`https://${apiHost}/v2/books`);
@@ -658,7 +659,15 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: ['UPDATED', 'POPULARITY', 'LIKES', 'CHAPTERS', 'BOOKMARKS', 'RATING', 'NEWEST'],
+      sortOrders: [
+        SORT_ORDER.POPULARITY,
+        SORT_ORDER.UPDATED,
+        SORT_ORDER.LIKES,
+        SORT_ORDER.CHAPTERS,
+        SORT_ORDER.BOOKMARKS,
+        SORT_ORDER.RATING,
+        SORT_ORDER.NEWEST,
+      ],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

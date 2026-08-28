@@ -1,4 +1,4 @@
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
@@ -78,9 +78,9 @@ const assetUrl = (file: FileRef | null): string | null => {
 
 const sortFor = (order: string | undefined): string => {
   switch (order) {
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return '-views';
-    case 'RATING':
+    case SORT_ORDER.RATING:
       return '-likes';
     default:
       return '-date_created';
@@ -231,7 +231,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: true,
       requiresVpn: true,
-      sortOrders: ['NEWEST', 'POPULARITY', 'RATING'],
+      sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

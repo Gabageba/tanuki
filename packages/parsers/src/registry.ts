@@ -65,6 +65,9 @@ const FILTERS_SUPPORTED_IDS = new Set([
   'MANGACHAN',
   'HENCHAN',
   'YAOICHAN',
+  'MANGALIB',
+  'HENTAILIB',
+  'YAOILIB',
 ]);
 
 const cookieScopeFor = (id: string): string => {

@@ -1,4 +1,4 @@
-export { type EnumLiteralsOf } from './utils';
+export { type EnumLiteralsOf, formatCompactNumber } from './utils';
 export { TagSchema, type Tag } from './tag';
 export {
   MangaSchema,

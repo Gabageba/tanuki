@@ -1,7 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
@@ -33,15 +33,15 @@ const USER_HASH_REGEX = /window\.user_hash\s*=\s*'([^']+)'/;
 
 const getSearchSortType = (order: string | undefined): string => {
   switch (order) {
-    case 'RATING':
+    case SORT_ORDER.RATING:
       return 'USER_RATING';
-    case 'ALPHABETICAL':
+    case SORT_ORDER.ALPHABETICAL:
       return 'NAME';
-    case 'ADDED':
+    case SORT_ORDER.ADDED:
       return 'YEAR';
-    case 'POPULARITY':
+    case SORT_ORDER.POPULARITY:
       return 'POPULARITY';
-    case 'NEWEST':
+    case SORT_ORDER.NEWEST:
       return 'DATE_CREATE';
     default:
       return 'DATE_UPDATE';
@@ -604,7 +604,14 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
-      sortOrders: ['UPDATED', 'POPULARITY', 'NEWEST', 'RATING', 'ALPHABETICAL', 'ADDED'],
+      sortOrders: [
+        SORT_ORDER.UPDATED,
+        SORT_ORDER.POPULARITY,
+        SORT_ORDER.NEWEST,
+        SORT_ORDER.RATING,
+        SORT_ORDER.ALPHABETICAL,
+        SORT_ORDER.ADDED,
+      ],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,
