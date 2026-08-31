@@ -30,6 +30,8 @@ export const getSortOrderLabel = (order: SortOrder): string => {
       return 'Популярное за месяц';
     case SORT_ORDER.RATING:
       return 'По рейтингу';
+    case SORT_ORDER.USER_RATING:
+      return 'По оценке';
     case SORT_ORDER.LIKES:
       return 'По лайкам';
     case SORT_ORDER.VIEWS:

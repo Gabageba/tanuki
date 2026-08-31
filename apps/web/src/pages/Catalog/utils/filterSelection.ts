@@ -1,6 +1,5 @@
 import {
   FILTER_TYPE,
-  formatCompactNumber,
   type EnumLiteralsOf,
   type FilterGroup,
   type FilterSelection,
@@ -182,11 +181,11 @@ const getRangeGroupSelectionOptions = (
 
   if (!label) {
     if (range.min !== undefined && range.max !== undefined) {
-      label = `${formatCompactNumber(range.min)}–${formatCompactNumber(range.max)}`;
+      label = `${range.min}–${range.max}`;
     } else if (range.min !== undefined) {
-      label = `от ${formatCompactNumber(range.min)}`;
+      label = `от ${range.min}`;
     } else if (range.max !== undefined) {
-      label = `до ${formatCompactNumber(range.max)}`;
+      label = `до ${range.max}`;
     }
   }
 

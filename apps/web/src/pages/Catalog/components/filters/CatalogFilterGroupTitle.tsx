@@ -5,13 +5,19 @@ type Props = {
   group: FilterGroup;
 };
 
+const formatRangeTitle = (min: number, max: number) => {
+  const compactMin = formatCompactNumber(min);
+  const compactMax = formatCompactNumber(max);
+  return compactMin === compactMax ? `${min} - ${max}` : `${compactMin} - ${compactMax}`;
+};
+
 function CatalogFilterGroupTitle({ group }: Props) {
   return (
     <Group gap={8} align="center">
       <Text fz={14}>{group.title}</Text>
       <Text c="dimmed" fz={12} mt={1}>
         {group.type === FILTER_TYPE.RANGE
-          ? `${formatCompactNumber(group.settings?.range.min ?? 0)} - ${formatCompactNumber(group.settings?.range.max ?? 0)}`
+          ? formatRangeTitle(group.settings?.range.min ?? 0, group.settings?.range.max ?? 0)
           : group.options.length}
       </Text>
     </Group>

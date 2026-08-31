@@ -1,11 +1,27 @@
-import type { Cheerio, CheerioAPI } from 'cheerio';
+import type { Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  MANGA_TYPE,
+  SORT_ORDER,
+  SOURCE_CONTENT_TYPE,
+  type FilterRangePreset,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
-import type { ListParams } from '../../core/paging';
+import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
-import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
+import type {
+  RawManga,
+  RawChapter,
+  RawFilterGroup,
+  RawFilterOption,
+  RawMangaState,
+  RawMangaType,
+  RawPage,
+  RawTag,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { concatUrl } from '../../core/html/urls';
@@ -18,10 +34,16 @@ import { UserAgents } from '../../core/http/user-agents';
 import { catalogEntryFor } from '../catalog';
 import { authenticateGrouple, authenticateAllHentai } from './auth';
 import type { GroupleConfig } from './config';
+import { GROUPLE_ELEMENT_TYPE, GROUPLE_TRANSLATION_STATUS } from './models';
+import type {
+  CatalogCategoryJson,
+  CatalogItemJson,
+  CatalogSearchResponseJson,
+  GroupleTranslationStatus,
+} from './models';
 
 const PAGE_SIZE = 50;
 const NSFW_ALERT = 'сексуальные сцены';
-const NOTHING_FOUND = 'Ничего не найдено';
 const MIN_IMAGE_SIZE = 1024;
 const COPYRIGHT_ALERT = 'Запрещена публикация произведения';
 const NO_CHAPTERS = 'В этой манге еще нет ни одной главы';
@@ -31,22 +53,101 @@ const TITLE_CHAPTER_NUMBER_REGEX = /([0-9]+(?:[.,]\d+)?)\s*$/;
 const HREF_VOLUME_REGEX = /\/vol(\d+)\//i;
 const USER_HASH_REGEX = /window\.user_hash\s*=\s*'([^']+)'/;
 
+/**
+ * `/search/advanced` embeds its whole filter vocabulary as flat `window.__FILTERS.<name> = {...};`
+ * assignments (id/code → Russian label), one per axis — verified live against 2.mintmanga.one.
+ * Each object is plain double-quoted JSON with no nesting, so a non-greedy match up to the first
+ * `}` is enough; `years` is the one exception (a bare `{ min, max }` JS literal, not JSON), parsed
+ * separately below.
+ */
+const GROUPLE_FILTER_MAP_REGEX = /window\.__FILTERS\.(\w+)\s*=\s*(\{[\s\S]*?\});/g;
+const GROUPLE_FILTER_YEARS_REGEX =
+  /window\.__FILTERS\.years\s*=\s*\{\s*min:\s*(\d+),\s*max:\s*(\d+)\s*\};/;
+const DEFAULT_YEARS_RANGE = { min: 1900, max: 2100 };
+
+const DECADE_SIZE = 10;
+const YEAR_RANGE_CUTOFF = 2000;
+
+/** "Текущий год", the current-decade-so-far, a preset per full decade back to `YEAR_RANGE_CUTOFF`,
+ *  then one trailing preset lumping everything older than that into "Раньше 2000". */
+const getYearRangePresets = (minYear: number, maxYear: number): FilterRangePreset[] => {
+  const presets: FilterRangePreset[] = [
+    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
+  ];
+  const currentDecadeStart = Math.floor(maxYear / DECADE_SIZE) * DECADE_SIZE;
+  if (currentDecadeStart < maxYear) {
+    presets.push({
+      id: `decade-${currentDecadeStart}`,
+      label: `${currentDecadeStart}–${maxYear}`,
+      min: currentDecadeStart,
+      max: maxYear,
+    });
+  }
+  for (
+    let decadeStart = currentDecadeStart - DECADE_SIZE;
+    decadeStart >= YEAR_RANGE_CUTOFF;
+    decadeStart -= DECADE_SIZE
+  ) {
+    presets.push({
+      id: `decade-${decadeStart}`,
+      label: `${decadeStart}-е`,
+      min: decadeStart,
+      max: decadeStart + DECADE_SIZE - 1,
+    });
+  }
+  if (minYear < YEAR_RANGE_CUTOFF) {
+    presets.push({
+      id: `before-${YEAR_RANGE_CUTOFF}`,
+      label: `Раньше ${YEAR_RANGE_CUTOFF}`,
+      min: minYear,
+      max: YEAR_RANGE_CUTOFF - 1,
+    });
+  }
+  return presets;
+};
+
+/** Element ids (genre/category/age rating/misc) all round-trip through the same
+ *  includeElementIds/excludeElementIds params on the search API — see applySelectionParams. */
+const ELEMENT_FILTER_GROUPS = new Set(['genre', 'category', 'ageRating', 'misc']);
+
 const getSearchSortType = (order: string | undefined): string => {
   switch (order) {
-    case SORT_ORDER.RATING:
+    case SORT_ORDER.USER_RATING:
       return 'USER_RATING';
     case SORT_ORDER.ALPHABETICAL:
       return 'NAME';
-    case SORT_ORDER.ADDED:
+    case SORT_ORDER.NEWEST:
       return 'YEAR';
     case SORT_ORDER.POPULARITY:
       return 'POPULARITY';
-    case SORT_ORDER.NEWEST:
+    case SORT_ORDER.RATING:
+      return 'RATING';
+    case SORT_ORDER.ADDED:
       return 'DATE_CREATE';
     default:
       return 'DATE_UPDATE';
   }
 };
+
+/** Pulls every `window.__FILTERS.<name> = {...};` map out of the advanced-search page, keyed by
+ *  its axis name (`genre`, `category`, `limitation`, `another`, `productionStatus`,
+ *  `translationStatus`, `searchFilters`) — `sortType` and `years` are handled separately. */
+const parseGroupleFilterMaps = (html: string): Record<string, Record<string, string>> => {
+  const maps: Record<string, Record<string, string>> = {};
+  for (const match of html.matchAll(GROUPLE_FILTER_MAP_REGEX)) {
+    const name = match[1]!;
+    if (name === 'sortType' || name === 'years') continue;
+    try {
+      maps[name] = JSON.parse(match[2]!) as Record<string, string>;
+    } catch {
+      // skip malformed block rather than failing the whole filter fetch
+    }
+  }
+  return maps;
+};
+
+const optionsFromMap = (map: Record<string, string> | undefined): RawFilterOption[] =>
+  Object.entries(map ?? {}).map(([key, title]) => ({ key, title, count: null }));
 
 const extractJsonAfter = (data: string, pos: number): string | null => {
   const tail = data.slice(pos);
@@ -246,91 +347,140 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     };
   };
 
-  const parseManga = ($tile: Cheerio<AnyNode>, $: CheerioAPI, baseUrl: string): RawManga | null => {
-    const imgDiv = $tile.find('div.img').first();
-    const descDiv = $tile.find('div.desc').first();
-    if (imgDiv.length === 0 || descDiv.length === 0) return null;
-    if (descDiv.find('i.fa-user').length > 0 || descDiv.find('i.fa-external-link').length > 0) {
-      return null; // author/creator tile, not a title
+  const mapCatalogState = (status: GroupleTranslationStatus): RawMangaState | null => {
+    switch (status) {
+      case GROUPLE_TRANSLATION_STATUS.FINISHED:
+        return RAW_MANGA_STATE.FINISHED;
+      case GROUPLE_TRANSLATION_STATUS.PROGRESS:
+        return RAW_MANGA_STATE.ONGOING;
+      case GROUPLE_TRANSLATION_STATUS.POSTPONED:
+        return RAW_MANGA_STATE.PAUSED;
+      case GROUPLE_TRANSLATION_STATUS.NONE:
+        return null;
     }
-    const hrefRaw = attrOrNull(imgDiv.find('a').first(), 'href');
-    if (!hrefRaw) return null;
-    let publicUrl: string;
-    try {
-      publicUrl = new URL(hrefRaw, baseUrl).toString();
-    } catch {
-      return null;
-    }
-    const title = textOrNull(descDiv.find('h3 a').first());
-    if (!title) return null;
+  };
 
-    const publicUrlObj = new URL(publicUrl);
-    if (publicUrlObj.hostname !== domain) {
-      return null; // cross-network redirect tile — out of scope for this port, see engine.ts notes
+  /** Catalog "category" — mirrors the site's own .catalog-kinds filter vocabulary. */
+  const mangaTypeByCategory = (
+    category: CatalogCategoryJson | null | undefined,
+  ): RawMangaType | null => {
+    switch (category?.name) {
+      case 'Манга':
+        return MANGA_TYPE.MANGA;
+      case 'Манхва':
+        return MANGA_TYPE.MANHWA;
+      case 'Манхуа':
+      case 'Маньхуа':
+        return MANGA_TYPE.MANHUA;
+      case 'Комикс':
+        return MANGA_TYPE.COMICS;
+      case undefined:
+      case null:
+        return null;
+      default:
+        return MANGA_TYPE.OTHER;
     }
-    const relUrl = publicUrlObj.pathname + publicUrlObj.search;
+  };
 
-    const tileInfo = descDiv.find('div.tile-info').first();
-    const author = textOrNull(tileInfo.find('a.person-link').first());
-    const ratingRaw = $tile.find('.compact-rate').first().attr('title');
-    const rating = parseFloatOrNull(ratingRaw ?? null);
-    const coverRaw = attrOrNull(imgDiv.find('img.lazy').first(), 'data-original');
-    const coverUrl = coverRaw ? concatUrl(baseUrl, coverRaw).replace('_p.', '.') : null;
-    const tags: RawTag[] = tileInfo
-      .find('a.element-link')
-      .toArray()
-      .map((el) => parseTagFromLink($(el)))
-      .filter((t): t is RawTag => t !== null);
+  const mapCatalogItem = (item: CatalogItemJson): RawManga => {
+    const relUrl = `/${item.elementId.linkName}`;
+    const tags: RawTag[] = (item.elements ?? [])
+      .filter(
+        (el) =>
+          el.typeName === GROUPLE_ELEMENT_TYPE.GENRE || el.typeName === GROUPLE_ELEMENT_TYPE.TAG,
+      )
+      .map((el) => ({ title: toTitleCase(el.name), key: String(el.id), source: cfg.id }));
 
     return {
       id: generateUid(cfg.id, relUrl),
-      title,
+      title: item.name,
       altTitles: [],
       url: relUrl,
-      publicUrl,
-      rating: rating !== null ? rating / 5 : RATING_UNKNOWN,
+      publicUrl: `https://${domain}${relUrl}`,
+      rating: item.rating && item.rating.voteCount > 0 ? item.rating.rate / 10 : RATING_UNKNOWN,
       contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
-      coverUrl,
+      coverUrl: item.picUrl,
       tags,
-      state:
-        $tile.find('div.tags span.mangaCompleted').length > 0 ? RAW_MANGA_STATE.FINISHED : null,
-      authors: author ? [author] : [],
+      state: mapCatalogState(item.translationStatus),
+      authors: [],
       largeCoverUrl: null,
       description: null,
       chapters: null,
       source: cfg.id,
+      type: mangaTypeByCategory(item.category),
+      chaptersCount: item.chaptersCount ?? null,
     };
   };
 
   /**
-   * Also used for plain catalog browsing (empty query): `/list` (the old page-driven catalog
-   * endpoint `getSortKey` used to target) has fallen behind the site's own live index — on both
-   * SEIMANGA and READMANGA_RU it omits titles updated in roughly the last few hours entirely,
-   * rather than just reordering them. `/search/advancedResults` with `q=''` hits the same live
-   * index the site's own catalog UI now calls through its JSON API and returns identical
-   * ordering, so it doubles as the browse endpoint instead of `/list`.
+   * `includeElementIds`/`excludeElementIds` cover genre, category, age rating ("limitation") and
+   * misc ("another") alike — the site's own advanced-search UI splits them into separate sections,
+   * but all four funnel into the same id space and query params (verified live: a captured request
+   * with one selection checked in each of those four sections produced exactly 4 include + 4
+   * exclude ids, matching ELEMENT_FILTER_GROUPS one-for-one). `searchFilter` follows the same
+   * include/exclude pair — its own tooltip (`.catalog-filter-checkbox`) shows both a
+   * `data-type="include"` and a `data-type="exclude"` indicator per option, same as every other
+   * *_EXCLUDE group here.
+   */
+  const applySelectionParams = (url: URL, filters: FilterSelection[] | undefined): void => {
+    for (const filter of filters ?? []) {
+      if ('range' in filter) continue; // years is handled separately below, by its own bounds
+      if (ELEMENT_FILTER_GROUPS.has(filter.groupId)) {
+        url.searchParams.append(
+          filter.exclude ? 'excludeElementIds' : 'includeElementIds',
+          filter.key,
+        );
+      } else if (filter.groupId === 'productionStatus') {
+        url.searchParams.append(
+          filter.exclude ? 'excludeProductionStatuses' : 'includeProductionStatuses',
+          filter.key,
+        );
+      } else if (filter.groupId === 'translationStatus') {
+        url.searchParams.append(
+          filter.exclude ? 'excludeTranslationStatuses' : 'includeTranslationStatuses',
+          filter.key,
+        );
+      } else if (filter.groupId === 'searchFilter') {
+        url.searchParams.append(
+          filter.exclude ? 'excludeSearchFilter' : 'includeSearchFilter',
+          filter.key,
+        );
+      }
+    }
+  };
+
+  const yearsRangeParam = (filters: FilterSelection[] | undefined): string => {
+    const yearFilter = filters?.find(
+      (f): f is Extract<FilterSelection, { range: unknown }> =>
+        'range' in f && f.groupId === 'year',
+    );
+    const min = yearFilter?.range.min ?? DEFAULT_YEARS_RANGE.min;
+    const max = yearFilter?.range.max ?? DEFAULT_YEARS_RANGE.max;
+    return `${min},${max}`;
+  };
+
+  /**
+   * Also used for plain catalog browsing (empty query). The old page-driven `/list` endpoint has
+   * fallen behind the site's own live index, and the HTML `/search/advancedResults` endpoint it
+   * was replaced with has since gone dark on several Grouple mirrors too (404 behind ddos-guard).
+   * `/api/catalog/search` is the JSON API the site's own current frontend calls — live everywhere
+   * `/search/advancedResults` used to be, plus mirrors where that's now dead — so it's the browse
+   * endpoint as well as the search one.
    */
   const searchPage = async (
     query: string,
     nativeOffset: number,
     order: string | undefined,
+    filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
-    const url = new URL(`https://${domain}/search/advancedResults`);
+    const url = new URL(`https://${domain}/api/catalog/search`);
     url.searchParams.set('q', query);
     url.searchParams.set('offset', String(nativeOffset));
-    url.searchParams.set('years', '1900,2100');
+    url.searchParams.set('years', yearsRangeParam(filters));
     url.searchParams.set('sortType', getSearchSortType(order));
-    const doc = await ctx.http.getHtml(url.toString());
-    const tiles = doc.$('div.tiles.row').first();
-    if (tiles.length === 0) {
-      if (doc.$.root().text().includes(NOTHING_FOUND)) return [];
-      throw new ParseError('No tiles found', cfg.id);
-    }
-    return tiles
-      .find('div.tile')
-      .toArray()
-      .map((el) => parseManga(doc.$(el), doc.$, doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+    applySelectionParams(url, filters);
+    const response = await ctx.http.getJson<CatalogSearchResponseJson>(url.toString());
+    return response.list.map(mapCatalogItem);
   };
 
   const parseChapterNumber = (
@@ -374,8 +524,102 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchOffsetNative(params, { size: PAGE_SIZE }, (offset) =>
-      searchPage(params.query ?? '', offset, params.order),
+      searchPage(params.query ?? '', offset, params.order, params.filters),
     );
+  };
+
+  let filtersPromise: Promise<RawFilterGroup[]> | null = null;
+
+  const getFilters = (): Promise<RawFilterGroup[]> => {
+    if (!filtersPromise) filtersPromise = fetchFilters();
+    return filtersPromise;
+  };
+
+  const fetchFilters = async (): Promise<RawFilterGroup[]> => {
+    const response = await ctx.http.get(`https://${domain}/search/advanced`);
+    const html = response.text();
+    const maps = parseGroupleFilterMaps(html);
+    const yearsMatch = GROUPLE_FILTER_YEARS_REGEX.exec(html);
+
+    const groups: RawFilterGroup[] = [];
+    const genres = optionsFromMap(maps.genre);
+    if (genres.length > 0) {
+      groups.push({
+        id: 'genre',
+        title: 'Жанры',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+        options: genres,
+      });
+    }
+    const categories = optionsFromMap(maps.category);
+    if (categories.length > 0) {
+      groups.push({
+        id: 'category',
+        title: 'Категории',
+        type: FILTER_TYPE.CHECKBOX_EXCLUDE,
+        options: categories,
+      });
+    }
+    const ageRatings = optionsFromMap(maps.limitation);
+    if (ageRatings.length > 0) {
+      groups.push({
+        id: 'ageRating',
+        title: 'Возрастной рейтинг',
+        type: FILTER_TYPE.CHECKBOX_EXCLUDE,
+        options: ageRatings,
+      });
+    }
+    const productionStatuses = optionsFromMap(maps.productionStatus);
+    if (productionStatuses.length > 0) {
+      groups.push({
+        id: 'productionStatus',
+        title: 'Статус выхода',
+        type: FILTER_TYPE.CHECKBOX_EXCLUDE,
+        options: productionStatuses,
+      });
+    }
+    const translationStatuses = optionsFromMap(maps.translationStatus);
+    if (translationStatuses.length > 0) {
+      groups.push({
+        id: 'translationStatus',
+        title: 'Статус перевода',
+        type: FILTER_TYPE.CHECKBOX_EXCLUDE,
+        options: translationStatuses,
+      });
+    }
+    if (yearsMatch) {
+      const yearMin = Number.parseInt(yearsMatch[1]!, 10);
+      const yearMax = Number.parseInt(yearsMatch[2]!, 10);
+      groups.push({
+        id: 'year',
+        title: 'Год выпуска',
+        type: FILTER_TYPE.RANGE,
+        options: [],
+        settings: {
+          range: { min: yearMin, max: yearMax },
+          presets: getYearRangePresets(yearMin, yearMax),
+        },
+      });
+    }
+    const searchFilters = optionsFromMap(maps.searchFilters);
+    if (searchFilters.length > 0) {
+      groups.push({
+        id: 'searchFilter',
+        title: 'Фильтры',
+        type: FILTER_TYPE.CHECKBOX_EXCLUDE,
+        options: searchFilters,
+      });
+    }
+    const misc = optionsFromMap(maps.another);
+    if (misc.length > 0) {
+      groups.push({
+        id: 'misc',
+        title: 'Прочее',
+        type: FILTER_TYPE.CHECKBOX_EXCLUDE,
+        options: misc,
+      });
+    }
+    return groups;
   };
 
   const getDetails = async (mangaUrl: string): Promise<RawManga> => {
@@ -605,20 +849,22 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
       sortOrders: [
-        SORT_ORDER.UPDATED,
         SORT_ORDER.POPULARITY,
-        SORT_ORDER.NEWEST,
-        SORT_ORDER.RATING,
         SORT_ORDER.ALPHABETICAL,
         SORT_ORDER.ADDED,
+        SORT_ORDER.RATING,
+        SORT_ORDER.USER_RATING,
+        SORT_ORDER.NEWEST,
+        SORT_ORDER.UPDATED,
       ],
       isSearchSupported: true,
       isMultipleTagsSupported: true,
-      isFiltersSupported: false,
+      isFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
+    getFilters,
     imageHeaders: () => ({ Referer: `https://${domain}/`, 'User-Agent': UserAgents.GROUPLE_ARORA }),
     async init() {
       if (cfg.authGateway === 'z.qawa.org') {

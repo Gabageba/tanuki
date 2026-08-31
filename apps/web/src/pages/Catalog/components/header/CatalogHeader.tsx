@@ -1,5 +1,5 @@
-import { ActionIcon, Alert, Flex, Group } from '@mantine/core';
-import { CaretLeftIcon, WarningCircleIcon } from '@phosphor-icons/react';
+import { ActionIcon, Flex, Group } from '@mantine/core';
+import { CaretLeftIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 import CatalogHeaderSkeleton from './CatalogHeaderSkeleton';
 import SourceTitle from '@/entities/source/components/SourceTitle';
@@ -27,7 +27,7 @@ function CatalogHeader({ source, isLoading }: Props) {
   }
 
   if (!source) {
-    return <Alert title="Источник не найден" color="red" icon={<WarningCircleIcon />} />;
+    return null;
   }
 
   return (
