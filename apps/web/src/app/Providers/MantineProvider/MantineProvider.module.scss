@@ -9,3 +9,13 @@
     border-color: var(--checkbox-color);
   }
 }
+
+.drawerContent {
+  border-top-left-radius: var(--mantine-radius-md);
+  border-top-right-radius: var(--mantine-radius-md);
+
+  @media (height <= 780px) {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+}

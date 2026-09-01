@@ -1,7 +1,9 @@
 import { Button, Card, Group, Stack, Tabs, Text, Title } from '@mantine/core';
+import { useElementSize } from '@mantine/hooks';
 import { useState } from 'react';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import { countGroupSelections } from '../../utils/filterSelection';
+import { calcFilterMah } from '../../utils/calcFilterMah';
 import useExclusiveFilterConfirm from '../../hooks/useExclusiveFilterConfirm';
 import CatalogFilterRender from './CatalogFilterRender';
 import CatalogFilterGroupTitle from './CatalogFilterGroupTitle';
@@ -19,6 +21,8 @@ type Props = {
 function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
   const [draft, setDraft] = useState(selection);
   const { applyChange, pending, confirmPending, cancelPending } = useExclusiveFilterConfirm();
+  const { ref: listRef, height: listHeight } = useElementSize<HTMLDivElement>();
+  const scrollMah = calcFilterMah(listHeight);
 
   return (
     <>
@@ -26,11 +30,11 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
         <Tabs
           defaultValue={groups[0]?.id}
           orientation="vertical"
-          classNames={{ tab: styles.tab }}
+          classNames={{ tab: styles.tab, list: styles.list }}
           radius={0}
           keepMounted={false}
         >
-          <Tabs.List w={270}>
+          <Tabs.List w={270} ref={listRef}>
             {groups.map((group) => {
               const { included, excluded } = countGroupSelections(draft, group.id);
 
@@ -68,7 +72,7 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
                   group={group}
                   selection={draft}
                   onChange={(next) => applyChange(groups, group, draft, next, setDraft)}
-                  scrollAreaProps={{ mah: 420 }}
+                  scrollAreaProps={{ mah: scrollMah }}
                 />
                 <Group justify="flex-end">
                   <Button

@@ -18,7 +18,7 @@ function MangaScoreBadge({ manga }: Props) {
   return (
     <Badge
       pos="absolute"
-      top={6}
+      bottom={6}
       right={6}
       color="dark"
       size="lg"

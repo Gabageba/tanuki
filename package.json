@@ -8,6 +8,7 @@
     "build": "turbo run build",
     "build:contracts": "turbo run build --filter=@tanuki/contracts",
     "dev": "turbo run dev",
+    "dev:mobile": "turbo run dev --filter=@tanuki/api & turbo run dev:host --filter=@tanuki/web; wait",
     "docker": "docker compose up -d --build",
     "lint": "turbo run lint && pnpm run lint:styles && pnpm run lint:format",
     "lint:format": "prettier --check .",

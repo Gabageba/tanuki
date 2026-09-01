@@ -70,6 +70,9 @@ const THEME = createTheme({
       },
     },
     Drawer: {
+      classNames: {
+        content: styles.drawerContent,
+      },
       styles: {
         header: {
           backgroundColor: 'var(--tanuki-color-surface)',
@@ -79,8 +82,6 @@ const THEME = createTheme({
           fontWeight: 600,
         },
         content: {
-          borderTopLeftRadius: 'var(--mantine-radius-md)',
-          borderTopRightRadius: 'var(--mantine-radius-md)',
           paddingBottom: 'var(--app-shell-footer-height)',
           display: 'flex',
           flexDirection: 'column',
@@ -133,7 +134,7 @@ const THEME = createTheme({
           height: 36,
           padding: 0,
           border: '1px solid var(--mantine-color-default-border)',
-          backgroundColor: 'var(--mantine-color-dark-filled)',
+          backgroundColor: 'var(--mantine-color-default)',
         },
         label: {
           height: '100%',

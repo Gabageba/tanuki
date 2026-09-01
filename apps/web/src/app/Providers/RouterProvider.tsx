@@ -1,4 +1,8 @@
-import { createBrowserRouter, RouterProvider as InternalRouterProvider } from 'react-router';
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider as InternalRouterProvider,
+} from 'react-router';
 import Layout from '@/app/Layout';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
 import MangaPage from '@/pages/Manga/MangaPage';
@@ -13,6 +17,10 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
+      {
+        path: '/',
+        element: <Navigate to={ROUTE_PATHS.SOURCES} replace />,
+      },
       {
         path: ROUTE_PATHS.SOURCES,
         element: <Sources />,

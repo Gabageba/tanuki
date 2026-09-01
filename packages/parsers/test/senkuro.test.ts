@@ -83,6 +83,45 @@ const PAGES_RESPONSE = JSON.stringify({
   },
 });
 
+const ALL_LABELS_RESPONSE = JSON.stringify({
+  data: {
+    allLabels: [
+      {
+        id: 'root-themes',
+        slug: 'themes',
+        rootId: 'root-themes',
+        depth: 0,
+        rating: 'GENERAL',
+        titles: [{ lang: 'RU', content: 'Темы' }],
+      },
+      {
+        id: 'isekai',
+        slug: 'isekai',
+        rootId: 'root-themes',
+        depth: 1,
+        rating: 'GENERAL',
+        titles: [{ lang: 'RU', content: 'Исекай' }],
+      },
+      {
+        id: 'root-hentai',
+        slug: 'hentai_themes',
+        rootId: 'root-hentai',
+        depth: 0,
+        rating: 'EXPLICIT',
+        titles: [{ lang: 'RU', content: 'Хентайные Темы' }],
+      },
+      {
+        id: 'ecchi',
+        slug: 'ecchi',
+        rootId: 'root-hentai',
+        depth: 1,
+        rating: 'EXPLICIT',
+        titles: [{ lang: 'RU', content: 'Этти' }],
+      },
+    ],
+  },
+});
+
 const SENKURO_CONFIG = SENKURO_CONFIGS.find((c) => c.id === 'SENKURO')!;
 const SENKOGNITO_CONFIG = SENKURO_CONFIGS.find((c) => c.id === 'SENKOGNITO')!;
 
@@ -120,6 +159,11 @@ const setUpFixtures = (
   http.register((url, body) => url === endpoint && !!body?.includes('fetchMangas'), {
     status: 200,
     body: SEARCH_RESPONSE,
+    contentType: 'application/json',
+  });
+  http.register((url, body) => url === endpoint && !!body?.includes('allLabels'), {
+    status: 200,
+    body: ALL_LABELS_RESPONSE,
     contentType: 'application/json',
   });
   return http;
@@ -170,6 +214,52 @@ describe('Senkuro parser conformance', () => {
       expect(page.url).toMatch(/^https?:\/\//);
     }
     expect(pages[0]!.url).toBe('https://cdn.senkuro.com/001.jpg');
+  });
+
+  it('getFilters: one group per allLabels root, plus the static and range groups', async () => {
+    const groups = await parser.getFilters!();
+
+    // SENKURO isn't the 18+ catalog, so the EXPLICIT-rated root is hidden entirely.
+    expect(groups.find((g) => g.id === 'label-hentai_themes')).toBeUndefined();
+
+    const themesGroup = groups.find((g) => g.id === 'label-themes')!;
+    expect(themesGroup.title).toBe('Темы');
+    expect(themesGroup.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(themesGroup.options).toEqual([{ key: 'isekai', title: 'Исекай', count: null }]);
+
+    const typeGroup = groups.find((g) => g.id === 'type')!;
+    expect(typeGroup.type).toBe('CHECKBOX_EXCLUDE');
+    expect(typeGroup.options.map((o) => o.key)).toContain('MANHWA');
+
+    const chaptersGroup = groups.find((g) => g.id === 'chapters')!;
+    expect(chaptersGroup.type).toBe('RANGE');
+    expect(chaptersGroup.settings?.range).toEqual({ min: 0, max: 2000 });
+
+    const releasedOnGroup = groups.find((g) => g.id === 'releasedOn')!;
+    expect(releasedOnGroup.settings?.range.format).toBe('YEAR');
+  });
+
+  it('getList with filters: label/type/chapters selections reach the mangas() variables', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'label-themes', key: 'isekai' },
+        { groupId: 'label-hentai_themes', key: 'ecchi', exclude: true },
+        { groupId: 'type', key: 'MANHWA' },
+        { groupId: 'chapters', range: { min: 10, max: 100 } },
+        { groupId: 'releasedOn', range: { min: 2015 } },
+      ],
+    });
+
+    const mangasRequests = http.requests.filter((r) => r.body?.includes('fetchMangas'));
+    const request = mangasRequests[mangasRequests.length - 1]!;
+    const variables = (JSON.parse(request.body!) as { variables: Record<string, unknown> })
+      .variables;
+    expect(variables['label']).toEqual({ include: ['isekai'], exclude: ['ecchi'] });
+    expect(variables['type']).toEqual({ include: ['MANHWA'], exclude: [] });
+    expect(variables['chapters']).toEqual({ start: 10, end: 100 });
+    expect(variables['releasedOn']).toEqual({ start: '2015-01-01', end: undefined });
   });
 });
 

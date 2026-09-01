@@ -1,11 +1,10 @@
-import { Fragment, useState } from 'react';
-import { Box, Center, Group, Image, Paper, Stack, Text } from '@mantine/core';
+import { Fragment } from 'react';
+import { Group, Stack, Text } from '@mantine/core';
 import { Link } from 'react-router';
-import { ImageBrokenIcon } from '@phosphor-icons/react';
 import { MANGA_TYPE, type Manga } from '@tanuki/contracts';
 import MidDot from '@/shared/ui/MidDot';
 import { getLabelByMangaType } from '../source/lib';
-import MangaScoreBadge from './MangaScoreBadge';
+import MangaImage from './MangaImage';
 import styles from './MangaCard.module.scss';
 
 type Props = {
@@ -13,8 +12,6 @@ type Props = {
 };
 
 function MangaCard({ manga }: Props) {
-  const [isCoverBroken, setIsCoverBroken] = useState(false);
-
   const metaItems = [
     manga.type && getLabelByMangaType(manga.type),
     manga.year && String(manga.year),
@@ -27,26 +24,7 @@ function MangaCard({ manga }: Props) {
       className={styles.card}
     >
       <Stack gap={8}>
-        <Box pos="relative">
-          <MangaScoreBadge manga={manga} />
-          {isCoverBroken || !manga.coverUrl ? (
-            <Paper>
-              <Center className={styles.cover} c="dimmed">
-                <ImageBrokenIcon size={38} />
-              </Center>
-            </Paper>
-          ) : (
-            <Image
-              src={manga.coverUrl}
-              alt={manga.title}
-              loading="lazy"
-              decoding="async"
-              className={styles.cover}
-              onError={() => setIsCoverBroken(true)}
-            />
-          )}
-        </Box>
-
+        <MangaImage manga={manga} />
         <Stack gap={4}>
           <Group
             gap={manga.type === MANGA_TYPE.MANHUA && (manga.chaptersCount || 0) >= 1000 ? 2 : 4}
