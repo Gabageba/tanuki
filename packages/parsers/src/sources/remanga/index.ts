@@ -5,6 +5,7 @@ import {
   MANGA_STATE,
   MANGA_TYPE,
   RANGE_FORMAT,
+  SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type FilterRangePreset,
@@ -215,17 +216,31 @@ const AGE_LIMIT_OPTIONS: RawFilterOption[] = [
   { key: '2', title: '18+', count: null },
 ];
 
-const getSortKey = (order: string | undefined): string => {
+const getSortField = (order: string | undefined): string => {
   switch (order) {
+    case SORT_ORDER.ADDED:
+      return 'id';
+    case SORT_ORDER.CHAPTERS:
+      return 'count_chapters';
     case SORT_ORDER.POPULARITY:
-      return '-rating';
+      return 'score';
     case SORT_ORDER.RATING:
-      return '-votes';
-    case SORT_ORDER.NEWEST:
-      return '-id';
+      return 'rating';
+    case SORT_ORDER.RATING_COUNT:
+      return 'count_rating';
+    case SORT_ORDER.LIKES:
+      return 'votes';
+    case SORT_ORDER.VIEWS:
+      return 'views';
     default:
-      return '-chapter_date';
+      return 'chapter_date';
   }
+};
+
+// Django-filter's ordering convention: a bare field name sorts ascending, a `-` prefix descending.
+const getSortKey = (order: string | undefined, direction: string | undefined): string => {
+  const field = getSortField(order);
+  return direction === SORT_DIRECTION.ASC ? field : `-${field}`;
 };
 
 const parseIsoDate = (value: string | undefined): number => {
@@ -335,6 +350,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
   const fetchListPage = async (
     page: number,
     order: string | undefined,
+    direction: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
@@ -342,7 +358,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     const url = new URL(`https://${apiHost}${path}`);
     url.searchParams.set('page', String(page));
     url.searchParams.set('count', String(PAGE_SIZE));
-    url.searchParams.set('ordering', getSortKey(order));
+    url.searchParams.set('ordering', getSortKey(order, direction));
     if (query) url.searchParams.set('query', query);
     applyFilterParams(url, filters);
 
@@ -352,7 +368,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
-      fetchListPage(page, params.order, params.query, params.filters),
+      fetchListPage(page, params.order, params.direction, params.query, params.filters),
     );
   };
 
@@ -548,8 +564,17 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.POPULARITY, SORT_ORDER.RATING, SORT_ORDER.NEWEST],
-      supportsDirection: false,
+      sortOrders: [
+        SORT_ORDER.POPULARITY,
+        SORT_ORDER.RATING,
+        SORT_ORDER.VIEWS,
+        SORT_ORDER.CHAPTERS,
+        SORT_ORDER.ADDED,
+        SORT_ORDER.UPDATED,
+        SORT_ORDER.RATING_COUNT,
+        SORT_ORDER.LIKES,
+      ],
+      supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

@@ -43,12 +43,14 @@ export const getSortOrderLabel = (order: SortOrder): string => {
       return 'Популярное за месяц';
     case SORT_ORDER.RATING:
       return 'По рейтингу';
+    case SORT_ORDER.RATING_COUNT:
+      return 'Коли-ву оценок';
     case SORT_ORDER.LIKES:
       return 'По лайкам';
     case SORT_ORDER.VIEWS:
       return 'По просмотрам';
     case SORT_ORDER.CHAPTERS:
-      return 'Количеству глав';
+      return 'По Кол-ву глав';
     case SORT_ORDER.BOOKMARKS:
       return 'По закладкам';
     case SORT_ORDER.ALPHABETICAL:
