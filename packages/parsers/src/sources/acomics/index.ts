@@ -203,6 +203,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
       isAdult: false,
       requiresVpn: false,
       sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.ALPHABETICAL, SORT_ORDER.POPULARITY],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

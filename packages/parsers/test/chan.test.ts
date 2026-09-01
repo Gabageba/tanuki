@@ -11,6 +11,7 @@ const CFG: ChanConfig = {
   id: 'MANGACHAN',
   isNsfw: false,
   sortOrders: ['NEWEST', 'POPULARITY', 'ALPHABETICAL', 'RATING', 'CHAPTERS'],
+  supportsDirection: true,
   variant: 'default',
 };
 
@@ -181,17 +182,67 @@ describe('Chan parser sort routing', () => {
   const http = setUpFixtures();
   const parser = createChanParser(CFG, makeContext(http));
 
-  it('POPULARITY and RATING both route to /mostfavorites — the site labels that endpoint "Популярность" and exposes no separate rating axis', async () => {
-    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY' });
-    expect(new URL(http.requests.at(-1)!.url).pathname).toBe('/mostfavorites');
+  it('every order routes through /manga/new with its default-direction n= value — verified live that this matches the dedicated /mostfavorites, /catalog and /sortch pages item-for-item', async () => {
+    await parser.getList({ offset: 0, limit: 20 });
+    let url = new URL(http.requests.at(-1)!.url);
+    expect(url.pathname).toBe('/manga/new');
+    expect(url.searchParams.get('n')).toBe('datedesc');
 
+    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY' });
+    url = new URL(http.requests.at(-1)!.url);
+    expect(url.pathname).toBe('/manga/new');
+    expect(url.searchParams.get('n')).toBe('favdesc');
+
+    // RATING aliases POPULARITY's `fav` field — this DLE engine has no separate rating axis.
     await parser.getList({ offset: 0, limit: 20, order: 'RATING' });
-    expect(new URL(http.requests.at(-1)!.url).pathname).toBe('/mostfavorites');
+    url = new URL(http.requests.at(-1)!.url);
+    expect(url.searchParams.get('n')).toBe('favdesc');
+
+    await parser.getList({ offset: 0, limit: 20, order: 'ALPHABETICAL' });
+    url = new URL(http.requests.at(-1)!.url);
+    expect(url.searchParams.get('n')).toBe('abcasc');
+
+    await parser.getList({ offset: 0, limit: 20, order: 'CHAPTERS' });
+    url = new URL(http.requests.at(-1)!.url);
+    expect(url.searchParams.get('n')).toBe('chdesc');
   });
 
-  it('CHAPTERS routes to /sortch', async () => {
-    await parser.getList({ offset: 0, limit: 20, order: 'CHAPTERS' });
-    expect(new URL(http.requests.at(-1)!.url).pathname).toBe('/sortch');
+  it('a direction matching the order default leaves the n= value unchanged', async () => {
+    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY', direction: 'DESC' });
+    expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('favdesc');
+  });
+
+  it('a non-default direction flips the n= suffix for every order', async () => {
+    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY', direction: 'ASC' });
+    expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('favasc');
+
+    await parser.getList({ offset: 0, limit: 20, order: 'CHAPTERS', direction: 'ASC' });
+    expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('chasc');
+
+    await parser.getList({ offset: 0, limit: 20, order: 'ALPHABETICAL', direction: 'DESC' });
+    expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('abcdesc');
+
+    await parser.getList({ offset: 0, limit: 20, direction: 'ASC' });
+    expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('dateasc');
+  });
+
+  it('a source with supportsDirection: false ignores ListParams.direction entirely', async () => {
+    const noDirCfg: ChanConfig = { ...CFG, supportsDirection: false };
+    const noDirHttp = setUpFixtures();
+    const noDirParser = createChanParser(noDirCfg, makeContext(noDirHttp));
+    await noDirParser.getList({ offset: 0, limit: 20, order: 'POPULARITY', direction: 'ASC' });
+    expect(new URL(noDirHttp.requests.at(-1)!.url).searchParams.get('n')).toBe('favdesc');
+  });
+
+  it('the henchan variant shares the same /manga/new routing — unverified against the live site (currently down) but no longer special-cased to its own mostviews/mostfavorites/manga-newest pages', async () => {
+    const henchanCfg: ChanConfig = { ...CFG, variant: 'henchan', supportsDirection: false };
+    const henchanHttp = setUpFixtures();
+    const henchanParser = createChanParser(henchanCfg, makeContext(henchanHttp));
+    await henchanParser.getList({ offset: 0, limit: 20, order: 'RATING' });
+    const url = new URL(henchanHttp.requests.at(-1)!.url);
+    expect(url.pathname).toBe('/manga/new');
+    expect(url.searchParams.get('n')).toBe('favdesc');
+    expect(url.searchParams.has('sort')).toBe(false);
   });
 });
 

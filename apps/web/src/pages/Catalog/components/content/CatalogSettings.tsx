@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Grid, Group, SegmentedControl, Select, Stack, Text } from '@mantine/core';
+import { Button, Grid, Group, SegmentedControl, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useSearchParams } from 'react-router';
 import {
@@ -10,9 +10,9 @@ import {
   SquaresFourIcon,
 } from '@phosphor-icons/react';
 import PageLayout from '@/shared/ui/PageLayout';
-import type { FilterSelection, SortOrder } from '@tanuki/contracts';
+import { SORT_DIRECTION, type FilterSelection } from '@tanuki/contracts';
 import useSource from '@/entities/source/hooks/useSource';
-import { getSortOrderLabel, resolveOrder } from '../../utils/sortOrder';
+import { resolveOrder } from '../../utils/sortOrder';
 import { serializeFilters } from '../../utils/filterSelection';
 import type { CatalogParams } from '../../models';
 import useFilters from '../../hooks/useFilters';
@@ -20,6 +20,7 @@ import CatalogFilterPills from '../filters/CatalogFilterPills';
 import CatalogFilterCard from '../filters/CatalogFilterCard';
 import CatalogFilterDrawer from '../filters/CatalogFilterDrawer';
 import CatalogSettingsSkeleton from './CatalogSettingsSkeleton';
+import CatalogSort from './CatalogSort';
 
 type Props = {
   sourceId: string | undefined;
@@ -37,34 +38,33 @@ function CatalogSettings({ sourceId }: Props) {
   // ScrollArea в десктопной CatalogFilterCard. Открываем Drawer только на мобильном вьюпорте.
   const isMobile = useMediaQuery('(max-width: 47.9375em)', false);
 
-  const order = resolveOrder(params.order, source);
+  const order = resolveOrder(params.order, source?.sortOrders);
+  const direction = params.direction ?? SORT_DIRECTION.DESC;
 
-  // Сортировка не может отсутствовать в урле — как только источник подгрузился и мы знаем
-  // сортировку по умолчанию (params.order ещё не задан явно), сразу закрепляем её в урле.
+  // Сортировка (и направление, если источник его поддерживает) не может отсутствовать в
+  // урле — как только источник подгрузился и мы знаем дефолты, сразу закрепляем их в урле.
+  // Оба поля обновляются одним setParams/setSearchParams, чтобы не потерять одно
+  // изменение из-за того, что setParams — обычный useState-сеттер, а не функциональный.
   useEffect(() => {
-    if (params.order || !order) return;
-    setParams({ ...params, order });
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('order', order);
-        return next;
-      },
-      { replace: true },
-    );
-  }, [order, params, setParams, setSearchParams]);
+    const needsOrder = !params.order && !!order;
+    const needsDirection = !!source?.supportsDirection && !params.direction;
+    if (!needsOrder && !needsDirection) return;
 
-  const handleOrderChange = (order: SortOrder) => {
-    setParams({ ...params, order });
+    setParams({
+      ...params,
+      ...(needsOrder && { order }),
+      ...(needsDirection && { direction }),
+    });
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        next.set('order', order);
+        if (needsOrder) next.set('order', order);
+        if (needsDirection) next.set('direction', direction);
         return next;
       },
       { replace: true },
     );
-  };
+  }, [order, direction, params, source?.supportsDirection, setParams, setSearchParams]);
 
   const handleFiltersChange = (next: FilterSelection[]) => {
     setParams({ ...params, filters: next });
@@ -103,21 +103,10 @@ function CatalogSettings({ sourceId }: Props) {
         </Grid.Col>
         <Grid.Col span={{ base: 12, xs: 'content' }} order={{ base: 3, xs: 2 }}>
           <Group gap="xs">
-            {!!source?.sortOrders.length && !params.query && (
-              <Select
-                data={source.sortOrders.map((value) => ({
-                  value,
-                  label: getSortOrderLabel(value),
-                }))}
-                value={order ?? null}
-                onChange={(value) => handleOrderChange(value as SortOrder)}
-                placeholder="Сортировка"
-                allowDeselect={false}
-                w={200}
-                floatingHeight="viewport"
-                flex={{ base: 1, sm: 'none' }}
-              />
-            )}
+            <CatalogSort
+              sortOrders={source?.sortOrders ?? []}
+              supportsDirection={source?.supportsDirection ?? false}
+            />
             <SegmentedControl
               data={[
                 { label: <RowsIcon size={18} />, value: 'rows' },

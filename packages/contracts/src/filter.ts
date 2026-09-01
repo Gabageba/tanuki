@@ -60,12 +60,26 @@ export const FilterRangePresetSchema = z.object({
 
 export type FilterRangePreset = z.infer<typeof FilterRangePresetSchema>;
 
+/**
+ * How a RANGE group's bounds should read as text — plain counts ("0 - 2000") can shorten to "2к",
+ * but a year is a label, not a magnitude, so "1900 - 2026" must never become "1.9к - 2к".
+ */
+export const RANGE_FORMAT = {
+  NUMBER: 'NUMBER',
+  YEAR: 'YEAR',
+} as const;
+export type RangeFormat = EnumLiteralsOf<typeof RANGE_FORMAT>;
+
+export const RangeFormatSchema = z.enum(RANGE_FORMAT);
+
 /** Selectable bounds for a RANGE group — the source's own min/max, not the user's current pick. */
 export const FilterRangeSchema = z.object({
   min: z.number(),
   max: z.number(),
   /** Smallest meaningful increment, e.g. 0.1 for a 0..10 rating. Omitted means integer steps. */
   step: z.number().optional(),
+  /** Defaults to NUMBER when omitted. */
+  format: RangeFormatSchema.optional(),
 });
 
 export type FilterRange = z.infer<typeof FilterRangeSchema>;

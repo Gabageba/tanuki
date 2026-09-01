@@ -9,6 +9,7 @@ export type ListParams = {
   /** Always 20 today (apps/api's PAGE_SIZE), explicit so the math below isn't hardcoded. */
   limit: number;
   order?: string;
+  direction?: string;
   query?: string;
   /** Selections from a getFilters() group — sources without getFilters just ignore this. */
   filters?: FilterSelection[];

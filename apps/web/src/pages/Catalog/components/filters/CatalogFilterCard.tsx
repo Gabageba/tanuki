@@ -30,7 +30,7 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
           radius={0}
           keepMounted={false}
         >
-          <Tabs.List w={250}>
+          <Tabs.List w={270}>
             {groups.map((group) => {
               const { included, excluded } = countGroupSelections(draft, group.id);
 

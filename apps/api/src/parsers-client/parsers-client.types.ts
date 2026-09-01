@@ -6,7 +6,6 @@
 export type {
   RawTag,
   RawContentRating,
-  RawMangaState,
   RawManga,
   RawChapter,
   RawPage,

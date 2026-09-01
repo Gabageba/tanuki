@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Alert,
   Anchor,
   Badge,
   Container,
@@ -12,10 +13,24 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { WarningIcon } from '@phosphor-icons/react';
 import { Link, useParams } from 'react-router';
+import { MANGA_RESTRICTION, type MangaRestriction } from '@tanuki/contracts';
 import useChapters from './hooks/useChapters';
 import useMangaDetails from './hooks/useMangaDetails';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
+import { STATUS_DOWN_COLOR } from '@/shared/lib/palette';
+
+const getRestrictionMessage = (restriction: MangaRestriction): string => {
+  switch (restriction) {
+    case MANGA_RESTRICTION.GEO:
+      return 'Источник закрыл доступ к главам по гео-ограничению';
+    case MANGA_RESTRICTION.LEGAL:
+      return 'Источник закрыл доступ к главам по требованию правообладателя';
+    case MANGA_RESTRICTION.PAYWALL:
+      return 'Все главы этого тайтла платные на источнике';
+  }
+};
 
 function MangaPage() {
   const { sourceId = '', mangaId = '' } = useParams<{ sourceId: string; mangaId: string }>();
@@ -59,6 +74,11 @@ function MangaPage() {
         <Grid.Col span={{ base: 12, sm: 8, md: 9 }}>
           <Title order={1}>{manga.title}</Title>
           {manga.authors.length > 0 && <Text c="dimmed">{manga.authors.join(', ')}</Text>}
+          {manga.restriction && (
+            <Alert color={STATUS_DOWN_COLOR} icon={<WarningIcon weight="fill" />} mt="sm" py={8}>
+              {getRestrictionMessage(manga.restriction)}
+            </Alert>
+          )}
           <Group gap="xs" my="sm">
             {manga.tags.map((tag) => (
               <Badge key={tag.id} variant="light">

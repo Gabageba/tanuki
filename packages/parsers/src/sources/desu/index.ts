@@ -1,12 +1,13 @@
 import type { Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { RAW_MANGA_STATE } from '../../types';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_STATE,
   MANGA_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
+  type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -16,7 +17,6 @@ import type {
   RawChapter,
   RawPage,
   RawTag,
-  RawMangaState,
   RawMangaType,
   RawFilterGroup,
   RawFilterOption,
@@ -66,9 +66,9 @@ const toLargeCoverUrl = (coverUrl: string): string => {
   return coverUrl.replace(/\/(preview|snippet|x120)\//, '/original/');
 };
 
-const mangaStateByClass = (cls: string | null): RawMangaState | null => {
-  if (cls === 'ongoing') return RAW_MANGA_STATE.ONGOING;
-  if (cls === 'released' || cls === 'completed') return RAW_MANGA_STATE.FINISHED;
+const mangaStateByClass = (cls: string | null): MangaState | null => {
+  if (cls === 'ongoing') return MANGA_STATE.ONGOING;
+  if (cls === 'released' || cls === 'completed') return MANGA_STATE.FINISHED;
   return null;
 };
 
@@ -293,7 +293,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     if (ratings.length > 0) {
       groups.push({
         id: 'rating',
-        title: 'Возрастной рейтинг',
+        title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: ratings,
       });
@@ -627,9 +627,10 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       sortOrders: [
         SORT_ORDER.POPULARITY,
         SORT_ORDER.UPDATED,
-        SORT_ORDER.NEWEST,
+        SORT_ORDER.ADDED,
         SORT_ORDER.ALPHABETICAL,
       ],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

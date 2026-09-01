@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import type { CatalogResponse, FilterSelection, SortOrder } from '@tanuki/contracts';
+import type { CatalogResponse, FilterSelection, SortDirection, SortOrder } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { serializeFilters } from '../utils/filterSelection';
 import { resolveOrder } from '../utils/sortOrder';
@@ -11,15 +11,22 @@ type Params = {
   query?: string;
   filters?: FilterSelection[];
   order?: SortOrder;
+  direction?: SortDirection;
 };
 
-function useCatalog({ sourceId, query: searchQuery, filters, order: explicitOrder }: Params) {
+function useCatalog({
+  sourceId,
+  query: searchQuery,
+  filters,
+  order: explicitOrder,
+  direction,
+}: Params) {
   const { data: source, isLoading: isSourceLoading } = useSource({ sourceId });
-  const order = resolveOrder(explicitOrder, source);
+  const order = resolveOrder(explicitOrder, source?.sortOrders);
 
   const queryClient = useQueryClient();
   const forceNextFetch = useRef(false);
-  const queryKey = ['catalog', sourceId, searchQuery, filters ?? [], order];
+  const queryKey = ['catalog', sourceId, searchQuery, filters ?? [], order, direction];
 
   const query = useInfiniteQuery({
     queryKey,
@@ -32,6 +39,9 @@ function useCatalog({ sourceId, query: searchQuery, filters, order: explicitOrde
       }
       if (order) {
         params.set('order', order);
+      }
+      if (direction) {
+        params.set('direction', direction);
       }
       for (const value of serializeFilters(filters ?? [])) {
         params.append('filters', value);

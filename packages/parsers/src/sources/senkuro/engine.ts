@@ -1,16 +1,8 @@
-import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SORT_ORDER } from '@tanuki/contracts';
+import { CONTENT_RATING, MANGA_STATE, SORT_ORDER, type MangaState } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchCursorPaged } from '../../core/paging';
-import type {
-  RawManga,
-  RawChapter,
-  RawPage,
-  RawTag,
-  RawMangaState,
-  RawContentRating,
-} from '../../types';
+import type { RawManga, RawChapter, RawPage, RawTag, RawContentRating } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
@@ -75,18 +67,18 @@ type TeamJson = {
   name?: string;
 };
 
-const parseState = (raw: string | undefined): RawMangaState | null => {
+const parseState = (raw: string | undefined): MangaState | null => {
   switch (raw?.toUpperCase()) {
     case 'FINISHED':
-      return RAW_MANGA_STATE.FINISHED;
+      return MANGA_STATE.FINISHED;
     case 'ONGOING':
-      return RAW_MANGA_STATE.ONGOING;
+      return MANGA_STATE.ONGOING;
     case 'HIATUS':
-      return RAW_MANGA_STATE.PAUSED;
+      return MANGA_STATE.PAUSED;
     case 'ANNOUNCE':
-      return RAW_MANGA_STATE.UPCOMING;
+      return MANGA_STATE.UPCOMING;
     case 'CANCELLED':
-      return RAW_MANGA_STATE.ABANDONED;
+      return MANGA_STATE.ABANDONED;
     default:
       return null;
   }
@@ -408,6 +400,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       isAdult: catalogEntryFor(SOURCE_ID).isAdult,
       requiresVpn: catalogEntryFor(SOURCE_ID).requiresVpn,
       sortOrders: [SORT_ORDER.POPULARITY, SORT_ORDER.UPDATED],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

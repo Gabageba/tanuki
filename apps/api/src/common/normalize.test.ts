@@ -73,9 +73,9 @@ describe('normalizeManga', () => {
     );
   });
 
-  it('maps RESTRICTED state to null — contracts has no such state', () => {
-    expect(normalizeManga(ENV, 'DESUME', raw({ state: 'RESTRICTED' })).state).toBeNull();
-    expect(normalizeManga(ENV, 'DESUME', raw({ state: 'ONGOING' })).state).toBe('ONGOING');
+  it('passes restriction through, defaulting to null when the parser omits it', () => {
+    expect(normalizeManga(ENV, 'DESUME', raw({})).restriction).toBeNull();
+    expect(normalizeManga(ENV, 'DESUME', raw({ restriction: 'LEGAL' })).restriction).toBe('LEGAL');
   });
 
   it('turns a null coverUrl into an empty string, never null', () => {

@@ -1,16 +1,14 @@
-import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  MANGA_STATE,
+  SORT_ORDER,
+  SOURCE_CONTENT_TYPE,
+  type MangaState,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type {
-  RawManga,
-  RawChapter,
-  RawPage,
-  RawTag,
-  RawMangaState,
-  RawContentRating,
-} from '../../types';
+import type { RawManga, RawChapter, RawPage, RawTag, RawContentRating } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { ParseError } from '../../errors';
@@ -61,7 +59,6 @@ const getApiSortBy = (order: string | undefined): string => {
     case SORT_ORDER.RATING:
       return 'averageRating';
     case SORT_ORDER.ALPHABETICAL:
-    case SORT_ORDER.ALPHABETICAL_DESC:
       return 'name';
     // UPDATED and no explicit order — same as the site's default /titles?sortBy=updatedAt
     default:
@@ -80,16 +77,16 @@ const parseContentRating = (info: MangaJson): RawContentRating => {
   return CONTENT_RATING.SAFE;
 };
 
-const parseState = (raw: string | undefined): RawMangaState | null => {
+const parseState = (raw: string | undefined): MangaState | null => {
   switch (raw?.toLowerCase()) {
     case 'ongoing':
-      return RAW_MANGA_STATE.ONGOING;
+      return MANGA_STATE.ONGOING;
     case 'completed':
-      return RAW_MANGA_STATE.FINISHED;
+      return MANGA_STATE.FINISHED;
     case 'pause':
-      return RAW_MANGA_STATE.PAUSED;
+      return MANGA_STATE.PAUSED;
     case 'cancelled':
-      return RAW_MANGA_STATE.ABANDONED;
+      return MANGA_STATE.ABANDONED;
     default:
       return null;
   }
@@ -315,8 +312,8 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
         SORT_ORDER.NEWEST,
         SORT_ORDER.RATING,
         SORT_ORDER.ALPHABETICAL,
-        SORT_ORDER.ALPHABETICAL_DESC,
       ],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

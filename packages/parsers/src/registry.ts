@@ -110,6 +110,7 @@ const buildDescriptor = (id: SourceId): SourceDescriptor => {
     isAdult: catalogEntry.isAdult,
     requiresVpn: catalogEntry.requiresVpn,
     sortOrders: [],
+    supportsDirection: false,
     isSearchSupported: true,
     isMultipleTagsSupported: true,
     isFiltersSupported: FILTERS_SUPPORTED_IDS.has(id),

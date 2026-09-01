@@ -220,6 +220,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       isAdult: true,
       requiresVpn: false,
       sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

@@ -1,9 +1,14 @@
-import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  MANGA_STATE,
+  SORT_ORDER,
+  SOURCE_CONTENT_TYPE,
+  type MangaState,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawManga, RawChapter, RawPage, RawTag, RawMangaState } from '../../types';
+import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
@@ -39,18 +44,18 @@ type PageFileJson = {
   diskFile: string;
 };
 
-const parseState = (status: string | undefined): RawMangaState | null => {
+const parseState = (status: string | undefined): MangaState | null => {
   switch (status?.toLowerCase()) {
     case 'ongoing':
-      return RAW_MANGA_STATE.ONGOING;
+      return MANGA_STATE.ONGOING;
     case 'finished':
     case 'completed':
-      return RAW_MANGA_STATE.FINISHED;
+      return MANGA_STATE.FINISHED;
     case 'abandoned':
-      return RAW_MANGA_STATE.ABANDONED;
+      return MANGA_STATE.ABANDONED;
     case 'paused':
     case 'frozen':
-      return RAW_MANGA_STATE.PAUSED;
+      return MANGA_STATE.PAUSED;
     default:
       return null;
   }
@@ -199,6 +204,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
         SORT_ORDER.POPULARITY,
         SORT_ORDER.ALPHABETICAL,
       ],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: false,
       isFiltersSupported: false,

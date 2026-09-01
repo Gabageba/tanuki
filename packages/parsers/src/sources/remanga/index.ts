@@ -1,9 +1,27 @@
-import { RAW_MANGA_STATE } from '../../types';
-import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  MANGA_RESTRICTION,
+  MANGA_STATE,
+  MANGA_TYPE,
+  RANGE_FORMAT,
+  SORT_ORDER,
+  SOURCE_CONTENT_TYPE,
+  type FilterRangePreset,
+  type MangaState,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
-import type { ListParams } from '../../core/paging';
+import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawManga, RawChapter, RawPage, RawTag, RawMangaState } from '../../types';
+import type {
+  RawManga,
+  RawChapter,
+  RawPage,
+  RawTag,
+  RawMangaType,
+  RawFilterGroup,
+  RawFilterOption,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
@@ -12,15 +30,71 @@ import { NotFoundError } from '../../errors';
 
 const SOURCE_ID = 'REMANGA';
 const PAGE_SIZE = 20;
+const DECADE_SIZE = 10;
+const YEAR_RANGE_MIN = 1900;
+const YEAR_RANGE_CUTOFF = 2000;
 
-const STATES: Record<number, RawMangaState> = {
-  1: RAW_MANGA_STATE.FINISHED,
-  2: RAW_MANGA_STATE.ONGOING,
-  3: RAW_MANGA_STATE.PAUSED,
-  4: RAW_MANGA_STATE.ABANDONED,
-  5: RAW_MANGA_STATE.UPCOMING,
-  6: RAW_MANGA_STATE.RESTRICTED,
+const RATING_PRESETS: FilterRangePreset[] = [
+  { id: '9-plus', label: '9+', min: 9 },
+  { id: '8-plus', label: '8+', min: 8 },
+  { id: '7-plus', label: '7+', min: 7 },
+];
+
+const CHAPTERS_COUNT_PRESETS: FilterRangePreset[] = [
+  { id: 'lt-20', label: '< 20', max: 20 },
+  { id: 'lt-50', label: '< 50', max: 50 },
+  { id: '100-200', label: '100-200', min: 100, max: 200 },
+  { id: '200-300', label: '200-300', min: 200, max: 300 },
+  { id: '300-plus', label: '300+', min: 300 },
+];
+
+/** "Текущий год", the current-decade-so-far, a preset per full decade back to `YEAR_RANGE_CUTOFF`,
+ *  then one trailing preset lumping everything older than that into "Раньше 2000". */
+const getYearRangePresets = (maxYear: number): FilterRangePreset[] => {
+  const presets: FilterRangePreset[] = [
+    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
+  ];
+  const currentDecadeStart = Math.floor(maxYear / DECADE_SIZE) * DECADE_SIZE;
+  if (currentDecadeStart < maxYear) {
+    presets.push({
+      id: `decade-${currentDecadeStart}`,
+      label: `${currentDecadeStart}–${maxYear}`,
+      min: currentDecadeStart,
+      max: maxYear,
+    });
+  }
+  for (
+    let decadeStart = currentDecadeStart - DECADE_SIZE;
+    decadeStart >= YEAR_RANGE_CUTOFF;
+    decadeStart -= DECADE_SIZE
+  ) {
+    presets.push({
+      id: `decade-${decadeStart}`,
+      label: `${decadeStart}-е`,
+      min: decadeStart,
+      max: decadeStart + DECADE_SIZE - 1,
+    });
+  }
+  presets.push({
+    id: `before-${YEAR_RANGE_CUTOFF}`,
+    label: `Раньше ${YEAR_RANGE_CUTOFF}`,
+    min: YEAR_RANGE_MIN,
+    max: YEAR_RANGE_CUTOFF - 1,
+  });
+  return presets;
 };
+
+const STATES: Record<number, MangaState> = {
+  1: MANGA_STATE.FINISHED,
+  2: MANGA_STATE.ONGOING,
+  3: MANGA_STATE.PAUSED,
+  4: MANGA_STATE.ABANDONED,
+  5: MANGA_STATE.UPCOMING,
+};
+
+/** status.id === 6 ("Лицензировано") means the publisher pulled scanlations after licensing the
+ *  title — not a publication state, so it maps to `restriction` instead of `state`. */
+const LICENSED_STATUS_ID = 6;
 
 type CoverJson = {
   mid?: string;
@@ -40,6 +114,10 @@ type AgeLimitJson = {
   id?: number;
 };
 
+type TypeJson = {
+  id?: number;
+};
+
 type MangaJson = {
   dir: string;
   main_name: string;
@@ -47,8 +125,10 @@ type MangaJson = {
   another_name?: string;
   avg_rating?: number;
   cover: CoverJson;
+  type?: TypeJson;
   status?: StatusJson;
   age_limit?: AgeLimitJson;
+  issue_year?: number;
   genres?: TagJson[];
   description?: string;
   branches?: { id: number; publishers?: { name?: string } }[];
@@ -73,6 +153,67 @@ type ChapterJson = {
 type PageJson = {
   link: string;
 };
+
+type DictionaryJson = {
+  id: number;
+  name: string;
+};
+
+/** Type/status/translate_status/age_limit are small, closed enumerations the site itself never
+ *  changes without a redesign — verified live against api.remanga.org's own catalog SSR payload
+ *  (`filtersOptions`), same way STATES above was derived. Genres/categories are the only groups
+ *  fetched live, since those grow over time. */
+const TYPE_OPTIONS: RawFilterOption[] = [
+  { key: '1', title: 'Манга', count: null },
+  { key: '2', title: 'Манхва', count: null },
+  { key: '3', title: 'Маньхуа', count: null },
+  { key: '4', title: 'Западный комикс', count: null },
+  { key: '5', title: 'Рукомикс', count: null },
+  { key: '6', title: 'Индонезийский комикс', count: null },
+  { key: '7', title: 'Другое', count: null },
+  { key: '22', title: 'Оригиналы', count: null },
+];
+
+/** `type.id` on the manga/list JSON — same ids as TYPE_OPTIONS above. Only the unambiguous ones
+ *  get their own case; the rest (Рукомикс, Индонезийский комикс, Другое, Оригиналы) fall to OTHER. */
+const mangaTypeById = (id: number | undefined): RawMangaType | null => {
+  switch (id) {
+    case 1:
+      return MANGA_TYPE.MANGA;
+    case 2:
+      return MANGA_TYPE.MANHWA;
+    case 3:
+      return MANGA_TYPE.MANHUA;
+    case 4:
+      return MANGA_TYPE.COMICS;
+    case undefined:
+      return null;
+    default:
+      return MANGA_TYPE.OTHER;
+  }
+};
+
+const STATUS_OPTIONS: RawFilterOption[] = [
+  { key: '5', title: 'Анонс', count: null },
+  { key: '1', title: 'Закончен', count: null },
+  { key: '3', title: 'Заморожен', count: null },
+  { key: '6', title: 'Лицензировано', count: null },
+  { key: '2', title: 'Продолжается', count: null },
+];
+
+const TRANSLATE_STATUS_OPTIONS: RawFilterOption[] = [
+  { key: '1', title: 'Закончен', count: null },
+  { key: '3', title: 'Заморожен', count: null },
+  { key: '5', title: 'Не переводится (лицензировано)', count: null },
+  { key: '4', title: 'Нет переводчика', count: null },
+  { key: '2', title: 'Продолжается', count: null },
+];
+
+const AGE_LIMIT_OPTIONS: RawFilterOption[] = [
+  { key: '0', title: 'Для всех', count: null },
+  { key: '1', title: '16+', count: null },
+  { key: '2', title: '18+', count: null },
+];
 
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
@@ -135,6 +276,9 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       largeCoverUrl: cover.high ? toAbsoluteUrl(cover.high, apiHost) : null,
       tags: parseTags(jo.genres),
       state: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
+      restriction: jo.status?.id === LICENSED_STATUS_ID ? MANGA_RESTRICTION.LEGAL : null,
+      type: mangaTypeById(jo.type?.id),
+      year: jo.issue_year ?? null,
       authors: [],
       description: null,
       chapters: null,
@@ -142,10 +286,57 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     };
   };
 
+  /**
+   * genre/category/type are the only groups the API lets you exclude — verified live against
+   * api.remanga.org (`exclude_genres`/`exclude_categories`/`exclude_types`, each a repeated bare
+   * `key=id` param, same shape as the plain include side). status/age_limit/translate_status have
+   * no exclude counterpart. rating/issue_year/count_chapters are RANGE groups bounded through
+   * Django-filter's own `_gte`/`_lte` suffix convention rather than a single combined param.
+   */
+  const applyFilterParams = (url: URL, filters: FilterSelection[] | undefined): void => {
+    if (!filters || filters.length === 0) return;
+    for (const filter of filters) {
+      if ('range' in filter) {
+        const param =
+          filter.groupId === 'year'
+            ? 'issue_year'
+            : filter.groupId === 'chaptersCount'
+              ? 'count_chapters'
+              : filter.groupId;
+        if (filter.range.min != null)
+          url.searchParams.set(`${param}_gte`, String(filter.range.min));
+        if (filter.range.max != null)
+          url.searchParams.set(`${param}_lte`, String(filter.range.max));
+        continue;
+      }
+      switch (filter.groupId) {
+        case 'genre':
+          url.searchParams.append(filter.exclude ? 'exclude_genres' : 'genres', filter.key);
+          break;
+        case 'category':
+          url.searchParams.append(filter.exclude ? 'exclude_categories' : 'categories', filter.key);
+          break;
+        case 'type':
+          url.searchParams.append(filter.exclude ? 'exclude_types' : 'types', filter.key);
+          break;
+        case 'status':
+          url.searchParams.append('status', filter.key);
+          break;
+        case 'ageRating':
+          url.searchParams.append('age_limit', filter.key);
+          break;
+        case 'translateStatus':
+          url.searchParams.append('translate_status', filter.key);
+          break;
+      }
+    }
+  };
+
   const fetchListPage = async (
     page: number,
     order: string | undefined,
     query: string | undefined,
+    filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
     const path = query ? '/api/v2/search' : '/api/v2/search/catalog';
     const url = new URL(`https://${apiHost}${path}`);
@@ -153,6 +344,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     url.searchParams.set('count', String(PAGE_SIZE));
     url.searchParams.set('ordering', getSortKey(order));
     if (query) url.searchParams.set('query', query);
+    applyFilterParams(url, filters);
 
     const json = await ctx.http.getJson<{ results: MangaJson[] }>(url.toString());
     return json.results.map(parseManga);
@@ -160,8 +352,83 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
-      fetchListPage(page, params.order, params.query),
+      fetchListPage(page, params.order, params.query, params.filters),
     );
+  };
+
+  const fetchDictionary = async (name: 'genres' | 'categories'): Promise<RawFilterOption[]> => {
+    const json = await ctx.http.getJson<DictionaryJson[]>(
+      `https://${apiHost}/api/v2/titles/${name}/`,
+    );
+    return json.map((jo) => ({ key: String(jo.id), title: jo.name, count: null }));
+  };
+
+  let filtersPromise: Promise<RawFilterGroup[]> | null = null;
+
+  const getFilters = (): Promise<RawFilterGroup[]> => {
+    if (!filtersPromise) filtersPromise = fetchFilters();
+    return filtersPromise;
+  };
+
+  const fetchFilters = async (): Promise<RawFilterGroup[]> => {
+    const [genres, categories] = await Promise.all([
+      fetchDictionary('genres'),
+      fetchDictionary('categories'),
+    ]);
+    const currentYear = new Date().getFullYear();
+
+    return [
+      {
+        id: 'genre',
+        title: 'Жанры',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+        options: genres,
+      },
+      {
+        id: 'category',
+        title: 'Категории',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
+        options: categories,
+      },
+      { id: 'type', title: 'Тип', type: FILTER_TYPE.CHECKBOX_EXCLUDE, options: TYPE_OPTIONS },
+      { id: 'status', title: 'Статус', type: FILTER_TYPE.CHECKBOX, options: STATUS_OPTIONS },
+      {
+        id: 'translateStatus',
+        title: 'Статус перевода',
+        type: FILTER_TYPE.CHECKBOX,
+        options: TRANSLATE_STATUS_OPTIONS,
+      },
+      {
+        id: 'ageRating',
+        title: 'Возрастное ограничение',
+        type: FILTER_TYPE.CHECKBOX,
+        options: AGE_LIMIT_OPTIONS,
+      },
+      {
+        id: 'rating',
+        title: 'Рейтинг',
+        type: FILTER_TYPE.RANGE,
+        options: [],
+        settings: { range: { min: 0, max: 10, step: 0.1 }, presets: RATING_PRESETS },
+      },
+      {
+        id: 'year',
+        title: 'Год выпуска',
+        type: FILTER_TYPE.RANGE,
+        options: [],
+        settings: {
+          range: { min: YEAR_RANGE_MIN, max: currentYear, format: RANGE_FORMAT.YEAR },
+          presets: getYearRangePresets(currentYear),
+        },
+      },
+      {
+        id: 'chaptersCount',
+        title: 'Количество глав',
+        type: FILTER_TYPE.RANGE,
+        options: [],
+        settings: { range: { min: 0, max: 2000 }, presets: CHAPTERS_COUNT_PRESETS },
+      },
+    ];
   };
 
   const slugFromUrl = (mangaUrl: string): string => {
@@ -192,11 +459,15 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     ].filter((t) => t.length > 0);
 
     const chapters: RawChapter[] = [];
+    let hadPaidChapters = false;
     for (const branch of json.branches ?? []) {
       const branchName = branch.publishers?.name ?? null;
       const branchChapters = (await fetchAllChapters(branch.id)).slice().reverse();
       for (const cjo of branchChapters) {
-        if (cjo.is_paid && !cjo.is_bought) continue;
+        if (cjo.is_paid && !cjo.is_bought) {
+          hadPaidChapters = true;
+          continue;
+        }
         chapters.push({
           id: generateUid(SOURCE_ID, cjo.id),
           title: cjo.name ? toTitleCase(cjo.name) : null,
@@ -228,6 +499,14 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       largeCoverUrl: cover.high ? toAbsoluteUrl(cover.high, apiHost) : null,
       tags: parseTags(json.genres),
       state: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,
+      restriction:
+        json.status?.id === LICENSED_STATUS_ID
+          ? MANGA_RESTRICTION.LEGAL
+          : chapters.length === 0 && hadPaidChapters
+            ? MANGA_RESTRICTION.PAYWALL
+            : null,
+      type: mangaTypeById(json.type?.id),
+      year: json.issue_year ?? null,
       authors: [],
       description: json.description ?? null,
       chapters,
@@ -270,13 +549,15 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       isAdult: false,
       requiresVpn: false,
       sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.POPULARITY, SORT_ORDER.RATING, SORT_ORDER.NEWEST],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
-      isFiltersSupported: false,
+      isFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
+    getFilters,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

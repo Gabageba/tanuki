@@ -85,7 +85,7 @@ const FILTERS_HTML = `<!doctype html><html><body>
         </select>
       </div>
       <div class="catalog__field">
-        <select name="age_rating[]" multiple data-placeholder="Возрастной рейтинг">
+        <select name="age_rating[]" multiple data-placeholder="Возрастное ограничение">
           <option value="18+">18+</option>
           <option value="16+">16+</option>
         </select>
@@ -285,7 +285,7 @@ describe('MangaBuff parser conformance', () => {
       ['UPDATED', 'updated_at'],
       ['POPULARITY', 'real_views'],
       ['RATING', 'rating'],
-      ['NEWEST', 'created_at'],
+      ['ADDED', 'created_at'],
     ];
     for (const [order, sort] of cases) {
       await parser.getList({ offset: 0, limit: 20, order });

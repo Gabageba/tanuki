@@ -5,11 +5,10 @@ export type {
   RawTag,
   RawSourceInfo,
   RawContentRating,
-  RawMangaState,
   RawFilterGroup,
   RawFilterOption,
 } from './types';
-export { RATING_UNKNOWN, RAW_MANGA_STATE } from './types';
+export { RATING_UNKNOWN } from './types';
 
 export {
   ParserError,

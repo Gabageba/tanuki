@@ -217,7 +217,7 @@ describe('Desu parser conformance', () => {
     ]);
 
     const rating = groups.find((g) => g.id === 'rating')!;
-    expect(rating.title).toBe('Возрастной рейтинг');
+    expect(rating.title).toBe('Возрастное ограничение');
     expect(rating.type).toBe('CHECKBOX');
     expect(rating.options).toEqual([{ key: 'no18plus', title: 'Без 18+', count: null }]);
   });

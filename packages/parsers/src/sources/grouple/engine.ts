@@ -1,13 +1,16 @@
 import type { Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { RAW_MANGA_STATE } from '../../types';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_RESTRICTION,
+  MANGA_STATE,
   MANGA_TYPE,
+  RANGE_FORMAT,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type FilterRangePreset,
+  type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -17,7 +20,6 @@ import type {
   RawChapter,
   RawFilterGroup,
   RawFilterOption,
-  RawMangaState,
   RawMangaType,
   RawPage,
   RawTag,
@@ -112,7 +114,7 @@ const ELEMENT_FILTER_GROUPS = new Set(['genre', 'category', 'ageRating', 'misc']
 
 const getSearchSortType = (order: string | undefined): string => {
   switch (order) {
-    case SORT_ORDER.USER_RATING:
+    case SORT_ORDER.LIKES:
       return 'USER_RATING';
     case SORT_ORDER.ALPHABETICAL:
       return 'NAME';
@@ -347,14 +349,14 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     };
   };
 
-  const mapCatalogState = (status: GroupleTranslationStatus): RawMangaState | null => {
+  const mapCatalogState = (status: GroupleTranslationStatus): MangaState | null => {
     switch (status) {
       case GROUPLE_TRANSLATION_STATUS.FINISHED:
-        return RAW_MANGA_STATE.FINISHED;
+        return MANGA_STATE.FINISHED;
       case GROUPLE_TRANSLATION_STATUS.PROGRESS:
-        return RAW_MANGA_STATE.ONGOING;
+        return MANGA_STATE.ONGOING;
       case GROUPLE_TRANSLATION_STATUS.POSTPONED:
-        return RAW_MANGA_STATE.PAUSED;
+        return MANGA_STATE.PAUSED;
       case GROUPLE_TRANSLATION_STATUS.NONE:
         return null;
     }
@@ -564,7 +566,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     if (ageRatings.length > 0) {
       groups.push({
         id: 'ageRating',
-        title: 'Возрастной рейтинг',
+        title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: ageRatings,
       });
@@ -596,7 +598,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: {
-          range: { min: yearMin, max: yearMax },
+          range: { min: yearMin, max: yearMax, format: RANGE_FORMAT.YEAR },
           presets: getYearRangePresets(yearMin, yearMax),
         },
       });
@@ -750,7 +752,8 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         attrOrNull(coverImg, 'data-full') ??
         null,
       tags: [...tags.values()],
-      state: isRestricted ? RAW_MANGA_STATE.RESTRICTED : null,
+      state: null,
+      restriction: isRestricted ? MANGA_RESTRICTION.LEGAL : null,
       authors: root
         .find('.elem_author,.elem_illustrator,.elem_screenwriter')
         .find('a.person-link')
@@ -853,10 +856,11 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         SORT_ORDER.ALPHABETICAL,
         SORT_ORDER.ADDED,
         SORT_ORDER.RATING,
-        SORT_ORDER.USER_RATING,
+        SORT_ORDER.LIKES,
         SORT_ORDER.NEWEST,
         SORT_ORDER.UPDATED,
       ],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

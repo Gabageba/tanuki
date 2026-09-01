@@ -241,6 +241,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
       sortOrders: [SORT_ORDER.NEWEST],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

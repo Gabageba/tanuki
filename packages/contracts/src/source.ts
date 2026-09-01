@@ -39,19 +39,29 @@ export const SORT_ORDER = {
   POPULARITY_WEEK: 'POPULARITY_WEEK',
   POPULARITY_MONTH: 'POPULARITY_MONTH',
   RATING: 'RATING',
-  USER_RATING: 'USER_RATING',
   LIKES: 'LIKES',
   VIEWS: 'VIEWS',
   CHAPTERS: 'CHAPTERS',
   BOOKMARKS: 'BOOKMARKS',
   ALPHABETICAL: 'ALPHABETICAL',
-  ALPHABETICAL_DESC: 'ALPHABETICAL_DESC',
   ALPHABETICAL_RU: 'ALPHABETICAL_RU',
   ALPHABETICAL_EN: 'ALPHABETICAL_EN',
 } as const;
 export type SortOrder = EnumLiteralsOf<typeof SORT_ORDER>;
 
 export const SortOrderSchema = z.enum(SORT_ORDER);
+
+/**
+ * Whether the source's own catalog actually reverses order for the chosen `SortOrder` — most
+ * sources bake a fixed direction into each SORT_ORDER value and ignore `ListParams.direction`.
+ */
+export const SORT_DIRECTION = {
+  ASC: 'ASC',
+  DESC: 'DESC',
+} as const;
+export type SortDirection = EnumLiteralsOf<typeof SORT_DIRECTION>;
+
+export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 
 export const SourceSchema = z.object({
   id: z.string(), // "DESUME"
@@ -69,6 +79,9 @@ export const SourceSchema = z.object({
   requiresVpn: z.boolean(),
   /** Empty when the source doesn't support choosing an order — ListParams.order is then ignored. */
   sortOrders: z.array(SortOrderSchema),
+  /** True when the source actually reverses order for the chosen SortOrder — most sources ignore
+   *  ListParams.direction, so their UI hides the direction toggle entirely. */
+  supportsDirection: z.boolean(),
 });
 
 export type Source = z.infer<typeof SourceSchema>;

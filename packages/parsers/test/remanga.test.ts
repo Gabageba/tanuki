@@ -15,7 +15,9 @@ const LIST_JSON = JSON.stringify({
       secondary_name: 'One Piece',
       avg_rating: 8.5,
       cover: { mid: '/covers/op-mid.jpg', high: '/covers/op-high.jpg' },
+      type: { id: 1, name: 'Манга' },
       status: { id: 2 },
+      issue_year: 1997,
       genres: [{ id: 1, name: 'приключения' }],
     },
   ],
@@ -28,8 +30,10 @@ const DETAILS_JSON = JSON.stringify({
   secondary_name: 'Wan Pis',
   avg_rating: 8.7,
   cover: { mid: '/covers/op-mid.jpg', high: '/covers/op-high.jpg' },
+  type: { id: 1, name: 'Манга' },
   status: { id: 2 },
   age_limit: { id: 0 },
+  issue_year: 1997,
   genres: [{ id: 1, name: 'приключения' }],
   description: 'Описание тайтла.',
   branches: [{ id: 555, publishers: { name: 'TeamA' } }],
@@ -69,6 +73,16 @@ const PAGES_JSON = JSON.stringify({
   ],
 });
 
+const GENRES_JSON = JSON.stringify([
+  { id: 1, name: 'Приключения', dir: 'priklyucheniya', description: '' },
+  { id: 3, name: 'Боевые искусства', dir: 'boeveiskusstva', description: '' },
+]);
+
+const CATEGORIES_JSON = JSON.stringify([
+  { id: 5, name: 'Веб', dir: 'veb', description: '' },
+  { id: 47, name: 'Алхимия', dir: 'alhimija', description: '' },
+]);
+
 const makeContext = (http: FakeHttpClient): ParserContext => {
   return {
     http,
@@ -81,6 +95,16 @@ const makeContext = (http: FakeHttpClient): ParserContext => {
 
 const setUpFixtures = (): FakeHttpClient => {
   const http = new FakeHttpClient();
+  http.register((url) => url.startsWith(`https://${API_HOST}/api/v2/titles/genres/`), {
+    status: 200,
+    body: GENRES_JSON,
+    contentType: 'application/json',
+  });
+  http.register((url) => url.startsWith(`https://${API_HOST}/api/v2/titles/categories/`), {
+    status: 200,
+    body: CATEGORIES_JSON,
+    contentType: 'application/json',
+  });
   http.register(
     (url) => url.includes('/api/v2/titles/chapters/?'),
     (() => {
@@ -129,6 +153,8 @@ describe('Remanga parser conformance', () => {
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
+    expect(item!.type).toBe('MANGA');
+    expect(item!.year).toBe(1997);
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
@@ -141,6 +167,8 @@ describe('Remanga parser conformance', () => {
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
+    expect(manga.type).toBe('MANGA');
+    expect(manga.year).toBe(1997);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {
@@ -152,5 +180,93 @@ describe('Remanga parser conformance', () => {
       expect(page.url).toMatch(/^https?:\/\//);
     }
     expect(pages[0]!.url).toBe('https://cdn.remanga.example/001.jpg');
+  });
+
+  it('getFilters: genre/category fetched live, the rest hardcoded, plus three RANGE groups', async () => {
+    const groups = await parser.getFilters!();
+    expect(groups.map((g) => g.id)).toEqual([
+      'genre',
+      'category',
+      'type',
+      'status',
+      'translateStatus',
+      'ageRating',
+      'rating',
+      'year',
+      'chaptersCount',
+    ]);
+
+    const genre = groups.find((g) => g.id === 'genre')!;
+    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(genre.options).toEqual([
+      { key: '1', title: 'Приключения', count: null },
+      { key: '3', title: 'Боевые искусства', count: null },
+    ]);
+
+    const category = groups.find((g) => g.id === 'category')!;
+    expect(category.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(category.options).toEqual([
+      { key: '5', title: 'Веб', count: null },
+      { key: '47', title: 'Алхимия', count: null },
+    ]);
+
+    const status = groups.find((g) => g.id === 'status')!;
+    expect(status.type).toBe('CHECKBOX');
+    expect(status.options.length).toBeGreaterThan(0);
+
+    const rating = groups.find((g) => g.id === 'rating')!;
+    expect(rating.type).toBe('RANGE');
+    expect(rating.options).toEqual([]);
+    expect(rating.settings?.range).toEqual({ min: 0, max: 10, step: 0.1 });
+    expect(rating.settings?.presets).toEqual([
+      { id: '9-plus', label: '9+', min: 9 },
+      { id: '8-plus', label: '8+', min: 8 },
+      { id: '7-plus', label: '7+', min: 7 },
+    ]);
+
+    const year = groups.find((g) => g.id === 'year')!;
+    expect(year.type).toBe('RANGE');
+    expect(year.settings?.range).toMatchObject({ min: 1900, format: 'YEAR' });
+    expect(year.settings?.presets?.[0]).toMatchObject({ id: 'current-year' });
+    expect(year.settings?.presets?.at(-1)).toEqual({
+      id: 'before-2000',
+      label: 'Раньше 2000',
+      min: 1900,
+      max: 1999,
+    });
+
+    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
+    expect(chaptersCount.type).toBe('RANGE');
+    expect(chaptersCount.settings?.range).toEqual({ min: 0, max: 2000 });
+    expect(chaptersCount.settings?.presets).toEqual([
+      { id: 'lt-20', label: '< 20', max: 20 },
+      { id: 'lt-50', label: '< 50', max: 50 },
+      { id: '100-200', label: '100-200', min: 100, max: 200 },
+      { id: '200-300', label: '200-300', min: 200, max: 300 },
+      { id: '300-plus', label: '300+', min: 300 },
+    ]);
+  });
+
+  it('getList with filters: genre/category/type exclude routes through exclude_*, ranges through _gte/_lte', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: 'genre', key: '1' },
+        { groupId: 'genre', key: '3', exclude: true },
+        { groupId: 'category', key: '5', exclude: true },
+        { groupId: 'status', key: '2' },
+        { groupId: 'rating', range: { min: 8 } },
+        { groupId: 'year', range: { max: 2020 } },
+      ],
+    });
+    const listRequest = http.requests.filter((r) => r.url.includes('/search/catalog')).at(-1)!;
+    const url = new URL(listRequest.url);
+    expect(url.searchParams.getAll('genres')).toEqual(['1']);
+    expect(url.searchParams.getAll('exclude_genres')).toEqual(['3']);
+    expect(url.searchParams.getAll('exclude_categories')).toEqual(['5']);
+    expect(url.searchParams.getAll('status')).toEqual(['2']);
+    expect(url.searchParams.get('rating_gte')).toBe('8');
+    expect(url.searchParams.get('issue_year_lte')).toBe('2020');
   });
 });

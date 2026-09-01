@@ -3,13 +3,16 @@ export { TagSchema, type Tag } from './tag';
 export {
   MangaSchema,
   MangaStateSchema,
+  MangaRestrictionSchema,
   ContentRatingSchema,
   MangaTypeSchema,
   MANGA_STATE,
+  MANGA_RESTRICTION,
   CONTENT_RATING,
   MANGA_TYPE,
   type Manga,
   type MangaState,
+  type MangaRestriction,
   type ContentRating,
   type MangaType,
 } from './manga';
@@ -20,13 +23,16 @@ export {
   SourceContentTypeSchema,
   SourceStatusSchema,
   SortOrderSchema,
+  SortDirectionSchema,
   SOURCE_CONTENT_TYPE,
   SOURCE_STATUS,
   SORT_ORDER,
+  SORT_DIRECTION,
   type Source,
   type SourceContentType,
   type SourceStatus,
   type SortOrder,
+  type SortDirection,
 } from './source';
 export { BranchSchema, type Branch } from './branch';
 export {
@@ -36,7 +42,9 @@ export {
   FilterRangeSchema,
   FilterRangePresetSchema,
   FilterGroupSettingsSchema,
+  RangeFormatSchema,
   FILTER_TYPE,
+  RANGE_FORMAT,
   type FilterType,
   type FilterOption,
   type FilterGroup,
@@ -44,6 +52,7 @@ export {
   type FilterRangePreset,
   type FilterGroupSettings,
   type FilterSelection,
+  type RangeFormat,
 } from './filter';
 export {
   SOURCE_CATALOG,

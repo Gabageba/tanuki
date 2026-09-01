@@ -1,14 +1,27 @@
-import { SORT_ORDER, SortOrderSchema, type SortOrder, type Source } from '@tanuki/contracts';
+import {
+  SORT_ORDER,
+  SORT_DIRECTION,
+  SortOrderSchema,
+  SortDirectionSchema,
+  type SortOrder,
+  type SortDirection,
+} from '@tanuki/contracts';
 
 // Пока пользователь не выбрал сортировку сам, используем первую из тех, что поддерживает источник.
 export const resolveOrder = (
   explicitOrder: SortOrder | undefined,
-  source: Source | undefined,
-): SortOrder | undefined => explicitOrder ?? source?.sortOrders[0];
+  sortOrders: SortOrder[] | undefined,
+): SortOrder | undefined => explicitOrder ?? sortOrders?.[0];
 
 // Значение ?order= из урла: валидируем, чтобы битый/устаревший параметр не улетел в запрос как есть.
 export const parseSortOrder = (raw: string | null): SortOrder | undefined => {
   const result = SortOrderSchema.safeParse(raw);
+  return result.success ? result.data : undefined;
+};
+
+// Значение ?direction= из урла — та же валидация, что и у parseSortOrder.
+export const parseSortDirection = (raw: string | null): SortDirection | undefined => {
+  const result = SortDirectionSchema.safeParse(raw);
   return result.success ? result.data : undefined;
 };
 
@@ -30,8 +43,6 @@ export const getSortOrderLabel = (order: SortOrder): string => {
       return 'Популярное за месяц';
     case SORT_ORDER.RATING:
       return 'По рейтингу';
-    case SORT_ORDER.USER_RATING:
-      return 'По оценке';
     case SORT_ORDER.LIKES:
       return 'По лайкам';
     case SORT_ORDER.VIEWS:
@@ -42,11 +53,18 @@ export const getSortOrderLabel = (order: SortOrder): string => {
       return 'По закладкам';
     case SORT_ORDER.ALPHABETICAL:
       return 'По названию';
-    case SORT_ORDER.ALPHABETICAL_DESC:
-      return 'По названию (Я-А)';
     case SORT_ORDER.ALPHABETICAL_EN:
       return 'По названию (A-Z)';
     case SORT_ORDER.ALPHABETICAL_RU:
       return 'По названию (А-Я)';
+  }
+};
+
+export const getSortDirectionLabel = (direction: SortDirection): string => {
+  switch (direction) {
+    case SORT_DIRECTION.DESC:
+      return 'По убыванию';
+    case SORT_DIRECTION.ASC:
+      return 'По возрастанию';
   }
 };

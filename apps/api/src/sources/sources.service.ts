@@ -79,6 +79,7 @@ export class SourcesService {
       isAdult: raw.isAdult,
       requiresVpn: raw.requiresVpn,
       sortOrders: raw.sortOrders,
+      supportsDirection: raw.supportsDirection,
     };
   }
 }

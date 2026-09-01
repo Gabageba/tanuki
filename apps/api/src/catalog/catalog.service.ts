@@ -35,6 +35,7 @@ export class CatalogService {
     params: {
       page: number;
       order?: string;
+      direction?: string;
       query?: string;
       force?: boolean;
       filters?: FilterSelection[];

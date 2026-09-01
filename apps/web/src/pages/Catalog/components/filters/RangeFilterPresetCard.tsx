@@ -8,7 +8,7 @@ type Props = {
 
 function RangeFilterPresetCard({ id, label }: Props) {
   return (
-    <Radio.Card value={id} p="xs" className={styles.radioCard}>
+    <Radio.Card value={id} px="xs" py={6} className={styles.radioCard}>
       <Flex gap="xs" align="center">
         <Radio.Indicator variant="outline" size="xs" />
         <Text>{label}</Text>

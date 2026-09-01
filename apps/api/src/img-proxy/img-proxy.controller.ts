@@ -73,8 +73,6 @@ export class ImgProxyController {
     const width = w ? Number.parseInt(w, 10) : undefined;
     const format = f === IMAGE_FORMAT.webp || f === IMAGE_FORMAT.avif ? f : undefined;
 
-    reply.header('Cache-Control', 'public, max-age=31536000, immutable');
-
     // Ресайз/перекодирование — только для обложек (doc04), и только этот путь кешируется в
     // Valkey: байты для одного (url, width, format) неизменны по построению, а сами обложки
     // маленькие (десятки КБ). Страницы глав всегда запрашиваются без w/f и не кешируются.
@@ -83,6 +81,10 @@ export class ImgProxyController {
       const { value } = await this.cache.getOrSet(key, CACHE_TTL.images, () =>
         this.dedupedFetchAndTransform(key, absoluteUrl, s, width, format),
       );
+      // Cache-Control выставляется только тут, после успешного получения байт — если апстрим
+      // недоступен и fetchAndTransform бросает исключение, ответ с ошибкой не должен уйти
+      // клиенту с этим же immutable-заголовком и осесть в кеше браузера/CDN как "успех навечно".
+      reply.header('Cache-Control', 'public, max-age=31536000, immutable');
       reply.header('Content-Type', value.contentType);
       reply.status(HttpStatus.OK).send(Buffer.from(value.bodyBase64, 'base64'));
       return;
@@ -90,17 +92,18 @@ export class ImgProxyController {
 
     const upstream = await this.fetchUpstream(absoluteUrl, s);
     const contentType = upstream.headers['content-type'];
+    // Buffered rather than streamed straight through: sources like INKSTORY serve images
+    // XOR'd against a key fetched separately (parsers.decodeImage), which needs the full body
+    // up front — a no-op passthrough for every other source.
+    const raw = await streamToBuffer(this.decodeBody(upstream));
+    const decoded = await this.parsers.decodeImage(s, raw, absoluteUrl);
+    reply.header('Cache-Control', 'public, max-age=31536000, immutable');
     reply.header(
       'Content-Type',
       Array.isArray(contentType)
         ? (contentType[0] ?? '')
         : (contentType ?? 'application/octet-stream'),
     );
-    // Buffered rather than streamed straight through: sources like INKSTORY serve images
-    // XOR'd against a key fetched separately (parsers.decodeImage), which needs the full body
-    // up front — a no-op passthrough for every other source.
-    const raw = await streamToBuffer(this.decodeBody(upstream));
-    const decoded = await this.parsers.decodeImage(s, raw, absoluteUrl);
     reply.status(HttpStatus.OK).send(decoded);
   }
 

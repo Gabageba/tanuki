@@ -5,7 +5,7 @@ import CatalogHeader from './components/header/CatalogHeader';
 import useSource from '@/entities/source/hooks/useSource';
 import CatalogContent from './components/content/CatalogContent';
 import { parseFilters } from './utils/filterSelection';
-import { parseSortOrder } from './utils/sortOrder';
+import { parseSortDirection, parseSortOrder } from './utils/sortOrder';
 
 function Catalog() {
   const { sourceId } = useParams<{ sourceId: string }>();
@@ -19,6 +19,7 @@ function Catalog() {
       params={{
         sourceId: sourceId ?? '',
         order: parseSortOrder(searchParams.get('order')),
+        direction: parseSortDirection(searchParams.get('direction')),
         filters: parseFilters(searchParams.getAll('filters')),
       }}
     >

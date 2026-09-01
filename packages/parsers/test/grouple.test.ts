@@ -182,7 +182,7 @@ describe('Grouple parser conformance', () => {
       count: null,
     });
     expect(byId.year!.type).toBe('RANGE');
-    expect(byId.year!.settings!.range).toEqual({ min: 1957, max: 2027 });
+    expect(byId.year!.settings!.range).toEqual({ min: 1957, max: 2027, format: 'YEAR' });
     expect(byId.year!.settings!.presets![0]).toEqual({
       id: 'current-year',
       label: 'Текущий год',

@@ -11,32 +11,21 @@
  * - id (RawManga, RawChapter): stable across process restarts — see core/uid.ts.
  */
 
-import {
-  MANGA_STATE,
-  type ContentRating,
-  type EnumLiteralsOf,
-  type FilterGroupSettings,
-  type FilterType,
-  type MangaType,
-  type SortOrder,
-  type SourceContentType,
+import type {
+  ContentRating,
+  FilterGroupSettings,
+  FilterType,
+  MangaRestriction,
+  MangaState,
+  MangaType,
+  SortOrder,
+  SourceContentType,
 } from '@tanuki/contracts';
 
 export const RATING_UNKNOWN = -1;
 
 export type RawContentRating = ContentRating;
 export type RawMangaType = MangaType;
-
-/**
- * Публичные статусы (@tanuki/contracts MANGA_STATE) плюс RESTRICTED — гео-ограничение или
- * юридическая блокировка на стороне источника. Наружу он не выходит: normalize.ts в api
- * схлопывает его в null, чтобы не тащить редкое значение в публичный контракт.
- */
-export const RAW_MANGA_STATE = {
-  ...MANGA_STATE,
-  RESTRICTED: 'RESTRICTED',
-} as const;
-export type RawMangaState = EnumLiteralsOf<typeof RAW_MANGA_STATE>;
 
 export type RawTag = {
   title: string;
@@ -54,7 +43,7 @@ export type RawManga = {
   contentRating: RawContentRating | null;
   coverUrl: string | null;
   tags: RawTag[];
-  state: RawMangaState | null;
+  state: MangaState | null;
   authors: string[];
   largeCoverUrl: string | null;
   description: string | null;
@@ -74,6 +63,10 @@ export type RawManga = {
    *  ceiling, so it can't be normalized onto the 0..10 scale. Omitted where the source has no
    *  such counter. */
   likes?: number | null;
+  /** Why the source won't hand over the chapters (geo-block, takedown, paywall) — independent of
+   *  `state`, which is about publication, not access. Omitted where the source doesn't restrict
+   *  this title. */
+  restriction?: MangaRestriction | null;
 };
 
 export type RawChapter = {
@@ -133,6 +126,8 @@ export type RawSourceInfo = {
   isAdult: boolean;
   requiresVpn: boolean;
   sortOrders: SortOrder[];
+  /** True when the source actually reverses order for the chosen SortOrder — see ListParams.direction. */
+  supportsDirection: boolean;
   isSearchSupported: boolean;
   /** Mirrors whether the parser implements getFilters() — see Parser.getFilters. */
   isFiltersSupported: boolean;

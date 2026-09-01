@@ -2,10 +2,7 @@ import { z } from 'zod';
 import { TagSchema } from './tag';
 import type { EnumLiteralsOf } from './utils';
 
-/**
- * Публичные статусы тайтла. Парсеры расширяют этот же набор своим RESTRICTED
- * (см. RAW_MANGA_STATE в @tanuki/parsers) — сюда он не выходит.
- */
+/** Публичные статусы тайтла — публикация как таковая, не доступность его глав. */
 export const MANGA_STATE = {
   ONGOING: 'ONGOING',
   FINISHED: 'FINISHED',
@@ -16,6 +13,19 @@ export const MANGA_STATE = {
 export type MangaState = EnumLiteralsOf<typeof MANGA_STATE>;
 
 export const MangaStateSchema = z.enum(MANGA_STATE);
+
+/**
+ * Причина, по которой источник не отдаёт главы тайтла целиком: GEO — гео-ограничение,
+ * LEGAL — блокировка по требованию правообладателя, PAYWALL — все главы платные.
+ */
+export const MANGA_RESTRICTION = {
+  GEO: 'GEO',
+  LEGAL: 'LEGAL',
+  PAYWALL: 'PAYWALL',
+} as const;
+export type MangaRestriction = EnumLiteralsOf<typeof MANGA_RESTRICTION>;
+
+export const MangaRestrictionSchema = z.enum(MANGA_RESTRICTION);
 
 export const CONTENT_RATING = {
   SAFE: 'SAFE',
@@ -53,6 +63,7 @@ export const MangaSchema = z.object({
   tags: z.array(TagSchema),
 
   state: MangaStateSchema.nullable(),
+  restriction: MangaRestrictionSchema.nullable(),
   contentRating: ContentRatingSchema,
   type: MangaTypeSchema.nullable(),
   year: z.number().nullable(),

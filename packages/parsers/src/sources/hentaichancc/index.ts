@@ -232,6 +232,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       isAdult: true,
       requiresVpn: true,
       sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

@@ -51,6 +51,7 @@ export class ParsersClientService {
     params: {
       page: number;
       order?: string;
+      direction?: string;
       query?: string;
       force?: boolean;
       filters?: FilterSelection[];
@@ -72,6 +73,7 @@ export class ParsersClientService {
       sourceId,
       params.page,
       params.order ?? '',
+      params.direction ?? '',
       params.query ?? '',
       filtersKey,
     );
@@ -84,6 +86,7 @@ export class ParsersClientService {
           offset: params.page * PAGE_SIZE,
           limit: PAGE_SIZE,
           order: params.order,
+          direction: params.direction,
           query: params.query,
           filters: params.filters,
         }),

@@ -21,3 +21,20 @@ html {
   // нативный pull-to-refresh браузера завязан на нём, а не на body.
   overscroll-behavior-y: contain;
 }
+
+// Общий вид выбираемого пункта списка: сырой Combobox.Option (ComboboxOption) помечает
+// выбор атрибутом data-combobox-selected, а Select из MantineProvider — data-checked.
+.selectableOption {
+  border: 1px solid transparent;
+
+  &:hover {
+    background-color: var(--mantine-color-gray-light-hover);
+  }
+
+  &[data-combobox-selected],
+  &[data-checked] {
+    color: var(--mantine-color-terracotta-text);
+    background-color: var(--tanuki-color-primary-light-transparent);
+    border-color: var(--mantine-primary-color-filled);
+  }
+}

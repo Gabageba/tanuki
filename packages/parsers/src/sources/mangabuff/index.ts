@@ -1,12 +1,13 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { RAW_MANGA_STATE } from '../../types';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_STATE,
   MANGA_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
+  type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -16,7 +17,6 @@ import type {
   RawChapter,
   RawPage,
   RawTag,
-  RawMangaState,
   RawMangaType,
   RawContentRating,
   RawFilterGroup,
@@ -43,23 +43,23 @@ const getSortKey = (order: string | undefined): string => {
       return 'real_views';
     case SORT_ORDER.RATING:
       return 'rating';
-    case SORT_ORDER.NEWEST:
+    case SORT_ORDER.ADDED:
       return 'created_at';
     default:
       return 'updated_at';
   }
 };
 
-const parseStatus = (value: string): RawMangaState | null => {
+const parseStatus = (value: string): MangaState | null => {
   switch (value.toLowerCase().trim()) {
     case 'завершен':
-      return RAW_MANGA_STATE.FINISHED;
+      return MANGA_STATE.FINISHED;
     case 'продолжается':
-      return RAW_MANGA_STATE.ONGOING;
+      return MANGA_STATE.ONGOING;
     case 'заморожен':
-      return RAW_MANGA_STATE.PAUSED;
+      return MANGA_STATE.PAUSED;
     case 'заброшен':
-      return RAW_MANGA_STATE.ABANDONED;
+      return MANGA_STATE.ABANDONED;
     default:
       return null;
   }
@@ -312,7 +312,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     if (ageRatings.length > 0) {
       groups.push({
         id: 'ageRating',
-        title: 'Возрастной рейтинг',
+        title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: ageRatings,
       });
@@ -539,7 +539,8 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: false,
       requiresVpn: false,
-      sortOrders: [SORT_ORDER.POPULARITY, SORT_ORDER.UPDATED, SORT_ORDER.RATING, SORT_ORDER.NEWEST],
+      sortOrders: [SORT_ORDER.POPULARITY, SORT_ORDER.UPDATED, SORT_ORDER.RATING, SORT_ORDER.ADDED],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

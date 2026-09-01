@@ -8,7 +8,6 @@ import {
   type Page,
   type Tag,
 } from '@tanuki/contracts';
-import { RAW_MANGA_STATE } from '@tanuki/parsers';
 import type { Env } from '../config/env';
 import { buildSignedImageUrl } from '../img-proxy/sign.util';
 import { IMAGE_FORMAT } from '../img-proxy/models';
@@ -19,7 +18,6 @@ import type {
   RawFilterGroup,
   RawFilterOption,
   RawManga,
-  RawMangaState,
   RawPage,
   RawTag,
 } from '../parsers-client/parsers-client.types';
@@ -41,13 +39,6 @@ export const normalizeFilterGroup = (raw: RawFilterGroup): FilterGroup => {
     settings: raw.settings,
     exclusiveGroup: raw.exclusiveGroup,
   };
-};
-
-// Contracts не знают о RESTRICTED (гео-ограничение/юр. блокировка на источнике) — в doc04
-// такого статуса нет. Отдаём "неизвестно" вместо расширения публичного контракта ради
-// одного редкого значения.
-const normalizeState = (state: RawMangaState | null): Manga['state'] => {
-  return state === null || state === RAW_MANGA_STATE.RESTRICTED ? null : state;
 };
 
 export const mangaIdOf = (sourceId: string, raw: Pick<RawManga, 'id' | 'url'>): string => {
@@ -83,7 +74,8 @@ export const normalizeManga = (
     description: raw.description,
     authors: raw.authors,
     tags: raw.tags.map(normalizeTag),
-    state: normalizeState(raw.state),
+    state: raw.state,
+    restriction: raw.restriction ?? null,
     contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
     type: raw.type ?? null,
     year: raw.year ?? null,

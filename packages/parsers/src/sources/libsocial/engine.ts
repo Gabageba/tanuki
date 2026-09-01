@@ -1,15 +1,18 @@
 import { join } from 'node:path';
-import { RAW_MANGA_STATE } from '../../types';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_RESTRICTION,
   MANGA_STATE,
+  MANGA_TYPE,
+  RANGE_FORMAT,
+  SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   formatCompactNumber,
   type FilterRangePreset,
+  type MangaState,
 } from '@tanuki/contracts';
-import type { MangaState } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -20,6 +23,7 @@ import type {
   RawTag,
   RawFilterGroup,
   RawFilterOption,
+  RawMangaType,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -33,11 +37,11 @@ import { getValidAccessToken } from './auth';
 const PAGE_SIZE = 60;
 
 const STATES: Record<number, RawManga['state']> = {
-  1: RAW_MANGA_STATE.ONGOING,
-  2: RAW_MANGA_STATE.FINISHED,
-  3: RAW_MANGA_STATE.UPCOMING,
-  4: RAW_MANGA_STATE.PAUSED,
-  5: RAW_MANGA_STATE.ABANDONED,
+  1: MANGA_STATE.ONGOING,
+  2: MANGA_STATE.FINISHED,
+  3: MANGA_STATE.UPCOMING,
+  4: MANGA_STATE.PAUSED,
+  5: MANGA_STATE.ABANDONED,
 };
 
 /** `status[]` filter values — same ids as STATES above, kept as a separate ordered list since
@@ -62,6 +66,28 @@ const getStatusTitle = (state: MangaState): string => {
       return 'Приостановлен';
     case MANGA_STATE.ABANDONED:
       return 'Заброшен';
+  }
+};
+
+/** `type.id` on the manga list/details JSON — confirmed live against api.cdnlibs.org (ids 0, 1,
+ *  4, 5, 6, 8, 9 are the ones scoped to site_ids 1/2/4, i.e. MANGALIB/YAOILIB/HENTAILIB; the rest
+ *  belong to unrelated LibSocial network members). Only the unambiguous ones get their own case —
+ *  OEL-манга and Руманга fall to OTHER, same as remanga's mangaTypeById. */
+const mangaTypeById = (id: number | undefined): RawMangaType | null => {
+  switch (id) {
+    case 1:
+      return MANGA_TYPE.MANGA;
+    case 5:
+      return MANGA_TYPE.MANHWA;
+    case 6:
+      return MANGA_TYPE.MANHUA;
+    case 9:
+      return MANGA_TYPE.COMICS;
+    case undefined:
+    case 0:
+      return null;
+    default:
+      return MANGA_TYPE.OTHER;
   }
 };
 
@@ -158,6 +184,10 @@ type AgeRestrictionJson = {
   id?: number;
 };
 
+type TypeJson = {
+  id?: number;
+};
+
 type MangaListItemJson = {
   id: number;
   name: string;
@@ -166,6 +196,7 @@ type MangaListItemJson = {
   cover: CoverJson;
   rating?: RatingJson;
   status?: StatusJson;
+  type?: TypeJson;
 };
 
 type TagJson = {
@@ -208,9 +239,11 @@ type MangaDetailsJson = {
   authors: AuthorJson[];
   summary?: unknown;
   close_view?: number;
+  is_licensed?: boolean;
   rating?: RatingJson;
   status?: StatusJson;
   ageRestriction?: AgeRestrictionJson;
+  type?: TypeJson;
 };
 
 type BranchJson = {
@@ -316,22 +349,6 @@ const getSortBy = (order: string | undefined): string | null => {
   }
 };
 
-const getSortType = (order: string | undefined): string | null => {
-  switch (order) {
-    case SORT_ORDER.UPDATED:
-    case SORT_ORDER.NEWEST:
-    case SORT_ORDER.POPULARITY:
-    case SORT_ORDER.RATING:
-    case SORT_ORDER.CHAPTERS:
-    case SORT_ORDER.VIEWS:
-    case SORT_ORDER.ALPHABETICAL_EN:
-    case SORT_ORDER.ALPHABETICAL_RU:
-      return 'desc';
-    default:
-      return null;
-  }
-};
-
 export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let imageServersPromise: Promise<Map<string, string>> | null = null;
@@ -363,6 +380,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       coverUrl: jo.cover.default,
       tags: [],
       state: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
+      type: mangaTypeById(jo.type?.id),
       authors: [],
       largeCoverUrl: jo.cover.default,
       description: null,
@@ -459,6 +477,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
   const fetchListPage = async (
     page: number,
     order: string | undefined,
+    direction: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
@@ -470,7 +489,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     if (query) url.searchParams.set('q', query);
     const sortBy = getSortBy(order);
     if (sortBy) url.searchParams.set('sort_by', sortBy);
-    const sortType = getSortType(order);
+    const sortType = direction === SORT_DIRECTION.ASC ? 'asc' : 'desc';
     if (sortType) url.searchParams.set('sort_type', sortType);
     applyFilterParams(url, filters);
 
@@ -483,7 +502,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     // callers that don't care about order should still see recently-updated titles first.
     const order = params.order ?? SORT_ORDER.UPDATED;
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
-      fetchListPage(page, order, params.query, params.filters),
+      fetchListPage(page, order, params.direction, params.query, params.filters),
     );
   };
 
@@ -552,7 +571,11 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       return true;
     });
     const authors = json.authors.map((a) => a.name).filter((n): n is string => !!n);
-    const isRestricted = (json.close_view ?? 0) > 0;
+    // close_view flags premium (МангаЛib+/Hentailib+) content — combined with an empty chapters
+    // list (every branch came back restricted_view.is_open === false), every chapter is paid.
+    const isPaywalled = chapters.length === 0 && (json.close_view ?? 0) > 0;
+    // is_licensed with no chapters means the publisher pulled the scanlation for a legal release.
+    const isLicensedTakedown = chapters.length === 0 && json.is_licensed === true;
     const title = json.rus_name && json.rus_name.length > 0 ? json.rus_name : json.name;
     const ageRestrictionId = json.ageRestriction?.id;
 
@@ -575,12 +598,13 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
             : CONTENT_RATING.SAFE,
       coverUrl: json.cover.default,
       tags: allTags,
-      state:
-        chapters.length === 0 && isRestricted
-          ? RAW_MANGA_STATE.RESTRICTED
-          : json.status?.id != null
-            ? (STATES[json.status.id] ?? null)
-            : null,
+      state: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,
+      type: mangaTypeById(json.type?.id),
+      restriction: isLicensedTakedown
+        ? MANGA_RESTRICTION.LEGAL
+        : isPaywalled
+          ? MANGA_RESTRICTION.PAYWALL
+          : null,
       authors,
       largeCoverUrl: json.cover.default,
       description: summaryText(json.summary) || null,
@@ -701,7 +725,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: {
-          range: { min: YEAR_RANGE_MIN, max: new Date().getFullYear() },
+          range: { min: YEAR_RANGE_MIN, max: new Date().getFullYear(), format: RANGE_FORMAT.YEAR },
           presets: getYearRangePresets(new Date().getFullYear()),
         },
       },
@@ -800,6 +824,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
         SORT_ORDER.ALPHABETICAL_EN,
         SORT_ORDER.ALPHABETICAL_RU,
       ],
+      supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

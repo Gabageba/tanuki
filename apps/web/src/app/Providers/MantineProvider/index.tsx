@@ -27,7 +27,7 @@ import {
   STATUS_OK_COLOR,
   STATUS_OK_COLOR_SHADES,
 } from '@/shared/lib/palette';
-import SelectOption from './SelectOption';
+import SelectOption from '../../../shared/ui/option/SelectOption';
 import styles from './MantineProvider.module.scss';
 
 const DEFAULT_COLOR_SCHEME: ColorScheme = COLOR_SCHEME.AUTO;
@@ -158,14 +158,12 @@ const THEME = createTheme({
         ),
       },
       classNames: {
-        option: styles.selectOption,
+        option: 'selectableOption',
       },
     },
     Text: {
-      styles: {
-        root: {
-          fontSize: 14,
-        },
+      defaultProps: {
+        fz: 14,
       },
     },
     NavLink: {
@@ -194,6 +192,11 @@ const THEME = createTheme({
     Checkbox: {
       classNames: {
         input: styles.checkboxInput,
+      },
+    },
+    Radio: {
+      defaultProps: {
+        variant: 'outline',
       },
     },
   },

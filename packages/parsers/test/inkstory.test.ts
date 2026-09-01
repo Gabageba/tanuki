@@ -170,6 +170,29 @@ describe('Inkstory parser conformance', () => {
     expect(url.searchParams.get('sort')).toBe(sortKey);
   });
 
+  it.each([
+    ['POPULARITY', 'viewsCount,asc'],
+    ['RATING', 'averageRating,asc'],
+  ])('getList: order %s with direction ASC maps to sort=%s', async (order, sortKey) => {
+    await parser.getList({ offset: 0, limit: 20, order, direction: 'ASC' });
+    const booksRequest = http.requests
+      .filter((r) => r.url.startsWith(`https://${API_HOST}/v2/books?`))
+      .at(-1);
+    expect(booksRequest).toBeDefined();
+    const url = new URL(booksRequest!.url);
+    expect(url.searchParams.get('sort')).toBe(sortKey);
+  });
+
+  it('getList: default UPDATED order with direction ASC bypasses the chapter-update-feed and reads /v2/books', async () => {
+    await parser.getList({ offset: 0, limit: 20, direction: 'ASC' });
+    const booksRequest = http.requests
+      .filter((r) => r.url.startsWith(`https://${API_HOST}/v2/books?`))
+      .at(-1);
+    expect(booksRequest).toBeDefined();
+    const url = new URL(booksRequest!.url);
+    expect(url.searchParams.get('sort')).toBe('updatedAt,asc');
+  });
+
   it('getFilters: genre from /v2/labels (COLLECTION kind excluded) plus static and range groups', async () => {
     const groups = await parser.getFilters!();
     expect(groups.map((g) => g.id)).toEqual([
@@ -354,6 +377,7 @@ describe('Inkstory parser conformance', () => {
     expect(manga.authors).toEqual(['Oda Eiichiro']);
     expect(manga.type).toBe('MANGA');
     expect(manga.year).toBe(1997);
+    expect(manga.restriction).toBeNull();
   });
 
   it.each([
@@ -373,6 +397,29 @@ describe('Inkstory parser conformance', () => {
     const parser = createInkStoryParser(makeContext(freshHttp));
     const [item] = await parser.getList({ offset: 0, limit: 20 });
     expect(item!.type).toBe(type);
+  });
+
+  it('getDetails: chaptersCount>0 with empty chapters and a content notice reports LEGAL restriction', async () => {
+    const takenDownId = 'cccc-dddd-2222';
+    const freshHttp = new FakeHttpClient();
+    freshHttp.register((url) => url.includes(`/v2/chapters?bookId=${takenDownId}`), {
+      status: 200,
+      body: '[]',
+      contentType: 'application/json',
+    });
+    freshHttp.register((url) => url.startsWith(`https://${API_HOST}/v2/books/${takenDownId}`), {
+      status: 200,
+      body: JSON.stringify({ ...JSON.parse(DETAILS_JSON), id: takenDownId }),
+      contentType: 'application/json',
+    });
+    freshHttp.register((url) => url.includes(`/v2/content-notices?bookId=${takenDownId}`), {
+      status: 200,
+      body: JSON.stringify([{ id: 'notice-1', title: 'Про удаление глав' }]),
+      contentType: 'application/json',
+    });
+    const parser = createInkStoryParser(makeContext(freshHttp));
+    const manga = await parser.getDetails(takenDownId);
+    expect(manga.restriction).toBe('LEGAL');
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

@@ -1,6 +1,12 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, FILTER_TYPE, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  SORT_DIRECTION,
+  SORT_ORDER,
+  SOURCE_CONTENT_TYPE,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
@@ -193,9 +199,31 @@ const chanSortParam = (order: string | undefined): string => {
     case SORT_ORDER.CHAPTERS:
       return 'chdesc';
     default:
-      return ''; // SortOrder.NEWEST
+      return ''; // SortOrder.ADDED
   }
 };
+
+/** Field name behind `chanSortParam`'s `n=` value, split out so a direction override can be
+ *  appended explicitly (see `supportsDirection` doc on ChanConfig). */
+const chanSortField = (order: string | undefined): string => {
+  switch (order) {
+    case SORT_ORDER.RATING:
+    case SORT_ORDER.POPULARITY:
+      return 'fav';
+    case SORT_ORDER.ALPHABETICAL:
+      return 'abc';
+    case SORT_ORDER.CHAPTERS:
+      return 'ch';
+    default:
+      return 'date'; // SortOrder.ADDED
+  }
+};
+
+/** Direction each dedicated browse page (`/mostfavorites`, `/catalog`, `/sortch`, `/manga/new`)
+ *  is already sorted in — only the alphabetical listing is ascending, everything else is
+ *  newest/most-first. Matches the values `chanSortParam` bakes in below. */
+const chanDefaultDirection = (order: string | undefined): string =>
+  order === SORT_ORDER.ALPHABETICAL ? SORT_DIRECTION.ASC : SORT_DIRECTION.DESC;
 
 const findSingleSelection = (
   filters: FilterSelection[] | undefined,
@@ -212,6 +240,7 @@ const buildListUrl = (
   domain: string,
   offset: number,
   order: string | undefined,
+  direction: string | undefined,
   query: string | undefined,
   filters: FilterSelection[] | undefined,
 ): string => {
@@ -253,43 +282,19 @@ const buildListUrl = (
     return url.toString();
   }
 
-  if (cfg.variant === 'henchan') {
-    switch (order) {
-      case SORT_ORDER.POPULARITY:
-        url.pathname = '/mostviews';
-        url.searchParams.set('sort', 'manga');
-        break;
-      case SORT_ORDER.RATING:
-        url.pathname = '/mostfavorites';
-        url.searchParams.set('sort', 'manga');
-        break;
-      default:
-        url.pathname = '/manga/newest';
-    }
-    return url.toString();
-  }
-
-  switch (order) {
-    case SORT_ORDER.POPULARITY:
-    case SORT_ORDER.RATING:
-      // The site's own sort menu has one favorites-based ranking labelled "Популярность" —
-      // verified live it's `/mostfavorites`, not `/mostviews` ("Самая просматриваемая манга",
-      // a views count the site doesn't expose as a sort option at all). There's no separate
-      // rating axis on this DLE engine (see RawManga.likes doc), so RATING aliases POPULARITY
-      // here — same as chanSortParam already does for the tags/type/status routes below.
-      url.pathname = '/mostfavorites';
-      break;
-    case SORT_ORDER.ALPHABETICAL:
-      url.pathname = '/catalog';
-      break;
-    case SORT_ORDER.CHAPTERS:
-      // Verified live: "Главы" ("по кол-ву глав") in the site's sort menu is `/sortch`, a
-      // standalone listing (same markup as /catalog) pre-sorted by chapter count.
-      url.pathname = '/sortch';
-      break;
-    default:
-      url.pathname = '/manga/new';
-  }
+  // The site's sort menu points POPULARITY/RATING/ALPHABETICAL/CHAPTERS at their own dedicated
+  // pre-sorted pages (/mostfavorites, /catalog, /sortch) — but verified live, item-for-item
+  // across multiple offsets, that `/manga/new?n=<field><asc|desc>` returns exactly the same
+  // listing for every one of them on MANGACHAN (RATING aliases POPULARITY's `fav` field — this
+  // DLE engine has no separate rating axis, see RawManga.likes doc). HENCHAN's own dedicated
+  // pages (/mostviews, /mostfavorites, /manga/newest — different paths, different `sort=manga`
+  // param) weren't reachable to verify the same way, but that source is already non-functional,
+  // so it shares this route unverified for now rather than keeping a second code path alive.
+  url.pathname = '/manga/new';
+  const resolvedDirection =
+    cfg.supportsDirection && direction ? direction : chanDefaultDirection(order);
+  const dirSuffix = resolvedDirection === SORT_DIRECTION.ASC ? 'asc' : 'desc';
+  url.searchParams.set('n', `${chanSortField(order)}${dirSuffix}`);
   return url.toString();
 };
 
@@ -352,10 +357,11 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
   const fetchListPage = async (
     offset: number,
     order: string | undefined,
+    direction: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
   ): Promise<RawManga[]> => {
-    const url = buildListUrl(cfg, domain, offset, order, query, filters);
+    const url = buildListUrl(cfg, domain, offset, order, direction, query, filters);
     const doc = await ctx.http.getHtml(url);
     const root = doc.$('div.main_fon').find('#content').first();
     if (root.length === 0) {
@@ -371,7 +377,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     const size = params.query ? SEARCH_NATIVE_SIZE : BROWSE_NATIVE_SIZE;
     return fetchOffsetNative(params, { size }, (offset) =>
-      fetchListPage(offset, params.order, params.query, params.filters),
+      fetchListPage(offset, params.order, params.direction, params.query, params.filters),
     );
   };
 
@@ -654,6 +660,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
       sortOrders: cfg.sortOrders,
+      supportsDirection: cfg.supportsDirection,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

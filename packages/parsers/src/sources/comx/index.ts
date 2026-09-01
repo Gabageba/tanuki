@@ -1,12 +1,11 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { RAW_MANGA_STATE } from '../../types';
-import { SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { MANGA_STATE, SORT_ORDER, SOURCE_CONTENT_TYPE, type MangaState } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
 import type { Doc } from '../../core/html/dom';
-import type { RawManga, RawChapter, RawPage, RawTag, RawMangaState } from '../../types';
+import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
@@ -196,8 +195,8 @@ export const createComxParser = (ctx: ParserContext): Parser => {
 
     const author = nullIfEmpty(findLiValueAfter(doc.$, 'Publisher:'));
     const releaseType = findLiValueAfter(doc.$, 'Release type:');
-    const state: RawMangaState =
-      releaseType === 'Ongoing' ? RAW_MANGA_STATE.ONGOING : RAW_MANGA_STATE.FINISHED;
+    const state: MangaState =
+      releaseType === 'Ongoing' ? MANGA_STATE.ONGOING : MANGA_STATE.FINISHED;
 
     const tagLinks = doc
       .$('a[href*="/genres/"]')
@@ -281,6 +280,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       isAdult: false,
       requiresVpn: false,
       sortOrders: [SORT_ORDER.UPDATED],
+      supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

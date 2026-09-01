@@ -1,11 +1,15 @@
-import { RAW_MANGA_STATE } from '../../types';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_RESTRICTION,
+  MANGA_STATE,
   MANGA_TYPE,
+  RANGE_FORMAT,
+  SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type FilterRangePreset,
+  type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -15,7 +19,6 @@ import type {
   RawChapter,
   RawPage,
   RawTag,
-  RawMangaState,
   RawMangaType,
   RawFilterGroup,
   RawFilterOption,
@@ -135,6 +138,11 @@ type ChapterUpdateFeedItem = {
   book: MangaJson;
 };
 
+type ContentNoticeJson = {
+  id: string;
+  title: string;
+};
+
 type LabelJson = {
   slug: string;
   name: string;
@@ -238,36 +246,40 @@ const toStaticOptions = (keys: string[], getTitle: (key: string) => string): Raw
 
 /** Mirrors the site's own catalog sort dropdown (6 native `/v2/books` sort fields) — RATING
  *  is the site's real averageRating field, not likesCount, which is its own separate LIKES
- *  option. bookmarksCount is inferred from the same `<noun>Count` naming as views/likes/chapters. */
-const getSortKey = (order: string | undefined): string => {
+ *  option. bookmarksCount is inferred from the same `<noun>Count` naming as views/likes/chapters.
+ *  Inkstory is the only source in this repo whose native `sort` param already accepts a plain
+ *  `<field>,<asc|desc>` pair, so it's the only one that actually honors ListParams.direction —
+ *  see Source.supportsDirection. */
+const getSortKey = (order: string | undefined, direction: string | undefined): string => {
+  const dir = direction === SORT_DIRECTION.ASC ? 'asc' : 'desc';
   switch (order) {
     case SORT_ORDER.POPULARITY:
-      return 'viewsCount,desc';
+      return `viewsCount,${dir}`;
     case SORT_ORDER.LIKES:
-      return 'likesCount,desc';
+      return `likesCount,${dir}`;
     case SORT_ORDER.CHAPTERS:
-      return 'chaptersCount,desc';
+      return `chaptersCount,${dir}`;
     case SORT_ORDER.BOOKMARKS:
-      return 'bookmarksCount,desc';
+      return `bookmarksCount,${dir}`;
     case SORT_ORDER.RATING:
-      return 'averageRating,desc';
+      return `averageRating,${dir}`;
     case SORT_ORDER.NEWEST:
-      return 'createdAt,desc';
+      return `createdAt,${dir}`;
     default:
-      return 'updatedAt,desc';
+      return `updatedAt,${dir}`;
   }
 };
 
-const toMangaState = (status: string | undefined): RawMangaState | null => {
+const toMangaState = (status: string | undefined): MangaState | null => {
   switch (status?.toUpperCase()) {
     case 'DONE':
-      return RAW_MANGA_STATE.FINISHED;
+      return MANGA_STATE.FINISHED;
     case 'ONGOING':
-      return RAW_MANGA_STATE.ONGOING;
+      return MANGA_STATE.ONGOING;
     case 'FROZEN':
-      return RAW_MANGA_STATE.PAUSED;
+      return MANGA_STATE.PAUSED;
     case 'ANNOUNCE':
-      return RAW_MANGA_STATE.UPCOMING;
+      return MANGA_STATE.UPCOMING;
     default:
       return null;
   }
@@ -492,7 +504,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       },
       {
         id: 'contentStatus',
-        title: 'Возрастной рейтинг',
+        title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(CONTENT_STATUS_KEYS, getContentStatusTitle),
       },
@@ -524,7 +536,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: {
-          range: { min: yearMin, max: yearMax },
+          range: { min: yearMin, max: yearMax, format: RANGE_FORMAT.YEAR },
           presets: getYearRangePresets(yearMin, yearMax),
         },
       },
@@ -543,8 +555,17 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     order: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
+    direction: string | undefined,
   ): Promise<RawManga[]> => {
-    if (!query && !filters?.length && (order === undefined || order === SORT_ORDER.UPDATED)) {
+    // fetchUpdatedPage reads a dedicated "latest chapter drops" feed that has no direction
+    // control of its own, so an explicit ascending request must fall through to the generic
+    // /v2/books?sort=updatedAt,asc path instead.
+    if (
+      !query &&
+      !filters?.length &&
+      (order === undefined || order === SORT_ORDER.UPDATED) &&
+      direction !== SORT_DIRECTION.ASC
+    ) {
       return fetchUpdatedPage(page);
     }
     const url = new URL(`https://${apiHost}/v2/books`);
@@ -554,7 +575,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     if (query) {
       url.searchParams.set('search', query);
     } else {
-      url.searchParams.set('sort', getSortKey(order));
+      url.searchParams.set('sort', getSortKey(order, direction));
     }
     applyFilterParams(url, filters);
     const items = await ctx.http.getJson<MangaJson[]>(url.toString());
@@ -563,7 +584,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: FIRST_PAGE }, (page) =>
-      fetchListPage(page, params.order, params.query, params.filters),
+      fetchListPage(page, params.order, params.query, params.filters, params.direction),
     );
   };
 
@@ -605,6 +626,16 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     return chapters.reverse();
   };
 
+  /** `chaptersCount` keeps counting a title's real chapters even after a rightsholder takedown
+   *  wipes `/v2/chapters` — a dedicated notice at `/v2/content-notices` is what the site's own
+   *  chapter-list component reads to render the "removed by request" banner in that case. */
+  const hasContentNotice = async (mangaId: string): Promise<boolean> => {
+    const url = new URL(`https://${apiHost}/v2/content-notices`);
+    url.searchParams.set('bookId', mangaId);
+    const notices = await ctx.http.getJson<ContentNoticeJson[]>(url.toString());
+    return notices.length > 0;
+  };
+
   const getDetails = async (mangaId: string): Promise<RawManga> => {
     const [chapters, jo] = await Promise.all([
       getChapters(mangaId),
@@ -614,6 +645,10 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       .filter((r) => r.type === 'AUTHOR')
       .map((r) => r.publisher?.name)
       .filter((n): n is string => !!n);
+    const restriction =
+      chapters.length === 0 && (jo.chaptersCount ?? 0) > 0 && (await hasContentNotice(mangaId))
+        ? MANGA_RESTRICTION.LEGAL
+        : null;
 
     return {
       id: generateUid(SOURCE_ID, jo.id),
@@ -627,6 +662,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       largeCoverUrl: null,
       tags: (jo.labels ?? []).map(toTag),
       state: toMangaState(jo.status),
+      restriction,
       authors,
       description: jo.description ?? null,
       chapters,
@@ -668,6 +704,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         SORT_ORDER.RATING,
         SORT_ORDER.NEWEST,
       ],
+      supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

@@ -5,6 +5,7 @@ import type { LibSocialConfig } from '../src/sources/libsocial/config';
 import { LIBSOCIAL_API_HOST } from '../src/sources/libsocial/config';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { MANGA_RESTRICTION, MANGA_TYPE } from '@tanuki/contracts';
 
 const DOMAIN = 'mangalib.org';
 const SLUG = '123--one-piece';
@@ -29,6 +30,7 @@ const LIST_JSON = JSON.stringify({
       },
       rating: { average: 8.5 },
       status: { id: 1 },
+      type: { id: 5 },
     },
   ],
 });
@@ -56,6 +58,7 @@ const DETAILS_JSON = JSON.stringify({
     rating: { average: 8.7 },
     status: { id: 1 },
     ageRestriction: { id: 1 },
+    type: { id: 1 },
   },
 });
 
@@ -202,6 +205,28 @@ describe('LibSocial parser conformance', () => {
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
+    expect(item!.type).toBe(MANGA_TYPE.MANHWA);
+  });
+
+  it('getList: direction flips sort_type, defaulting to desc when unset', async () => {
+    await parser.getList({ offset: 0, limit: 20, order: 'RATING' });
+    let url = new URL(http.requests.at(-1)!.url);
+    expect(url.searchParams.get('sort_by')).toBe('rate_avg');
+    expect(url.searchParams.get('sort_type')).toBe('desc');
+
+    await parser.getList({ offset: 0, limit: 20, order: 'RATING', direction: 'DESC' });
+    url = new URL(http.requests.at(-1)!.url);
+    expect(url.searchParams.get('sort_type')).toBe('desc');
+
+    await parser.getList({ offset: 0, limit: 20, order: 'RATING', direction: 'ASC' });
+    url = new URL(http.requests.at(-1)!.url);
+    expect(url.searchParams.get('sort_type')).toBe('asc');
+
+    // POPULARITY has no sort_by (the API's own default ranking) but still takes sort_type.
+    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY', direction: 'ASC' });
+    url = new URL(http.requests.at(-1)!.url);
+    expect(url.searchParams.get('sort_by')).toBeNull();
+    expect(url.searchParams.get('sort_type')).toBe('asc');
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
@@ -217,6 +242,47 @@ describe('LibSocial parser conformance', () => {
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.description).toBe('Первый абзац.\n\nВторой абзац.');
     expect(manga.tags.map((t) => t.title).sort()).toEqual(['Пираты', 'Приключения']);
+    expect(manga.restriction).toBeNull();
+    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+  });
+
+  it('getDetails: is_licensed with no chapters reports LEGAL restriction', async () => {
+    const licensedSlug = '456--licensed-title';
+    const licensedHttp = new FakeHttpClient();
+    licensedHttp.register((url) => url.includes('/chapters'), {
+      status: 200,
+      body: JSON.stringify({ data: [] }),
+      contentType: 'application/json',
+    });
+    licensedHttp.register(
+      (url) => url.startsWith(`https://${LIBSOCIAL_API_HOST}/api/manga/${licensedSlug}`),
+      {
+        status: 200,
+        body: JSON.stringify({
+          data: {
+            id: 456,
+            name: 'Licensed Title',
+            cover: {
+              thumbnail: `https://${LIBSOCIAL_API_HOST}/uploads/456-thumb.jpg`,
+              default: `https://${LIBSOCIAL_API_HOST}/uploads/456-full.jpg`,
+            },
+            genres: [],
+            tags: [],
+            authors: [],
+            close_view: 0,
+            is_licensed: true,
+            rating: { average: 8.7 },
+            status: { id: 1 },
+          },
+        }),
+        contentType: 'application/json',
+      },
+    );
+    const licensedParser = createLibSocialParser(CFG, makeContext(licensedHttp));
+
+    const manga = await licensedParser.getDetails(licensedSlug);
+    expect(manga.chapters).toHaveLength(0);
+    expect(manga.restriction).toBe(MANGA_RESTRICTION.LEGAL);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {
