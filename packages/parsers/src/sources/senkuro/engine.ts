@@ -2,6 +2,7 @@ import {
   CONTENT_RATING,
   FILTER_TYPE,
   MANGA_STATE,
+  MANGA_TYPE,
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
@@ -19,6 +20,7 @@ import type {
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
+  RawMangaType,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -58,6 +60,9 @@ type MangaCardJson = {
   slug?: string;
   titles?: LocalizedText[];
   cover?: CoverJson;
+  type?: string;
+  releasedOn?: string;
+  chapters?: number;
 };
 
 /** One entry of `allLabels(subjectType: MANGA)` — a flat list mixing category roots (`depth: 0`,
@@ -112,6 +117,33 @@ const parseState = (raw: string | undefined): MangaState | null => {
     default:
       return null;
   }
+};
+
+/** `type` on the manga list/details JSON — confirmed live against api.senkuro.com since
+ *  introspection is disabled. OEL_MANGA and RU_MANGA fall to OTHER, same as remanga's
+ *  mangaTypeById. */
+const parseMangaType = (raw: string | undefined): RawMangaType | null => {
+  switch (raw?.toUpperCase()) {
+    case 'MANGA':
+      return MANGA_TYPE.MANGA;
+    case 'MANHWA':
+      return MANGA_TYPE.MANHWA;
+    case 'MANHUA':
+      return MANGA_TYPE.MANHUA;
+    case 'COMICS':
+      return MANGA_TYPE.COMICS;
+    case 'OEL_MANGA':
+    case 'RU_MANGA':
+      return MANGA_TYPE.OTHER;
+    default:
+      return null;
+  }
+};
+
+/** `releasedOn` is a full `YYYY-MM-DD` date — confirmed live against api.senkuro.com. */
+const parseYear = (raw: string | undefined): number | null => {
+  const year = Number.parseInt(raw?.slice(0, 4) ?? '', 10);
+  return Number.isNaN(year) ? null : year;
 };
 
 const parseContentRating = (raw: string | undefined): RawContentRating | null => {
@@ -520,6 +552,9 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       description: null,
       chapters: null,
       source: SOURCE_ID,
+      type: parseMangaType(info.type),
+      year: parseYear(info.releasedOn),
+      chaptersCount: info.chapters ?? null,
     };
   };
 
@@ -770,6 +805,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       description: descriptionParts.length > 0 ? descriptionParts.join('\n\n') : null,
       chapters: null,
       source: SOURCE_ID,
+      type: parseMangaType(info.type),
     };
   };
 
@@ -925,6 +961,9 @@ query fetchMangas(
             url
           }
         }
+        type
+        releasedOn
+        chapters
       }
     }
     pageInfo {

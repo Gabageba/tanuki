@@ -1,4 +1,4 @@
-import { Badge } from '@mantine/core';
+import { Badge, Text } from '@mantine/core';
 import { HeartIcon, StarFourIcon } from '@phosphor-icons/react';
 import { isEmpty } from '@/shared/lib/isEmpty';
 import type { Manga } from '@tanuki/contracts';
@@ -20,16 +20,23 @@ function MangaScoreBadge({ manga }: Props) {
       pos="absolute"
       bottom={6}
       right={6}
-      color="dark"
+      color="white"
       size="lg"
       fw={400}
-      leftSection={isRatingEmpty ? <HeartIcon weight="fill" /> : <StarFourIcon weight="fill" />}
+      leftSection={
+        isRatingEmpty ? (
+          <HeartIcon weight="fill" color="white" />
+        ) : (
+          <StarFourIcon weight="fill" color="white" />
+        )
+      }
       fz={14}
       px={8}
       radius="md"
+      variant="outline"
       bg="color-mix(in srgb, var(--mantine-color-dark-filled) 85%, transparent)"
     >
-      {isRatingEmpty ? manga.likes : manga.rating}
+      <Text c="white">{isRatingEmpty ? manga.likes : manga.rating}</Text>
     </Badge>
   );
 }

@@ -35,12 +35,12 @@ export const getSortOrderLabel = (order: SortOrder): string => {
       return 'Дате добавления';
     case SORT_ORDER.POPULARITY:
       return 'По популярности';
-    case SORT_ORDER.POPULARITY_TODAY:
-      return 'Популярное за день';
-    case SORT_ORDER.POPULARITY_WEEK:
-      return 'Популярное за неделю';
-    case SORT_ORDER.POPULARITY_MONTH:
-      return 'Популярное за месяц';
+    case SORT_ORDER.VIEWS_TODAY:
+      return 'Просмотры за день';
+    case SORT_ORDER.VIEWS_WEEK:
+      return 'Просмотры за неделю';
+    case SORT_ORDER.VIEWS_MONTH:
+      return 'Просмотры за месяц';
     case SORT_ORDER.RATING:
       return 'По рейтингу';
     case SORT_ORDER.RATING_COUNT:

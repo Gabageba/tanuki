@@ -18,6 +18,9 @@ const LIST_JSON = JSON.stringify({
         genres: ['Приключения'],
         averageRating: 8.5,
         status: 'ongoing',
+        type: 'manga',
+        releaseYear: 1997,
+        totalChapters: 1100,
       },
     ],
   },
@@ -42,6 +45,20 @@ const DETAILS_JSON = JSON.stringify({
 
 const PAGES_JSON = JSON.stringify({
   data: { pages: ['/chapters/ch-1/001.webp', '/chapters/ch-1/002.webp'] },
+});
+
+const FILTER_OPTIONS_JSON = JSON.stringify({
+  data: {
+    genres: ['Приключения', 'Драма'],
+    types: ['manga', 'manhwa', 'manhua', 'comic'],
+    status: ['ongoing', 'completed', 'pause', 'cancelled'],
+    tags: [],
+    releaseYears: [2010, 2015, 2024],
+    ageLimits: [0, 12, 16, 18],
+    chaptersMin: 1,
+    chaptersMax: 3864,
+    sortByOptions: ['createdAt', 'updatedAt'],
+  },
 });
 
 const makeContext = (http: FakeHttpClient): ParserContext => {
@@ -71,6 +88,11 @@ const setUpFixtures = (): FakeHttpClient => {
     body: LIST_JSON,
     contentType: 'application/json',
   });
+  http.register((url) => url.includes('/api/titles/filters/options'), {
+    status: 200,
+    body: FILTER_OPTIONS_JSON,
+    contentType: 'application/json',
+  });
   return http;
 };
 
@@ -91,6 +113,9 @@ describe('TomiloLib parser conformance', () => {
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
     expect(item!.coverUrl).toBe('https://s3.regru.cloud/tomilolib/titles/1/cover.jpg');
+    expect(item!.type).toBe('MANGA');
+    expect(item!.year).toBe(1997);
+    expect(item!.chaptersCount).toBe(1100);
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
@@ -114,5 +139,67 @@ describe('TomiloLib parser conformance', () => {
       expect(page.url).toMatch(/^https?:\/\//);
     }
     expect(pages[0]!.url).toBe('https://s3.regru.cloud/tomilolib/chapters/ch-1/001.webp');
+  });
+
+  it('getFilters: genre fetched live, type/status hardcoded, plus two RANGE groups', async () => {
+    const groups = await parser.getFilters!();
+    expect(groups.map((g) => g.id)).toEqual([
+      'genre',
+      'type',
+      'status',
+      'releaseYear',
+      'chaptersCount',
+    ]);
+
+    const genre = groups.find((g) => g.id === 'genre')!;
+    expect(genre.type).toBe('SEARCHABLE_CHECKBOX');
+    expect(genre.options).toEqual([
+      { key: 'Приключения', title: 'Приключения', count: null },
+      { key: 'Драма', title: 'Драма', count: null },
+    ]);
+
+    const type = groups.find((g) => g.id === 'type')!;
+    expect(type.type).toBe('RADIO');
+    expect(type.options.map((o) => o.key)).toEqual(['manga', 'manhwa', 'manhua', 'comic']);
+
+    const status = groups.find((g) => g.id === 'status')!;
+    expect(status.type).toBe('RADIO');
+    expect(status.options.map((o) => o.key)).toEqual([
+      'ongoing',
+      'completed',
+      'pause',
+      'cancelled',
+    ]);
+
+    const releaseYear = groups.find((g) => g.id === 'releaseYear')!;
+    expect(releaseYear.type).toBe('RANGE');
+    expect(releaseYear.options).toEqual([]);
+    expect(releaseYear.settings?.range).toMatchObject({ min: 2010, format: 'YEAR' });
+
+    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
+    expect(chaptersCount.type).toBe('RANGE');
+    expect(chaptersCount.settings?.range).toEqual({ min: 1, max: 3864 });
+  });
+
+  it('getList with filters: genres comma-joined, type/status single-valued, ranges via From/To', async () => {
+    await parser.getList({
+      offset: 0,
+      limit: 24,
+      filters: [
+        { groupId: 'genre', key: 'Приключения' },
+        { groupId: 'genre', key: 'Драма' },
+        { groupId: 'type', key: 'manhwa' },
+        { groupId: 'status', key: 'ongoing' },
+        { groupId: 'releaseYear', range: { min: 2015 } },
+        { groupId: 'chaptersCount', range: { max: 200 } },
+      ],
+    });
+    const listRequest = http.requests.filter((r) => r.url.includes('/api/titles?')).at(-1)!;
+    const url = new URL(listRequest.url);
+    expect(url.searchParams.get('genres')).toBe('Приключения,Драма');
+    expect(url.searchParams.get('type')).toBe('manhwa');
+    expect(url.searchParams.get('status')).toBe('ongoing');
+    expect(url.searchParams.get('releaseYearFrom')).toBe('2015');
+    expect(url.searchParams.get('chaptersTo')).toBe('200');
   });
 });

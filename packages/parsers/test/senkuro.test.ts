@@ -21,6 +21,9 @@ const SEARCH_RESPONSE = JSON.stringify({
               { lang: 'RU', content: 'Ван-Пис' },
             ],
             cover: { original: { url: 'https://cdn.senkuro.com/one-piece.jpg' } },
+            type: 'MANGA',
+            releasedOn: '1997-07-22',
+            chapters: 1000,
           },
         },
       ],
@@ -37,6 +40,7 @@ const DETAILS_RESPONSE = JSON.stringify({
       titles: [{ lang: 'RU', content: 'Ван-Пис' }],
       alternativeNames: [{ lang: 'EN', content: 'One Piece' }],
       localizations: [{ lang: 'RU', description: 'Описание тайтла.' }],
+      type: 'MANGA',
       rating: 'GENERAL',
       status: 'ONGOING',
       labels: [{ slug: 'adventure', titles: [{ lang: 'RU', content: 'приключения' }] }],
@@ -185,6 +189,9 @@ describe('Senkuro parser conformance', () => {
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     // RU title preferred over EN
     expect(item!.title).toBe('Ван-Пис');
+    expect(item!.type).toBe('MANGA');
+    expect(item!.year).toBe(1997);
+    expect(item!.chaptersCount).toBe(1000);
     expect(http.requests[0]!.headers['app-id']).toBe(SENKURO_CONFIG.appId);
   });
 
@@ -203,6 +210,7 @@ describe('Senkuro parser conformance', () => {
     expect(manga.description).toContain('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
+    expect(manga.type).toBe('MANGA');
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

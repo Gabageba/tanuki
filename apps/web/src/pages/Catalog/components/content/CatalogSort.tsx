@@ -67,7 +67,7 @@ function CatalogSort({ sortOrders, supportsDirection }: Props) {
           type="button"
           size="sm"
           pointer
-          w={200}
+          miw={220}
           flex={{ base: 1, sm: 'none' }}
           rightSection={<Combobox.Chevron />}
           leftSection={supportsDirection && <CatalogSortIcon direction={direction} />}
