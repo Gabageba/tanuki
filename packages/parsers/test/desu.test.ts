@@ -1,6 +1,8 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { createDesuParser } from '../src/sources/desu';
+import { FILTER_TYPE, MANGA_STATE, MANGA_TYPE } from '@tanuki/contracts';
+import { createDesuParser, DESU_FILTER_GROUP } from '../src/sources/desu';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -152,14 +154,14 @@ describe('Desu parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('DESUME');
+    expect(item!.source).toBe(SOURCE_ID.DESUME);
     expect(item!.rating === -1 || (item!.rating >= 0 && item!.rating <= 1)).toBe(true);
     expect(item!.rating).toBeCloseTo(0.85, 5);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.tags.map((t) => t.title).sort()).toEqual(['Боевик', 'Фэнтези']);
-    expect(item!.type).toBe('MANHWA');
+    expect(item!.type).toBe(MANGA_TYPE.MANHWA);
     expect(item!.year).toBe(2018);
   });
 
@@ -172,7 +174,7 @@ describe('Desu parser conformance', () => {
       expect(chapter.uploadDate === 0 || chapter.uploadDate > 1e12).toBe(true);
     }
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
-    expect(manga.state).toBe('ONGOING');
+    expect(manga.state).toBe(MANGA_STATE.ONGOING);
     expect(manga.rating).toBeCloseTo(0.87, 5);
     expect(manga.title).toBe('Поднятие уровня в одиночку');
     expect(manga.description).toBe('Первый абзац.\n\nВторой абзац.');
@@ -188,37 +190,43 @@ describe('Desu parser conformance', () => {
 
   it('getFilters: all five groups with their options and counts', async () => {
     const groups = await parser.getFilters!();
-    expect(groups.map((g) => g.id)).toEqual(['kind', 'genre', 'tag', 'status', 'rating']);
+    expect(groups.map((g) => g.id)).toEqual([
+      DESU_FILTER_GROUP.KIND,
+      DESU_FILTER_GROUP.GENRE,
+      DESU_FILTER_GROUP.TAG,
+      DESU_FILTER_GROUP.STATUS,
+      DESU_FILTER_GROUP.RATING,
+    ]);
 
-    const kind = groups.find((g) => g.id === 'kind')!;
-    expect(kind.type).toBe('CHECKBOX');
+    const kind = groups.find((g) => g.id === DESU_FILTER_GROUP.KIND)!;
+    expect(kind.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(kind.options).toEqual([
       { key: 'manga', title: 'Манга', count: null },
       { key: 'manhwa', title: 'Манхва', count: null },
     ]);
 
-    const genre = groups.find((g) => g.id === 'genre')!;
-    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const genre = groups.find((g) => g.id === DESU_FILTER_GROUP.GENRE)!;
+    expect(genre.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(genre.options).toEqual([
       { key: '12-action', title: 'Боевик', count: 130 },
       { key: '34-fantasy', title: 'Фэнтези', count: 3631 },
     ]);
 
-    const tag = groups.find((g) => g.id === 'tag')!;
+    const tag = groups.find((g) => g.id === DESU_FILTER_GROUP.TAG)!;
     expect(tag.title).toBe('Теги');
-    expect(tag.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(tag.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(tag.options).toEqual([{ key: '150-Artifacts', title: 'Артефакты', count: 477 }]);
 
-    const status = groups.find((g) => g.id === 'status')!;
-    expect(status.type).toBe('CHECKBOX');
+    const status = groups.find((g) => g.id === DESU_FILTER_GROUP.STATUS)!;
+    expect(status.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(status.options).toEqual([
       { key: 'ongoing', title: 'Выходит', count: null },
       { key: 'completed', title: 'Завершено', count: null },
     ]);
 
-    const rating = groups.find((g) => g.id === 'rating')!;
+    const rating = groups.find((g) => g.id === DESU_FILTER_GROUP.RATING)!;
     expect(rating.title).toBe('Возрастное ограничение');
-    expect(rating.type).toBe('CHECKBOX');
+    expect(rating.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(rating.options).toEqual([{ key: 'no18plus', title: 'Без 18+', count: null }]);
   });
 
@@ -227,10 +235,10 @@ describe('Desu parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'kind', key: 'manga' },
-        { groupId: 'status', key: 'ongoing' },
-        { groupId: 'genre', key: '12-action' },
-        { groupId: 'genre', key: '34-fantasy', exclude: true },
+        { groupId: DESU_FILTER_GROUP.KIND, key: 'manga' },
+        { groupId: DESU_FILTER_GROUP.STATUS, key: 'ongoing' },
+        { groupId: DESU_FILTER_GROUP.GENRE, key: '12-action' },
+        { groupId: DESU_FILTER_GROUP.GENRE, key: '34-fantasy', exclude: true },
       ],
     });
     const catalogRequest = http.requests.find((r) => r.url.startsWith(`https://${DOMAIN}/manga/?`));
@@ -246,8 +254,8 @@ describe('Desu parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'genre', key: '12-action' },
-        { groupId: 'tag', key: '150-Artifacts' },
+        { groupId: DESU_FILTER_GROUP.GENRE, key: '12-action' },
+        { groupId: DESU_FILTER_GROUP.TAG, key: '150-Artifacts' },
       ],
     });
     const catalogRequest = http.requests
@@ -262,8 +270,8 @@ describe('Desu parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'status', key: 'ongoing' },
-        { groupId: 'rating', key: 'no18plus' },
+        { groupId: DESU_FILTER_GROUP.STATUS, key: 'ongoing' },
+        { groupId: DESU_FILTER_GROUP.RATING, key: 'no18plus' },
       ],
     });
     const catalogRequest = http.requests

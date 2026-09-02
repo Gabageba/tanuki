@@ -13,8 +13,9 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
 import { toTitleCase } from '../../core/text/strings';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'WAMANGA';
+const SOURCE_ID = CATALOG_SOURCE_ID.WAMANGA;
 const PAGE_SIZE = 20;
 
 type MangaJson = {
@@ -194,7 +195,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       title: 'WaManga',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.manga,
+      contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
       requiresVpn: false,

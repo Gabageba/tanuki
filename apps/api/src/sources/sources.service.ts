@@ -75,7 +75,7 @@ export class SourcesService {
       // contentType парсеры берут из того же SOURCE_CONTENT_TYPE, что и контракт, — отдаём
       // значение как есть, без нормализации.
       contentType: raw.contentType,
-      status: raw.isBroken ? SOURCE_STATUS.down : this.sourceHealth.getStatus(raw.id),
+      status: raw.isBroken ? SOURCE_STATUS.DOWN : this.sourceHealth.getStatus(raw.id),
       isAdult: raw.isAdult,
       requiresVpn: raw.requiresVpn,
       sortOrders: raw.sortOrders,

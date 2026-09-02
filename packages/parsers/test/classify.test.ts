@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { looksLikeAntibotChallenge, classifyResponse } from '../src/core/http/classify';
 import { NotFoundError, SourceBlockedError, SourceUnavailableError } from '../src/errors';
+import { SOURCE_ID } from '../src/sources/catalog';
 
 describe('looksLikeAntibotChallenge', () => {
   it('detects a real Cloudflare challenge page', () => {
@@ -27,21 +28,23 @@ describe('looksLikeAntibotChallenge', () => {
 
 describe('classifyResponse', () => {
   it('returns null for a successful response', () => {
-    expect(classifyResponse('DESUME', 200, {}, '')).toBeNull();
+    expect(classifyResponse(SOURCE_ID.DESUME, 200, {}, '')).toBeNull();
   });
 
   it('maps antibot challenges to SourceBlockedError, checked before 404/generic', () => {
-    const err = classifyResponse('DESUME', 403, {}, 'Just a moment...');
+    const err = classifyResponse(SOURCE_ID.DESUME, 403, {}, 'Just a moment...');
     expect(err).toBeInstanceOf(SourceBlockedError);
   });
 
   it('maps 404 to NotFoundError', () => {
-    expect(classifyResponse('DESUME', 404, {}, 'Not Found')).toBeInstanceOf(NotFoundError);
+    expect(classifyResponse(SOURCE_ID.DESUME, 404, {}, 'Not Found')).toBeInstanceOf(NotFoundError);
   });
 
   it('maps other 4xx/5xx to SourceUnavailableError', () => {
-    expect(classifyResponse('DESUME', 500, {}, 'error')).toBeInstanceOf(SourceUnavailableError);
-    expect(classifyResponse('DESUME', 400, {}, 'bad request')).toBeInstanceOf(
+    expect(classifyResponse(SOURCE_ID.DESUME, 500, {}, 'error')).toBeInstanceOf(
+      SourceUnavailableError,
+    );
+    expect(classifyResponse(SOURCE_ID.DESUME, 400, {}, 'bad request')).toBeInstanceOf(
       SourceUnavailableError,
     );
   });

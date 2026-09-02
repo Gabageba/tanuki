@@ -1,16 +1,24 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { createChanParser } from '../src/sources/chan/engine';
+import { FILTER_TYPE, SORT_DIRECTION, SORT_ORDER } from '@tanuki/contracts';
+import { CHAN_FILTER_GROUP, createChanParser } from '../src/sources/chan/engine';
 import type { ChanConfig } from '../src/sources/chan/config';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
 const DOMAIN = 'manga-chan.example';
 
 const CFG: ChanConfig = {
-  id: 'MANGACHAN',
+  id: SOURCE_ID.MANGACHAN,
   isNsfw: false,
-  sortOrders: ['NEWEST', 'POPULARITY', 'ALPHABETICAL', 'RATING', 'CHAPTERS'],
+  sortOrders: [
+    SORT_ORDER.NEWEST,
+    SORT_ORDER.POPULARITY,
+    SORT_ORDER.ALPHABETICAL,
+    SORT_ORDER.RATING,
+    SORT_ORDER.CHAPTERS,
+  ],
   supportsDirection: true,
   variant: 'default',
 };
@@ -136,7 +144,7 @@ describe('Chan parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('MANGACHAN');
+    expect(item!.source).toBe(SOURCE_ID.MANGACHAN);
     expect(item!.rating).toBe(-1);
     expect(item!.likes).toBe(7);
     expect(item!.chaptersCount).toBe(89);
@@ -188,41 +196,61 @@ describe('Chan parser sort routing', () => {
     expect(url.pathname).toBe('/manga/new');
     expect(url.searchParams.get('n')).toBe('datedesc');
 
-    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY' });
+    await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.POPULARITY });
     url = new URL(http.requests.at(-1)!.url);
     expect(url.pathname).toBe('/manga/new');
     expect(url.searchParams.get('n')).toBe('favdesc');
 
     // RATING aliases POPULARITY's `fav` field — this DLE engine has no separate rating axis.
-    await parser.getList({ offset: 0, limit: 20, order: 'RATING' });
+    await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.RATING });
     url = new URL(http.requests.at(-1)!.url);
     expect(url.searchParams.get('n')).toBe('favdesc');
 
-    await parser.getList({ offset: 0, limit: 20, order: 'ALPHABETICAL' });
+    await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.ALPHABETICAL });
     url = new URL(http.requests.at(-1)!.url);
     expect(url.searchParams.get('n')).toBe('abcasc');
 
-    await parser.getList({ offset: 0, limit: 20, order: 'CHAPTERS' });
+    await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.CHAPTERS });
     url = new URL(http.requests.at(-1)!.url);
     expect(url.searchParams.get('n')).toBe('chdesc');
   });
 
   it('a direction matching the order default leaves the n= value unchanged', async () => {
-    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY', direction: 'DESC' });
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.POPULARITY,
+      direction: SORT_DIRECTION.DESC,
+    });
     expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('favdesc');
   });
 
   it('a non-default direction flips the n= suffix for every order', async () => {
-    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY', direction: 'ASC' });
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.POPULARITY,
+      direction: SORT_DIRECTION.ASC,
+    });
     expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('favasc');
 
-    await parser.getList({ offset: 0, limit: 20, order: 'CHAPTERS', direction: 'ASC' });
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.CHAPTERS,
+      direction: SORT_DIRECTION.ASC,
+    });
     expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('chasc');
 
-    await parser.getList({ offset: 0, limit: 20, order: 'ALPHABETICAL', direction: 'DESC' });
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.ALPHABETICAL,
+      direction: SORT_DIRECTION.DESC,
+    });
     expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('abcdesc');
 
-    await parser.getList({ offset: 0, limit: 20, direction: 'ASC' });
+    await parser.getList({ offset: 0, limit: 20, direction: SORT_DIRECTION.ASC });
     expect(new URL(http.requests.at(-1)!.url).searchParams.get('n')).toBe('dateasc');
   });
 
@@ -230,7 +258,12 @@ describe('Chan parser sort routing', () => {
     const noDirCfg: ChanConfig = { ...CFG, supportsDirection: false };
     const noDirHttp = setUpFixtures();
     const noDirParser = createChanParser(noDirCfg, makeContext(noDirHttp));
-    await noDirParser.getList({ offset: 0, limit: 20, order: 'POPULARITY', direction: 'ASC' });
+    await noDirParser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.POPULARITY,
+      direction: SORT_DIRECTION.ASC,
+    });
     expect(new URL(noDirHttp.requests.at(-1)!.url).searchParams.get('n')).toBe('favdesc');
   });
 
@@ -238,7 +271,7 @@ describe('Chan parser sort routing', () => {
     const henchanCfg: ChanConfig = { ...CFG, variant: 'henchan', supportsDirection: false };
     const henchanHttp = setUpFixtures();
     const henchanParser = createChanParser(henchanCfg, makeContext(henchanHttp));
-    await henchanParser.getList({ offset: 0, limit: 20, order: 'RATING' });
+    await henchanParser.getList({ offset: 0, limit: 20, order: SORT_ORDER.RATING });
     const url = new URL(henchanHttp.requests.at(-1)!.url);
     expect(url.pathname).toBe('/manga/new');
     expect(url.searchParams.get('n')).toBe('favdesc');
@@ -261,18 +294,18 @@ describe('Chan parser filters', () => {
     const groups = await parser.getFilters!();
     expect(groups).toHaveLength(3);
 
-    const tagGroup = groups.find((g) => g.id === 'tag')!;
-    expect(tagGroup.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const tagGroup = groups.find((g) => g.id === CHAN_FILTER_GROUP.TAG)!;
+    expect(tagGroup.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(tagGroup.options.map((o) => o.key)).toEqual(['priklyucheniya', 'komediya']);
     expect(tagGroup.options.map((o) => o.title)).toEqual(['Приключения', 'Комедия']);
     expect(tagGroup.options.map((o) => o.count)).toEqual([120, 45]);
 
-    const typeGroup = groups.find((g) => g.id === 'type')!;
-    expect(typeGroup.type).toBe('RADIO');
+    const typeGroup = groups.find((g) => g.id === CHAN_FILTER_GROUP.TYPE)!;
+    expect(typeGroup.type).toBe(FILTER_TYPE.RADIO);
     expect(typeGroup.options.map((o) => o.key)).toEqual(['Манга', 'Манхва']);
 
-    const statusGroup = groups.find((g) => g.id === 'status')!;
-    expect(statusGroup.type).toBe('RADIO');
+    const statusGroup = groups.find((g) => g.id === CHAN_FILTER_GROUP.STATUS)!;
+    expect(statusGroup.type).toBe(FILTER_TYPE.RADIO);
     // "Весь каталог" (/catalog, no second path segment) is a reset link, not a status option.
     expect(statusGroup.options.map((o) => o.key)).toEqual(['all_done', 'ongoing']);
 
@@ -285,10 +318,10 @@ describe('Chan parser filters', () => {
     const items = await parser.getList({
       offset: 0,
       limit: 20,
-      order: 'RATING',
+      order: SORT_ORDER.RATING,
       filters: [
-        { groupId: 'tag', key: 'komediya', exclude: true },
-        { groupId: 'tag', key: 'priklyucheniya' },
+        { groupId: CHAN_FILTER_GROUP.TAG, key: 'komediya', exclude: true },
+        { groupId: CHAN_FILTER_GROUP.TAG, key: 'priklyucheniya' },
       ],
     });
     expect(items).toHaveLength(1);
@@ -301,8 +334,8 @@ describe('Chan parser filters', () => {
     const items = await parser.getList({
       offset: 0,
       limit: 20,
-      order: 'CHAPTERS',
-      filters: [{ groupId: 'tag', key: 'priklyucheniya' }],
+      order: SORT_ORDER.CHAPTERS,
+      filters: [{ groupId: CHAN_FILTER_GROUP.TAG, key: 'priklyucheniya' }],
     });
     expect(items).toHaveLength(1);
     const requestedUrl = http.requests.at(-1)!.url;
@@ -313,8 +346,8 @@ describe('Chan parser filters', () => {
     const items = await parser.getList({
       offset: 0,
       limit: 20,
-      order: 'ALPHABETICAL',
-      filters: [{ groupId: 'type', key: 'Манга' }],
+      order: SORT_ORDER.ALPHABETICAL,
+      filters: [{ groupId: CHAN_FILTER_GROUP.TYPE, key: 'Манга' }],
     });
     expect(items).toHaveLength(1);
     const requestedUrl = http.requests.at(-1)!.url;
@@ -327,7 +360,7 @@ describe('Chan parser filters', () => {
     const items = await parser.getList({
       offset: 0,
       limit: 20,
-      filters: [{ groupId: 'status', key: 'ongoing' }],
+      filters: [{ groupId: CHAN_FILTER_GROUP.STATUS, key: 'ongoing' }],
     });
     expect(items).toHaveLength(1);
     const requestedUrl = http.requests.at(-1)!.url;

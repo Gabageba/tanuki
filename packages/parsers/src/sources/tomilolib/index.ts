@@ -7,12 +7,13 @@ import {
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type FilterRangePreset,
   type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
+import { CHAPTERS_COUNT_PRESETS, getYearRangePresets } from '../../core/filters/range-presets';
+import { FILTER_GROUP } from '../../core/filters/group';
 import type {
   RawManga,
   RawChapter,
@@ -26,60 +27,22 @@ import type {
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { ParseError } from '../../errors';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'TOMILOLIB';
+const SOURCE_ID = CATALOG_SOURCE_ID.TOMILOLIB;
 const PAGE_SIZE = 24;
 const CDN_URL = 'https://s3.regru.cloud/tomilolib';
 const IMAGE_ACCEPT = 'image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5';
 const YEAR_RANGE_FALLBACK_MIN = 1990;
-const DECADE_SIZE = 10;
 const YEAR_RANGE_CUTOFF = 2000;
 
-const CHAPTERS_COUNT_PRESETS: FilterRangePreset[] = [
-  { id: 'lt-20', label: '< 20', max: 20 },
-  { id: 'lt-50', label: '< 50', max: 50 },
-  { id: '100-200', label: '100-200', min: 100, max: 200 },
-  { id: '200-300', label: '200-300', min: 200, max: 300 },
-  { id: '300-plus', label: '300+', min: 300 },
-];
-
-/** "Текущий год", the current-decade-so-far, a preset per full decade back to `YEAR_RANGE_CUTOFF`,
- *  then one trailing preset lumping everything older than that into "Раньше 2000". */
-const getYearRangePresets = (minYear: number, maxYear: number): FilterRangePreset[] => {
-  const presets: FilterRangePreset[] = [
-    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
-  ];
-  const currentDecadeStart = Math.floor(maxYear / DECADE_SIZE) * DECADE_SIZE;
-  if (currentDecadeStart < maxYear) {
-    presets.push({
-      id: `decade-${currentDecadeStart}`,
-      label: `${currentDecadeStart}–${maxYear}`,
-      min: currentDecadeStart,
-      max: maxYear,
-    });
-  }
-  for (
-    let decadeStart = currentDecadeStart - DECADE_SIZE;
-    decadeStart >= YEAR_RANGE_CUTOFF;
-    decadeStart -= DECADE_SIZE
-  ) {
-    presets.push({
-      id: `decade-${decadeStart}`,
-      label: `${decadeStart}-е`,
-      min: decadeStart,
-      max: decadeStart + DECADE_SIZE - 1,
-    });
-  }
-  if (minYear < YEAR_RANGE_CUTOFF) {
-    presets.push({
-      id: `before-${YEAR_RANGE_CUTOFF}`,
-      label: `Раньше ${YEAR_RANGE_CUTOFF}`,
-      min: minYear,
-      max: YEAR_RANGE_CUTOFF - 1,
-    });
-  }
-  return presets;
-};
+export const TOMILOLIB_FILTER_GROUP = {
+  GENRE: FILTER_GROUP.GENRE,
+  TYPE: FILTER_GROUP.TYPE,
+  STATUS: FILTER_GROUP.STATUS,
+  RELEASE_YEAR: FILTER_GROUP.RELEASE_YEAR,
+  CHAPTERS_COUNT: FILTER_GROUP.CHAPTERS_COUNT,
+} as const;
 
 /** `type` on the manga/list JSON is a free-text field the site itself writes inconsistently
  *  (some titles carry the Russian label instead of the code) — these four lowercase codes are
@@ -344,20 +307,21 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     const genres: string[] = [];
     for (const filter of filters) {
       if ('range' in filter) {
-        const param = filter.groupId === 'releaseYear' ? 'releaseYear' : 'chapters';
+        const param =
+          filter.groupId === TOMILOLIB_FILTER_GROUP.RELEASE_YEAR ? 'releaseYear' : 'chapters';
         if (filter.range.min != null)
           url.searchParams.set(`${param}From`, String(filter.range.min));
         if (filter.range.max != null) url.searchParams.set(`${param}To`, String(filter.range.max));
         continue;
       }
       switch (filter.groupId) {
-        case 'genre':
+        case TOMILOLIB_FILTER_GROUP.GENRE:
           genres.push(filter.key);
           break;
-        case 'type':
+        case TOMILOLIB_FILTER_GROUP.TYPE:
           url.searchParams.set('type', filter.key);
           break;
-        case 'status':
+        case TOMILOLIB_FILTER_GROUP.STATUS:
           url.searchParams.set('status', filter.key);
           break;
       }
@@ -416,21 +380,36 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     const yearMax = releaseYears.length > 0 ? Math.max(...releaseYears, currentYear) : currentYear;
 
     return [
-      { id: 'genre', title: 'Жанры', type: FILTER_TYPE.SEARCHABLE_CHECKBOX, options: genres },
-      { id: 'type', title: 'Тип', type: FILTER_TYPE.RADIO, options: TYPE_OPTIONS },
-      { id: 'status', title: 'Статус', type: FILTER_TYPE.RADIO, options: STATUS_OPTIONS },
       {
-        id: 'releaseYear',
+        id: TOMILOLIB_FILTER_GROUP.GENRE,
+        title: 'Жанры',
+        type: FILTER_TYPE.SEARCHABLE_CHECKBOX,
+        options: genres,
+      },
+      {
+        id: TOMILOLIB_FILTER_GROUP.TYPE,
+        title: 'Тип',
+        type: FILTER_TYPE.RADIO,
+        options: TYPE_OPTIONS,
+      },
+      {
+        id: TOMILOLIB_FILTER_GROUP.STATUS,
+        title: 'Статус',
+        type: FILTER_TYPE.RADIO,
+        options: STATUS_OPTIONS,
+      },
+      {
+        id: TOMILOLIB_FILTER_GROUP.RELEASE_YEAR,
         title: 'Год выпуска',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: {
           range: { min: yearMin, max: yearMax, format: RANGE_FORMAT.YEAR },
-          presets: getYearRangePresets(yearMin, yearMax),
+          presets: getYearRangePresets(yearMin, yearMax, YEAR_RANGE_CUTOFF),
         },
       },
       {
-        id: 'chaptersCount',
+        id: TOMILOLIB_FILTER_GROUP.CHAPTERS_COUNT,
         title: 'Количество глав',
         type: FILTER_TYPE.RANGE,
         options: [],
@@ -507,7 +486,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       title: 'TomiloLib',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.manga,
+      contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
       requiresVpn: false,

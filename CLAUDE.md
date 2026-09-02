@@ -41,8 +41,13 @@
 ## Constants
 
 - Constant names are UPPERCASE — `THEME`, `PRIMARY_SHADE`, `COLOR_SCHEME_MANAGER`, never `theme` or
-  `colorSchemeManager`. The keys of an enum-like const object are UPPERCASE too (`LIGHT: 'light'`),
-  while the values stay exactly as they travel over the wire.
+  `colorSchemeManager`. An enum-like const object always follows `{ SCREAM_CASE: camelCase }` —
+  keys UPPERCASE, values camelCase (`LIGHT: 'light'`, `RATING_COUNT: 'ratingCount'`) — even when
+  the concept itself reads uppercase (an HTTP-style error code stays `NOT_FOUND: 'notFound'`, not
+  `NOT_FOUND: 'NOT_FOUND'`). The one exception is a value pinned by an external contract this
+  codebase doesn't own — a field mirrored verbatim from a source site's own JSON API response, or a
+  value typed against a third-party library (e.g. `COLOR_SCHEME` against Mantine's
+  `MantineColorScheme`) — where the value must stay exactly what that external contract expects.
 - No lookup tables mapping an enum to labels, icons, colors and the like
   (`Record<ColorScheme, string>`). Write an arrow function with an exhaustive `switch` instead — no
   `default` branch, so TypeScript points at the missing case when a value is added to the enum:

@@ -45,9 +45,9 @@ export const parseFilters = (raw: string[]): FilterSelection[] => {
 };
 
 export const OPTION_VALUE = {
-  NONE: 'NONE',
-  INCLUDE: 'INCLUDE',
-  EXCLUDE: 'EXCLUDE',
+  NONE: 'none',
+  INCLUDE: 'include',
+  EXCLUDE: 'exclude',
 } as const;
 export type OptionValue = EnumLiteralsOf<typeof OPTION_VALUE>;
 

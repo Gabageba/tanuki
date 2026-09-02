@@ -1,3 +1,5 @@
+import { SOURCE_ID } from '../catalog';
+
 export type MultpornConfig = {
   id: string;
   /** Drupal content-type filter value for the `/new?type=` browse listing. */
@@ -18,7 +20,7 @@ export type MultpornConfig = {
 // duplicate here.
 export const MULTPORN_CONFIGS: MultpornConfig[] = [
   {
-    id: 'MULTPORN',
+    id: SOURCE_ID.MULTPORN,
     typeParam: '1',
     pathPrefix: '/comics/',
     listTagSelector: '.views-field-field-category a',
@@ -26,7 +28,7 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
     authorSelector: '.field-name-field-author a',
   },
   {
-    id: 'MULTPORN_HENTAI',
+    id: SOURCE_ID.MULTPORN_HENTAI,
     typeParam: '3',
     pathPrefix: '/hentai_manga/',
     listTagSelector: '.views-field-field-h-category a',

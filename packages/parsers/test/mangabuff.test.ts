@@ -1,6 +1,14 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { createMangaBuffParser } from '../src/sources/mangabuff';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  MANGA_STATE,
+  MANGA_TYPE,
+  SORT_ORDER,
+} from '@tanuki/contracts';
+import { createMangaBuffParser, MANGABUFF_FILTER_GROUP } from '../src/sources/mangabuff';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -166,9 +174,9 @@ describe('MangaBuff parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('MANGABUFF');
+    expect(item!.source).toBe(SOURCE_ID.MANGABUFF);
     expect(item!.rating).toBeCloseTo(0.94, 5);
-    expect(item!.type).toBe('MANGA');
+    expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
@@ -188,10 +196,10 @@ describe('MangaBuff parser conformance', () => {
     expect(manga.chapters![0]!.number).toBe(1);
     expect(manga.chapters![1]!.number).toBe(2);
     expect(manga.rating).toBeCloseTo(0.87, 5);
-    expect(manga.state).toBe('ONGOING');
-    expect(manga.type).toBe('MANGA');
+    expect(manga.state).toBe(MANGA_STATE.ONGOING);
+    expect(manga.type).toBe(MANGA_TYPE.MANGA);
     expect(manga.year).toBe(1997);
-    expect(manga.contentRating).toBe('SUGGESTIVE');
+    expect(manga.contentRating).toBe(CONTENT_RATING.SUGGESTIVE);
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.description).toContain('Описание тайтла.');
     expect(manga.description).toContain('Рейтинг: 87%');
@@ -211,47 +219,47 @@ describe('MangaBuff parser conformance', () => {
   it('getFilters: all eight groups with their options', async () => {
     const groups = await parser.getFilters!();
     expect(groups.map((g) => g.id)).toEqual([
-      'genre',
-      'type',
-      'tag',
-      'status',
-      'ageRating',
-      'rating',
-      'year',
-      'chaptersCount',
+      MANGABUFF_FILTER_GROUP.GENRE,
+      MANGABUFF_FILTER_GROUP.TYPE,
+      MANGABUFF_FILTER_GROUP.TAG,
+      MANGABUFF_FILTER_GROUP.STATUS,
+      MANGABUFF_FILTER_GROUP.AGE_RATING,
+      MANGABUFF_FILTER_GROUP.RATING,
+      MANGABUFF_FILTER_GROUP.YEAR,
+      MANGABUFF_FILTER_GROUP.CHAPTERS_COUNT,
     ]);
 
-    const genre = groups.find((g) => g.id === 'genre')!;
-    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const genre = groups.find((g) => g.id === MANGABUFF_FILTER_GROUP.GENRE)!;
+    expect(genre.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(genre.options).toEqual([
       { key: '1', title: 'Арт', count: null },
       { key: '4', title: 'Боевые искусства', count: null },
     ]);
 
-    const type = groups.find((g) => g.id === 'type')!;
-    expect(type.type).toBe('CHECKBOX_EXCLUDE');
+    const type = groups.find((g) => g.id === MANGABUFF_FILTER_GROUP.TYPE)!;
+    expect(type.type).toBe(FILTER_TYPE.CHECKBOX_EXCLUDE);
     expect(type.options).toEqual([
       { key: '1', title: 'Манга', count: null },
       { key: '3', title: 'Манхва', count: null },
     ]);
 
-    const tag = groups.find((g) => g.id === 'tag')!;
-    expect(tag.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const tag = groups.find((g) => g.id === MANGABUFF_FILTER_GROUP.TAG)!;
+    expect(tag.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(tag.options).toEqual([
       { key: '7759', title: 'Азартные игры', count: null },
       { key: '7750', title: 'Алхимия', count: null },
     ]);
 
-    const status = groups.find((g) => g.id === 'status')!;
-    expect(status.type).toBe('CHECKBOX');
+    const status = groups.find((g) => g.id === MANGABUFF_FILTER_GROUP.STATUS)!;
+    expect(status.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(status.options).toEqual([
       { key: '1', title: 'Завершен', count: null },
       { key: '2', title: 'Продолжается', count: null },
     ]);
 
-    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
+    const chaptersCount = groups.find((g) => g.id === MANGABUFF_FILTER_GROUP.CHAPTERS_COUNT)!;
     expect(chaptersCount.title).toBe('Количество глав');
-    expect(chaptersCount.type).toBe('CHECKBOX');
+    expect(chaptersCount.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(chaptersCount.options).toEqual([
       { key: '0', title: '<50', count: null },
       { key: '200', title: '>200', count: null },
@@ -263,11 +271,11 @@ describe('MangaBuff parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'genre', key: '1' },
-        { groupId: 'genre', key: '4', exclude: true },
-        { groupId: 'type', key: '3', exclude: true },
-        { groupId: 'status', key: '2' },
-        { groupId: 'chaptersCount', key: '200' },
+        { groupId: MANGABUFF_FILTER_GROUP.GENRE, key: '1' },
+        { groupId: MANGABUFF_FILTER_GROUP.GENRE, key: '4', exclude: true },
+        { groupId: MANGABUFF_FILTER_GROUP.TYPE, key: '3', exclude: true },
+        { groupId: MANGABUFF_FILTER_GROUP.STATUS, key: '2' },
+        { groupId: MANGABUFF_FILTER_GROUP.CHAPTERS_COUNT, key: '200' },
       ],
     });
     const catalogRequest = http.requests.filter((r) => r.url.includes('/manga?')).at(-1)!;
@@ -282,10 +290,10 @@ describe('MangaBuff parser conformance', () => {
   it("getList: order maps to the site's actual sort= values", async () => {
     const cases: [string | undefined, string][] = [
       [undefined, 'updated_at'],
-      ['UPDATED', 'updated_at'],
-      ['POPULARITY', 'real_views'],
-      ['RATING', 'rating'],
-      ['ADDED', 'created_at'],
+      [SORT_ORDER.UPDATED, 'updated_at'],
+      [SORT_ORDER.POPULARITY, 'real_views'],
+      [SORT_ORDER.RATING, 'rating'],
+      [SORT_ORDER.ADDED, 'created_at'],
     ];
     for (const [order, sort] of cases) {
       await parser.getList({ offset: 0, limit: 20, order });

@@ -32,97 +32,97 @@ export type CatalogEntry = {
 // below is the real 28-member type, not `string` — that's what makes a missing/typo'd source
 // id a compile error everywhere else in the codebase instead of a silent `| undefined`.
 export const SOURCE_CATALOG = {
-  READMANGA_RU: {
+  readmanga_ru: {
     title: 'ReadManga',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['a.zazaza.me', '3.readmanga.ru'],
   },
-  MINTMANGA: {
+  mintmanga: {
     title: 'MintManga',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['2.mintmanga.one', '24.mintmanga.one', 'mintmanga.live', 'mintmanga.com'],
   },
-  SELFMANGA: {
+  selfmanga: {
     title: 'SelfManga',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['1.selfmanga.live', 'selfmanga.live'],
   },
-  SEIMANGA: {
+  seimanga: {
     title: 'SeiManga',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['1.seimanga.me', 'seimanga.me'],
   },
-  USAGI: {
+  usagi: {
     title: 'Usagi',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['web.usagi.one'],
   },
-  ALLHENTAI: {
+  allhentai: {
     title: 'AllHentai',
-    contentType: SOURCE_CONTENT_TYPE.hentai,
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
     isBroken: false,
     isAdult: true,
     requiresVpn: false,
     domains: ['20.allhen.online', 'z.ahen.me', '24.allhen.online', '2023.allhen.online'],
   },
-  DESUME: {
+  desume: {
     title: 'Desu',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['desu.uno', 'x.desu.city', 'desu.city', 'desu.work', 'desu.store', 'desu.win'],
   },
-  MANGALIB: {
+  mangalib: {
     title: 'MangaLib',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['mangalib.org', 'mangalib.me'],
   },
-  HENTAILIB: {
+  hentailib: {
     title: 'HentaiLib',
-    contentType: SOURCE_CONTENT_TYPE.hentai,
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
     isBroken: false,
     isAdult: true,
     requiresVpn: true,
     domains: ['v1.hentailib.org', 'hentailib.me'],
   },
-  YAOILIB: {
+  yaoilib: {
     title: 'SlashLib',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: true,
     isAdult: false,
     requiresVpn: false,
     domains: ['v2.slashlib.me'],
   },
-  MANGACHAN: {
+  mangachan: {
     title: 'Манга-тян',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: true,
     domains: ['im.manga-chan.me'],
   },
-  HENCHAN: {
+  henchan: {
     title: 'Хентай-тян',
-    contentType: SOURCE_CONTENT_TYPE.hentai,
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
     isBroken: false,
     isAdult: true,
     requiresVpn: true,
@@ -137,9 +137,9 @@ export const SOURCE_CATALOG = {
       'hentaichan.live',
     ],
   },
-  YAOICHAN: {
+  yaoichan: {
     title: 'Яой-тян',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: true,
     isAdult: false,
     requiresVpn: false,
@@ -152,49 +152,49 @@ export const SOURCE_CATALOG = {
       'yaoi-chan.me',
     ],
   },
-  REMANGA: {
+  remanga: {
     title: 'Реманга',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['remanga.org'],
   },
-  NUDEMOON: {
+  nudemoon: {
     title: 'Nude-Moon',
-    contentType: SOURCE_CONTENT_TYPE.hentai,
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
     isBroken: false,
     isAdult: true,
     requiresVpn: true,
     domains: ['g.nude-moon.fun', 'nude-moon.net', 'nude-moon.org', 'b.nude-moon.fun'],
   },
-  ACOMICS: {
+  acomics: {
     title: 'AComics',
-    contentType: SOURCE_CONTENT_TYPE.comics,
+    contentType: SOURCE_CONTENT_TYPE.COMICS,
     isBroken: true,
     isAdult: false,
     requiresVpn: false,
     domains: ['acomics.ru'],
   },
-  COMX: {
+  comx: {
     title: 'Com-X',
-    contentType: SOURCE_CONTENT_TYPE.comics,
+    contentType: SOURCE_CONTENT_TYPE.COMICS,
     isBroken: true,
     isAdult: false,
     requiresVpn: false,
     domains: ['com-x.life', 'comx.life'],
   },
-  MANGABUFF: {
+  mangabuff: {
     title: 'MangaBuff',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['mangabuff.ru'],
   },
-  SENKURO: {
+  senkuro: {
     title: 'Senkuro',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: true,
@@ -202,9 +202,9 @@ export const SOURCE_CATALOG = {
     // some RU users); both hit the same api.senkuro.com backend, see sources/senkuro/config.ts.
     domains: ['senkuro.me', 'ne.senkuro.com', 'senkuro.com'],
   },
-  SENKOGNITO: {
+  senkognito: {
     title: 'Senkognito',
-    contentType: SOURCE_CONTENT_TYPE.hentai,
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
     isBroken: false,
     isAdult: true,
     requiresVpn: true,
@@ -213,57 +213,57 @@ export const SOURCE_CATALOG = {
     // unblocked hostname. See sources/senkuro/config.ts for how the two are split.
     domains: ['ne.senkognito.com', 'senkognito.com'],
   },
-  TOMILOLIB: {
+  tomilolib: {
     title: 'TomiloLib',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['tomilo-lib.ru'],
   },
-  WAMANGA: {
+  wamanga: {
     title: 'WaManga',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['wamanga.ru'],
   },
-  INKSTORY: {
+  inkstory: {
     title: 'Inkstory',
-    contentType: SOURCE_CONTENT_TYPE.manga,
+    contentType: SOURCE_CONTENT_TYPE.MANGA,
     isBroken: false,
     isAdult: false,
     requiresVpn: false,
     domains: ['inkstory.net'],
   },
-  HENTAICHAN_CC: {
+  hentaichan_cc: {
     title: 'HentaiChan',
-    contentType: SOURCE_CONTENT_TYPE.hentai,
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
     isBroken: false,
     isAdult: true,
     requiresVpn: true,
     domains: ['hentaichan.cc'],
   },
-  SEXKOMIX2: {
+  sexkomix2: {
     title: 'SexKomix2',
-    contentType: SOURCE_CONTENT_TYPE.comics,
+    contentType: SOURCE_CONTENT_TYPE.COMICS,
     isBroken: false,
     isAdult: true,
     requiresVpn: false,
     domains: ['super.sexkomix22.com', 'sexkomix2.com'],
   },
-  MULTPORN: {
+  multporn: {
     title: 'MultPorn',
-    contentType: SOURCE_CONTENT_TYPE.comics,
+    contentType: SOURCE_CONTENT_TYPE.COMICS,
     isBroken: false,
     isAdult: true,
     requiresVpn: true,
     domains: ['multporn.net'],
   },
-  MULTPORN_HENTAI: {
+  multporn_hentai: {
     title: 'MultPorn Hentai',
-    contentType: SOURCE_CONTENT_TYPE.hentai,
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
     isBroken: false,
     isAdult: true,
     requiresVpn: true,
@@ -272,15 +272,16 @@ export const SOURCE_CATALOG = {
 } satisfies Record<string, CatalogEntry>;
 
 /**
- * Идентификаторы источников как перечисление (id → id) — чтобы потребителям (например
- * EnvSchema в apps/api) не приходилось приводить массив строк к литеральному типу руками.
+ * Идентификаторы источников как перечисление (SCREAM_CASE → snake_case id) — чтобы потребителям
+ * (например EnvSchema в apps/api) не приходилось приводить массив строк к литеральному типу
+ * руками, а вызывающему коду — писать `SOURCE_ID.READMANGA_RU` вместо сырого `'readmanga_ru'`.
  */
-export const SOURCE_ID = Object.fromEntries(Object.keys(SOURCE_CATALOG).map((id) => [id, id])) as {
-  [K in keyof typeof SOURCE_CATALOG]: K;
-};
+export const SOURCE_ID = Object.fromEntries(
+  Object.keys(SOURCE_CATALOG).map((id) => [id.toUpperCase(), id]),
+) as { [K in keyof typeof SOURCE_CATALOG as Uppercase<K>]: K };
 export type SourceId = EnumLiteralsOf<typeof SOURCE_ID>;
 
-export const SOURCE_IDS = Object.keys(SOURCE_ID).sort() as SourceId[];
+export const SOURCE_IDS = Object.values(SOURCE_ID).sort() as SourceId[];
 
 /**
  * Looks up a catalog entry by id for source-specific configs (GroupleConfig.id etc.), which

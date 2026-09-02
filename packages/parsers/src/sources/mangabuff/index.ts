@@ -31,11 +31,24 @@ import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { nullIfEmpty } from '../../core/text/strings';
 import { parseDdMmYyyy } from '../../core/text/dates';
 import { ParseError, SourceUnavailableError } from '../../errors';
+import { FILTER_GROUP } from '../../core/filters/group';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'MANGABUFF';
+const SOURCE_ID = CATALOG_SOURCE_ID.MANGABUFF;
 const PAGE_SIZE = 24;
 const CHAPTER_SELECTOR = 'a.chapters__item';
 const CHAPTER_NUMBER_REGEX = /\d+(?:[.,]\d+)?/;
+
+export const MANGABUFF_FILTER_GROUP = {
+  GENRE: FILTER_GROUP.GENRE,
+  TYPE: FILTER_GROUP.TYPE,
+  TAG: FILTER_GROUP.TAG,
+  STATUS: FILTER_GROUP.STATUS,
+  AGE_RATING: FILTER_GROUP.AGE_RATING,
+  RATING: FILTER_GROUP.RATING,
+  YEAR: FILTER_GROUP.YEAR,
+  CHAPTERS_COUNT: FILTER_GROUP.CHAPTERS_COUNT,
+} as const;
 
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
@@ -242,28 +255,28 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     for (const filter of filters) {
       if ('range' in filter) continue; // MangaBuff has no RANGE groups.
       switch (filter.groupId) {
-        case 'genre':
+        case MANGABUFF_FILTER_GROUP.GENRE:
           url.searchParams.append(filter.exclude ? 'without_genres[]' : 'genres[]', filter.key);
           break;
-        case 'type':
+        case MANGABUFF_FILTER_GROUP.TYPE:
           url.searchParams.append(filter.exclude ? 'without_type_id[]' : 'type_id[]', filter.key);
           break;
-        case 'tag':
+        case MANGABUFF_FILTER_GROUP.TAG:
           url.searchParams.append(filter.exclude ? 'without_tags[]' : 'tags[]', filter.key);
           break;
-        case 'status':
+        case MANGABUFF_FILTER_GROUP.STATUS:
           url.searchParams.append('status_id[]', filter.key);
           break;
-        case 'ageRating':
+        case MANGABUFF_FILTER_GROUP.AGE_RATING:
           url.searchParams.append('age_rating[]', filter.key);
           break;
-        case 'rating':
+        case MANGABUFF_FILTER_GROUP.RATING:
           url.searchParams.append('rating[]', filter.key);
           break;
-        case 'year':
+        case MANGABUFF_FILTER_GROUP.YEAR:
           url.searchParams.append('year[]', filter.key);
           break;
-        case 'chaptersCount':
+        case MANGABUFF_FILTER_GROUP.CHAPTERS_COUNT:
           url.searchParams.append('chapters[]', filter.key);
           break;
       }
@@ -285,7 +298,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     const genres = parseSelectOptions($, 'genres[]');
     if (genres.length > 0) {
       groups.push({
-        id: 'genre',
+        id: MANGABUFF_FILTER_GROUP.GENRE,
         title: 'Жанры',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: genres,
@@ -293,12 +306,17 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     }
     const types = parseSelectOptions($, 'type_id[]');
     if (types.length > 0) {
-      groups.push({ id: 'type', title: 'Тип', type: FILTER_TYPE.CHECKBOX_EXCLUDE, options: types });
+      groups.push({
+        id: MANGABUFF_FILTER_GROUP.TYPE,
+        title: 'Тип',
+        type: FILTER_TYPE.CHECKBOX_EXCLUDE,
+        options: types,
+      });
     }
     const tags = parseSelectOptions($, 'tags[]');
     if (tags.length > 0) {
       groups.push({
-        id: 'tag',
+        id: MANGABUFF_FILTER_GROUP.TAG,
         title: 'Теги',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: tags,
@@ -306,12 +324,17 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     }
     const statuses = parseSelectOptions($, 'status_id[]');
     if (statuses.length > 0) {
-      groups.push({ id: 'status', title: 'Статус', type: FILTER_TYPE.CHECKBOX, options: statuses });
+      groups.push({
+        id: MANGABUFF_FILTER_GROUP.STATUS,
+        title: 'Статус',
+        type: FILTER_TYPE.CHECKBOX,
+        options: statuses,
+      });
     }
     const ageRatings = parseSelectOptions($, 'age_rating[]');
     if (ageRatings.length > 0) {
       groups.push({
-        id: 'ageRating',
+        id: MANGABUFF_FILTER_GROUP.AGE_RATING,
         title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: ageRatings,
@@ -319,16 +342,26 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     }
     const ratings = parseSelectOptions($, 'rating[]');
     if (ratings.length > 0) {
-      groups.push({ id: 'rating', title: 'Рейтинг', type: FILTER_TYPE.CHECKBOX, options: ratings });
+      groups.push({
+        id: MANGABUFF_FILTER_GROUP.RATING,
+        title: 'Рейтинг',
+        type: FILTER_TYPE.CHECKBOX,
+        options: ratings,
+      });
     }
     const years = parseSelectOptions($, 'year[]');
     if (years.length > 0) {
-      groups.push({ id: 'year', title: 'Год выпуска', type: FILTER_TYPE.CHECKBOX, options: years });
+      groups.push({
+        id: MANGABUFF_FILTER_GROUP.YEAR,
+        title: 'Год выпуска',
+        type: FILTER_TYPE.CHECKBOX,
+        options: years,
+      });
     }
     const chaptersCount = parseChaptersCountOptions($);
     if (chaptersCount.length > 0) {
       groups.push({
-        id: 'chaptersCount',
+        id: MANGABUFF_FILTER_GROUP.CHAPTERS_COUNT,
         title: 'Количество глав',
         type: FILTER_TYPE.CHECKBOX,
         options: chaptersCount,
@@ -535,7 +568,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       title: 'MangaBuff',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.manga,
+      contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
       requiresVpn: false,

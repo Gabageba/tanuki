@@ -59,16 +59,16 @@ function SearchPage() {
           <div key={group.sourceId}>
             <Group gap="xs" mb="sm">
               <Title order={3}>{sourceTitle(group.sourceId)}</Title>
-              {group.status !== SEARCH_GROUP_STATUS.ok && (
+              {group.status !== SEARCH_GROUP_STATUS.OK && (
                 <Badge
-                  color={group.status === SEARCH_GROUP_STATUS.timeout ? 'yellow' : 'red'}
+                  color={group.status === SEARCH_GROUP_STATUS.TIMEOUT ? 'yellow' : 'red'}
                   variant="light"
                 >
                   {GROUP_STATUS_LABEL[group.status]}
                 </Badge>
               )}
             </Group>
-            {group.items.length === 0 && group.status === SEARCH_GROUP_STATUS.ok && (
+            {group.items.length === 0 && group.status === SEARCH_GROUP_STATUS.OK && (
               <Text c="dimmed" size="sm">
                 Ничего не найдено
               </Text>

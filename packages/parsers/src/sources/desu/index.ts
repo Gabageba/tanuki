@@ -30,10 +30,20 @@ import { parseIntOrNull, parseFloatOrNull } from '../../core/text/numbers';
 import { toTitleCase, nullIfEmpty } from '../../core/text/strings';
 import { ParseError } from '../../errors';
 import { UserAgents } from '../../core/http/user-agents';
+import { FILTER_GROUP } from '../../core/filters/group';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'DESUME';
+const SOURCE_ID = CATALOG_SOURCE_ID.DESUME;
 const PAGE_SIZE = 24;
 const IMAGE_REFERER = 'https://x.desu.city/';
+
+export const DESU_FILTER_GROUP = {
+  KIND: FILTER_GROUP.KIND,
+  GENRE: FILTER_GROUP.GENRE,
+  TAG: FILTER_GROUP.TAG,
+  STATUS: FILTER_GROUP.STATUS,
+  RATING: FILTER_GROUP.RATING,
+} as const;
 
 const CHAPTER_ID_REGEX = /\.(\d+)\/?$/;
 const CHAPTER_PATH_REGEX = /\/vol(\d+)\/ch([0-9.]+)\//;
@@ -260,7 +270,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     // wall of chips, plus the include/exclude cycling the genre filter supports.
     if (kinds.length > 0) {
       groups.push({
-        id: 'kind',
+        id: DESU_FILTER_GROUP.KIND,
         title: 'Тип',
         type: FILTER_TYPE.CHECKBOX,
         options: kinds,
@@ -268,7 +278,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     }
     if (genres.length > 0) {
       groups.push({
-        id: 'genre',
+        id: DESU_FILTER_GROUP.GENRE,
         title: 'Жанры',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: genres,
@@ -276,7 +286,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     }
     if (tags.length > 0) {
       groups.push({
-        id: 'tag',
+        id: DESU_FILTER_GROUP.TAG,
         title: 'Теги',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: tags,
@@ -284,7 +294,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     }
     if (statuses.length > 0) {
       groups.push({
-        id: 'status',
+        id: DESU_FILTER_GROUP.STATUS,
         title: 'Статус',
         type: FILTER_TYPE.CHECKBOX,
         options: statuses,
@@ -292,7 +302,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     }
     if (ratings.length > 0) {
       groups.push({
-        id: 'rating',
+        id: DESU_FILTER_GROUP.RATING,
         title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: ratings,
@@ -324,15 +334,19 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       byGroup.set(filter.groupId, list);
     }
 
-    const kinds = byGroup.get('kind');
+    const kinds = byGroup.get(DESU_FILTER_GROUP.KIND);
     if (kinds?.length) url.searchParams.set('kinds', kinds.map((f) => f.key).join(','));
 
-    const statusKeys = [...(byGroup.get('status') ?? []), ...(byGroup.get('rating') ?? [])].map(
-      (f) => f.key,
-    );
+    const statusKeys = [
+      ...(byGroup.get(DESU_FILTER_GROUP.STATUS) ?? []),
+      ...(byGroup.get(DESU_FILTER_GROUP.RATING) ?? []),
+    ].map((f) => f.key);
     if (statusKeys.length) url.searchParams.set('status', statusKeys.join(','));
 
-    const genres = [...(byGroup.get('genre') ?? []), ...(byGroup.get('tag') ?? [])];
+    const genres = [
+      ...(byGroup.get(DESU_FILTER_GROUP.GENRE) ?? []),
+      ...(byGroup.get(DESU_FILTER_GROUP.TAG) ?? []),
+    ];
     if (genres.length) {
       const genreParams = genres.map((f) => {
         const separatorIndex = f.key.indexOf('-');
@@ -620,7 +634,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       title: 'Desu',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.manga,
+      contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
       requiresVpn: false,

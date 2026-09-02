@@ -21,12 +21,12 @@ import type { EnumLiteralsOf } from './utils';
  * весь путь листинга, а не добавляют query-параметр.
  */
 export const FILTER_TYPE = {
-  CHECKBOX: 'CHECKBOX',
-  CHECKBOX_EXCLUDE: 'CHECKBOX_EXCLUDE',
-  SEARCHABLE_CHECKBOX: 'SEARCHABLE_CHECKBOX',
-  SEARCHABLE_CHECKBOX_EXCLUDE: 'SEARCHABLE_CHECKBOX_EXCLUDE',
-  RANGE: 'RANGE',
-  RADIO: 'RADIO',
+  CHECKBOX: 'checkbox',
+  CHECKBOX_EXCLUDE: 'checkboxExclude',
+  SEARCHABLE_CHECKBOX: 'searchableCheckbox',
+  SEARCHABLE_CHECKBOX_EXCLUDE: 'searchableCheckboxExclude',
+  RANGE: 'range',
+  RADIO: 'radio',
 } as const;
 export type FilterType = EnumLiteralsOf<typeof FILTER_TYPE>;
 
@@ -65,8 +65,8 @@ export type FilterRangePreset = z.infer<typeof FilterRangePresetSchema>;
  * but a year is a label, not a magnitude, so "1900 - 2026" must never become "1.9к - 2к".
  */
 export const RANGE_FORMAT = {
-  NUMBER: 'NUMBER',
-  YEAR: 'YEAR',
+  NUMBER: 'number',
+  YEAR: 'year',
 } as const;
 export type RangeFormat = EnumLiteralsOf<typeof RANGE_FORMAT>;
 

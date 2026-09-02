@@ -5,7 +5,7 @@ import { HttpClientImpl, type Timeouts } from './core/http/client';
 import { UserAgents } from './core/http/user-agents';
 import { jarFor } from './core/http/cookies';
 import { NotImplementedError, UnknownSourceError } from './errors';
-import { SOURCE_CATALOG, SOURCE_IDS, type SourceId } from './sources/catalog';
+import { SOURCE_CATALOG, SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/catalog';
 export { SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/catalog';
 import { GROUPLE_CONFIGS } from './sources/grouple/config';
 import { createGroupleParser } from './sources/grouple/engine';
@@ -55,19 +55,19 @@ const notImplemented = (id: string, info: RawSourceInfo): SourceDescriptor['crea
 };
 
 const GROUPLE_IDS = new Set(GROUPLE_CONFIGS.map((c) => c.id));
-/** MANGALIB/HENTAILIB/YAOILIB all hit the same host (api.cdnlibs.org) — see docs plan. */
-const LIBSOCIAL_IDS = new Set(['MANGALIB', 'HENTAILIB', 'YAOILIB']);
+/** mangalib/hentailib/yaoilib all hit the same host (api.cdnlibs.org) — see docs plan. */
+const LIBSOCIAL_IDS = new Set<string>([SOURCE_ID.MANGALIB, SOURCE_ID.HENTAILIB, SOURCE_ID.YAOILIB]);
 /** Sources whose parser implements getFilters() — mirrored into RawSourceInfo.isFiltersSupported. */
-const FILTERS_SUPPORTED_IDS = new Set([
-  'DESUME',
-  'INKSTORY',
-  'MANGABUFF',
-  'MANGACHAN',
-  'HENCHAN',
-  'YAOICHAN',
-  'MANGALIB',
-  'HENTAILIB',
-  'YAOILIB',
+const FILTERS_SUPPORTED_IDS = new Set<SourceId>([
+  SOURCE_ID.DESUME,
+  SOURCE_ID.INKSTORY,
+  SOURCE_ID.MANGABUFF,
+  SOURCE_ID.MANGACHAN,
+  SOURCE_ID.HENCHAN,
+  SOURCE_ID.YAOICHAN,
+  SOURCE_ID.MANGALIB,
+  SOURCE_ID.HENTAILIB,
+  SOURCE_ID.YAOILIB,
 ]);
 
 const cookieScopeFor = (id: string): string => {
@@ -78,17 +78,17 @@ const cookieScopeFor = (id: string): string => {
 
 /** Sources with a single id, no shared-engine config to pick between. */
 const SINGLE_SOURCE_FACTORIES: Record<string, (ctx: ParserContext) => Parser> = {
-  DESUME: createDesuParser,
-  REMANGA: createRemangaParser,
-  MANGABUFF: createMangaBuffParser,
-  INKSTORY: createInkStoryParser,
-  COMX: createComxParser,
-  TOMILOLIB: createTomiloLibParser,
-  WAMANGA: createWaMangaParser,
-  NUDEMOON: createNudeMoonParser,
-  ACOMICS: createAComicsParser,
-  HENTAICHAN_CC: createHentaichanCcParser,
-  SEXKOMIX2: createSexKomix2Parser,
+  [SOURCE_ID.DESUME]: createDesuParser,
+  [SOURCE_ID.REMANGA]: createRemangaParser,
+  [SOURCE_ID.MANGABUFF]: createMangaBuffParser,
+  [SOURCE_ID.INKSTORY]: createInkStoryParser,
+  [SOURCE_ID.COMX]: createComxParser,
+  [SOURCE_ID.TOMILOLIB]: createTomiloLibParser,
+  [SOURCE_ID.WAMANGA]: createWaMangaParser,
+  [SOURCE_ID.NUDEMOON]: createNudeMoonParser,
+  [SOURCE_ID.ACOMICS]: createAComicsParser,
+  [SOURCE_ID.HENTAICHAN_CC]: createHentaichanCcParser,
+  [SOURCE_ID.SEXKOMIX2]: createSexKomix2Parser,
 };
 
 const buildDescriptor = (id: SourceId): SourceDescriptor => {

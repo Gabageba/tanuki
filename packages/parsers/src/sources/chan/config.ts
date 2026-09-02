@@ -1,4 +1,5 @@
 import { SORT_ORDER, type SortOrder } from '@tanuki/contracts';
+import { SOURCE_ID } from '../catalog';
 
 export type ChanConfig = {
   id: string;
@@ -24,7 +25,7 @@ export type ChanConfig = {
 // title/domains live in SOURCE_CATALOG (../catalog) — look them up by id, don't duplicate here.
 export const CHAN_CONFIGS: ChanConfig[] = [
   {
-    id: 'MANGACHAN',
+    id: SOURCE_ID.MANGACHAN,
     isNsfw: false,
     sortOrders: [
       SORT_ORDER.POPULARITY,
@@ -36,14 +37,14 @@ export const CHAN_CONFIGS: ChanConfig[] = [
     variant: 'default',
   },
   {
-    id: 'HENCHAN',
+    id: SOURCE_ID.HENCHAN,
     isNsfw: true,
     sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
     supportsDirection: false,
     variant: 'henchan',
   },
   {
-    id: 'YAOICHAN',
+    id: SOURCE_ID.YAOICHAN,
     isNsfw: false,
     sortOrders: [SORT_ORDER.NEWEST],
     supportsDirection: false,

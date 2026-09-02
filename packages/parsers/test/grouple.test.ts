@@ -1,14 +1,17 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
+import { FILTER_TYPE, MANGA_STATE, MANGA_TYPE } from '@tanuki/contracts';
 import { createGroupleParser } from '../src/sources/grouple/engine';
+import { GROUPLE_FILTER_GROUP } from '../src/sources/grouple/models';
 import type { GroupleConfig } from '../src/sources/grouple/config';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
 const DOMAIN = 'mintmanga.example';
 
 const CFG: GroupleConfig = {
-  id: 'MINTMANGA',
+  id: SOURCE_ID.MINTMANGA,
   siteId: 2,
   authGateway: '3.grouple.co',
   isNsfw: false,
@@ -119,16 +122,16 @@ describe('Grouple parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('MINTMANGA');
+    expect(item!.source).toBe(SOURCE_ID.MINTMANGA);
     expect(item!.rating === -1 || (item!.rating >= 0 && item!.rating <= 1)).toBe(true);
     expect(item!.rating).toBeCloseTo(0.9, 5);
     expect(item!.tags.map((t) => t.key)).toEqual(['42']);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
-    expect(item!.state).toBe('FINISHED');
+    expect(item!.state).toBe(MANGA_STATE.FINISHED);
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
-    expect(item!.type).toBe('MANGA');
+    expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.chaptersCount).toBe(1057);
   });
 
@@ -160,7 +163,7 @@ describe('Grouple parser conformance', () => {
     const groups = await parser.getFilters!();
     const byId = Object.fromEntries(groups.map((g) => [g.id, g]));
 
-    expect(byId.genre!.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(byId.genre!.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(byId.genre!.options).toContainEqual({ key: '1346', title: 'боевик', count: null });
     expect(byId.category!.options).toContainEqual({ key: '6637', title: 'OEL-манга', count: null });
     expect(byId.ageRating!.options).toContainEqual({ key: '3969', title: 'NC-17', count: null });
@@ -175,14 +178,14 @@ describe('Grouple parser conformance', () => {
       title: 'Начат',
       count: null,
     });
-    expect(byId.searchFilter!.type).toBe('CHECKBOX_EXCLUDE');
+    expect(byId.searchFilter!.type).toBe(FILTER_TYPE.CHECKBOX_EXCLUDE);
     expect(byId.searchFilter!.options).toContainEqual({
       key: 'MATURE',
       title: 'Для взрослых',
       count: null,
     });
-    expect(byId.year!.type).toBe('RANGE');
-    expect(byId.year!.settings!.range).toEqual({ min: 1957, max: 2027, format: 'YEAR' });
+    expect(byId.year!.type).toBe(FILTER_TYPE.RANGE);
+    expect(byId.year!.settings!.range).toEqual({ min: 1957, max: 2027, format: 'year' });
     expect(byId.year!.settings!.presets![0]).toEqual({
       id: 'current-year',
       label: 'Текущий год',
@@ -209,14 +212,14 @@ describe('Grouple parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'genre', key: '1346' },
-        { groupId: 'genre', key: '1334', exclude: true },
-        { groupId: 'category', key: '6637' },
-        { groupId: 'productionStatus', key: 'FINISHED' },
-        { groupId: 'translationStatus', key: 'STARTED', exclude: true },
-        { groupId: 'searchFilter', key: 'HIGH_RATE' },
-        { groupId: 'searchFilter', key: 'MATURE', exclude: true },
-        { groupId: 'year', range: { min: 2010, max: 2020 } },
+        { groupId: GROUPLE_FILTER_GROUP.GENRE, key: '1346' },
+        { groupId: GROUPLE_FILTER_GROUP.GENRE, key: '1334', exclude: true },
+        { groupId: GROUPLE_FILTER_GROUP.CATEGORY, key: '6637' },
+        { groupId: GROUPLE_FILTER_GROUP.PRODUCTION_STATUS, key: 'FINISHED' },
+        { groupId: GROUPLE_FILTER_GROUP.TRANSLATION_STATUS, key: 'STARTED', exclude: true },
+        { groupId: GROUPLE_FILTER_GROUP.SEARCH_FILTER, key: 'HIGH_RATE' },
+        { groupId: GROUPLE_FILTER_GROUP.SEARCH_FILTER, key: 'MATURE', exclude: true },
+        { groupId: GROUPLE_FILTER_GROUP.YEAR, range: { min: 2010, max: 2020 } },
       ],
     });
     const req = http.requests.findLast((r) => r.url.includes('/api/catalog/search?'))!;

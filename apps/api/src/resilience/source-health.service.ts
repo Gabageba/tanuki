@@ -5,7 +5,7 @@ import { ENV } from '../config/env.module';
 import { BREAKER_STATE, type SourceState } from './models';
 
 const initialState = (): SourceState => {
-  return { state: BREAKER_STATE.closed, consecutiveFailures: 0, openedAt: 0, probeInFlight: false };
+  return { state: BREAKER_STATE.CLOSED, consecutiveFailures: 0, openedAt: 0, probeInFlight: false };
 };
 
 /**
@@ -31,7 +31,7 @@ export class SourceHealthService {
   /** true, если запрос можно попробовать выполнить прямо сейчас. */
   canAttempt(sourceId: string): boolean {
     const entry = this.stateOf(sourceId);
-    if (entry.state !== BREAKER_STATE.open) {
+    if (entry.state !== BREAKER_STATE.OPEN) {
       return true;
     }
 
@@ -44,14 +44,14 @@ export class SourceHealthService {
       return false;
     }
 
-    entry.state = BREAKER_STATE.halfOpen;
+    entry.state = BREAKER_STATE.HALF_OPEN;
     entry.probeInFlight = true;
     return true;
   }
 
   recordSuccess(sourceId: string): void {
     const entry = this.stateOf(sourceId);
-    entry.state = BREAKER_STATE.closed;
+    entry.state = BREAKER_STATE.CLOSED;
     entry.consecutiveFailures = 0;
     entry.probeInFlight = false;
   }
@@ -60,15 +60,15 @@ export class SourceHealthService {
     const entry = this.stateOf(sourceId);
     entry.probeInFlight = false;
 
-    if (entry.state === BREAKER_STATE.halfOpen) {
-      entry.state = BREAKER_STATE.open;
+    if (entry.state === BREAKER_STATE.HALF_OPEN) {
+      entry.state = BREAKER_STATE.OPEN;
       entry.openedAt = Date.now();
       return;
     }
 
     entry.consecutiveFailures += 1;
     if (entry.consecutiveFailures >= this.env.SOURCE_BREAKER_FAILURE_THRESHOLD) {
-      entry.state = BREAKER_STATE.open;
+      entry.state = BREAKER_STATE.OPEN;
       entry.openedAt = Date.now();
     }
   }
@@ -83,14 +83,14 @@ export class SourceHealthService {
   }
 
   getStatus(sourceId: string): SourceStatus {
-    return this.stateOf(sourceId).state === BREAKER_STATE.closed
-      ? SOURCE_STATUS.ok
-      : SOURCE_STATUS.degraded;
+    return this.stateOf(sourceId).state === BREAKER_STATE.CLOSED
+      ? SOURCE_STATUS.OK
+      : SOURCE_STATUS.DEGRADED;
   }
 
   getRetryAfterSeconds(sourceId: string): number {
     const entry = this.stateOf(sourceId);
-    if (entry.state !== BREAKER_STATE.open) {
+    if (entry.state !== BREAKER_STATE.OPEN) {
       return 0;
     }
     const remainingMs = entry.openedAt + this.env.SOURCE_BREAKER_RESET_MS - Date.now();

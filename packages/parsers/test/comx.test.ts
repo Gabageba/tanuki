@@ -1,6 +1,8 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
+import { MANGA_STATE } from '@tanuki/contracts';
 import { createComxParser } from '../src/sources/comx';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -64,7 +66,7 @@ describe('Com-X parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('COMX');
+    expect(item!.source).toBe(SOURCE_ID.COMX);
     expect(item!.rating).toBe(-1);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
@@ -85,7 +87,7 @@ describe('Com-X parser conformance', () => {
     // oldest-first ordering after .reverse()
     expect(manga.chapters![0]!.number).toBe(1);
     expect(manga.chapters![1]!.number).toBe(2);
-    expect(manga.state).toBe('ONGOING');
+    expect(manga.state).toBe(MANGA_STATE.ONGOING);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
     expect(manga.description).toBe('Описание тайтла.');
   });

@@ -13,8 +13,9 @@ import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
 import { parseDdMmYyyy } from '../../core/text/dates';
 import { nullIfEmpty, toTitleCase } from '../../core/text/strings';
 import { ParseError } from '../../errors';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'COMX';
+const SOURCE_ID = CATALOG_SOURCE_ID.COMX;
 const PAGE_SIZE = 20;
 const CDN_IMAGE_HOST = 'img.com-x.life/comix/';
 
@@ -271,7 +272,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       title: 'Com-X',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.comics,
+      contentType: SOURCE_CONTENT_TYPE.COMICS,
       // Site gates every request behind a JS PoW + TLS/JA3 fingerprint challenge (custom
       // "guard" appliance, not Cloudflare) — verified the /_v verification endpoint 404s
       // unconditionally for any non-real-browser TLS handshake, correct PoW answer or not.

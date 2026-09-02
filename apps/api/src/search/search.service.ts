@@ -45,12 +45,12 @@ export class SearchService {
       const groups: SearchGroup[] = settled.map((result, index) => {
         const sourceId = candidates[index]!.id;
         if (result.status === 'fulfilled') {
-          return { sourceId, status: SEARCH_GROUP_STATUS.ok, items: result.value };
+          return { sourceId, status: SEARCH_GROUP_STATUS.OK, items: result.value };
         }
         const status =
           result.reason instanceof SearchTimeoutError
-            ? SEARCH_GROUP_STATUS.timeout
-            : SEARCH_GROUP_STATUS.error;
+            ? SEARCH_GROUP_STATUS.TIMEOUT
+            : SEARCH_GROUP_STATUS.ERROR;
         return { sourceId, status, items: [] };
       });
 

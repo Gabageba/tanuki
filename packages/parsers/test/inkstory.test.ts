@@ -1,6 +1,14 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { createInkStoryParser } from '../src/sources/inkstory';
+import {
+  FILTER_TYPE,
+  MANGA_RESTRICTION,
+  MANGA_TYPE,
+  SORT_DIRECTION,
+  SORT_ORDER,
+} from '@tanuki/contracts';
+import { createInkStoryParser, INKSTORY_FILTER_GROUP } from '../src/sources/inkstory';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -135,31 +143,31 @@ describe('Inkstory parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('INKSTORY');
+    expect(item!.source).toBe(SOURCE_ID.INKSTORY);
     expect(item!.rating === -1 || (item!.rating >= 0 && item!.rating <= 1)).toBe(true);
     expect(item!.rating).toBeCloseTo(0.85, 5);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
-    expect(item!.type).toBe('MANGA');
+    expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(219);
   });
 
   it('getList: non-UPDATED order still reads /v2/books with a sort key', async () => {
-    const items = await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY' });
+    const items = await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.POPULARITY });
     expect(items).toHaveLength(1);
     expect(items[0]!.title).toBe('Ван-Пис');
   });
 
   it.each([
-    ['POPULARITY', 'viewsCount,desc'],
-    ['LIKES', 'likesCount,desc'],
-    ['CHAPTERS', 'chaptersCount,desc'],
-    ['BOOKMARKS', 'bookmarksCount,desc'],
-    ['RATING', 'averageRating,desc'],
-    ['NEWEST', 'createdAt,desc'],
+    [SORT_ORDER.POPULARITY, 'viewsCount,desc'],
+    [SORT_ORDER.LIKES, 'likesCount,desc'],
+    [SORT_ORDER.CHAPTERS, 'chaptersCount,desc'],
+    [SORT_ORDER.BOOKMARKS, 'bookmarksCount,desc'],
+    [SORT_ORDER.RATING, 'averageRating,desc'],
+    [SORT_ORDER.NEWEST, 'createdAt,desc'],
   ])('getList: order %s maps to sort=%s', async (order, sortKey) => {
     await parser.getList({ offset: 0, limit: 20, order });
     const booksRequest = http.requests
@@ -171,10 +179,10 @@ describe('Inkstory parser conformance', () => {
   });
 
   it.each([
-    ['POPULARITY', 'viewsCount,asc'],
-    ['RATING', 'averageRating,asc'],
+    [SORT_ORDER.POPULARITY, 'viewsCount,asc'],
+    [SORT_ORDER.RATING, 'averageRating,asc'],
   ])('getList: order %s with direction ASC maps to sort=%s', async (order, sortKey) => {
-    await parser.getList({ offset: 0, limit: 20, order, direction: 'ASC' });
+    await parser.getList({ offset: 0, limit: 20, order, direction: SORT_DIRECTION.ASC });
     const booksRequest = http.requests
       .filter((r) => r.url.startsWith(`https://${API_HOST}/v2/books?`))
       .at(-1);
@@ -184,7 +192,7 @@ describe('Inkstory parser conformance', () => {
   });
 
   it('getList: default UPDATED order with direction ASC bypasses the chapter-update-feed and reads /v2/books', async () => {
-    await parser.getList({ offset: 0, limit: 20, direction: 'ASC' });
+    await parser.getList({ offset: 0, limit: 20, direction: SORT_DIRECTION.ASC });
     const booksRequest = http.requests
       .filter((r) => r.url.startsWith(`https://${API_HOST}/v2/books?`))
       .at(-1);
@@ -196,25 +204,25 @@ describe('Inkstory parser conformance', () => {
   it('getFilters: genre from /v2/labels (COLLECTION kind excluded) plus static and range groups', async () => {
     const groups = await parser.getFilters!();
     expect(groups.map((g) => g.id)).toEqual([
-      'genre',
-      'status',
-      'contentStatus',
-      'country',
-      'format',
-      'averageRating',
-      'year',
-      'chaptersCount',
+      INKSTORY_FILTER_GROUP.GENRE,
+      INKSTORY_FILTER_GROUP.STATUS,
+      INKSTORY_FILTER_GROUP.CONTENT_STATUS,
+      INKSTORY_FILTER_GROUP.COUNTRY,
+      INKSTORY_FILTER_GROUP.FORMAT,
+      INKSTORY_FILTER_GROUP.AVERAGE_RATING,
+      INKSTORY_FILTER_GROUP.YEAR,
+      INKSTORY_FILTER_GROUP.CHAPTERS_COUNT,
     ]);
 
-    const genre = groups.find((g) => g.id === 'genre')!;
-    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const genre = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.GENRE)!;
+    expect(genre.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(genre.options).toEqual([
       { key: 'vampires', title: 'Вампиры', count: null },
       { key: 'harem', title: 'Гарем', count: null },
     ]);
 
-    const status = groups.find((g) => g.id === 'status')!;
-    expect(status.type).toBe('CHECKBOX');
+    const status = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.STATUS)!;
+    expect(status.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(status.options).toEqual([
       { key: 'ONGOING', title: 'Онгоинг', count: null },
       { key: 'DONE', title: 'Завершён', count: null },
@@ -222,7 +230,7 @@ describe('Inkstory parser conformance', () => {
       { key: 'ANNOUNCE', title: 'Анонс', count: null },
     ]);
 
-    const contentStatus = groups.find((g) => g.id === 'contentStatus')!;
+    const contentStatus = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.CONTENT_STATUS)!;
     expect(contentStatus.options.map((o) => o.key)).toEqual([
       'SAFE',
       'UNSAFE',
@@ -230,7 +238,7 @@ describe('Inkstory parser conformance', () => {
       'PORNOGRAPHIC',
     ]);
 
-    const country = groups.find((g) => g.id === 'country')!;
+    const country = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.COUNTRY)!;
     expect(country.options).toEqual([
       { key: 'RUSSIA', title: 'Россия', count: null },
       { key: 'JAPAN', title: 'Япония', count: null },
@@ -239,7 +247,7 @@ describe('Inkstory parser conformance', () => {
       { key: 'OTHER', title: 'Другая', count: null },
     ]);
 
-    const format = groups.find((g) => g.id === 'format')!;
+    const format = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.FORMAT)!;
     expect(format.options.map((o) => o.key)).toEqual([
       'FOURTH_KOMA',
       'COMPILATION',
@@ -252,8 +260,8 @@ describe('Inkstory parser conformance', () => {
       'WEB',
     ]);
 
-    const averageRating = groups.find((g) => g.id === 'averageRating')!;
-    expect(averageRating.type).toBe('RANGE');
+    const averageRating = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.AVERAGE_RATING)!;
+    expect(averageRating.type).toBe(FILTER_TYPE.RANGE);
     expect(averageRating.options).toEqual([]);
     expect(averageRating.settings?.range).toEqual({ min: 0, max: 10 });
     expect(averageRating.settings?.presets).toEqual([
@@ -262,8 +270,8 @@ describe('Inkstory parser conformance', () => {
       { id: '7-plus', label: '7+', min: 7 },
     ]);
 
-    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
-    expect(chaptersCount.type).toBe('RANGE');
+    const chaptersCount = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.CHAPTERS_COUNT)!;
+    expect(chaptersCount.type).toBe(FILTER_TYPE.RANGE);
     expect(chaptersCount.settings?.range).toEqual({ min: 0, max: 10000 });
     expect(chaptersCount.settings?.presets).toEqual([
       { id: 'lt-20', label: '< 20', max: 20 },
@@ -275,8 +283,8 @@ describe('Inkstory parser conformance', () => {
 
     const currentYear = new Date().getFullYear();
     const currentDecadeStart = Math.floor(currentYear / 10) * 10;
-    const year = groups.find((g) => g.id === 'year')!;
-    expect(year.type).toBe('RANGE');
+    const year = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.YEAR)!;
+    expect(year.type).toBe(FILTER_TYPE.RANGE);
     expect(year.settings!.range.min).toBe(1950);
     expect(year.settings!.range.max).toBe(currentYear);
     expect(year.settings!.presets![0]).toEqual({
@@ -305,13 +313,13 @@ describe('Inkstory parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'status', key: 'ONGOING' },
-        { groupId: 'status', key: 'DONE' },
-        { groupId: 'genre', key: 'vampires' },
-        { groupId: 'genre', key: 'harem', exclude: true },
-        { groupId: 'contentStatus', key: 'SAFE' },
-        { groupId: 'country', key: 'JAPAN' },
-        { groupId: 'format', key: 'WEBTOON' },
+        { groupId: INKSTORY_FILTER_GROUP.STATUS, key: 'ONGOING' },
+        { groupId: INKSTORY_FILTER_GROUP.STATUS, key: 'DONE' },
+        { groupId: INKSTORY_FILTER_GROUP.GENRE, key: 'vampires' },
+        { groupId: INKSTORY_FILTER_GROUP.GENRE, key: 'harem', exclude: true },
+        { groupId: INKSTORY_FILTER_GROUP.CONTENT_STATUS, key: 'SAFE' },
+        { groupId: INKSTORY_FILTER_GROUP.COUNTRY, key: 'JAPAN' },
+        { groupId: INKSTORY_FILTER_GROUP.FORMAT, key: 'WEBTOON' },
       ],
     });
     const booksRequest = http.requests
@@ -332,9 +340,9 @@ describe('Inkstory parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'averageRating', range: { min: 8.5, max: 10 } },
-        { groupId: 'year', range: { min: 2020 } },
-        { groupId: 'chaptersCount', range: { max: 500 } },
+        { groupId: INKSTORY_FILTER_GROUP.AVERAGE_RATING, range: { min: 8.5, max: 10 } },
+        { groupId: INKSTORY_FILTER_GROUP.YEAR, range: { min: 2020 } },
+        { groupId: INKSTORY_FILTER_GROUP.CHAPTERS_COUNT, range: { max: 500 } },
       ],
     });
     const booksRequest = http.requests
@@ -354,7 +362,7 @@ describe('Inkstory parser conformance', () => {
     const items = await parser.getList({
       offset: 0,
       limit: 20,
-      filters: [{ groupId: 'status', key: 'ONGOING' }],
+      filters: [{ groupId: INKSTORY_FILTER_GROUP.STATUS, key: 'ONGOING' }],
     });
     expect(items).toHaveLength(1);
     const booksRequest = http.requests
@@ -375,17 +383,17 @@ describe('Inkstory parser conformance', () => {
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
-    expect(manga.type).toBe('MANGA');
+    expect(manga.type).toBe(MANGA_TYPE.MANGA);
     expect(manga.year).toBe(1997);
     expect(manga.restriction).toBeNull();
   });
 
   it.each([
-    ['JAPAN', 'MANGA'],
-    ['KOREA', 'MANHWA'],
-    ['CHINA', 'MANHUA'],
-    ['RUSSIA', 'COMICS'],
-    ['OTHER', 'OTHER'],
+    ['JAPAN', MANGA_TYPE.MANGA],
+    ['KOREA', MANGA_TYPE.MANHWA],
+    ['CHINA', MANGA_TYPE.MANHUA],
+    ['RUSSIA', MANGA_TYPE.COMICS],
+    ['OTHER', MANGA_TYPE.OTHER],
     [undefined, null],
   ])('getList: country %s maps to type %s', async (country, type) => {
     const freshHttp = new FakeHttpClient();
@@ -419,7 +427,7 @@ describe('Inkstory parser conformance', () => {
     });
     const parser = createInkStoryParser(makeContext(freshHttp));
     const manga = await parser.getDetails(takenDownId);
-    expect(manga.restriction).toBe('LEGAL');
+    expect(manga.restriction).toBe(MANGA_RESTRICTION.LEGAL);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

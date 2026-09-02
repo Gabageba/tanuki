@@ -71,7 +71,7 @@ export class ImgProxyController {
   ): Promise<void> {
     const absoluteUrl = verifySignedImageUrl(this.env.IMG_SIGN_SECRET, { u, s, exp, sig });
     const width = w ? Number.parseInt(w, 10) : undefined;
-    const format = f === IMAGE_FORMAT.webp || f === IMAGE_FORMAT.avif ? f : undefined;
+    const format = f === IMAGE_FORMAT.WEBP || f === IMAGE_FORMAT.AVIF ? f : undefined;
 
     // Ресайз/перекодирование — только для обложек (doc04), и только этот путь кешируется в
     // Valkey: байты для одного (url, width, format) неизменны по построению, а сами обложки
@@ -151,7 +151,7 @@ export class ImgProxyController {
     absoluteUrl: string,
     sourceId: string,
     width: number | undefined,
-    format: Exclude<ImageFormat, typeof IMAGE_FORMAT.orig> | undefined,
+    format: Exclude<ImageFormat, typeof IMAGE_FORMAT.ORIG> | undefined,
   ): Promise<TransformedImage> {
     const existing = this.inFlight.get(key);
     if (existing) {
@@ -169,7 +169,7 @@ export class ImgProxyController {
     absoluteUrl: string,
     sourceId: string,
     width: number | undefined,
-    format: Exclude<ImageFormat, typeof IMAGE_FORMAT.orig> | undefined,
+    format: Exclude<ImageFormat, typeof IMAGE_FORMAT.ORIG> | undefined,
   ): Promise<TransformedImage> {
     const upstream = await this.fetchUpstream(absoluteUrl, sourceId);
     const raw = await streamToBuffer(this.decodeBody(upstream));

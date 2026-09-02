@@ -7,7 +7,7 @@
  * on the site's own callback URL (before that page's own JS has a chance to consume the code
  * itself), then exchanges it for an access/refresh token pair using its own PKCE verifier.
  *
- * Usage: pnpm --filter @tanuki/parsers login:libsocial [SOURCE_ID]   (default: HENTAILIB)
+ * Usage: pnpm --filter @tanuki/parsers login:libsocial [SOURCE_ID]   (default: hentailib)
  * Optionally set LIB_USERNAME / LIB_PASSWORD to prefill the login form — one account covers
  * the whole network (MANGALIB/HENTAILIB/YAOILIB), not just the source you're logging into.
  * The reCAPTCHA still needs a human regardless, this just saves typing credentials each time.
@@ -16,7 +16,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { resolve, join } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import { chromium, type Frame } from 'playwright';
-import { catalogEntryFor } from '../src/sources/catalog';
+import { catalogEntryFor, SOURCE_ID } from '../src/sources/catalog';
 import { LIBSOCIAL_CONFIGS } from '../src/sources/libsocial/config';
 import { writeTokenStore, type LibSocialTokenState } from '../src/sources/libsocial/token-store';
 
@@ -39,7 +39,7 @@ const base64url = (buf: Buffer): string => {
 };
 
 const main = async (): Promise<void> => {
-  const sourceId = process.argv[2] ?? 'HENTAILIB';
+  const sourceId = process.argv[2] ?? SOURCE_ID.HENTAILIB;
   const cfg = LIBSOCIAL_CONFIGS.find((c) => c.id === sourceId);
   if (!cfg) {
     throw new Error(

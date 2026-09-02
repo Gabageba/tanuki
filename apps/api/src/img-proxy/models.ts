@@ -2,9 +2,9 @@ import type { EnumLiteralsOf } from '@tanuki/contracts';
 
 /** `orig` — отдать байты источника как есть, без перекодирования. */
 export const IMAGE_FORMAT = {
-  webp: 'webp',
-  avif: 'avif',
-  orig: 'orig',
+  WEBP: 'webp',
+  AVIF: 'avif',
+  ORIG: 'orig',
 } as const;
 export type ImageFormat = EnumLiteralsOf<typeof IMAGE_FORMAT>;
 

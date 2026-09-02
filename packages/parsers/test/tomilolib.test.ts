@@ -1,6 +1,8 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { createTomiloLibParser } from '../src/sources/tomilolib';
+import { FILTER_TYPE, MANGA_TYPE } from '@tanuki/contracts';
+import { createTomiloLibParser, TOMILOLIB_FILTER_GROUP } from '../src/sources/tomilolib';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -105,7 +107,7 @@ describe('TomiloLib parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('TOMILOLIB');
+    expect(item!.source).toBe(SOURCE_ID.TOMILOLIB);
     expect(item!.rating === -1 || (item!.rating >= 0 && item!.rating <= 1)).toBe(true);
     expect(item!.rating).toBeCloseTo(0.85, 5);
     expect(item!.url.startsWith('http')).toBe(false);
@@ -113,7 +115,7 @@ describe('TomiloLib parser conformance', () => {
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
     expect(item!.coverUrl).toBe('https://s3.regru.cloud/tomilolib/titles/1/cover.jpg');
-    expect(item!.type).toBe('MANGA');
+    expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(1100);
   });
@@ -144,26 +146,26 @@ describe('TomiloLib parser conformance', () => {
   it('getFilters: genre fetched live, type/status hardcoded, plus two RANGE groups', async () => {
     const groups = await parser.getFilters!();
     expect(groups.map((g) => g.id)).toEqual([
-      'genre',
-      'type',
-      'status',
-      'releaseYear',
-      'chaptersCount',
+      TOMILOLIB_FILTER_GROUP.GENRE,
+      TOMILOLIB_FILTER_GROUP.TYPE,
+      TOMILOLIB_FILTER_GROUP.STATUS,
+      TOMILOLIB_FILTER_GROUP.RELEASE_YEAR,
+      TOMILOLIB_FILTER_GROUP.CHAPTERS_COUNT,
     ]);
 
-    const genre = groups.find((g) => g.id === 'genre')!;
-    expect(genre.type).toBe('SEARCHABLE_CHECKBOX');
+    const genre = groups.find((g) => g.id === TOMILOLIB_FILTER_GROUP.GENRE)!;
+    expect(genre.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX);
     expect(genre.options).toEqual([
       { key: 'Приключения', title: 'Приключения', count: null },
       { key: 'Драма', title: 'Драма', count: null },
     ]);
 
-    const type = groups.find((g) => g.id === 'type')!;
-    expect(type.type).toBe('RADIO');
+    const type = groups.find((g) => g.id === TOMILOLIB_FILTER_GROUP.TYPE)!;
+    expect(type.type).toBe(FILTER_TYPE.RADIO);
     expect(type.options.map((o) => o.key)).toEqual(['manga', 'manhwa', 'manhua', 'comic']);
 
-    const status = groups.find((g) => g.id === 'status')!;
-    expect(status.type).toBe('RADIO');
+    const status = groups.find((g) => g.id === TOMILOLIB_FILTER_GROUP.STATUS)!;
+    expect(status.type).toBe(FILTER_TYPE.RADIO);
     expect(status.options.map((o) => o.key)).toEqual([
       'ongoing',
       'completed',
@@ -171,13 +173,13 @@ describe('TomiloLib parser conformance', () => {
       'cancelled',
     ]);
 
-    const releaseYear = groups.find((g) => g.id === 'releaseYear')!;
-    expect(releaseYear.type).toBe('RANGE');
+    const releaseYear = groups.find((g) => g.id === TOMILOLIB_FILTER_GROUP.RELEASE_YEAR)!;
+    expect(releaseYear.type).toBe(FILTER_TYPE.RANGE);
     expect(releaseYear.options).toEqual([]);
-    expect(releaseYear.settings?.range).toMatchObject({ min: 2010, format: 'YEAR' });
+    expect(releaseYear.settings?.range).toMatchObject({ min: 2010, format: 'year' });
 
-    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
-    expect(chaptersCount.type).toBe('RANGE');
+    const chaptersCount = groups.find((g) => g.id === TOMILOLIB_FILTER_GROUP.CHAPTERS_COUNT)!;
+    expect(chaptersCount.type).toBe(FILTER_TYPE.RANGE);
     expect(chaptersCount.settings?.range).toEqual({ min: 1, max: 3864 });
   });
 
@@ -186,12 +188,12 @@ describe('TomiloLib parser conformance', () => {
       offset: 0,
       limit: 24,
       filters: [
-        { groupId: 'genre', key: 'Приключения' },
-        { groupId: 'genre', key: 'Драма' },
-        { groupId: 'type', key: 'manhwa' },
-        { groupId: 'status', key: 'ongoing' },
-        { groupId: 'releaseYear', range: { min: 2015 } },
-        { groupId: 'chaptersCount', range: { max: 200 } },
+        { groupId: TOMILOLIB_FILTER_GROUP.GENRE, key: 'Приключения' },
+        { groupId: TOMILOLIB_FILTER_GROUP.GENRE, key: 'Драма' },
+        { groupId: TOMILOLIB_FILTER_GROUP.TYPE, key: 'manhwa' },
+        { groupId: TOMILOLIB_FILTER_GROUP.STATUS, key: 'ongoing' },
+        { groupId: TOMILOLIB_FILTER_GROUP.RELEASE_YEAR, range: { min: 2015 } },
+        { groupId: TOMILOLIB_FILTER_GROUP.CHAPTERS_COUNT, range: { max: 200 } },
       ],
     });
     const listRequest = http.requests.filter((r) => r.url.includes('/api/titles?')).at(-1)!;

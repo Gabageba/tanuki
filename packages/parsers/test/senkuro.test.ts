@@ -1,8 +1,9 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
-import { createSenkuroParser } from '../src/sources/senkuro/engine';
+import { FILTER_TYPE, MANGA_TYPE, RANGE_FORMAT, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { createSenkuroParser, SENKURO_FILTER_GROUP } from '../src/sources/senkuro/engine';
 import { SENKURO_CONFIGS } from '../src/sources/senkuro/config';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -126,8 +127,8 @@ const ALL_LABELS_RESPONSE = JSON.stringify({
   },
 });
 
-const SENKURO_CONFIG = SENKURO_CONFIGS.find((c) => c.id === 'SENKURO')!;
-const SENKOGNITO_CONFIG = SENKURO_CONFIGS.find((c) => c.id === 'SENKOGNITO')!;
+const SENKURO_CONFIG = SENKURO_CONFIGS.find((c) => c.id === SOURCE_ID.SENKURO)!;
+const SENKOGNITO_CONFIG = SENKURO_CONFIGS.find((c) => c.id === SOURCE_ID.SENKOGNITO)!;
 
 const makeContext = (http: FakeHttpClient, domain = DOMAIN): ParserContext => {
   return {
@@ -182,14 +183,14 @@ describe('Senkuro parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('SENKURO');
+    expect(item!.source).toBe(SOURCE_ID.SENKURO);
     expect(item!.rating).toBe(-1);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     // RU title preferred over EN
     expect(item!.title).toBe('Ван-Пис');
-    expect(item!.type).toBe('MANGA');
+    expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(1000);
     expect(http.requests[0]!.headers['app-id']).toBe(SENKURO_CONFIG.appId);
@@ -210,7 +211,7 @@ describe('Senkuro parser conformance', () => {
     expect(manga.description).toContain('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
-    expect(manga.type).toBe('MANGA');
+    expect(manga.type).toBe(MANGA_TYPE.MANGA);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {
@@ -232,19 +233,19 @@ describe('Senkuro parser conformance', () => {
 
     const themesGroup = groups.find((g) => g.id === 'label-themes')!;
     expect(themesGroup.title).toBe('Темы');
-    expect(themesGroup.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    expect(themesGroup.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(themesGroup.options).toEqual([{ key: 'isekai', title: 'Исекай', count: null }]);
 
-    const typeGroup = groups.find((g) => g.id === 'type')!;
-    expect(typeGroup.type).toBe('CHECKBOX_EXCLUDE');
+    const typeGroup = groups.find((g) => g.id === SENKURO_FILTER_GROUP.TYPE)!;
+    expect(typeGroup.type).toBe(FILTER_TYPE.CHECKBOX_EXCLUDE);
     expect(typeGroup.options.map((o) => o.key)).toContain('MANHWA');
 
-    const chaptersGroup = groups.find((g) => g.id === 'chapters')!;
-    expect(chaptersGroup.type).toBe('RANGE');
+    const chaptersGroup = groups.find((g) => g.id === SENKURO_FILTER_GROUP.CHAPTERS)!;
+    expect(chaptersGroup.type).toBe(FILTER_TYPE.RANGE);
     expect(chaptersGroup.settings?.range).toEqual({ min: 0, max: 2000 });
 
-    const releasedOnGroup = groups.find((g) => g.id === 'releasedOn')!;
-    expect(releasedOnGroup.settings?.range.format).toBe('YEAR');
+    const releasedOnGroup = groups.find((g) => g.id === SENKURO_FILTER_GROUP.RELEASED_ON)!;
+    expect(releasedOnGroup.settings?.range.format).toBe(RANGE_FORMAT.YEAR);
   });
 
   it('getList with filters: label/type/chapters selections reach the mangas() variables', async () => {
@@ -254,9 +255,9 @@ describe('Senkuro parser conformance', () => {
       filters: [
         { groupId: 'label-themes', key: 'isekai' },
         { groupId: 'label-hentai_themes', key: 'ecchi', exclude: true },
-        { groupId: 'type', key: 'MANHWA' },
-        { groupId: 'chapters', range: { min: 10, max: 100 } },
-        { groupId: 'releasedOn', range: { min: 2015 } },
+        { groupId: SENKURO_FILTER_GROUP.TYPE, key: 'MANHWA' },
+        { groupId: SENKURO_FILTER_GROUP.CHAPTERS, range: { min: 10, max: 100 } },
+        { groupId: SENKURO_FILTER_GROUP.RELEASED_ON, range: { min: 2015 } },
       ],
     });
 
@@ -286,7 +287,7 @@ describe('Senkognito config', () => {
     expect(http.requests[0]!.url).toBe(SENKOGNITO_CONFIG.apiEndpoint);
     expect(http.requests[0]!.headers['app-id']).toBe(SENKOGNITO_CONFIG.appId);
     expect(SENKOGNITO_CONFIG.appId).not.toBe(SENKURO_CONFIG.appId);
-    expect(items[0]!.source).toBe('SENKOGNITO');
+    expect(items[0]!.source).toBe(SOURCE_ID.SENKOGNITO);
     expect(items[0]!.publicUrl).toBe('https://ne.senkognito.com/manga/one-piece');
     // Different source id ⇒ a different uid for the same upstream manga, so the two storefronts
     // never collide in the app's catalog.
@@ -300,6 +301,6 @@ describe('Senkognito config', () => {
   it('exposes the catalog entry as a hentai source', () => {
     const parser = createSenkuroParser(SENKOGNITO_CONFIG, makeContext(new FakeHttpClient()));
     expect(parser.info.title).toBe('Senkognito');
-    expect(parser.info.contentType).toBe(SOURCE_CONTENT_TYPE.hentai);
+    expect(parser.info.contentType).toBe(SOURCE_CONTENT_TYPE.HENTAI);
   });
 });

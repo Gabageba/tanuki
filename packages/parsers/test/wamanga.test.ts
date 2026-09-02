@@ -1,6 +1,8 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
+import { SORT_ORDER } from '@tanuki/contracts';
 import { createWaMangaParser } from '../src/sources/wamanga';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -89,7 +91,7 @@ describe('WaManga parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('WAMANGA');
+    expect(item!.source).toBe(SOURCE_ID.WAMANGA);
     expect(item!.rating).toBe(-1);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
@@ -114,10 +116,10 @@ describe('WaManga parser conformance', () => {
   it('getList: defaults to updatedAt desc, maps the other sort orders', async () => {
     const cases: [string | undefined, string, string][] = [
       [undefined, 'updatedAt', 'true'],
-      ['UPDATED', 'updatedAt', 'true'],
-      ['NEWEST', 'createdAt', 'true'],
-      ['POPULARITY', 'views', 'true'],
-      ['ALPHABETICAL', 'alphabetical', 'false'],
+      [SORT_ORDER.UPDATED, 'updatedAt', 'true'],
+      [SORT_ORDER.NEWEST, 'createdAt', 'true'],
+      [SORT_ORDER.POPULARITY, 'views', 'true'],
+      [SORT_ORDER.ALPHABETICAL, 'alphabetical', 'false'],
     ];
     for (const [order, key, descending] of cases) {
       const fresh = setUpFixtures();

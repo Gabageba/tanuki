@@ -1,6 +1,8 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { createRemangaParser } from '../src/sources/remanga';
+import { FILTER_TYPE, MANGA_TYPE } from '@tanuki/contracts';
+import { createRemangaParser, REMANGA_FILTER_GROUP } from '../src/sources/remanga';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -146,14 +148,14 @@ describe('Remanga parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('REMANGA');
+    expect(item!.source).toBe(SOURCE_ID.REMANGA);
     expect(item!.rating === -1 || (item!.rating >= 0 && item!.rating <= 1)).toBe(true);
     expect(item!.rating).toBeCloseTo(0.85, 5);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
-    expect(item!.type).toBe('MANGA');
+    expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
   });
 
@@ -167,7 +169,7 @@ describe('Remanga parser conformance', () => {
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
-    expect(manga.type).toBe('MANGA');
+    expect(manga.type).toBe(MANGA_TYPE.MANGA);
     expect(manga.year).toBe(1997);
   });
 
@@ -185,37 +187,37 @@ describe('Remanga parser conformance', () => {
   it('getFilters: genre/category fetched live, the rest hardcoded, plus three RANGE groups', async () => {
     const groups = await parser.getFilters!();
     expect(groups.map((g) => g.id)).toEqual([
-      'genre',
-      'category',
-      'type',
-      'status',
-      'translateStatus',
-      'ageRating',
-      'rating',
-      'year',
-      'chaptersCount',
+      REMANGA_FILTER_GROUP.GENRE,
+      REMANGA_FILTER_GROUP.CATEGORY,
+      REMANGA_FILTER_GROUP.TYPE,
+      REMANGA_FILTER_GROUP.STATUS,
+      REMANGA_FILTER_GROUP.TRANSLATE_STATUS,
+      REMANGA_FILTER_GROUP.AGE_RATING,
+      REMANGA_FILTER_GROUP.RATING,
+      REMANGA_FILTER_GROUP.YEAR,
+      REMANGA_FILTER_GROUP.CHAPTERS_COUNT,
     ]);
 
-    const genre = groups.find((g) => g.id === 'genre')!;
-    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const genre = groups.find((g) => g.id === REMANGA_FILTER_GROUP.GENRE)!;
+    expect(genre.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(genre.options).toEqual([
       { key: '1', title: 'Приключения', count: null },
       { key: '3', title: 'Боевые искусства', count: null },
     ]);
 
-    const category = groups.find((g) => g.id === 'category')!;
-    expect(category.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const category = groups.find((g) => g.id === REMANGA_FILTER_GROUP.CATEGORY)!;
+    expect(category.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(category.options).toEqual([
       { key: '5', title: 'Веб', count: null },
       { key: '47', title: 'Алхимия', count: null },
     ]);
 
-    const status = groups.find((g) => g.id === 'status')!;
-    expect(status.type).toBe('CHECKBOX');
+    const status = groups.find((g) => g.id === REMANGA_FILTER_GROUP.STATUS)!;
+    expect(status.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(status.options.length).toBeGreaterThan(0);
 
-    const rating = groups.find((g) => g.id === 'rating')!;
-    expect(rating.type).toBe('RANGE');
+    const rating = groups.find((g) => g.id === REMANGA_FILTER_GROUP.RATING)!;
+    expect(rating.type).toBe(FILTER_TYPE.RANGE);
     expect(rating.options).toEqual([]);
     expect(rating.settings?.range).toEqual({ min: 0, max: 10, step: 0.1 });
     expect(rating.settings?.presets).toEqual([
@@ -224,9 +226,9 @@ describe('Remanga parser conformance', () => {
       { id: '7-plus', label: '7+', min: 7 },
     ]);
 
-    const year = groups.find((g) => g.id === 'year')!;
-    expect(year.type).toBe('RANGE');
-    expect(year.settings?.range).toMatchObject({ min: 1900, format: 'YEAR' });
+    const year = groups.find((g) => g.id === REMANGA_FILTER_GROUP.YEAR)!;
+    expect(year.type).toBe(FILTER_TYPE.RANGE);
+    expect(year.settings?.range).toMatchObject({ min: 1900, format: 'year' });
     expect(year.settings?.presets?.[0]).toMatchObject({ id: 'current-year' });
     expect(year.settings?.presets?.at(-1)).toEqual({
       id: 'before-2000',
@@ -235,8 +237,8 @@ describe('Remanga parser conformance', () => {
       max: 1999,
     });
 
-    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
-    expect(chaptersCount.type).toBe('RANGE');
+    const chaptersCount = groups.find((g) => g.id === REMANGA_FILTER_GROUP.CHAPTERS_COUNT)!;
+    expect(chaptersCount.type).toBe(FILTER_TYPE.RANGE);
     expect(chaptersCount.settings?.range).toEqual({ min: 0, max: 2000 });
     expect(chaptersCount.settings?.presets).toEqual([
       { id: 'lt-20', label: '< 20', max: 20 },
@@ -252,12 +254,12 @@ describe('Remanga parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'genre', key: '1' },
-        { groupId: 'genre', key: '3', exclude: true },
-        { groupId: 'category', key: '5', exclude: true },
-        { groupId: 'status', key: '2' },
-        { groupId: 'rating', range: { min: 8 } },
-        { groupId: 'year', range: { max: 2020 } },
+        { groupId: REMANGA_FILTER_GROUP.GENRE, key: '1' },
+        { groupId: REMANGA_FILTER_GROUP.GENRE, key: '3', exclude: true },
+        { groupId: REMANGA_FILTER_GROUP.CATEGORY, key: '5', exclude: true },
+        { groupId: REMANGA_FILTER_GROUP.STATUS, key: '2' },
+        { groupId: REMANGA_FILTER_GROUP.RATING, range: { min: 8 } },
+        { groupId: REMANGA_FILTER_GROUP.YEAR, range: { max: 2020 } },
       ],
     });
     const listRequest = http.requests.filter((r) => r.url.includes('/search/catalog')).at(-1)!;

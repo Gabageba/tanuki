@@ -4,11 +4,11 @@ import type { EnumLiteralsOf } from './utils';
 
 /** Публичные статусы тайтла — публикация как таковая, не доступность его глав. */
 export const MANGA_STATE = {
-  ONGOING: 'ONGOING',
-  FINISHED: 'FINISHED',
-  PAUSED: 'PAUSED',
-  ABANDONED: 'ABANDONED',
-  UPCOMING: 'UPCOMING',
+  ONGOING: 'ongoing',
+  FINISHED: 'finished',
+  PAUSED: 'paused',
+  ABANDONED: 'abandoned',
+  UPCOMING: 'upcoming',
 } as const;
 export type MangaState = EnumLiteralsOf<typeof MANGA_STATE>;
 
@@ -19,29 +19,29 @@ export const MangaStateSchema = z.enum(MANGA_STATE);
  * LEGAL — блокировка по требованию правообладателя, PAYWALL — все главы платные.
  */
 export const MANGA_RESTRICTION = {
-  GEO: 'GEO',
-  LEGAL: 'LEGAL',
-  PAYWALL: 'PAYWALL',
+  GEO: 'geo',
+  LEGAL: 'legal',
+  PAYWALL: 'paywall',
 } as const;
 export type MangaRestriction = EnumLiteralsOf<typeof MANGA_RESTRICTION>;
 
 export const MangaRestrictionSchema = z.enum(MANGA_RESTRICTION);
 
 export const CONTENT_RATING = {
-  SAFE: 'SAFE',
-  SUGGESTIVE: 'SUGGESTIVE',
-  ADULT: 'ADULT',
+  SAFE: 'safe',
+  SUGGESTIVE: 'suggestive',
+  ADULT: 'adult',
 } as const;
 export type ContentRating = EnumLiteralsOf<typeof CONTENT_RATING>;
 
 export const ContentRatingSchema = z.enum(CONTENT_RATING);
 
 export const MANGA_TYPE = {
-  MANGA: 'MANGA',
-  MANHWA: 'MANHWA',
-  MANHUA: 'MANHUA',
-  COMICS: 'COMICS',
-  OTHER: 'OTHER',
+  MANGA: 'manga',
+  MANHWA: 'manhwa',
+  MANHUA: 'manhua',
+  COMICS: 'comics',
+  OTHER: 'other',
 } as const;
 export type MangaType = EnumLiteralsOf<typeof MANGA_TYPE>;
 

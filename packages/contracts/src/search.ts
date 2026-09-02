@@ -4,9 +4,9 @@ import type { EnumLiteralsOf } from './utils';
 
 /** Исход опроса одного источника в веере мультипоиска. */
 export const SEARCH_GROUP_STATUS = {
-  ok: 'ok',
-  timeout: 'timeout',
-  error: 'error',
+  OK: 'ok',
+  TIMEOUT: 'timeout',
+  ERROR: 'error',
 } as const;
 export type SearchGroupStatus = EnumLiteralsOf<typeof SEARCH_GROUP_STATUS>;
 

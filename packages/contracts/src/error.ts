@@ -2,14 +2,14 @@ import { z } from 'zod';
 import type { EnumLiteralsOf } from './utils';
 
 export const API_ERROR_CODE = {
-  SOURCE_UNAVAILABLE: 'SOURCE_UNAVAILABLE',
-  SOURCE_BLOCKED: 'SOURCE_BLOCKED',
-  SOURCE_AUTH_REQUIRED: 'SOURCE_AUTH_REQUIRED',
-  SOURCE_TOKEN_EXPIRED: 'SOURCE_TOKEN_EXPIRED',
-  PARSER_FAILED: 'PARSER_FAILED',
-  NOT_FOUND: 'NOT_FOUND',
-  RATE_LIMITED: 'RATE_LIMITED',
-  INVALID_SIGNATURE: 'INVALID_SIGNATURE',
+  SOURCE_UNAVAILABLE: 'sourceUnavailable',
+  SOURCE_BLOCKED: 'sourceBlocked',
+  SOURCE_AUTH_REQUIRED: 'sourceAuthRequired',
+  SOURCE_TOKEN_EXPIRED: 'sourceTokenExpired',
+  PARSER_FAILED: 'parserFailed',
+  NOT_FOUND: 'notFound',
+  RATE_LIMITED: 'rateLimited',
+  INVALID_SIGNATURE: 'invalidSignature',
 } as const;
 export type ApiErrorCode = EnumLiteralsOf<typeof API_ERROR_CODE>;
 

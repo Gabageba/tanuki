@@ -1,3 +1,5 @@
+import { SOURCE_ID } from '../catalog';
+
 /**
  * OAuth2 Authorization Code + PKCE endpoints for one LibSocial network member's branded auth
  * gateway (reverse-engineered from HentaiLib's live traffic — auth.hentaicdn.org / SSO). Each
@@ -31,7 +33,7 @@ export const LIBSOCIAL_API_HOST = 'api.cdnlibs.org';
 // title/domains live in SOURCE_CATALOG (../catalog) — look them up by id, don't duplicate here.
 export const LIBSOCIAL_CONFIGS: LibSocialConfig[] = [
   {
-    id: 'MANGALIB',
+    id: SOURCE_ID.MANGALIB,
     siteId: 1,
     isNsfw: false,
     authRequiredOnMissingPages: true,
@@ -46,7 +48,7 @@ export const LIBSOCIAL_CONFIGS: LibSocialConfig[] = [
     },
   },
   {
-    id: 'HENTAILIB',
+    id: SOURCE_ID.HENTAILIB,
     siteId: 4,
     isNsfw: true,
     // Unlike MANGALIB, every chapter's pages endpoint 404s site-wide (verified against both
@@ -62,7 +64,7 @@ export const LIBSOCIAL_CONFIGS: LibSocialConfig[] = [
     },
   },
   {
-    id: 'YAOILIB',
+    id: SOURCE_ID.YAOILIB,
     siteId: 2,
     isNsfw: false,
   },

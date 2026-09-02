@@ -8,12 +8,17 @@ import {
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type FilterRangePreset,
   type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
+import {
+  CHAPTERS_COUNT_PRESETS,
+  RATING_PRESETS,
+  getYearRangePresets,
+} from '../../core/filters/range-presets';
+import { FILTER_GROUP } from '../../core/filters/group';
 import type {
   RawManga,
   RawChapter,
@@ -28,66 +33,25 @@ import { generateUid } from '../../core/uid';
 import { toTitleCase } from '../../core/text/strings';
 import { ParseError } from '../../errors';
 import { UserAgents } from '../../core/http/user-agents';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'INKSTORY';
+const SOURCE_ID = CATALOG_SOURCE_ID.INKSTORY;
 const PAGE_SIZE = 20;
 const FIRST_PAGE = 0;
 const SECRET_KEY_TTL_MS = 10 * 60 * 1000;
-const DECADE_SIZE = 10;
 
-const CHAPTERS_COUNT_PRESETS: FilterRangePreset[] = [
-  { id: 'lt-20', label: '< 20', max: 20 },
-  { id: 'lt-50', label: '< 50', max: 50 },
-  { id: '100-200', label: '100-200', min: 100, max: 200 },
-  { id: '200-300', label: '200-300', min: 200, max: 300 },
-  { id: '300-plus', label: '300+', min: 300 },
-];
-
-const AVERAGE_RATING_PRESETS: FilterRangePreset[] = [
-  { id: '9-plus', label: '9+', min: 9 },
-  { id: '8-plus', label: '8+', min: 8 },
-  { id: '7-plus', label: '7+', min: 7 },
-];
+export const INKSTORY_FILTER_GROUP = {
+  GENRE: FILTER_GROUP.GENRE,
+  STATUS: FILTER_GROUP.STATUS,
+  CONTENT_STATUS: FILTER_GROUP.CONTENT_STATUS,
+  COUNTRY: FILTER_GROUP.COUNTRY,
+  FORMAT: FILTER_GROUP.FORMAT,
+  AVERAGE_RATING: FILTER_GROUP.AVERAGE_RATING,
+  YEAR: FILTER_GROUP.YEAR,
+  CHAPTERS_COUNT: FILTER_GROUP.CHAPTERS_COUNT,
+} as const;
 
 const YEAR_RANGE_CUTOFF = 2000;
-
-/** "Текущий год", the current-decade-so-far, a preset per full decade back to `YEAR_RANGE_CUTOFF`,
- *  then one trailing preset lumping everything older than that into "Раньше 2000". */
-const getYearRangePresets = (minYear: number, maxYear: number): FilterRangePreset[] => {
-  const presets: FilterRangePreset[] = [
-    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
-  ];
-  const currentDecadeStart = Math.floor(maxYear / DECADE_SIZE) * DECADE_SIZE;
-  if (currentDecadeStart < maxYear) {
-    presets.push({
-      id: `decade-${currentDecadeStart}`,
-      label: `${currentDecadeStart}–${maxYear}`,
-      min: currentDecadeStart,
-      max: maxYear,
-    });
-  }
-  for (
-    let decadeStart = currentDecadeStart - DECADE_SIZE;
-    decadeStart >= YEAR_RANGE_CUTOFF;
-    decadeStart -= DECADE_SIZE
-  ) {
-    presets.push({
-      id: `decade-${decadeStart}`,
-      label: `${decadeStart}-е`,
-      min: decadeStart,
-      max: decadeStart + DECADE_SIZE - 1,
-    });
-  }
-  if (minYear < YEAR_RANGE_CUTOFF) {
-    presets.push({
-      id: `before-${YEAR_RANGE_CUTOFF}`,
-      label: `Раньше ${YEAR_RANGE_CUTOFF}`,
-      min: minYear,
-      max: YEAR_RANGE_CUTOFF - 1,
-    });
-  }
-  return presets;
-};
 
 type NameJson = {
   ru: string;
@@ -430,17 +394,31 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     return items.map((item) => toManga(item.book));
   };
 
-  /** RANGE groups address a `<groupId>Min`/`<groupId>Max` pair — confirmed live for all three
-   *  (averageRatingMin/Max, yearMin/Max, chaptersCountMin/Max) by watching x-estimated-total-hits
-   *  drop under each bound. Either side is optional — filters.ts guarantees at least one is set. */
+  /** RANGE groups address a `<param>Min`/`<param>Max` pair on the site's own API — confirmed live
+   *  for all three (averageRatingMin/Max, yearMin/Max, chaptersCountMin/Max) by watching
+   *  x-estimated-total-hits drop under each bound. Either side is optional — filters.ts
+   *  guarantees at least one is set. */
   const applyRangeParam = (
     url: URL,
     groupId: string,
     range: { min?: number; max?: number },
   ): void => {
-    if (groupId !== 'averageRating' && groupId !== 'year' && groupId !== 'chaptersCount') return;
-    if (range.min !== undefined) url.searchParams.set(`${groupId}Min`, String(range.min));
-    if (range.max !== undefined) url.searchParams.set(`${groupId}Max`, String(range.max));
+    let param: string;
+    switch (groupId) {
+      case INKSTORY_FILTER_GROUP.AVERAGE_RATING:
+        param = 'averageRating';
+        break;
+      case INKSTORY_FILTER_GROUP.YEAR:
+        param = 'year';
+        break;
+      case INKSTORY_FILTER_GROUP.CHAPTERS_COUNT:
+        param = 'chaptersCount';
+        break;
+      default:
+        return;
+    }
+    if (range.min !== undefined) url.searchParams.set(`${param}Min`, String(range.min));
+    if (range.max !== undefined) url.searchParams.set(`${param}Max`, String(range.max));
   };
 
   /**
@@ -458,19 +436,19 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         continue;
       }
       switch (filter.groupId) {
-        case 'genre':
+        case INKSTORY_FILTER_GROUP.GENRE:
           url.searchParams.append(filter.exclude ? 'labelsExclude' : 'labelsInclude', filter.key);
           break;
-        case 'status':
+        case INKSTORY_FILTER_GROUP.STATUS:
           url.searchParams.append('status', filter.key);
           break;
-        case 'contentStatus':
+        case INKSTORY_FILTER_GROUP.CONTENT_STATUS:
           url.searchParams.append('contentStatus', filter.key);
           break;
-        case 'country':
+        case INKSTORY_FILTER_GROUP.COUNTRY:
           url.searchParams.append('country', filter.key);
           break;
-        case 'format':
+        case INKSTORY_FILTER_GROUP.FORMAT:
           url.searchParams.append('formats', filter.key);
           break;
       }
@@ -491,31 +469,31 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     const yearMax = new Date().getFullYear();
     return [
       {
-        id: 'genre',
+        id: INKSTORY_FILTER_GROUP.GENRE,
         title: 'Жанры',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: genres.map((l) => ({ key: l.slug, title: toTitleCase(l.name), count: null })),
       },
       {
-        id: 'status',
+        id: INKSTORY_FILTER_GROUP.STATUS,
         title: 'Статус',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(STATUS_KEYS, getStatusTitle),
       },
       {
-        id: 'contentStatus',
+        id: INKSTORY_FILTER_GROUP.CONTENT_STATUS,
         title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(CONTENT_STATUS_KEYS, getContentStatusTitle),
       },
       {
-        id: 'country',
+        id: INKSTORY_FILTER_GROUP.COUNTRY,
         title: 'Страна',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(COUNTRY_KEYS, getCountryTitle),
       },
       {
-        id: 'format',
+        id: INKSTORY_FILTER_GROUP.FORMAT,
         title: 'Формат выпуска',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(FORMAT_KEYS, getFormatTitle),
@@ -524,24 +502,24 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       // rating and chapter count are hardcoded there too, only the year cap tracks the current
       // year at each of their deploys, so it's computed here instead of pinned to today's value.
       {
-        id: 'averageRating',
+        id: INKSTORY_FILTER_GROUP.AVERAGE_RATING,
         title: 'Рейтинг',
         type: FILTER_TYPE.RANGE,
         options: [],
-        settings: { range: { min: 0, max: 10 }, presets: AVERAGE_RATING_PRESETS },
+        settings: { range: { min: 0, max: 10 }, presets: RATING_PRESETS },
       },
       {
-        id: 'year',
+        id: INKSTORY_FILTER_GROUP.YEAR,
         title: 'Год выпуска',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: {
           range: { min: yearMin, max: yearMax, format: RANGE_FORMAT.YEAR },
-          presets: getYearRangePresets(yearMin, yearMax),
+          presets: getYearRangePresets(yearMin, yearMax, YEAR_RANGE_CUTOFF),
         },
       },
       {
-        id: 'chaptersCount',
+        id: INKSTORY_FILTER_GROUP.CHAPTERS_COUNT,
         title: 'Число глав',
         type: FILTER_TYPE.RANGE,
         options: [],
@@ -691,7 +669,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       title: 'Inkstory',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.manga,
+      contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
       requiresVpn: false,

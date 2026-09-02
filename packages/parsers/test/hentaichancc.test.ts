@@ -1,6 +1,8 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
+import { CONTENT_RATING } from '@tanuki/contracts';
 import { createHentaichanCcParser } from '../src/sources/hentaichancc';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -93,9 +95,9 @@ describe('HentaiChan.cc parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('HENTAICHAN_CC');
+    expect(item!.source).toBe(SOURCE_ID.HENTAICHAN_CC);
     expect(item!.rating).toBe(-1);
-    expect(item!.contentRating).toBe('ADULT');
+    expect(item!.contentRating).toBe(CONTENT_RATING.ADULT);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toBe('https://hentaichan.cc/manga/1-2-ato-no-futari');
     expect(Number.isSafeInteger(item!.id)).toBe(true);

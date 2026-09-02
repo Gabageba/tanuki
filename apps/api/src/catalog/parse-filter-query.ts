@@ -21,8 +21,8 @@ const parseRangeSelection = (groupId: string, rest: string): FilterSelection[] =
  * Wire format for one repeated `?filters=` value:
  * - `groupId:key` to include, `groupId:!key` to exclude — mirrors how parsers encode exclude
  *   natively (see desu's applyFilterParams), so this round-trips without an extra JSON layer.
- * - `groupId:min..max` for a RANGE group's bounds (see Inkstory's averageRating/year/
- *   chaptersCount) — either side may be blank for an open-ended range (`8.5..`, `..2024`).
+ * - `groupId:min..max` for a RANGE group's bounds (see Inkstory's average_rating/year/
+ *   chapters_count) — either side may be blank for an open-ended range (`8.5..`, `..2024`).
  */
 export const parseFilterQuery = (raw: string[] | string | undefined): FilterSelection[] => {
   const values = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];

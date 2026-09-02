@@ -8,12 +8,17 @@ import {
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type FilterRangePreset,
   type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
+import {
+  CHAPTERS_COUNT_PRESETS,
+  RATING_PRESETS,
+  getYearRangePresets,
+} from '../../core/filters/range-presets';
+import { FILTER_GROUP } from '../../core/filters/group';
 import type {
   RawManga,
   RawChapter,
@@ -28,62 +33,24 @@ import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
 import { toTitleCase } from '../../core/text/strings';
 import { NotFoundError } from '../../errors';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'REMANGA';
+const SOURCE_ID = CATALOG_SOURCE_ID.REMANGA;
 const PAGE_SIZE = 20;
-const DECADE_SIZE = 10;
 const YEAR_RANGE_MIN = 1900;
 const YEAR_RANGE_CUTOFF = 2000;
 
-const RATING_PRESETS: FilterRangePreset[] = [
-  { id: '9-plus', label: '9+', min: 9 },
-  { id: '8-plus', label: '8+', min: 8 },
-  { id: '7-plus', label: '7+', min: 7 },
-];
-
-const CHAPTERS_COUNT_PRESETS: FilterRangePreset[] = [
-  { id: 'lt-20', label: '< 20', max: 20 },
-  { id: 'lt-50', label: '< 50', max: 50 },
-  { id: '100-200', label: '100-200', min: 100, max: 200 },
-  { id: '200-300', label: '200-300', min: 200, max: 300 },
-  { id: '300-plus', label: '300+', min: 300 },
-];
-
-/** "Текущий год", the current-decade-so-far, a preset per full decade back to `YEAR_RANGE_CUTOFF`,
- *  then one trailing preset lumping everything older than that into "Раньше 2000". */
-const getYearRangePresets = (maxYear: number): FilterRangePreset[] => {
-  const presets: FilterRangePreset[] = [
-    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
-  ];
-  const currentDecadeStart = Math.floor(maxYear / DECADE_SIZE) * DECADE_SIZE;
-  if (currentDecadeStart < maxYear) {
-    presets.push({
-      id: `decade-${currentDecadeStart}`,
-      label: `${currentDecadeStart}–${maxYear}`,
-      min: currentDecadeStart,
-      max: maxYear,
-    });
-  }
-  for (
-    let decadeStart = currentDecadeStart - DECADE_SIZE;
-    decadeStart >= YEAR_RANGE_CUTOFF;
-    decadeStart -= DECADE_SIZE
-  ) {
-    presets.push({
-      id: `decade-${decadeStart}`,
-      label: `${decadeStart}-е`,
-      min: decadeStart,
-      max: decadeStart + DECADE_SIZE - 1,
-    });
-  }
-  presets.push({
-    id: `before-${YEAR_RANGE_CUTOFF}`,
-    label: `Раньше ${YEAR_RANGE_CUTOFF}`,
-    min: YEAR_RANGE_MIN,
-    max: YEAR_RANGE_CUTOFF - 1,
-  });
-  return presets;
-};
+export const REMANGA_FILTER_GROUP = {
+  GENRE: FILTER_GROUP.GENRE,
+  CATEGORY: FILTER_GROUP.CATEGORY,
+  TYPE: FILTER_GROUP.TYPE,
+  STATUS: FILTER_GROUP.STATUS,
+  AGE_RATING: FILTER_GROUP.AGE_RATING,
+  TRANSLATE_STATUS: FILTER_GROUP.TRANSLATE_STATUS,
+  RATING: FILTER_GROUP.RATING,
+  YEAR: FILTER_GROUP.YEAR,
+  CHAPTERS_COUNT: FILTER_GROUP.CHAPTERS_COUNT,
+} as const;
 
 const STATES: Record<number, MangaState> = {
   1: MANGA_STATE.FINISHED,
@@ -313,9 +280,9 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     for (const filter of filters) {
       if ('range' in filter) {
         const param =
-          filter.groupId === 'year'
+          filter.groupId === REMANGA_FILTER_GROUP.YEAR
             ? 'issue_year'
-            : filter.groupId === 'chaptersCount'
+            : filter.groupId === REMANGA_FILTER_GROUP.CHAPTERS_COUNT
               ? 'count_chapters'
               : filter.groupId;
         if (filter.range.min != null)
@@ -325,22 +292,22 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
         continue;
       }
       switch (filter.groupId) {
-        case 'genre':
+        case REMANGA_FILTER_GROUP.GENRE:
           url.searchParams.append(filter.exclude ? 'exclude_genres' : 'genres', filter.key);
           break;
-        case 'category':
+        case REMANGA_FILTER_GROUP.CATEGORY:
           url.searchParams.append(filter.exclude ? 'exclude_categories' : 'categories', filter.key);
           break;
-        case 'type':
+        case REMANGA_FILTER_GROUP.TYPE:
           url.searchParams.append(filter.exclude ? 'exclude_types' : 'types', filter.key);
           break;
-        case 'status':
+        case REMANGA_FILTER_GROUP.STATUS:
           url.searchParams.append('status', filter.key);
           break;
-        case 'ageRating':
+        case REMANGA_FILTER_GROUP.AGE_RATING:
           url.searchParams.append('age_limit', filter.key);
           break;
-        case 'translateStatus':
+        case REMANGA_FILTER_GROUP.TRANSLATE_STATUS:
           url.searchParams.append('translate_status', filter.key);
           break;
       }
@@ -395,50 +362,60 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
     return [
       {
-        id: 'genre',
+        id: REMANGA_FILTER_GROUP.GENRE,
         title: 'Жанры',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: genres,
       },
       {
-        id: 'category',
+        id: REMANGA_FILTER_GROUP.CATEGORY,
         title: 'Категории',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: categories,
       },
-      { id: 'type', title: 'Тип', type: FILTER_TYPE.CHECKBOX_EXCLUDE, options: TYPE_OPTIONS },
-      { id: 'status', title: 'Статус', type: FILTER_TYPE.CHECKBOX, options: STATUS_OPTIONS },
       {
-        id: 'translateStatus',
+        id: REMANGA_FILTER_GROUP.TYPE,
+        title: 'Тип',
+        type: FILTER_TYPE.CHECKBOX_EXCLUDE,
+        options: TYPE_OPTIONS,
+      },
+      {
+        id: REMANGA_FILTER_GROUP.STATUS,
+        title: 'Статус',
+        type: FILTER_TYPE.CHECKBOX,
+        options: STATUS_OPTIONS,
+      },
+      {
+        id: REMANGA_FILTER_GROUP.TRANSLATE_STATUS,
         title: 'Статус перевода',
         type: FILTER_TYPE.CHECKBOX,
         options: TRANSLATE_STATUS_OPTIONS,
       },
       {
-        id: 'ageRating',
+        id: REMANGA_FILTER_GROUP.AGE_RATING,
         title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: AGE_LIMIT_OPTIONS,
       },
       {
-        id: 'rating',
+        id: REMANGA_FILTER_GROUP.RATING,
         title: 'Рейтинг',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: { range: { min: 0, max: 10, step: 0.1 }, presets: RATING_PRESETS },
       },
       {
-        id: 'year',
+        id: REMANGA_FILTER_GROUP.YEAR,
         title: 'Год выпуска',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: {
           range: { min: YEAR_RANGE_MIN, max: currentYear, format: RANGE_FORMAT.YEAR },
-          presets: getYearRangePresets(currentYear),
+          presets: getYearRangePresets(YEAR_RANGE_MIN, currentYear, YEAR_RANGE_CUTOFF),
         },
       },
       {
-        id: 'chaptersCount',
+        id: REMANGA_FILTER_GROUP.CHAPTERS_COUNT,
         title: 'Количество глав',
         type: FILTER_TYPE.RANGE,
         options: [],
@@ -560,7 +537,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       title: 'Реманга',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.manga,
+      contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
       requiresVpn: false,

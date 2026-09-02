@@ -1,17 +1,24 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { createLibSocialParser } from '../src/sources/libsocial/engine';
+import { createLibSocialParser, LIBSOCIAL_FILTER_GROUP } from '../src/sources/libsocial/engine';
 import type { LibSocialConfig } from '../src/sources/libsocial/config';
 import { LIBSOCIAL_API_HOST } from '../src/sources/libsocial/config';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
-import { MANGA_RESTRICTION, MANGA_TYPE } from '@tanuki/contracts';
+import {
+  FILTER_TYPE,
+  MANGA_RESTRICTION,
+  MANGA_TYPE,
+  SORT_DIRECTION,
+  SORT_ORDER,
+} from '@tanuki/contracts';
 
 const DOMAIN = 'mangalib.org';
 const SLUG = '123--one-piece';
 
 const CFG: LibSocialConfig = {
-  id: 'MANGALIB',
+  id: SOURCE_ID.MANGALIB,
   siteId: 1,
   isNsfw: false,
   authRequiredOnMissingPages: true,
@@ -198,7 +205,7 @@ describe('LibSocial parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('MANGALIB');
+    expect(item!.source).toBe(SOURCE_ID.MANGALIB);
     expect(item!.rating === -1 || (item!.rating >= 0 && item!.rating <= 1)).toBe(true);
     expect(item!.rating).toBeCloseTo(0.85, 5);
     expect(item!.url.startsWith('http')).toBe(false);
@@ -209,21 +216,36 @@ describe('LibSocial parser conformance', () => {
   });
 
   it('getList: direction flips sort_type, defaulting to desc when unset', async () => {
-    await parser.getList({ offset: 0, limit: 20, order: 'RATING' });
+    await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.RATING });
     let url = new URL(http.requests.at(-1)!.url);
     expect(url.searchParams.get('sort_by')).toBe('rate_avg');
     expect(url.searchParams.get('sort_type')).toBe('desc');
 
-    await parser.getList({ offset: 0, limit: 20, order: 'RATING', direction: 'DESC' });
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.RATING,
+      direction: SORT_DIRECTION.DESC,
+    });
     url = new URL(http.requests.at(-1)!.url);
     expect(url.searchParams.get('sort_type')).toBe('desc');
 
-    await parser.getList({ offset: 0, limit: 20, order: 'RATING', direction: 'ASC' });
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.RATING,
+      direction: SORT_DIRECTION.ASC,
+    });
     url = new URL(http.requests.at(-1)!.url);
     expect(url.searchParams.get('sort_type')).toBe('asc');
 
     // POPULARITY has no sort_by (the API's own default ranking) but still takes sort_type.
-    await parser.getList({ offset: 0, limit: 20, order: 'POPULARITY', direction: 'ASC' });
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.POPULARITY,
+      direction: SORT_DIRECTION.ASC,
+    });
     url = new URL(http.requests.at(-1)!.url);
     expect(url.searchParams.get('sort_by')).toBeNull();
     expect(url.searchParams.get('sort_type')).toBe('asc');
@@ -300,69 +322,71 @@ describe('LibSocial parser conformance', () => {
   it('getFilters: genre/tag/type/format/status groups scoped to siteId', async () => {
     const groups = await parser.getFilters!();
     expect(groups.map((g) => g.id)).toEqual([
-      'type',
-      'genre',
-      'tag',
-      'format',
-      'translationStatus',
-      'status',
-      'ageRestriction',
-      'rating',
-      'votesCount',
-      'year',
-      'chaptersCount',
-      'other',
+      LIBSOCIAL_FILTER_GROUP.TYPE,
+      LIBSOCIAL_FILTER_GROUP.GENRE,
+      LIBSOCIAL_FILTER_GROUP.TAG,
+      LIBSOCIAL_FILTER_GROUP.FORMAT,
+      LIBSOCIAL_FILTER_GROUP.TRANSLATION_STATUS,
+      LIBSOCIAL_FILTER_GROUP.STATUS,
+      LIBSOCIAL_FILTER_GROUP.AGE_RESTRICTION,
+      LIBSOCIAL_FILTER_GROUP.RATING,
+      LIBSOCIAL_FILTER_GROUP.VOTES_COUNT,
+      LIBSOCIAL_FILTER_GROUP.YEAR,
+      LIBSOCIAL_FILTER_GROUP.CHAPTERS_COUNT,
+      LIBSOCIAL_FILTER_GROUP.OTHER,
     ]);
 
-    const genre = groups.find((g) => g.id === 'genre')!;
-    expect(genre.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const genre = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.GENRE)!;
+    expect(genre.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(genre.options).toEqual([{ key: 'g34', title: 'Приключения', count: null }]);
 
-    const tag = groups.find((g) => g.id === 'tag')!;
-    expect(tag.type).toBe('SEARCHABLE_CHECKBOX_EXCLUDE');
+    const tag = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.TAG)!;
+    expect(tag.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(tag.options).toEqual([{ key: 't56', title: 'Пираты', count: null }]);
 
-    const type = groups.find((g) => g.id === 'type')!;
-    expect(type.type).toBe('CHECKBOX');
+    const type = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.TYPE)!;
+    expect(type.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(type.options).toEqual([{ key: '1', title: 'Манга', count: null }]);
 
-    const format = groups.find((g) => g.id === 'format')!;
-    expect(format.type).toBe('CHECKBOX_EXCLUDE');
+    const format = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.FORMAT)!;
+    expect(format.type).toBe(FILTER_TYPE.CHECKBOX_EXCLUDE);
     expect(format.options).toEqual([{ key: '4', title: 'В цвете', count: null }]);
 
-    const translationStatus = groups.find((g) => g.id === 'translationStatus')!;
-    expect(translationStatus.type).toBe('CHECKBOX');
+    const translationStatus = groups.find(
+      (g) => g.id === LIBSOCIAL_FILTER_GROUP.TRANSLATION_STATUS,
+    )!;
+    expect(translationStatus.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(translationStatus.options).toEqual([{ key: '2', title: 'Завершён', count: null }]);
 
-    const status = groups.find((g) => g.id === 'status')!;
-    expect(status.type).toBe('CHECKBOX');
+    const status = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.STATUS)!;
+    expect(status.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(status.options).toHaveLength(5);
 
-    const ageRestriction = groups.find((g) => g.id === 'ageRestriction')!;
-    expect(ageRestriction.type).toBe('CHECKBOX');
+    const ageRestriction = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.AGE_RESTRICTION)!;
+    expect(ageRestriction.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(ageRestriction.options).toEqual([{ key: '4', title: '18+', count: null }]);
 
-    const other = groups.find((g) => g.id === 'other')!;
-    expect(other.type).toBe('CHECKBOX_EXCLUDE');
+    const other = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.OTHER)!;
+    expect(other.type).toBe(FILTER_TYPE.CHECKBOX_EXCLUDE);
     expect(other.options).toEqual([
       { key: 'noTranslation', title: 'Нет перевода уже 2 месяца', count: null, excludable: false },
       { key: 'licensed', title: 'Издательский контент', count: null },
     ]);
 
-    const rating = groups.find((g) => g.id === 'rating')!;
-    expect(rating.type).toBe('RANGE');
+    const rating = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.RATING)!;
+    expect(rating.type).toBe(FILTER_TYPE.RANGE);
     expect(rating.settings?.range).toEqual({ min: 0, max: 10 });
 
-    const votesCount = groups.find((g) => g.id === 'votesCount')!;
-    expect(votesCount.type).toBe('RANGE');
+    const votesCount = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.VOTES_COUNT)!;
+    expect(votesCount.type).toBe(FILTER_TYPE.RANGE);
     expect(votesCount.settings?.range).toEqual({ min: 0, max: 100000 });
 
-    const year = groups.find((g) => g.id === 'year')!;
-    expect(year.type).toBe('RANGE');
+    const year = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.YEAR)!;
+    expect(year.type).toBe(FILTER_TYPE.RANGE);
     expect(year.settings?.range.min).toBe(1900);
 
-    const chaptersCount = groups.find((g) => g.id === 'chaptersCount')!;
-    expect(chaptersCount.type).toBe('RANGE');
+    const chaptersCount = groups.find((g) => g.id === LIBSOCIAL_FILTER_GROUP.CHAPTERS_COUNT)!;
+    expect(chaptersCount.type).toBe(FILTER_TYPE.RANGE);
     expect(chaptersCount.settings?.range).toEqual({ min: 0, max: 10000 });
   });
 
@@ -371,19 +395,19 @@ describe('LibSocial parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: 'genre', key: 'g34' },
-        { groupId: 'tag', key: 't56', exclude: true },
-        { groupId: 'status', key: '1' },
-        { groupId: 'type', key: '1' },
-        { groupId: 'format', key: '4', exclude: true },
-        { groupId: 'translationStatus', key: '2' },
-        { groupId: 'ageRestriction', key: '4' },
-        { groupId: 'other', key: 'noTranslation' },
-        { groupId: 'other', key: 'licensed' },
-        { groupId: 'rating', range: { min: 8 } },
-        { groupId: 'votesCount', range: { min: 1000, max: 1100 } },
-        { groupId: 'year', range: { min: 2015, max: 2020 } },
-        { groupId: 'chaptersCount', range: { max: 50 } },
+        { groupId: LIBSOCIAL_FILTER_GROUP.GENRE, key: 'g34' },
+        { groupId: LIBSOCIAL_FILTER_GROUP.TAG, key: 't56', exclude: true },
+        { groupId: LIBSOCIAL_FILTER_GROUP.STATUS, key: '1' },
+        { groupId: LIBSOCIAL_FILTER_GROUP.TYPE, key: '1' },
+        { groupId: LIBSOCIAL_FILTER_GROUP.FORMAT, key: '4', exclude: true },
+        { groupId: LIBSOCIAL_FILTER_GROUP.TRANSLATION_STATUS, key: '2' },
+        { groupId: LIBSOCIAL_FILTER_GROUP.AGE_RESTRICTION, key: '4' },
+        { groupId: LIBSOCIAL_FILTER_GROUP.OTHER, key: 'noTranslation' },
+        { groupId: LIBSOCIAL_FILTER_GROUP.OTHER, key: 'licensed' },
+        { groupId: LIBSOCIAL_FILTER_GROUP.RATING, range: { min: 8 } },
+        { groupId: LIBSOCIAL_FILTER_GROUP.VOTES_COUNT, range: { min: 1000, max: 1100 } },
+        { groupId: LIBSOCIAL_FILTER_GROUP.YEAR, range: { min: 2015, max: 2020 } },
+        { groupId: LIBSOCIAL_FILTER_GROUP.CHAPTERS_COUNT, range: { max: 50 } },
       ],
     });
     const req = http.requests.at(-1)!;

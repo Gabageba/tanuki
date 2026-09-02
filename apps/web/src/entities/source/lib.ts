@@ -17,35 +17,35 @@ export const flattenSources = (data?: SourcesResponse): Source[] => {
 
 export const getSourceStatusColor = (status: SourceStatus) => {
   switch (status) {
-    case SOURCE_STATUS.ok:
+    case SOURCE_STATUS.OK:
       return STATUS_OK_COLOR;
-    case SOURCE_STATUS.degraded:
+    case SOURCE_STATUS.DEGRADED:
       return STATUS_DEGRADED_COLOR;
-    case SOURCE_STATUS.down:
+    case SOURCE_STATUS.DOWN:
       return STATUS_DOWN_COLOR;
   }
 };
 
 export const getSourceStatusLabel = (status: SourceStatus) => {
   switch (status) {
-    case SOURCE_STATUS.ok:
+    case SOURCE_STATUS.OK:
       return 'онлайн';
-    case SOURCE_STATUS.degraded:
+    case SOURCE_STATUS.DEGRADED:
       return 'нестабилен';
-    case SOURCE_STATUS.down:
+    case SOURCE_STATUS.DOWN:
       return 'недоступен';
   }
 };
 
 export const getLabelByContentType = (contentType: SourceContentType) => {
   switch (contentType) {
-    case SOURCE_CONTENT_TYPE.manga:
+    case SOURCE_CONTENT_TYPE.MANGA:
       return 'Манга и манхва';
-    case SOURCE_CONTENT_TYPE.hentai:
+    case SOURCE_CONTENT_TYPE.HENTAI:
       return 'Хентай';
-    case SOURCE_CONTENT_TYPE.comics:
+    case SOURCE_CONTENT_TYPE.COMICS:
       return 'Комиксы';
-    case SOURCE_CONTENT_TYPE.other:
+    case SOURCE_CONTENT_TYPE.OTHER:
       return 'Прочее';
   }
 };

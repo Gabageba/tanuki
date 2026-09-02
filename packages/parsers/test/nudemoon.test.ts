@@ -1,6 +1,8 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
+import { CONTENT_RATING } from '@tanuki/contracts';
 import { createNudeMoonParser } from '../src/sources/nudemoon';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -64,9 +66,9 @@ describe('Nude-Moon parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('NUDEMOON');
+    expect(item!.source).toBe(SOURCE_ID.NUDEMOON);
     expect(item!.rating).toBe(-1);
-    expect(item!.contentRating).toBe('ADULT');
+    expect(item!.contentRating).toBe(CONTENT_RATING.ADULT);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);

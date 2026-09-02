@@ -12,9 +12,9 @@ export const getFilteredSources = (data: SourcesResponse | undefined, query: str
 };
 
 export const ACTIVE_SELECTION_KINDS = {
-  SOURCE: 'SOURCE',
-  ALL: 'ALL',
-  NONE: 'NONE',
+  SOURCE: 'source',
+  ALL: 'all',
+  NONE: 'none',
 } as const;
 type ActiveSelectionKind = EnumLiteralsOf<typeof ACTIVE_SELECTION_KINDS>;
 

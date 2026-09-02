@@ -12,8 +12,9 @@ import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
 import { parseGroupleDate } from '../../core/text/dates';
 import { nullIfEmpty } from '../../core/text/strings';
 import { ParseError } from '../../errors';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'SEXKOMIX2';
+const SOURCE_ID = CATALOG_SOURCE_ID.SEXKOMIX2;
 /**
  * The real catalog `<ul>` has 24 `li.comix` slots per /home and /search page, but one of them
  * is always an ad placeholder (`div.opt[data-asg-ins]`, no `<a>`) that parseMangaTile filters
@@ -215,7 +216,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       title: 'SexKomix2',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.comics,
+      contentType: SOURCE_CONTENT_TYPE.COMICS,
       isBroken: false,
       isAdult: true,
       requiresVpn: false,

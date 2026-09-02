@@ -10,8 +10,9 @@ import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
 import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
 import { toTitleCase, nullIfEmpty } from '../../core/text/strings';
 import { ParseError, SourceAuthRequiredError } from '../../errors';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'NUDEMOON';
+const SOURCE_ID = CATALOG_SOURCE_ID.NUDEMOON;
 /** The site's own `all_manga` pager advances `rowstart` by 30 raw rows per page. */
 const ROWSTART_STEP = 30;
 
@@ -281,7 +282,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       title: 'Nude-Moon',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.hentai,
+      contentType: SOURCE_CONTENT_TYPE.HENTAI,
       isBroken: false,
       isAdult: true,
       requiresVpn: true,

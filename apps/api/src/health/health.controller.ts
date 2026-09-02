@@ -9,6 +9,6 @@ export class HealthController {
   @ApiOkResponse({ type: HealthResponseDto })
   @Get()
   check(): { status: HealthStatus } {
-    return { status: HEALTH_STATUS.ok };
+    return { status: HEALTH_STATUS.OK };
   }
 }

@@ -25,6 +25,7 @@ import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
 import { parseGroupleDate } from '../../core/text/dates';
 import { nullIfEmpty } from '../../core/text/strings';
 import { ParseError } from '../../errors';
+import { FILTER_GROUP } from '../../core/filters/group';
 import { catalogEntryFor } from '../catalog';
 import type { ChanConfig } from './config';
 
@@ -49,6 +50,12 @@ const BROWSE_NATIVE_SIZE = 20;
  * of silently dropping whichever the parser doesn't route to.
  */
 const ROUTE_EXCLUSIVE_GROUP = 'route';
+
+export const CHAN_FILTER_GROUP = {
+  TAG: FILTER_GROUP.TAG,
+  TYPE: FILTER_GROUP.TYPE,
+  STATUS: FILTER_GROUP.STATUS,
+} as const;
 
 const toTagName = (raw: string): string => {
   const spaced = raw.replace(/_/g, ' ');
@@ -180,7 +187,7 @@ const tagsPathSegment = (filters: FilterSelection[]): string | null => {
   const included: string[] = [];
   const excluded: string[] = [];
   for (const filter of filters) {
-    if ('range' in filter || filter.groupId !== 'tag') continue;
+    if ('range' in filter || filter.groupId !== CHAN_FILTER_GROUP.TAG) continue;
     (filter.exclude ? excluded : included).push(filter.exclude ? `-${filter.key}` : filter.key);
   }
   if (included.length === 0 && excluded.length === 0) return null;
@@ -268,14 +275,14 @@ const buildListUrl = (
 
   // "Тип" and "Статус" are exclusiveGroup siblings of tags (see ROUTE_EXCLUSIVE_GROUP) — the UI
   // only ever sends one of the three, but pick a fixed precedence defensively rather than mixing.
-  const typeKey = findSingleSelection(filters, 'type');
+  const typeKey = findSingleSelection(filters, CHAN_FILTER_GROUP.TYPE);
   if (typeKey !== null) {
     url.pathname = `/type/${typeKey}`;
     url.searchParams.set('n', chanSortParam(order));
     return url.toString();
   }
 
-  const statusKey = findSingleSelection(filters, 'status');
+  const statusKey = findSingleSelection(filters, CHAN_FILTER_GROUP.STATUS);
   if (statusKey !== null) {
     url.pathname = `/catalog/${statusKey}`;
     url.searchParams.set('n', chanSortParam(order));
@@ -444,7 +451,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       .filter((o): o is RawFilterOption => o !== null);
     if (options.length === 0) return null;
     return {
-      id: 'tag',
+      id: CHAN_FILTER_GROUP.TAG,
       title: 'Теги',
       type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
       options,
@@ -467,7 +474,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       .filter((o): o is RawFilterOption => o !== null);
     if (options.length === 0) return null;
     return {
-      id: 'type',
+      id: CHAN_FILTER_GROUP.TYPE,
       title: 'Тип',
       type: FILTER_TYPE.RADIO,
       options,
@@ -493,7 +500,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       .filter((o): o is RawFilterOption => o !== null);
     if (options.length === 0) return null;
     return {
-      id: 'status',
+      id: CHAN_FILTER_GROUP.STATUS,
       title: 'Статус',
       type: FILTER_TYPE.RADIO,
       options,
@@ -655,7 +662,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       title: catalogEntryFor(cfg.id).title,
       domain,
       locale: 'ru',
-      contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.hentai : SOURCE_CONTENT_TYPE.manga,
+      contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.HENTAI : SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,

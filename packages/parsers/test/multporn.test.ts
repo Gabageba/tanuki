@@ -2,13 +2,14 @@ import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
 import { createMultpornParser } from '../src/sources/multporn/engine';
 import type { MultpornConfig } from '../src/sources/multporn/config';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
 const DOMAIN = 'multporn.example';
 
 const CFG: MultpornConfig = {
-  id: 'MULTPORN',
+  id: SOURCE_ID.MULTPORN,
   typeParam: '1',
   pathPrefix: '/comics/',
   listTagSelector: '.views-field-field-category a',
@@ -90,7 +91,7 @@ describe('MultPorn parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('MULTPORN');
+    expect(item!.source).toBe(SOURCE_ID.MULTPORN);
     expect(item!.rating).toBe(-1);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);

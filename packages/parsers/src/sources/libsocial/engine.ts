@@ -16,6 +16,12 @@ import {
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
+import {
+  CHAPTERS_COUNT_PRESETS,
+  RATING_PRESETS,
+  getYearRangePresets,
+} from '../../core/filters/range-presets';
+import { FILTER_GROUP } from '../../core/filters/group';
 import type {
   RawManga,
   RawChapter,
@@ -35,6 +41,21 @@ import { LIBSOCIAL_API_HOST } from './config';
 import { getValidAccessToken } from './auth';
 
 const PAGE_SIZE = 60;
+
+export const LIBSOCIAL_FILTER_GROUP = {
+  TYPE: FILTER_GROUP.TYPE,
+  GENRE: FILTER_GROUP.GENRE,
+  TAG: FILTER_GROUP.TAG,
+  FORMAT: FILTER_GROUP.FORMAT,
+  TRANSLATION_STATUS: FILTER_GROUP.TRANSLATION_STATUS,
+  STATUS: FILTER_GROUP.STATUS,
+  AGE_RESTRICTION: FILTER_GROUP.AGE_RESTRICTION,
+  RATING: FILTER_GROUP.RATING,
+  VOTES_COUNT: FILTER_GROUP.VOTES_COUNT,
+  YEAR: FILTER_GROUP.YEAR,
+  CHAPTERS_COUNT: FILTER_GROUP.CHAPTERS_COUNT,
+  OTHER: FILTER_GROUP.OTHER,
+} as const;
 
 const STATES: Record<number, RawManga['state']> = {
   1: MANGA_STATE.ONGOING,
@@ -91,23 +112,8 @@ const mangaTypeById = (id: number | undefined): RawMangaType | null => {
   }
 };
 
-const DECADE_SIZE = 10;
 const YEAR_RANGE_MIN = 1900;
 const YEAR_RANGE_CUTOFF = 2000;
-
-const RATING_PRESETS: FilterRangePreset[] = [
-  { id: '9-plus', label: '9+', min: 9 },
-  { id: '8-plus', label: '8+', min: 8 },
-  { id: '7-plus', label: '7+', min: 7 },
-];
-
-const CHAPTERS_COUNT_PRESETS: FilterRangePreset[] = [
-  { id: 'lt-20', label: '< 20', max: 20 },
-  { id: 'lt-50', label: '< 50', max: 50 },
-  { id: '100-200', label: '100-200', min: 100, max: 200 },
-  { id: '200-300', label: '200-300', min: 200, max: 300 },
-  { id: '300-plus', label: '300+', min: 300 },
-];
 
 const VOTES_COUNT_PRESETS: FilterRangePreset[] = [
   { id: 'lt-100', label: '< 100', max: 100 },
@@ -126,42 +132,6 @@ const VOTES_COUNT_PRESETS: FilterRangePreset[] = [
   },
   { id: '10000-plus', label: `${formatCompactNumber(10000)}+`, min: 10000 },
 ];
-
-/** "Текущий год", the current-decade-so-far, a preset per full decade back to `YEAR_RANGE_CUTOFF`,
- *  then one trailing preset lumping everything older than that into "Раньше 2000". */
-const getYearRangePresets = (maxYear: number): FilterRangePreset[] => {
-  const presets: FilterRangePreset[] = [
-    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
-  ];
-  const currentDecadeStart = Math.floor(maxYear / DECADE_SIZE) * DECADE_SIZE;
-  if (currentDecadeStart < maxYear) {
-    presets.push({
-      id: `decade-${currentDecadeStart}`,
-      label: `${currentDecadeStart}–${maxYear}`,
-      min: currentDecadeStart,
-      max: maxYear,
-    });
-  }
-  for (
-    let decadeStart = currentDecadeStart - DECADE_SIZE;
-    decadeStart >= YEAR_RANGE_CUTOFF;
-    decadeStart -= DECADE_SIZE
-  ) {
-    presets.push({
-      id: `decade-${decadeStart}`,
-      label: `${decadeStart}-е`,
-      min: decadeStart,
-      max: decadeStart + DECADE_SIZE - 1,
-    });
-  }
-  presets.push({
-    id: `before-${YEAR_RANGE_CUTOFF}`,
-    label: `Раньше ${YEAR_RANGE_CUTOFF}`,
-    min: YEAR_RANGE_MIN,
-    max: YEAR_RANGE_CUTOFF - 1,
-  });
-  return presets;
-};
 
 const SERVER_MAIN = 'main';
 const SERVER_SECONDARY = 'secondary';
@@ -406,16 +376,16 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
   ): void => {
     let param: string;
     switch (groupId) {
-      case 'rating':
+      case LIBSOCIAL_FILTER_GROUP.RATING:
         param = 'rating';
         break;
-      case 'year':
+      case LIBSOCIAL_FILTER_GROUP.YEAR:
         param = 'year';
         break;
-      case 'chaptersCount':
+      case LIBSOCIAL_FILTER_GROUP.CHAPTERS_COUNT:
         param = 'chap_count';
         break;
-      case 'votesCount':
+      case LIBSOCIAL_FILTER_GROUP.VOTES_COUNT:
         param = 'rate';
         break;
       default:
@@ -433,34 +403,34 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
         continue;
       }
       switch (filter.groupId) {
-        case 'genre':
+        case LIBSOCIAL_FILTER_GROUP.GENRE:
           url.searchParams.append(
             filter.exclude ? 'genres_exclude[]' : 'genres[]',
             filter.key.slice(1),
           );
           break;
-        case 'tag':
+        case LIBSOCIAL_FILTER_GROUP.TAG:
           url.searchParams.append(
             filter.exclude ? 'tags_exclude[]' : 'tags[]',
             filter.key.slice(1),
           );
           break;
-        case 'status':
+        case LIBSOCIAL_FILTER_GROUP.STATUS:
           url.searchParams.append('status[]', filter.key);
           break;
-        case 'type':
+        case LIBSOCIAL_FILTER_GROUP.TYPE:
           url.searchParams.append('types[]', filter.key);
           break;
-        case 'format':
+        case LIBSOCIAL_FILTER_GROUP.FORMAT:
           url.searchParams.append(filter.exclude ? 'format_exclude[]' : 'format[]', filter.key);
           break;
-        case 'translationStatus':
+        case LIBSOCIAL_FILTER_GROUP.TRANSLATION_STATUS:
           url.searchParams.append('scanlate_status[]', filter.key);
           break;
-        case 'ageRestriction':
+        case LIBSOCIAL_FILTER_GROUP.AGE_RESTRICTION:
           url.searchParams.append('caution[]', filter.key);
           break;
-        case 'other':
+        case LIBSOCIAL_FILTER_GROUP.OTHER:
           switch (filter.key) {
             case 'noTranslation':
               url.searchParams.set('long_no_translation', '1');
@@ -660,37 +630,37 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     const ageRestrictions = toLabelFilterOptions(json.data.ageRestriction);
     return [
       {
-        id: 'type',
+        id: LIBSOCIAL_FILTER_GROUP.TYPE,
         title: 'Тип',
         type: FILTER_TYPE.CHECKBOX,
         options: types,
       },
       {
-        id: 'genre',
+        id: LIBSOCIAL_FILTER_GROUP.GENRE,
         title: 'Жанры',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: genres,
       },
       {
-        id: 'tag',
+        id: LIBSOCIAL_FILTER_GROUP.TAG,
         title: 'Теги',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: tags,
       },
       {
-        id: 'format',
+        id: LIBSOCIAL_FILTER_GROUP.FORMAT,
         title: 'Формат выпуска',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: formats,
       },
       {
-        id: 'translationStatus',
+        id: LIBSOCIAL_FILTER_GROUP.TRANSLATION_STATUS,
         title: 'Статус перевода',
         type: FILTER_TYPE.CHECKBOX,
         options: translationStatuses,
       },
       {
-        id: 'status',
+        id: LIBSOCIAL_FILTER_GROUP.STATUS,
         title: 'Статус тайтла',
         type: FILTER_TYPE.CHECKBOX,
         options: STATUS_IDS.map(([key, state]) => ({
@@ -700,44 +670,44 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
         })),
       },
       {
-        id: 'ageRestriction',
+        id: LIBSOCIAL_FILTER_GROUP.AGE_RESTRICTION,
         title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: ageRestrictions,
       },
       {
-        id: 'rating',
+        id: LIBSOCIAL_FILTER_GROUP.RATING,
         title: 'Рейтинг',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: { range: { min: 0, max: 10 }, presets: RATING_PRESETS },
       },
       {
-        id: 'votesCount',
+        id: LIBSOCIAL_FILTER_GROUP.VOTES_COUNT,
         title: 'Количество оценок',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: { range: { min: 0, max: 100000 }, presets: VOTES_COUNT_PRESETS },
       },
       {
-        id: 'year',
+        id: LIBSOCIAL_FILTER_GROUP.YEAR,
         title: 'Год релиза',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: {
           range: { min: YEAR_RANGE_MIN, max: new Date().getFullYear(), format: RANGE_FORMAT.YEAR },
-          presets: getYearRangePresets(new Date().getFullYear()),
+          presets: getYearRangePresets(YEAR_RANGE_MIN, new Date().getFullYear(), YEAR_RANGE_CUTOFF),
         },
       },
       {
-        id: 'chaptersCount',
+        id: LIBSOCIAL_FILTER_GROUP.CHAPTERS_COUNT,
         title: 'Число глав',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: { range: { min: 0, max: 10000 }, presets: CHAPTERS_COUNT_PRESETS },
       },
       {
-        id: 'other',
+        id: LIBSOCIAL_FILTER_GROUP.OTHER,
         title: 'Другое',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         // The site itself mixes a plain toggle with an include/exclude one in this same group —
@@ -809,7 +779,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       title: catalogEntryFor(cfg.id).title,
       domain,
       locale: 'ru',
-      contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.hentai : SOURCE_CONTENT_TYPE.manga,
+      contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.HENTAI : SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,

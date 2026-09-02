@@ -1,4 +1,5 @@
 import type { EnumLiteralsOf } from '@tanuki/contracts';
+import { FILTER_GROUP } from '../../core/filters/group';
 
 export const GROUPLE_ELEMENT_TYPE = {
   GENRE: 'genre',
@@ -18,6 +19,18 @@ export const GROUPLE_TRANSLATION_STATUS = {
   NONE: 'NONE',
 } as const;
 export type GroupleTranslationStatus = EnumLiteralsOf<typeof GROUPLE_TRANSLATION_STATUS>;
+
+export const GROUPLE_FILTER_GROUP = {
+  GENRE: FILTER_GROUP.GENRE,
+  CATEGORY: FILTER_GROUP.CATEGORY,
+  AGE_RATING: FILTER_GROUP.AGE_RATING,
+  MISC: FILTER_GROUP.MISC,
+  PRODUCTION_STATUS: FILTER_GROUP.PRODUCTION_STATUS,
+  TRANSLATION_STATUS: FILTER_GROUP.TRANSLATION_STATUS,
+  SEARCH_FILTER: FILTER_GROUP.SEARCH_FILTER,
+  YEAR: FILTER_GROUP.YEAR,
+} as const;
+export type GroupleFilterGroup = EnumLiteralsOf<typeof GROUPLE_FILTER_GROUP>;
 
 export type CatalogElementJson = {
   id: number;

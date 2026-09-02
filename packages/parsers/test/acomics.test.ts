@@ -1,6 +1,7 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
 import { createAComicsParser } from '../src/sources/acomics';
+import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
@@ -68,7 +69,7 @@ describe('AComics parser conformance', () => {
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
-    expect(item!.source).toBe('ACOMICS');
+    expect(item!.source).toBe(SOURCE_ID.ACOMICS);
     expect(item!.rating).toBe(-1);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);

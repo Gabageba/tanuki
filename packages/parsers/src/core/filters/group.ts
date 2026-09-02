@@ -1,0 +1,33 @@
+/** Every filter group id used across every source's own `*_FILTER_GROUP` object — one declaration
+ *  per concept, shared or not, so no source hardcodes its own copy of a string literal. A source's
+ *  `*_FILTER_GROUP` picks whichever entries it needs and references them by name. */
+export const FILTER_GROUP = {
+  GENRE: 'genre',
+  TYPE: 'type',
+  STATUS: 'status',
+  TAG: 'tag',
+  YEAR: 'year',
+  CHAPTERS_COUNT: 'chaptersCount',
+  RATING: 'rating',
+  AGE_RATING: 'ageRating',
+  CATEGORY: 'category',
+  FORMAT: 'format',
+  TRANSLATION_STATUS: 'translationStatus',
+  KIND: 'kind',
+  RELEASE_YEAR: 'releaseYear',
+  TRANSLITION_STATUS: 'translitionStatus',
+  SOURCE: 'source',
+  CHAPTERS: 'chapters',
+  RELEASED_ON: 'releasedOn',
+  COMPLETED_ON: 'completedOn',
+  TRANSLATE_STATUS: 'translateStatus',
+  MISC: 'misc',
+  PRODUCTION_STATUS: 'productionStatus',
+  SEARCH_FILTER: 'searchFilter',
+  AGE_RESTRICTION: 'ageRestriction',
+  VOTES_COUNT: 'votesCount',
+  OTHER: 'other',
+  CONTENT_STATUS: 'contentStatus',
+  COUNTRY: 'country',
+  AVERAGE_RATING: 'averageRating',
+} as const;

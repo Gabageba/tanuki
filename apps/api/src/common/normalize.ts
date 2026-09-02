@@ -53,13 +53,13 @@ export const normalizeManga = (
   const coverUrl = raw.coverUrl
     ? buildSignedImageUrl(env.IMG_SIGN_SECRET, sourceId, raw.coverUrl, {
         width: 360,
-        format: IMAGE_FORMAT.webp,
+        format: IMAGE_FORMAT.WEBP,
       })
     : '';
   const largeCoverUrl = raw.largeCoverUrl
     ? buildSignedImageUrl(env.IMG_SIGN_SECRET, sourceId, raw.largeCoverUrl, {
         width: 1080,
-        format: IMAGE_FORMAT.webp,
+        format: IMAGE_FORMAT.WEBP,
       })
     : null;
 

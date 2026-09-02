@@ -9,12 +9,12 @@ import {
   RANGE_FORMAT,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type FilterRangePreset,
   type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
+import { getYearRangePresets } from '../../core/filters/range-presets';
 import type {
   RawManga,
   RawChapter,
@@ -33,10 +33,10 @@ import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { toTitleCase, nullIfEmpty, findGroupValue } from '../../core/text/strings';
 import { ParseError, SourceAuthRequiredError } from '../../errors';
 import { UserAgents } from '../../core/http/user-agents';
-import { catalogEntryFor } from '../catalog';
+import { catalogEntryFor, SOURCE_ID } from '../catalog';
 import { authenticateGrouple, authenticateAllHentai } from './auth';
 import type { GroupleConfig } from './config';
-import { GROUPLE_ELEMENT_TYPE, GROUPLE_TRANSLATION_STATUS } from './models';
+import { GROUPLE_ELEMENT_TYPE, GROUPLE_FILTER_GROUP, GROUPLE_TRANSLATION_STATUS } from './models';
 import type {
   CatalogCategoryJson,
   CatalogItemJson,
@@ -67,50 +67,16 @@ const GROUPLE_FILTER_YEARS_REGEX =
   /window\.__FILTERS\.years\s*=\s*\{\s*min:\s*(\d+),\s*max:\s*(\d+)\s*\};/;
 const DEFAULT_YEARS_RANGE = { min: 1900, max: 2100 };
 
-const DECADE_SIZE = 10;
 const YEAR_RANGE_CUTOFF = 2000;
-
-/** "Текущий год", the current-decade-so-far, a preset per full decade back to `YEAR_RANGE_CUTOFF`,
- *  then one trailing preset lumping everything older than that into "Раньше 2000". */
-const getYearRangePresets = (minYear: number, maxYear: number): FilterRangePreset[] => {
-  const presets: FilterRangePreset[] = [
-    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
-  ];
-  const currentDecadeStart = Math.floor(maxYear / DECADE_SIZE) * DECADE_SIZE;
-  if (currentDecadeStart < maxYear) {
-    presets.push({
-      id: `decade-${currentDecadeStart}`,
-      label: `${currentDecadeStart}–${maxYear}`,
-      min: currentDecadeStart,
-      max: maxYear,
-    });
-  }
-  for (
-    let decadeStart = currentDecadeStart - DECADE_SIZE;
-    decadeStart >= YEAR_RANGE_CUTOFF;
-    decadeStart -= DECADE_SIZE
-  ) {
-    presets.push({
-      id: `decade-${decadeStart}`,
-      label: `${decadeStart}-е`,
-      min: decadeStart,
-      max: decadeStart + DECADE_SIZE - 1,
-    });
-  }
-  if (minYear < YEAR_RANGE_CUTOFF) {
-    presets.push({
-      id: `before-${YEAR_RANGE_CUTOFF}`,
-      label: `Раньше ${YEAR_RANGE_CUTOFF}`,
-      min: minYear,
-      max: YEAR_RANGE_CUTOFF - 1,
-    });
-  }
-  return presets;
-};
 
 /** Element ids (genre/category/age rating/misc) all round-trip through the same
  *  includeElementIds/excludeElementIds params on the search API — see applySelectionParams. */
-const ELEMENT_FILTER_GROUPS = new Set(['genre', 'category', 'ageRating', 'misc']);
+const ELEMENT_FILTER_GROUPS = new Set<string>([
+  GROUPLE_FILTER_GROUP.GENRE,
+  GROUPLE_FILTER_GROUP.CATEGORY,
+  GROUPLE_FILTER_GROUP.AGE_RATING,
+  GROUPLE_FILTER_GROUP.MISC,
+]);
 
 const getSearchSortType = (order: string | undefined): string => {
   switch (order) {
@@ -419,7 +385,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
    * misc ("another") alike — the site's own advanced-search UI splits them into separate sections,
    * but all four funnel into the same id space and query params (verified live: a captured request
    * with one selection checked in each of those four sections produced exactly 4 include + 4
-   * exclude ids, matching ELEMENT_FILTER_GROUPS one-for-one). `searchFilter` follows the same
+   * exclude ids, matching ELEMENT_FILTER_GROUPS one-for-one). `search_filter` follows the same
    * include/exclude pair — its own tooltip (`.catalog-filter-checkbox`) shows both a
    * `data-type="include"` and a `data-type="exclude"` indicator per option, same as every other
    * *_EXCLUDE group here.
@@ -432,17 +398,17 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
           filter.exclude ? 'excludeElementIds' : 'includeElementIds',
           filter.key,
         );
-      } else if (filter.groupId === 'productionStatus') {
+      } else if (filter.groupId === GROUPLE_FILTER_GROUP.PRODUCTION_STATUS) {
         url.searchParams.append(
           filter.exclude ? 'excludeProductionStatuses' : 'includeProductionStatuses',
           filter.key,
         );
-      } else if (filter.groupId === 'translationStatus') {
+      } else if (filter.groupId === GROUPLE_FILTER_GROUP.TRANSLATION_STATUS) {
         url.searchParams.append(
           filter.exclude ? 'excludeTranslationStatuses' : 'includeTranslationStatuses',
           filter.key,
         );
-      } else if (filter.groupId === 'searchFilter') {
+      } else if (filter.groupId === GROUPLE_FILTER_GROUP.SEARCH_FILTER) {
         url.searchParams.append(
           filter.exclude ? 'excludeSearchFilter' : 'includeSearchFilter',
           filter.key,
@@ -454,7 +420,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
   const yearsRangeParam = (filters: FilterSelection[] | undefined): string => {
     const yearFilter = filters?.find(
       (f): f is Extract<FilterSelection, { range: unknown }> =>
-        'range' in f && f.groupId === 'year',
+        'range' in f && f.groupId === GROUPLE_FILTER_GROUP.YEAR,
     );
     const min = yearFilter?.range.min ?? DEFAULT_YEARS_RANGE.min;
     const max = yearFilter?.range.max ?? DEFAULT_YEARS_RANGE.max;
@@ -547,7 +513,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     const genres = optionsFromMap(maps.genre);
     if (genres.length > 0) {
       groups.push({
-        id: 'genre',
+        id: GROUPLE_FILTER_GROUP.GENRE,
         title: 'Жанры',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: genres,
@@ -556,7 +522,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     const categories = optionsFromMap(maps.category);
     if (categories.length > 0) {
       groups.push({
-        id: 'category',
+        id: GROUPLE_FILTER_GROUP.CATEGORY,
         title: 'Категории',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: categories,
@@ -565,7 +531,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     const ageRatings = optionsFromMap(maps.limitation);
     if (ageRatings.length > 0) {
       groups.push({
-        id: 'ageRating',
+        id: GROUPLE_FILTER_GROUP.AGE_RATING,
         title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: ageRatings,
@@ -574,7 +540,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     const productionStatuses = optionsFromMap(maps.productionStatus);
     if (productionStatuses.length > 0) {
       groups.push({
-        id: 'productionStatus',
+        id: GROUPLE_FILTER_GROUP.PRODUCTION_STATUS,
         title: 'Статус выхода',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: productionStatuses,
@@ -583,7 +549,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     const translationStatuses = optionsFromMap(maps.translationStatus);
     if (translationStatuses.length > 0) {
       groups.push({
-        id: 'translationStatus',
+        id: GROUPLE_FILTER_GROUP.TRANSLATION_STATUS,
         title: 'Статус перевода',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: translationStatuses,
@@ -593,20 +559,20 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       const yearMin = Number.parseInt(yearsMatch[1]!, 10);
       const yearMax = Number.parseInt(yearsMatch[2]!, 10);
       groups.push({
-        id: 'year',
+        id: GROUPLE_FILTER_GROUP.YEAR,
         title: 'Год выпуска',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: {
           range: { min: yearMin, max: yearMax, format: RANGE_FORMAT.YEAR },
-          presets: getYearRangePresets(yearMin, yearMax),
+          presets: getYearRangePresets(yearMin, yearMax, YEAR_RANGE_CUTOFF),
         },
       });
     }
     const searchFilters = optionsFromMap(maps.searchFilters);
     if (searchFilters.length > 0) {
       groups.push({
-        id: 'searchFilter',
+        id: GROUPLE_FILTER_GROUP.SEARCH_FILTER,
         title: 'Фильтры',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: searchFilters,
@@ -615,7 +581,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     const misc = optionsFromMap(maps.another);
     if (misc.length > 0) {
       groups.push({
-        id: 'misc',
+        id: GROUPLE_FILTER_GROUP.MISC,
         title: 'Прочее',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: misc,
@@ -844,10 +810,10 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       domain,
       locale: 'ru',
       contentType: cfg.isNsfw
-        ? SOURCE_CONTENT_TYPE.hentai
-        : cfg.id === 'SELFMANGA'
-          ? SOURCE_CONTENT_TYPE.other
-          : SOURCE_CONTENT_TYPE.manga,
+        ? SOURCE_CONTENT_TYPE.HENTAI
+        : cfg.id === SOURCE_ID.SELFMANGA
+          ? SOURCE_CONTENT_TYPE.OTHER
+          : SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,

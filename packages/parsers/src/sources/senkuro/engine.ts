@@ -6,12 +6,13 @@ import {
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
-  type FilterRangePreset,
   type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchCursorPaged } from '../../core/paging';
+import { CHAPTERS_COUNT_PRESETS, getYearRangePresets } from '../../core/filters/range-presets';
+import { FILTER_GROUP } from '../../core/filters/group';
 import type {
   RawManga,
   RawChapter,
@@ -35,6 +36,19 @@ const URL_DELIMITER = ',,';
 // frontend and reaches the same backend — the API host and the catalog-selecting app-id come
 // from the config, not the domain.
 const LIST_MAX_PAGE_SIZE = 100;
+
+export const SENKURO_FILTER_GROUP = {
+  TYPE: FILTER_GROUP.TYPE,
+  FORMAT: FILTER_GROUP.FORMAT,
+  STATUS: FILTER_GROUP.STATUS,
+  RATING: FILTER_GROUP.RATING,
+  TRANSLITION_STATUS: FILTER_GROUP.TRANSLITION_STATUS,
+  SOURCE: FILTER_GROUP.SOURCE,
+  CHAPTERS: FILTER_GROUP.CHAPTERS,
+  RELEASED_ON: FILTER_GROUP.RELEASED_ON,
+  COMPLETED_ON: FILTER_GROUP.COMPLETED_ON,
+} as const;
+const SENKURO_LABEL_GROUP_PREFIX = 'label-';
 
 type LocalizedText = {
   lang?: string;
@@ -384,46 +398,8 @@ const toStaticOptions = (keys: string[], getTitle: (key: string) => string): Raw
 };
 
 const CHAPTERS_RANGE_MAX = 2000;
-const CHAPTERS_COUNT_PRESETS: FilterRangePreset[] = [
-  { id: 'lt-20', label: '< 20', max: 20 },
-  { id: 'lt-50', label: '< 50', max: 50 },
-  { id: '100-200', label: '100-200', min: 100, max: 200 },
-  { id: '200-300', label: '200-300', min: 200, max: 300 },
-  { id: '300-plus', label: '300+', min: 300 },
-];
 
 const YEAR_RANGE_MIN = 1970;
-const YEAR_RANGE_DECADE_SIZE = 10;
-
-/** "Текущий год", the current-decade-so-far, then a preset per full decade back to
- *  YEAR_RANGE_MIN — same shape as Inkstory's year presets. */
-const getYearRangePresets = (minYear: number, maxYear: number): FilterRangePreset[] => {
-  const presets: FilterRangePreset[] = [
-    { id: 'current-year', label: 'Текущий год', min: maxYear, max: maxYear },
-  ];
-  const currentDecadeStart = Math.floor(maxYear / YEAR_RANGE_DECADE_SIZE) * YEAR_RANGE_DECADE_SIZE;
-  if (currentDecadeStart < maxYear) {
-    presets.push({
-      id: `decade-${currentDecadeStart}`,
-      label: `${currentDecadeStart}–${maxYear}`,
-      min: currentDecadeStart,
-      max: maxYear,
-    });
-  }
-  for (
-    let decadeStart = currentDecadeStart - YEAR_RANGE_DECADE_SIZE;
-    decadeStart >= minYear;
-    decadeStart -= YEAR_RANGE_DECADE_SIZE
-  ) {
-    presets.push({
-      id: `decade-${decadeStart}`,
-      label: `${decadeStart}-е`,
-      min: decadeStart,
-      max: decadeStart + YEAR_RANGE_DECADE_SIZE - 1,
-    });
-  }
-  return presets;
-};
 
 type InclusionInput = { include: string[]; exclude: string[] };
 
@@ -456,7 +432,7 @@ const yearToDateBound = (year: number | undefined): string | undefined =>
 
 /** Every getFilters() group whose selections all fold into the single `label` GraphQL argument —
  *  one group per `allLabels` root category (see fetchLabelGroups). */
-const isLabelGroup = (groupId: string): boolean => groupId.startsWith('label-');
+const isLabelGroup = (groupId: string): boolean => groupId.startsWith(SENKURO_LABEL_GROUP_PREFIX);
 
 /** All filter-driven variables `mangas()` accepts beyond paging/search/order — omits a key
  *  entirely when nothing was selected for it rather than sending an empty filter object. */
@@ -466,29 +442,32 @@ const buildFilterVariables = (filters: FilterSelection[] | undefined): Record<st
 
   const label = collectInclusion(filters, isLabelGroup);
   if (label) variables['label'] = label;
-  const type = collectInclusion(filters, (id) => id === 'type');
+  const type = collectInclusion(filters, (id) => id === SENKURO_FILTER_GROUP.TYPE);
   if (type) variables['type'] = type;
-  const format = collectInclusion(filters, (id) => id === 'format');
+  const format = collectInclusion(filters, (id) => id === SENKURO_FILTER_GROUP.FORMAT);
   if (format) variables['format'] = format;
-  const status = collectInclusion(filters, (id) => id === 'status');
+  const status = collectInclusion(filters, (id) => id === SENKURO_FILTER_GROUP.STATUS);
   if (status) variables['status'] = status;
-  const rating = collectInclusion(filters, (id) => id === 'rating');
+  const rating = collectInclusion(filters, (id) => id === SENKURO_FILTER_GROUP.RATING);
   if (rating) variables['rating'] = rating;
-  const translitionStatus = collectInclusion(filters, (id) => id === 'translitionStatus');
+  const translitionStatus = collectInclusion(
+    filters,
+    (id) => id === SENKURO_FILTER_GROUP.TRANSLITION_STATUS,
+  );
   if (translitionStatus) variables['translitionStatus'] = translitionStatus;
-  const source = collectInclusion(filters, (id) => id === 'source');
+  const source = collectInclusion(filters, (id) => id === SENKURO_FILTER_GROUP.SOURCE);
   if (source) variables['source'] = source;
 
-  const chapters = findRange(filters, 'chapters');
+  const chapters = findRange(filters, SENKURO_FILTER_GROUP.CHAPTERS);
   if (chapters) variables['chapters'] = { start: chapters.min, end: chapters.max };
-  const releasedOn = findRange(filters, 'releasedOn');
+  const releasedOn = findRange(filters, SENKURO_FILTER_GROUP.RELEASED_ON);
   if (releasedOn) {
     variables['releasedOn'] = {
       start: yearToDateBound(releasedOn.min),
       end: yearToDateBound(releasedOn.max),
     };
   }
-  const completedOn = findRange(filters, 'completedOn');
+  const completedOn = findRange(filters, SENKURO_FILTER_GROUP.COMPLETED_ON);
   if (completedOn) {
     variables['completedOn'] = {
       start: yearToDateBound(completedOn.min),
@@ -672,7 +651,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       if (options.length === 0) continue;
 
       groups.push({
-        id: `label-${root.slug}`,
+        id: `${SENKURO_LABEL_GROUP_PREFIX}${root.slug}`,
         title: rootTitle,
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options,
@@ -687,50 +666,50 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
     return [
       ...labelGroups,
       {
-        id: 'type',
+        id: SENKURO_FILTER_GROUP.TYPE,
         title: 'Тип',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: toStaticOptions(MANGA_TYPE_KEYS, getMangaTypeTitle),
       },
       {
-        id: 'format',
+        id: SENKURO_FILTER_GROUP.FORMAT,
         title: 'Формат',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: toStaticOptions(MANGA_FORMAT_KEYS, getMangaFormatTitle),
       },
       {
-        id: 'status',
+        id: SENKURO_FILTER_GROUP.STATUS,
         title: 'Статус тайтла',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: toStaticOptions(MANGA_FILTER_STATUS_KEYS, getMangaFilterStatusTitle),
       },
       {
-        id: 'rating',
+        id: SENKURO_FILTER_GROUP.RATING,
         title: 'Возрастной рейтинг',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: toStaticOptions(MANGA_FILTER_RATING_KEYS, getMangaFilterRatingTitle),
       },
       {
-        id: 'translitionStatus',
+        id: SENKURO_FILTER_GROUP.TRANSLITION_STATUS,
         title: 'Статус перевода',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: toStaticOptions(TRANSLITION_STATUS_KEYS, getTranslitionStatusTitle),
       },
       {
-        id: 'source',
+        id: SENKURO_FILTER_GROUP.SOURCE,
         title: 'Первоисточник',
         type: FILTER_TYPE.CHECKBOX_EXCLUDE,
         options: toStaticOptions(MANGA_SOURCE_KEYS, getMangaSourceTitle),
       },
       {
-        id: 'chapters',
+        id: SENKURO_FILTER_GROUP.CHAPTERS,
         title: 'Число глав',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: { range: { min: 0, max: CHAPTERS_RANGE_MAX }, presets: CHAPTERS_COUNT_PRESETS },
       },
       {
-        id: 'releasedOn',
+        id: SENKURO_FILTER_GROUP.RELEASED_ON,
         title: 'Год выпуска',
         type: FILTER_TYPE.RANGE,
         options: [],
@@ -740,7 +719,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
         },
       },
       {
-        id: 'completedOn',
+        id: SENKURO_FILTER_GROUP.COMPLETED_ON,
         title: 'Год завершения',
         type: FILTER_TYPE.RANGE,
         options: [],

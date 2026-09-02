@@ -1,3 +1,5 @@
+import { SOURCE_ID } from '../catalog';
+
 export type SenkuroConfig = {
   id: string;
   /** GraphQL endpoint serving both the `mangas` connection and the `mangaTachiyomi*` queries. */
@@ -22,12 +24,12 @@ export type SenkuroConfig = {
 // app-id returns an empty catalog, so never send a guessed value. `app-version` is not required.
 export const SENKURO_CONFIGS: SenkuroConfig[] = [
   {
-    id: 'SENKURO',
+    id: SOURCE_ID.SENKURO,
     apiEndpoint: 'https://api.senkuro.com/graphql',
     appId: '4026531840100',
   },
   {
-    id: 'SENKOGNITO',
+    id: SOURCE_ID.SENKOGNITO,
     apiEndpoint: 'https://api.senkognito.com/graphql',
     appId: '5033164800100',
   },

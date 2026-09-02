@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import { describe, expect, it } from 'vitest';
 import { createRegistry } from '../src/registry';
-import type { SourceId } from '../src/sources/catalog';
+import { SOURCE_ID, type SourceId } from '../src/sources/catalog';
 
 // Mirrors scripts/libsocial-login.ts: GROUPLE_USERNAME etc. live in apps/api/.env rather than
 // needing a separate file here. Silently no-ops if that file doesn't exist (e.g. CI, where these
@@ -17,19 +17,19 @@ loadDotenv({ path: resolve(__dirname, '../../../apps/api/.env'), quiet: true });
  * failure.
  */
 const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
-  'DESUME',
-  'READMANGA_RU',
-  'MINTMANGA',
-  'SELFMANGA',
-  'SEIMANGA',
-  'USAGI',
+  SOURCE_ID.DESUME,
+  SOURCE_ID.READMANGA_RU,
+  SOURCE_ID.MINTMANGA,
+  SOURCE_ID.SELFMANGA,
+  SOURCE_ID.SEIMANGA,
+  SOURCE_ID.USAGI,
   // ALLHENTAI's catalog requires an authenticated session site-wide, via its own qawa.org SSO
   // gateway — separate credentials from the main network (see ALLHENTAI_USERNAME/PASSWORD and
   // sources/grouple/auth.ts). Included here, but will fail like any other source if those
   // secrets aren't configured for this run.
-  'ALLHENTAI',
-  'MANGALIB',
-  'YAOILIB',
+  SOURCE_ID.ALLHENTAI,
+  SOURCE_ID.MANGALIB,
+  SOURCE_ID.YAOILIB,
   // HENTAILIB's getPages() is gated site-wide behind an authenticated session (see
   // LIBSOCIAL_CONFIGS.HENTAILIB.auth in sources/libsocial/config.ts) — login itself is
   // reCAPTCHA-gated and can only be driven by a human, once, via
@@ -38,33 +38,33 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   // the stored refresh_token — no further human step — as long as LIBSOCIAL_TOKEN_STORE_DIR
   // points at a directory holding that token file. Included here, but will fail like any other
   // source if that directory/token isn't configured for this run.
-  'HENTAILIB',
-  'MANGACHAN',
-  'HENCHAN',
+  SOURCE_ID.HENTAILIB,
+  SOURCE_ID.MANGACHAN,
+  SOURCE_ID.HENCHAN,
   // YAOICHAN intentionally excluded: marked broken (`isBroken: true` in source-catalog.ts) —
   // every request times out at the connect/TLS stage, reproduces from multiple networks.
   //
   // REMANGA/MANGABUFF/INKSTORY are here too — see CI_ANTIBOT_FLAKY_SOURCE_IDS below for why
   // they're filtered out of the CI run specifically instead of being excluded outright.
-  'REMANGA',
-  'MANGABUFF',
-  'INKSTORY',
+  SOURCE_ID.REMANGA,
+  SOURCE_ID.MANGABUFF,
+  SOURCE_ID.INKSTORY,
   // COMX intentionally excluded: marked broken (`isBroken: true` in comx/index.ts) — every
   // request is gated behind a JS PoW + TLS/JA3 fingerprint challenge no undici client can pass.
-  'TOMILOLIB',
-  'WAMANGA',
-  'NUDEMOON',
+  SOURCE_ID.TOMILOLIB,
+  SOURCE_ID.WAMANGA,
+  SOURCE_ID.NUDEMOON,
   // ACOMICS intentionally excluded: marked broken in the upstream kotatsu enum
   // (`isBroken: true` in registry.ts) independent of this port's own correctness.
-  'SENKURO',
+  SOURCE_ID.SENKURO,
   // Shares SENKURO's backend but serves a disjoint catalog, selected by the `app-id` header
   // (see sources/senkuro/config.ts). Covered separately so a silent fallback to SENKURO's
   // catalog — what a wrong or missing app-id causes — doesn't go unnoticed.
-  'SENKOGNITO',
-  'HENTAICHAN_CC',
-  'SEXKOMIX2',
-  'MULTPORN',
-  'MULTPORN_HENTAI',
+  SOURCE_ID.SENKOGNITO,
+  SOURCE_ID.HENTAICHAN_CC,
+  SOURCE_ID.SEXKOMIX2,
+  SOURCE_ID.MULTPORN,
+  SOURCE_ID.MULTPORN_HENTAI,
 ];
 
 // REMANGA/MANGABUFF/INKSTORY/NUDEMOON: known-flaky in the nightly workflow specifically — their
@@ -75,7 +75,12 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
 // IPs got flagged again," not a parsing regression — so they run locally (any residential/non-CI
 // IP) but are skipped when GITHUB_ACTIONS is set, instead of being excluded outright like
 // YAOICHAN/COMX/ACOMICS.
-const CI_ANTIBOT_FLAKY_SOURCE_IDS: SourceId[] = ['REMANGA', 'MANGABUFF', 'INKSTORY', 'NUDEMOON'];
+const CI_ANTIBOT_FLAKY_SOURCE_IDS: SourceId[] = [
+  SOURCE_ID.REMANGA,
+  SOURCE_ID.MANGABUFF,
+  SOURCE_ID.INKSTORY,
+  SOURCE_ID.NUDEMOON,
+];
 
 const RUN_SOURCE_IDS =
   process.env['GITHUB_ACTIONS'] === 'true'

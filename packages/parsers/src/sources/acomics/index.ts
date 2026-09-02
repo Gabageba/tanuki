@@ -9,8 +9,9 @@ import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
 import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
 import { nullIfEmpty } from '../../core/text/strings';
 import { ParseError } from '../../errors';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'ACOMICS';
+const SOURCE_ID = CATALOG_SOURCE_ID.ACOMICS;
 const PAGE_SIZE = 10;
 const FIRST_PAGE = 0;
 
@@ -198,7 +199,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
       title: 'AComics',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.comics,
+      contentType: SOURCE_CONTENT_TYPE.COMICS,
       isBroken: true,
       isAdult: false,
       requiresVpn: false,

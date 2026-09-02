@@ -2,9 +2,9 @@ import type { EnumLiteralsOf } from '@tanuki/contracts';
 
 /** Состояния circuit breaker'а источника — см. SourceHealthService. */
 export const BREAKER_STATE = {
-  closed: 'closed',
-  open: 'open',
-  halfOpen: 'half-open',
+  CLOSED: 'closed',
+  OPEN: 'open',
+  HALF_OPEN: 'halfOpen',
 } as const;
 export type BreakerState = EnumLiteralsOf<typeof BREAKER_STATE>;
 

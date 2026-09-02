@@ -6,8 +6,9 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toTitleCase } from '../../core/text/strings';
 import { ParseError } from '../../errors';
+import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
-const SOURCE_ID = 'HENTAICHAN_CC';
+const SOURCE_ID = CATALOG_SOURCE_ID.HENTAICHAN_CC;
 /**
  * Not a domain the source config discovers dynamically — the site's Next.js frontend
  * (`ctx.domain`, used only for publicUrl/Referer) calls this Directus instance from the
@@ -227,7 +228,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       title: 'HentaiChan',
       domain,
       locale: 'ru',
-      contentType: SOURCE_CONTENT_TYPE.hentai,
+      contentType: SOURCE_CONTENT_TYPE.HENTAI,
       isBroken: false,
       isAdult: true,
       requiresVpn: true,

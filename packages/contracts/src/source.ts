@@ -7,19 +7,19 @@ import type { EnumLiteralsOf } from './utils';
  * наружу как есть, без приведения регистра.
  */
 export const SOURCE_CONTENT_TYPE = {
-  manga: 'manga',
-  hentai: 'hentai',
-  comics: 'comics',
-  other: 'other',
+  MANGA: 'manga',
+  HENTAI: 'hentai',
+  COMICS: 'comics',
+  OTHER: 'other',
 } as const;
 export type SourceContentType = EnumLiteralsOf<typeof SOURCE_CONTENT_TYPE>;
 
 export const SourceContentTypeSchema = z.enum(SOURCE_CONTENT_TYPE);
 
 export const SOURCE_STATUS = {
-  ok: 'ok',
-  degraded: 'degraded',
-  down: 'down',
+  OK: 'ok',
+  DEGRADED: 'degraded',
+  DOWN: 'down',
 } as const;
 export type SourceStatus = EnumLiteralsOf<typeof SOURCE_STATUS>;
 
@@ -31,22 +31,22 @@ export const SourceStatusSchema = z.enum(SOURCE_STATUS);
  * claim that every source offers every value.
  */
 export const SORT_ORDER = {
-  UPDATED: 'UPDATED',
-  NEWEST: 'NEWEST',
-  ADDED: 'ADDED',
-  POPULARITY: 'POPULARITY',
-  RATING: 'RATING',
-  RATING_COUNT: 'RATING_COUNT',
-  LIKES: 'LIKES',
-  VIEWS: 'VIEWS',
-  VIEWS_TODAY: 'VIEWS_TODAY',
-  VIEWS_WEEK: 'VIEWS_WEEK',
-  VIEWS_MONTH: 'VIEWS_MONTH',
-  CHAPTERS: 'CHAPTERS',
-  BOOKMARKS: 'BOOKMARKS',
-  ALPHABETICAL: 'ALPHABETICAL',
-  ALPHABETICAL_RU: 'ALPHABETICAL_RU',
-  ALPHABETICAL_EN: 'ALPHABETICAL_EN',
+  UPDATED: 'updated',
+  NEWEST: 'newest',
+  ADDED: 'added',
+  POPULARITY: 'popularity',
+  RATING: 'rating',
+  RATING_COUNT: 'ratingCount',
+  LIKES: 'likes',
+  VIEWS: 'views',
+  VIEWS_TODAY: 'viewsToday',
+  VIEWS_WEEK: 'viewsWeek',
+  VIEWS_MONTH: 'viewsMonth',
+  CHAPTERS: 'chapters',
+  BOOKMARKS: 'bookmarks',
+  ALPHABETICAL: 'alphabetical',
+  ALPHABETICAL_RU: 'alphabeticalRu',
+  ALPHABETICAL_EN: 'alphabeticalEn',
 } as const;
 export type SortOrder = EnumLiteralsOf<typeof SORT_ORDER>;
 
@@ -57,15 +57,15 @@ export const SortOrderSchema = z.enum(SORT_ORDER);
  * sources bake a fixed direction into each SORT_ORDER value and ignore `ListParams.direction`.
  */
 export const SORT_DIRECTION = {
-  ASC: 'ASC',
-  DESC: 'DESC',
+  ASC: 'asc',
+  DESC: 'desc',
 } as const;
 export type SortDirection = EnumLiteralsOf<typeof SORT_DIRECTION>;
 
 export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 
 export const SourceSchema = z.object({
-  id: z.string(), // "DESUME"
+  id: z.string(), // "desume"
   title: z.string(),
   /**
    * Canonical host, no scheme: "web.usagi.one". Whichever mirror the parser currently talks to

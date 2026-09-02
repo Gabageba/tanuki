@@ -30,7 +30,7 @@ export const buildSignedImageUrl = (
   if (options?.width) {
     params.set('w', String(roundWidth(options.width)));
   }
-  if (options?.format && options.format !== IMAGE_FORMAT.orig) {
+  if (options?.format && options.format !== IMAGE_FORMAT.ORIG) {
     params.set('f', options.format);
   }
 
