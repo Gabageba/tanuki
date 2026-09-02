@@ -1,6 +1,12 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { CONTENT_RATING, FILTER_TYPE, MANGA_TYPE, SORT_ORDER } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  MANGA_TYPE,
+  SORT_DIRECTION,
+  SORT_ORDER,
+} from '@tanuki/contracts';
 import { createWaMangaParser, WAMANGA_FILTER_GROUP } from '../src/sources/wamanga';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -152,8 +158,10 @@ describe('WaManga parser conformance', () => {
     const cases: [string | undefined, string, string][] = [
       [undefined, 'updatedAt', 'true'],
       [SORT_ORDER.UPDATED, 'updatedAt', 'true'],
-      [SORT_ORDER.NEWEST, 'createdAt', 'true'],
+      [SORT_ORDER.NEWEST, 'publicDate', 'true'],
+      [SORT_ORDER.ADDED, 'createdAt', 'true'],
       [SORT_ORDER.POPULARITY, 'views', 'true'],
+      [SORT_ORDER.LIKES, 'likes', 'true'],
       [SORT_ORDER.ALPHABETICAL, 'alphabetical', 'false'],
     ];
     for (const [order, key, descending] of cases) {
@@ -161,6 +169,26 @@ describe('WaManga parser conformance', () => {
       await createWaMangaParser(makeContext(fresh)).getList({ offset: 0, limit: 20, order });
       const url = new URL(fresh.requests[0]!.url);
       expect(url.searchParams.get('sortKey')).toBe(key);
+      expect(url.searchParams.get('sortDescending')).toBe(descending);
+    }
+  });
+
+  it("getList: explicit direction overrides each sort order's default", async () => {
+    const cases: [string | undefined, string, string][] = [
+      [SORT_ORDER.UPDATED, SORT_DIRECTION.ASC, 'false'],
+      [SORT_ORDER.NEWEST, SORT_DIRECTION.ASC, 'false'],
+      [SORT_ORDER.POPULARITY, SORT_DIRECTION.ASC, 'false'],
+      [SORT_ORDER.ALPHABETICAL, SORT_DIRECTION.DESC, 'true'],
+    ];
+    for (const [order, direction, descending] of cases) {
+      const fresh = setUpFixtures();
+      await createWaMangaParser(makeContext(fresh)).getList({
+        offset: 0,
+        limit: 20,
+        order,
+        direction,
+      });
+      const url = new URL(fresh.requests[0]!.url);
       expect(url.searchParams.get('sortDescending')).toBe(descending);
     }
   });

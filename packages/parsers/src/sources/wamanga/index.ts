@@ -4,6 +4,7 @@ import {
   MANGA_STATE,
   MANGA_TYPE,
   RANGE_FORMAT,
+  SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type MangaState,
@@ -184,19 +185,43 @@ const collectAltTitles = (jo: MangaJson): string[] => {
  * sortKey ∈ createdAt | updatedAt | publicDate | views | likes | alphabetical. `updatedAt` desc is
  * what the site's homepage `freshUpdates` block is built from, so it's the default here — the
  * upstream default (`alphabetical`) pins the catalog to the same "100 девушек..." first page forever.
- * `likes` is deliberately unmapped: the API accepts it but returns alphabetical order for it.
+ * `createdAt` (added to the catalog) is ADDED, `publicDate` (the title's own release date) is
+ * NEWEST — same split other sources draw between the two.
+ *
+ * `likes` is mapped to LIKES for parity with the site's own sort dropdown, but verified live it's
+ * server-side broken — the API silently returns alphabetical order for it regardless of
+ * `sortDescending`, never actual likes order. Kept anyway so the option isn't missing where the
+ * site itself offers it; not something fixable from here.
+ *
+ * Verified live: `sortDescending` is genuinely respected for createdAt/publicDate/views/alphabetical,
+ * but the API silently ignores it for `updatedAt` (any truthy/falsy value returns the same desc
+ * order) — a site-side bug, not something fixable from here. That's the UPDATED/default sort, so
+ * toggling direction while on the default sort will look like a no-op; every other sort order does
+ * react to it.
  */
-const getSortKey = (order: string | undefined): { key: string; descending: boolean } => {
-  switch (order) {
-    case SORT_ORDER.ALPHABETICAL:
-      return { key: 'alphabetical', descending: false };
-    case SORT_ORDER.NEWEST:
-      return { key: 'createdAt', descending: true };
-    case SORT_ORDER.POPULARITY:
-      return { key: 'views', descending: true };
-    default:
-      return { key: 'updatedAt', descending: true };
-  }
+const getSortKey = (
+  order: string | undefined,
+  direction: string | undefined,
+): { key: string; descending: boolean } => {
+  const { key, descending } = ((): { key: string; descending: boolean } => {
+    switch (order) {
+      case SORT_ORDER.ALPHABETICAL:
+        return { key: 'alphabetical', descending: false };
+      case SORT_ORDER.ADDED:
+        return { key: 'createdAt', descending: true };
+      case SORT_ORDER.NEWEST:
+        return { key: 'publicDate', descending: true };
+      case SORT_ORDER.POPULARITY:
+        return { key: 'views', descending: true };
+      case SORT_ORDER.LIKES:
+        return { key: 'likes', descending: true };
+      default:
+        return { key: 'updatedAt', descending: true };
+    }
+  })();
+  if (direction === SORT_DIRECTION.ASC) return { key, descending: false };
+  if (direction === SORT_DIRECTION.DESC) return { key, descending: true };
+  return { key, descending };
 };
 
 const parseIsoDate = (value: string | undefined): number => {
@@ -274,7 +299,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       const url = new URL(`${apiUrl}/manga`);
       url.searchParams.set('limit', String(PAGE_SIZE));
       url.searchParams.set('offset', String(offset));
-      const sort = getSortKey(params.order);
+      const sort = getSortKey(params.order, params.direction);
       url.searchParams.set('sortKey', sort.key);
       url.searchParams.set('sortDescending', String(sort.descending));
       if (params.query) url.searchParams.set('query', params.query);
@@ -377,12 +402,14 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       isAdult: false,
       requiresVpn: false,
       sortOrders: [
-        SORT_ORDER.UPDATED,
-        SORT_ORDER.NEWEST,
         SORT_ORDER.POPULARITY,
         SORT_ORDER.ALPHABETICAL,
+        SORT_ORDER.LIKES,
+        SORT_ORDER.ADDED,
+        SORT_ORDER.UPDATED,
+        SORT_ORDER.NEWEST,
       ],
-      supportsDirection: false,
+      supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: false,
       isFiltersSupported: true,
