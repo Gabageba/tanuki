@@ -1,7 +1,7 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { CONTENT_RATING, MANGA_TYPE, SORT_ORDER } from '@tanuki/contracts';
-import { createWaMangaParser } from '../src/sources/wamanga';
+import { CONTENT_RATING, FILTER_TYPE, MANGA_TYPE, SORT_ORDER } from '@tanuki/contracts';
+import { createWaMangaParser, WAMANGA_FILTER_GROUP } from '../src/sources/wamanga';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
@@ -172,5 +172,74 @@ describe('WaManga parser conformance', () => {
       expect(page.url).toMatch(/^https?:\/\//);
     }
     expect(pages[0]!.url).toBe(`https://${DOMAIN}/files/001.jpg`);
+  });
+
+  it('getFilters: type/status/translationStatus/pegiRating checkboxes plus a year RANGE', async () => {
+    const groups = await parser.getFilters!();
+    expect(groups.map((g) => g.id)).toEqual([
+      WAMANGA_FILTER_GROUP.TYPE,
+      WAMANGA_FILTER_GROUP.STATUS,
+      WAMANGA_FILTER_GROUP.TRANSLATION_STATUS,
+      WAMANGA_FILTER_GROUP.AGE_RATING,
+      WAMANGA_FILTER_GROUP.RELEASE_YEAR,
+    ]);
+
+    const type = groups.find((g) => g.id === WAMANGA_FILTER_GROUP.TYPE)!;
+    expect(type.type).toBe(FILTER_TYPE.CHECKBOX);
+    expect(type.options.map((o) => o.key)).toEqual([
+      'manga',
+      'manhwa',
+      'manhua',
+      'comic',
+      'manuscript',
+    ]);
+
+    const status = groups.find((g) => g.id === WAMANGA_FILTER_GROUP.STATUS)!;
+    expect(status.type).toBe(FILTER_TYPE.CHECKBOX);
+    expect(status.options.map((o) => o.key)).toEqual([
+      'announced',
+      'ongoing',
+      'hiatus',
+      'completed',
+      'abandoned',
+      'cancelled',
+      'unknown',
+    ]);
+
+    const translationStatus = groups.find((g) => g.id === WAMANGA_FILTER_GROUP.TRANSLATION_STATUS)!;
+    expect(translationStatus.type).toBe(FILTER_TYPE.CHECKBOX);
+    expect(translationStatus.options).toEqual(status.options);
+
+    const ageRating = groups.find((g) => g.id === WAMANGA_FILTER_GROUP.AGE_RATING)!;
+    expect(ageRating.type).toBe(FILTER_TYPE.CHECKBOX);
+    expect(ageRating.options.map((o) => o.key)).toEqual(['3+', '6+', '12+', '16+', '18+']);
+
+    const releaseYear = groups.find((g) => g.id === WAMANGA_FILTER_GROUP.RELEASE_YEAR)!;
+    expect(releaseYear.type).toBe(FILTER_TYPE.RANGE);
+    expect(releaseYear.options).toEqual([]);
+    expect(releaseYear.settings?.range).toMatchObject({ min: 1990, format: 'year' });
+  });
+
+  it('getList with filters: types/statuses/translationStatuses/pegiRatings repeated, year via From/To', async () => {
+    const fresh = setUpFixtures();
+    await createWaMangaParser(makeContext(fresh)).getList({
+      offset: 0,
+      limit: 20,
+      filters: [
+        { groupId: WAMANGA_FILTER_GROUP.TYPE, key: 'manhwa' },
+        { groupId: WAMANGA_FILTER_GROUP.TYPE, key: 'manga' },
+        { groupId: WAMANGA_FILTER_GROUP.STATUS, key: 'ongoing' },
+        { groupId: WAMANGA_FILTER_GROUP.TRANSLATION_STATUS, key: 'completed' },
+        { groupId: WAMANGA_FILTER_GROUP.AGE_RATING, key: '16+' },
+        { groupId: WAMANGA_FILTER_GROUP.RELEASE_YEAR, range: { min: 2015, max: 2020 } },
+      ],
+    });
+    const url = new URL(fresh.requests[0]!.url);
+    expect(url.searchParams.getAll('types')).toEqual(['manhwa', 'manga']);
+    expect(url.searchParams.getAll('statuses')).toEqual(['ongoing']);
+    expect(url.searchParams.getAll('translationStatuses')).toEqual(['completed']);
+    expect(url.searchParams.getAll('pegiRatings')).toEqual(['16+']);
+    expect(url.searchParams.get('releaseYearFrom')).toBe('2015');
+    expect(url.searchParams.get('releaseYearTo')).toBe('2020');
   });
 });
