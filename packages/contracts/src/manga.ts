@@ -71,6 +71,7 @@ export const MangaSchema = z.object({
   rating: z.number().min(0).max(10).nullable(), // приведено к единой шкале 0..10
   likes: z.number().nullable(), // неограниченный счётчик лайков/плюсиков, если source не даёт rating
   chaptersCount: z.number().nullable(),
+  pages: z.number().nullable(), // число страниц тайтла целиком, если source отдаёт его на уровне манги
 
   publicUrl: z.string(), // ссылка на страницу источника — обязательна
 });

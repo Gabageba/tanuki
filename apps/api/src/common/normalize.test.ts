@@ -66,6 +66,11 @@ describe('normalizeManga', () => {
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ likes: 46 })).likes).toBe(46);
   });
 
+  it('passes pages through, defaulting to null when the parser omits them', () => {
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).pages).toBeNull();
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ pages: 24 })).pages).toBe(24);
+  });
+
   it('passes type/year through, defaulting to null when the parser omits them', () => {
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).type).toBeNull();
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).year).toBeNull();

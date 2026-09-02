@@ -85,6 +85,7 @@ export const normalizeManga = (
     rating: raw.rating >= 0 ? Math.round(raw.rating * 1000) / 100 : null,
     likes: raw.likes ?? null,
     chaptersCount: raw.chapters?.length ?? raw.chaptersCount ?? null,
+    pages: raw.pages ?? null,
     publicUrl: raw.publicUrl,
   };
 };

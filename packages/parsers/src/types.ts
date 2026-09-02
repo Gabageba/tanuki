@@ -63,6 +63,10 @@ export type RawManga = {
    *  ceiling, so it can't be normalized onto the 0..10 scale. Omitted where the source has no
    *  such counter. */
   likes?: number | null;
+  /** Total page count of the title itself, for sources whose catalog entry is a single release
+   *  (a oneshot or gallery) rather than a series split into chapters — distinct from a chapter's
+   *  own page list (RawPage). Omitted where the source has no such counter. */
+  pages?: number | null;
   /** Why the source won't hand over the chapters (geo-block, takedown, paywall) — independent of
    *  `state`, which is about publication, not access. Omitted where the source doesn't restrict
    *  this title. */

@@ -30,4 +30,10 @@ export const FILTER_GROUP = {
   CONTENT_STATUS: 'contentStatus',
   COUNTRY: 'country',
   AVERAGE_RATING: 'averageRating',
+  AUTHOR: 'author',
+  TRANSLATOR: 'translator',
+  SERIES: 'series',
+  VIEWS: 'views',
+  LIKES: 'likes',
+  PAGES: 'pages',
 } as const;

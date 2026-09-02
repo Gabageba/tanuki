@@ -13,9 +13,10 @@ type Props = {
 
 function MangaCard({ manga }: Props) {
   const metaItems = [
-    manga.type && getLabelByMangaType(manga.type),
-    manga.year && String(manga.year),
-    manga.chaptersCount && `${manga.chaptersCount} гл.`,
+    !!manga.type && getLabelByMangaType(manga.type),
+    !!manga.year && String(manga.year),
+    !!manga.chaptersCount && `${manga.chaptersCount} гл.`,
+    !manga.chaptersCount && !!manga.pages && `${manga.pages} стр.`,
   ].filter((item): item is string => Boolean(item));
 
   return (
