@@ -26,22 +26,24 @@ function MangaCard({ manga }: Props) {
       <Stack gap={8}>
         <MangaImage manga={manga} />
         <Stack gap={4}>
-          <Group
-            gap={manga.type === MANGA_TYPE.MANHUA && (manga.chaptersCount || 0) >= 1000 ? 2 : 4}
-          >
-            {metaItems.map((item, index) => (
-              <Fragment key={item}>
-                {index > 0 && (
+          {!!metaItems.length && (
+            <Group
+              gap={manga.type === MANGA_TYPE.MANHUA && (manga.chaptersCount || 0) >= 1000 ? 2 : 4}
+            >
+              {metaItems.map((item, index) => (
+                <Fragment key={item}>
+                  {index > 0 && (
+                    <Text c="dimmed" fz={12} lh={1}>
+                      <MidDot />
+                    </Text>
+                  )}
                   <Text c="dimmed" fz={12} lh={1}>
-                    <MidDot />
+                    {item}
                   </Text>
-                )}
-                <Text c="dimmed" fz={12} lh={1}>
-                  {item}
-                </Text>
-              </Fragment>
-            ))}
-          </Group>
+                </Fragment>
+              ))}
+            </Group>
+          )}
           <Text lineClamp={2} lh={1}>
             {manga.title}
           </Text>

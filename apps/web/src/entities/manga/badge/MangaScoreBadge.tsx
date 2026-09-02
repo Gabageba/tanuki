@@ -20,6 +20,7 @@ function MangaScoreBadge({ manga }: Props) {
       pos="absolute"
       bottom={6}
       right={6}
+      style={{ zIndex: 1 }}
       color="white"
       size="lg"
       fw={400}

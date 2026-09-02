@@ -16,6 +16,7 @@ function MangaAdultBadge({ contentRating }: Props) {
       pos="absolute"
       top={6}
       right={6}
+      style={{ zIndex: 1 }}
       color="var(--mantine-color-red-2)"
       size="lg"
       fw={400}

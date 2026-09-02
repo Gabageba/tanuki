@@ -1,9 +1,26 @@
 .card {
   text-decoration: none;
   color: inherit;
+
+  &:hover {
+    color: var(--mantine-primary-color-filled);
+  }
+}
+
+.wrapper {
+  overflow: hidden;
+  border-radius: var(--mantine-radius-md);
 }
 
 .cover {
   aspect-ratio: 3 / 4;
   object-fit: cover;
+}
+
+.image {
+  transition: transform 0.2s ease;
+
+  .card:hover & {
+    transform: scale(1.05);
+  }
 }

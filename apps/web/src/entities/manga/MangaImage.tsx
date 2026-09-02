@@ -15,7 +15,7 @@ function MangaImage({ manga }: Props) {
   const [isCoverLoading, setIsCoverLoading] = useState(true);
 
   return (
-    <Box pos="relative">
+    <Box pos="relative" className={styles.wrapper}>
       <MangaAdultBadge contentRating={manga.contentRating} />
       <MangaScoreBadge manga={manga} />
       {isCoverBroken || !manga.coverUrl ? (
@@ -32,7 +32,7 @@ function MangaImage({ manga }: Props) {
             alt={manga.title}
             loading="lazy"
             decoding="async"
-            className={styles.cover}
+            className={`${styles.cover} ${styles.image}`}
             style={isCoverLoading ? { visibility: 'hidden' } : undefined}
             onLoad={() => setIsCoverLoading(false)}
             onError={() => setIsCoverBroken(true)}
