@@ -1,4 +1,4 @@
-import type { Cheerio } from 'cheerio';
+import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
@@ -42,6 +42,7 @@ import type {
   CatalogCategoryJson,
   CatalogItemJson,
   CatalogSearchResponseJson,
+  GroupleFilterGroup,
   GroupleTranslationStatus,
 } from './models';
 
@@ -117,6 +118,103 @@ const parseGroupleFilterMaps = (html: string): Record<string, Record<string, str
 
 const optionsFromMap = (map: Record<string, string> | undefined): RawFilterOption[] =>
   Object.entries(map ?? {}).map(([key, title]) => ({ key, title, count: null }));
+
+/**
+ * AllHentai's `/search/advanced` never got migrated to the `window.__FILTERS` JSON template the
+ * rest of the network uses (verified live: authenticated fetch returns 200 with zero
+ * `window.__FILTERS.*` assignments) — it's still the older plain HTML form, one `<div
+ * class="form-group row">` per axis, options as `<li class="property">` checkboxes toggled by
+ * `rm_h.search.clickOption(this, 'el_855')`. That toggle (seen in the site's own bundled JS)
+ * cycles each hidden input's `name`/`value` through unset → `name=<id>, value="in"` → `value=
+ * "ex"` → unset again, so the id namespace and in/ex semantics are identical to the JSON
+ * template's includeElementIds/excludeElementIds — only the scrape shape differs. Confirmed
+ * live against `/api/catalog/search` that includeElementIds/includeSearchFilter/
+ * includeProductionStatuses/includeTranslationStatuses all accept these same keys unchanged.
+ * "Пародии"/"Тэги"/"Персона" are deliberately not scraped here — the site itself only offers
+ * them as an ajax type-ahead with no exhaustive option list (`elementsByType` returns `null`
+ * until a query is typed), which doesn't fit any FILTER_TYPE this app supports.
+ */
+const LEGACY_FORM_FILTER_GROUPS: Partial<
+  Record<string, { id: GroupleFilterGroup; prefix: string; upperKey?: boolean }>
+> = {
+  Жанры: { id: GROUPLE_FILTER_GROUP.GENRE, prefix: 'el_' },
+  Категории: { id: GROUPLE_FILTER_GROUP.CATEGORY, prefix: 'el_' },
+  Фильтры: { id: GROUPLE_FILTER_GROUP.SEARCH_FILTER, prefix: 's_', upperKey: true },
+  'Статус выхода': { id: GROUPLE_FILTER_GROUP.PRODUCTION_STATUS, prefix: 'prod_' },
+  'Статус перевода': { id: GROUPLE_FILTER_GROUP.TRANSLATION_STATUS, prefix: 'trans_' },
+};
+
+const parseLegacyFormFilterGroup = (
+  $: CheerioAPI,
+  $group: Cheerio<AnyNode>,
+  labelText: string,
+): RawFilterGroup | null => {
+  const spec = LEGACY_FORM_FILTER_GROUPS[labelText];
+  if (!spec) return null;
+  const options: RawFilterOption[] = [];
+  $group.find('li.property').each((_, li) => {
+    const $li = $(li);
+    const name = attrOrNull($li.find('input.hide').first(), 'name');
+    const title = attrOrNull($li.find('label span.js-link').first(), 'title');
+    if (!name || !title || !name.startsWith(spec.prefix)) return;
+    const rawKey = name.slice(spec.prefix.length);
+    options.push({ key: spec.upperKey ? rawKey.toUpperCase() : rawKey, title, count: null });
+  });
+  if (options.length === 0) return null;
+  return {
+    id: spec.id,
+    title: labelText,
+    type:
+      spec.id === GROUPLE_FILTER_GROUP.GENRE
+        ? FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE
+        : FILTER_TYPE.CHECKBOX_EXCLUDE,
+    options,
+  };
+};
+
+const parseLegacyFormYearGroup = ($group: Cheerio<AnyNode>): RawFilterGroup | null => {
+  const slider = $group.find('input.range-input[name=years]').first();
+  const min = parseIntOrNull(attrOrNull(slider, 'data-slider-min'));
+  const max = parseIntOrNull(attrOrNull(slider, 'data-slider-max'));
+  if (min === null || max === null) return null;
+  return {
+    id: GROUPLE_FILTER_GROUP.YEAR,
+    title: 'Год выпуска',
+    type: FILTER_TYPE.RANGE,
+    options: [],
+    settings: {
+      range: { min, max, format: RANGE_FORMAT.YEAR },
+      presets: getYearRangePresets(min, max, YEAR_RANGE_CUTOFF),
+    },
+  };
+};
+
+const LEGACY_FORM_GROUP_ORDER: GroupleFilterGroup[] = [
+  GROUPLE_FILTER_GROUP.GENRE,
+  GROUPLE_FILTER_GROUP.CATEGORY,
+  GROUPLE_FILTER_GROUP.PRODUCTION_STATUS,
+  GROUPLE_FILTER_GROUP.TRANSLATION_STATUS,
+  GROUPLE_FILTER_GROUP.YEAR,
+  GROUPLE_FILTER_GROUP.SEARCH_FILTER,
+];
+
+const parseLegacyFormFilters = ($: CheerioAPI): RawFilterGroup[] => {
+  const byId = new Map<string, RawFilterGroup>();
+  $('#advanced > .form-group.row').each((_, el) => {
+    const $group = $(el);
+    const $label = $group.find('> .col-sm-2.col-form-label').first();
+    if ($label.length === 0) return;
+    const labelText = ($label.find('> a').first().text() || $label.text()).trim();
+    const group =
+      labelText === 'Год выпуска'
+        ? parseLegacyFormYearGroup($group)
+        : parseLegacyFormFilterGroup($, $group, labelText);
+    if (group) byId.set(group.id, group);
+  });
+  return LEGACY_FORM_GROUP_ORDER.map((id) => byId.get(id)).filter(
+    (g): g is RawFilterGroup => g !== undefined,
+  );
+};
 
 const extractJsonAfter = (data: string, pos: number): string | null => {
   const tail = data.slice(pos);
@@ -379,6 +477,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     const limitation = item.elements?.find(
       (el) => el.typeName === GROUPLE_ELEMENT_TYPE.LIMITATION,
     )?.name;
+    const year = item.elements?.find((el) => el.typeName === GROUPLE_ELEMENT_TYPE.YEAR)?.name;
 
     return {
       id: generateUid(cfg.id, relUrl),
@@ -399,6 +498,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       source: cfg.id,
       type: mangaTypeByCategory(item.category),
       chaptersCount: item.chaptersCount ?? null,
+      year: year ? (parseIntOrNull(year) ?? null) : null,
     };
   };
 
@@ -526,10 +626,14 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
   };
 
   const fetchFilters = async (): Promise<RawFilterGroup[]> => {
-    const response = await ctx.http.get(`https://${domain}/search/advanced`);
-    const html = response.text();
+    const doc = await ctx.http.getHtml(`https://${domain}/search/advanced`);
+    const html = doc.$.html();
     const maps = parseGroupleFilterMaps(html);
     const yearsMatch = GROUPLE_FILTER_YEARS_REGEX.exec(html);
+
+    if (Object.keys(maps).length === 0 && !yearsMatch) {
+      return parseLegacyFormFilters(doc.$);
+    }
 
     const groups: RawFilterGroup[] = [];
     const genres = optionsFromMap(maps.genre);
@@ -650,6 +754,17 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       .toArray()
       .some((el) => ownText(doc.$(el)).includes(NSFW_ALERT));
 
+    // `data-rating-status="none"` is the site's own marker for "0 votes" — its value text is a
+    // literal "0", which would otherwise be indistinguishable from a genuine bottom score.
+    const ratingValueEl = mangaBox
+      .find('.cr-hero-rating__item--main .cr-hero-rating__value')
+      .first();
+    const ratingValue = parseFloatOrNull(textOrNull(ratingValueEl));
+    const rating =
+      ratingValue !== null && attrOrNull(ratingValueEl, 'data-rating-status') !== 'none'
+        ? ratingValue / 10
+        : RATING_UNKNOWN;
+
     const tagSelector = [
       'div.subject-meta a.element-link',
       '.subject-meta a.element-link',
@@ -721,7 +836,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         .filter((t): t is string => t !== null),
       url: mangaUrl,
       publicUrl: finalUrl,
-      rating: RATING_UNKNOWN,
+      rating,
       contentRating: isRestricted
         ? null
         : hasNsfwAlert
