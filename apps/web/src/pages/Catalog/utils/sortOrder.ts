@@ -51,6 +51,8 @@ export const getSortOrderLabel = (order: SortOrder): string => {
       return 'По просмотрам';
     case SORT_ORDER.CHAPTERS:
       return 'По Кол-ву глав';
+    case SORT_ORDER.PAGES:
+      return 'По Кол-ву страниц';
     case SORT_ORDER.BOOKMARKS:
       return 'По закладкам';
     case SORT_ORDER.ALPHABETICAL:

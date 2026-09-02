@@ -1,4 +1,4 @@
-import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_DIRECTION, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
@@ -77,15 +77,24 @@ const assetUrl = (file: FileRef | null): string | null => {
   return file?.filename_disk ? `${CDN_BASE}/${file.filename_disk}` : null;
 };
 
-const sortFor = (order: string | undefined): string => {
+const sortFieldFor = (order: string | undefined): string => {
   switch (order) {
     case SORT_ORDER.POPULARITY:
-      return '-views';
+      return 'views';
     case SORT_ORDER.RATING:
-      return '-likes';
+      return 'likes';
+    case SORT_ORDER.PAGES:
+      return 'pages';
     default:
-      return '-date_created';
+      return 'date_created';
   }
+};
+
+/** Directus takes direction as a `-` prefix on the field, not a separate param — verified live
+ *  that `sort=<field>` and `sort=-<field>` both work for every field used below. */
+const sortFor = (order: string | undefined, direction: string | undefined): string => {
+  const field = sortFieldFor(order);
+  return direction === SORT_DIRECTION.ASC ? field : `-${field}`;
 };
 
 export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
@@ -121,7 +130,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
     const query: Record<string, string> = {
       limit: String(params.limit),
       offset: String(params.offset),
-      sort: sortFor(params.order),
+      sort: sortFor(params.order, params.direction),
       fields: 'id,name,slug,cover.filename_disk',
     };
     if (params.query?.trim()) query['search'] = params.query.trim();
@@ -232,8 +241,8 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       isBroken: false,
       isAdult: true,
       requiresVpn: true,
-      sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
-      supportsDirection: false,
+      sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING, SORT_ORDER.PAGES],
+      supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

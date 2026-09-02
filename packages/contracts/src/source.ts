@@ -43,6 +43,7 @@ export const SORT_ORDER = {
   VIEWS_WEEK: 'viewsWeek',
   VIEWS_MONTH: 'viewsMonth',
   CHAPTERS: 'chapters',
+  PAGES: 'pages',
   BOOKMARKS: 'bookmarks',
   ALPHABETICAL: 'alphabetical',
   ALPHABETICAL_RU: 'alphabeticalRu',
