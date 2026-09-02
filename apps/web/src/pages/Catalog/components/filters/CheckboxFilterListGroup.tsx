@@ -1,7 +1,6 @@
 import type { ScrollAreaAutosizeProps } from '@mantine/core';
-import { ScrollArea, SimpleGrid } from '@mantine/core';
 import { FILTER_TYPE, type FilterGroup, type FilterSelection } from '@tanuki/contracts';
-import CheckboxFilterOption from './CheckboxFilterOption';
+import VirtualizedCheckboxGrid from './VirtualizedCheckboxGrid';
 import { getOptionValue, setOptionValue } from '../../utils/filterSelection';
 
 type Props = {
@@ -11,21 +10,15 @@ type Props = {
   scrollAreaProps?: ScrollAreaAutosizeProps;
 };
 
-function CheckboxFilterListGroup({ group, selection, onChange, scrollAreaProps = {} }: Props) {
+function CheckboxFilterListGroup({ group, selection, onChange, scrollAreaProps }: Props) {
   return (
-    <ScrollArea.Autosize flex={1} mih={0} type="auto" offsetScrollbars="y" {...scrollAreaProps}>
-      <SimpleGrid cols={{ base: 1, xs: 2 }}>
-        {group.options.map((option) => (
-          <CheckboxFilterOption
-            option={option}
-            key={option.key}
-            withExclude={group.type === FILTER_TYPE.CHECKBOX_EXCLUDE && option.excludable !== false}
-            value={getOptionValue(selection, group.id, option.key)}
-            onChange={(value) => onChange(setOptionValue(selection, group.id, option.key, value))}
-          />
-        ))}
-      </SimpleGrid>
-    </ScrollArea.Autosize>
+    <VirtualizedCheckboxGrid
+      options={group.options}
+      withExclude={group.type === FILTER_TYPE.CHECKBOX_EXCLUDE}
+      getValue={(key) => getOptionValue(selection, group.id, key)}
+      onChange={(key, value) => onChange(setOptionValue(selection, group.id, key, value))}
+      scrollAreaProps={scrollAreaProps}
+    />
   );
 }
 

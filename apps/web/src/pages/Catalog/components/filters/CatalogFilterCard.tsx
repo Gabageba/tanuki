@@ -32,37 +32,41 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
           orientation="vertical"
           classNames={{ tab: styles.tab, list: styles.list }}
           radius={0}
-          keepMounted={false}
+          keepMounted
         >
-          <Tabs.List w={270} ref={listRef}>
-            {groups.map((group) => {
-              const { included, excluded } = countGroupSelections(draft, group.id);
+          <Tabs.List w={270}>
+            {/* Measured separately from Tabs.List itself, which stays stretched to the panel's
+              height so the list/panel divider reaches all the way down — see CatalogFilter.module.scss. */}
+            <div ref={listRef}>
+              {groups.map((group) => {
+                const { included, excluded } = countGroupSelections(draft, group.id);
 
-              return (
-                <Tabs.Tab key={group.id} value={group.id}>
-                  <Group justify="space-between">
-                    <CatalogFilterGroupTitle group={group} />
-                    {(included || excluded) && (
-                      <Group mt={1} gap={8}>
-                        {!!included && (
-                          <Text fz={12} c="terracotta">
-                            {included}
-                          </Text>
-                        )}
-                        {!!excluded && (
-                          <Text fz={12} c="red">
-                            -{excluded}
-                          </Text>
-                        )}
-                      </Group>
-                    )}
-                  </Group>
-                </Tabs.Tab>
-              );
-            })}
+                return (
+                  <Tabs.Tab key={group.id} value={group.id} w="100%">
+                    <Group justify="space-between">
+                      <CatalogFilterGroupTitle group={group} />
+                      {(included || excluded) && (
+                        <Group mt={1} gap={8}>
+                          {!!included && (
+                            <Text fz={12} c="terracotta">
+                              {included}
+                            </Text>
+                          )}
+                          {!!excluded && (
+                            <Text fz={12} c="red">
+                              -{excluded}
+                            </Text>
+                          )}
+                        </Group>
+                      )}
+                    </Group>
+                  </Tabs.Tab>
+                );
+              })}
+            </div>
           </Tabs.List>
           {groups?.map((group) => (
-            <Tabs.Panel key={group.id} value={group.id} p={'var(--mantine-spacing-sm)'}>
+            <Tabs.Panel key={group.id} value={group.id} p={'var(--mantine-spacing-sm)'} miw={0}>
               <Stack h="100%">
                 <Group>
                   <Title order={4}>{group.title}</Title>

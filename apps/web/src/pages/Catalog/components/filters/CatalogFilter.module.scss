@@ -5,10 +5,15 @@
 }
 
 .list {
-  // Vertical Tabs stretches the list to match the panel's height by default. That would feed
-  // back into the panel's own height calculation (which measures the list), so the list is kept
-  // at its own natural height instead.
-  align-self: flex-start;
+  // Vertical Tabs draws the list/panel divider as a pseudo-element sized to the list's own box,
+  // so the list must stay stretched to the panel's height (the default) for that divider to
+  // reach all the way down. The height used for the panel's own scroll-area calculation is
+  // measured separately, off an inner wrapper — see CatalogFilterCard.
+
+  // A flex item's default min-width is content-based, so without this the list gets squeezed
+  // narrower whenever the panel's own content (e.g. a wide checkbox grid) wants more room than
+  // is available — keep it pinned at its own width instead.
+  flex-shrink: 0;
 }
 
 .pill {

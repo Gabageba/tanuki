@@ -56,14 +56,19 @@ function CheckboxFilterOption({ option, withExclude, value, onChange }: Props) {
       {...checkboxProps}
       onChange={handleChange}
       label={option.title}
+      title={option.title}
       key={option.key}
       w="100%"
       styles={{
         labelWrapper: {
           flex: 1,
+          minWidth: 0,
         },
         label: {
           flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
         },
       }}
     />
