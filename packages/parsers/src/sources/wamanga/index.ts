@@ -1,6 +1,7 @@
 import {
   CONTENT_RATING,
   MANGA_STATE,
+  MANGA_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type MangaState,
@@ -8,7 +9,14 @@ import {
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
+import type {
+  RawManga,
+  RawChapter,
+  RawContentRating,
+  RawMangaType,
+  RawPage,
+  RawTag,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
@@ -32,6 +40,10 @@ type MangaJson = {
   isAdult?: boolean;
   description?: string;
   teams?: { name?: string }[];
+  year?: number;
+  type?: string;
+  pegiRating?: string;
+  likes?: number;
 };
 
 type ChapterJson = {
@@ -57,6 +69,43 @@ const parseState = (status: string | undefined): MangaState | null => {
     case 'paused':
     case 'frozen':
       return MANGA_STATE.PAUSED;
+    default:
+      return null;
+  }
+};
+
+/** `pegiRating` per the site's own OpenAPI spec (https://wamanga.ru/api/docs-json): one of
+ *  3+ | 6+ | 12+ | 16+ | 18+. `isAdult` overrides it — a title can be flagged adult regardless
+ *  of a lower pegi tier. */
+const parseContentRating = (jo: { isAdult?: boolean; pegiRating?: string }): RawContentRating => {
+  if (jo.isAdult) return CONTENT_RATING.ADULT;
+  switch (jo.pegiRating) {
+    case '3+':
+    case '6+':
+      return CONTENT_RATING.SAFE;
+    case '12+':
+    case '16+':
+      return CONTENT_RATING.SUGGESTIVE;
+    case '18+':
+      return CONTENT_RATING.ADULT;
+    default:
+      return CONTENT_RATING.SAFE;
+  }
+};
+
+/** `type` per the site's own OpenAPI spec: manga | manhwa | manhua | comic | manuscript. */
+const parseMangaType = (raw: string | undefined): RawMangaType | null => {
+  switch (raw) {
+    case 'manga':
+      return MANGA_TYPE.MANGA;
+    case 'manhwa':
+      return MANGA_TYPE.MANHWA;
+    case 'manhua':
+      return MANGA_TYPE.MANHUA;
+    case 'comic':
+      return MANGA_TYPE.COMICS;
+    case 'manuscript':
+      return MANGA_TYPE.OTHER;
     default:
       return null;
   }
@@ -119,8 +168,10 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       altTitles: collectAltTitles(jo),
       url: jo.id,
       publicUrl: `https://${domain}/manga/${jo.slug}`,
+      // The site has no bounded 0..10 rating axis, only an unbounded "likes" tally — see
+      // RawManga.likes doc on why the two can't be merged.
       rating: RATING_UNKNOWN,
-      contentRating: jo.isAdult ? CONTENT_RATING.ADULT : CONTENT_RATING.SAFE,
+      contentRating: parseContentRating(jo),
       coverUrl: jo.coverUrl ? toAbsoluteUrl(jo.coverUrl, domain) : null,
       largeCoverUrl: jo.imageUrl ? toAbsoluteUrl(jo.imageUrl, domain) : null,
       tags: parseTags(jo),
@@ -129,6 +180,9 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       description: null,
       chapters: null,
       source: SOURCE_ID,
+      type: parseMangaType(jo.type),
+      year: jo.year ?? null,
+      likes: jo.likes ?? null,
     };
   };
 

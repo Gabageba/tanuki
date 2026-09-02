@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { SORT_ORDER } from '@tanuki/contracts';
+import { CONTENT_RATING, MANGA_TYPE, SORT_ORDER } from '@tanuki/contracts';
 import { createWaMangaParser } from '../src/sources/wamanga';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -20,6 +20,10 @@ const LIST_JSON = JSON.stringify([
     statusTitle: 'ongoing',
     authors: ['Oda Eiichiro'],
     isAdult: false,
+    year: 1997,
+    type: 'manga',
+    pegiRating: '16+',
+    likes: 26,
   },
 ]);
 
@@ -36,6 +40,9 @@ const DETAILS_JSON = JSON.stringify({
   isAdult: false,
   description: 'Описание тайтла.',
   teams: [{ name: 'TeamA' }],
+  year: 1997,
+  type: 'manga',
+  pegiRating: '16+',
 });
 
 const CHAPTERS_JSON = JSON.stringify([
@@ -98,6 +105,10 @@ describe('WaManga parser conformance', () => {
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
     expect(item!.altTitles).toEqual(['One Piece']);
+    expect(item!.contentRating).toBe(CONTENT_RATING.SUGGESTIVE);
+    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.year).toBe(1997);
+    expect(item!.likes).toBe(26);
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
@@ -111,6 +122,30 @@ describe('WaManga parser conformance', () => {
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
+  });
+
+  it('getList: pegiRating maps to contentRating tiers, isAdult overrides to adult', async () => {
+    const cases: [string | undefined, boolean, string][] = [
+      ['3+', false, CONTENT_RATING.SAFE],
+      ['6+', false, CONTENT_RATING.SAFE],
+      ['12+', false, CONTENT_RATING.SUGGESTIVE],
+      ['16+', false, CONTENT_RATING.SUGGESTIVE],
+      ['18+', false, CONTENT_RATING.ADULT],
+      ['6+', true, CONTENT_RATING.ADULT],
+      [undefined, false, CONTENT_RATING.SAFE],
+    ];
+    for (const [pegiRating, isAdult, expected] of cases) {
+      const fresh = new FakeHttpClient();
+      fresh.register((url) => url.includes('/api/v1/manga?'), {
+        status: 200,
+        body: JSON.stringify([
+          { id: MANGA_ID, slug: 'one-piece', title: 'Ван-Пис', pegiRating, isAdult },
+        ]),
+        contentType: 'application/json',
+      });
+      const items = await createWaMangaParser(makeContext(fresh)).getList({ offset: 0, limit: 20 });
+      expect(items[0]!.contentRating).toBe(expected);
+    }
   });
 
   it('getList: defaults to updatedAt desc, maps the other sort orders', async () => {
