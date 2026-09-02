@@ -77,6 +77,7 @@ type MangaCardJson = {
   type?: string;
   releasedOn?: string;
   chapters?: number;
+  rating?: string;
 };
 
 /** One entry of `allLabels(subjectType: MANGA)` — a flat list mixing category roots (`depth: 0`,
@@ -522,7 +523,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       url,
       publicUrl: `https://${domain}/manga/${info.slug}`,
       rating: RATING_UNKNOWN,
-      contentRating: null,
+      contentRating: parseContentRating(info.rating),
       coverUrl: cover,
       largeCoverUrl: cover,
       tags: [],
@@ -943,6 +944,7 @@ query fetchMangas(
         type
         releasedOn
         chapters
+        rating
       }
     }
     pageInfo {

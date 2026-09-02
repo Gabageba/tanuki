@@ -18,6 +18,7 @@ import { getYearRangePresets } from '../../core/filters/range-presets';
 import type {
   RawManga,
   RawChapter,
+  RawContentRating,
   RawFilterGroup,
   RawFilterOption,
   RawMangaType,
@@ -350,6 +351,23 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     }
   };
 
+  /** Catalog "limitation" element — the site's own MPAA-style age-rating badge (PG/PG-13/R/NC-17),
+   *  attached per title rather than per source. Falls through to cfg.isNsfw when a title carries
+   *  no badge at all, same as the un-tagged default used before this was per-title. */
+  const contentRatingByLimitation = (name: string | undefined): RawContentRating | null => {
+    switch (name) {
+      case 'PG':
+      case 'PG-13':
+        return CONTENT_RATING.SAFE;
+      case 'R':
+        return CONTENT_RATING.SUGGESTIVE;
+      case 'NC-17':
+        return CONTENT_RATING.ADULT;
+      default:
+        return null;
+    }
+  };
+
   const mapCatalogItem = (item: CatalogItemJson): RawManga => {
     const relUrl = `/${item.elementId.linkName}`;
     const tags: RawTag[] = (item.elements ?? [])
@@ -358,6 +376,9 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
           el.typeName === GROUPLE_ELEMENT_TYPE.GENRE || el.typeName === GROUPLE_ELEMENT_TYPE.TAG,
       )
       .map((el) => ({ title: toTitleCase(el.name), key: String(el.id), source: cfg.id }));
+    const limitation = item.elements?.find(
+      (el) => el.typeName === GROUPLE_ELEMENT_TYPE.LIMITATION,
+    )?.name;
 
     return {
       id: generateUid(cfg.id, relUrl),
@@ -366,7 +387,8 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       url: relUrl,
       publicUrl: `https://${domain}${relUrl}`,
       rating: item.rating && item.rating.voteCount > 0 ? item.rating.rate / 10 : RATING_UNKNOWN,
-      contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
+      contentRating:
+        contentRatingByLimitation(limitation) ?? (cfg.isNsfw ? CONTENT_RATING.ADULT : null),
       coverUrl: item.picUrl,
       tags,
       state: mapCatalogState(item.translationStatus),

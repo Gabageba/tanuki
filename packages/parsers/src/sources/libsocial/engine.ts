@@ -30,6 +30,7 @@ import type {
   RawFilterGroup,
   RawFilterOption,
   RawMangaType,
+  RawContentRating,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -167,6 +168,7 @@ type MangaListItemJson = {
   rating?: RatingJson;
   status?: StatusJson;
   type?: TypeJson;
+  ageRestriction?: AgeRestrictionJson;
 };
 
 type TagJson = {
@@ -319,6 +321,26 @@ const getSortBy = (order: string | undefined): string | null => {
   }
 };
 
+/** `ageRestriction` ids from `/api/constants?fields[]=ageRestriction`: 1 "6+", 2 "12+", 3 "16+",
+ *  4 "18+", 5 "18+ (RX)" — same ids across every member site, no per-site endpoint for them. */
+const AGE_RESTRICTION_RATINGS: Record<number, RawContentRating> = {
+  1: CONTENT_RATING.SAFE,
+  2: CONTENT_RATING.SAFE,
+  3: CONTENT_RATING.SUGGESTIVE,
+  4: CONTENT_RATING.ADULT,
+  5: CONTENT_RATING.ADULT,
+};
+
+/** Falls back to the member site's own NSFW-ness (Hentailib is adult-only end to end) when a
+ *  title carries no ageRestriction of its own. */
+const contentRatingFor = (
+  ageRestrictionId: number | undefined,
+  isNsfw: boolean,
+): RawContentRating => {
+  const rating = ageRestrictionId != null ? AGE_RESTRICTION_RATINGS[ageRestrictionId] : undefined;
+  return rating ?? (isNsfw ? CONTENT_RATING.ADULT : CONTENT_RATING.SAFE);
+};
+
 export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let imageServersPromise: Promise<Map<string, string>> | null = null;
@@ -346,7 +368,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       url: jo.slug_url,
       publicUrl: `https://${domain}/ru/manga/${jo.slug_url}`,
       rating: parseRating(jo.rating),
-      contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : CONTENT_RATING.SAFE,
+      contentRating: contentRatingFor(jo.ageRestriction?.id, cfg.isNsfw),
       coverUrl: jo.cover.default,
       tags: [],
       state: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
@@ -455,6 +477,9 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     url.searchParams.set('site_id[]', String(cfg.siteId));
     url.searchParams.append('fields[]', 'rate');
     url.searchParams.append('fields[]', 'rate_avg');
+    // ageRestriction is already present on each list item without being requested — api.cdnlibs.org
+    // rejects it with a 422 ("Выбранное значение для fields.N ошибочно") if it's added here, same
+    // as 'status' below on the details endpoint.
     url.searchParams.set('page', String(page));
     if (query) url.searchParams.set('q', query);
     const sortBy = getSortBy(order);
@@ -547,7 +572,6 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     // is_licensed with no chapters means the publisher pulled the scanlation for a legal release.
     const isLicensedTakedown = chapters.length === 0 && json.is_licensed === true;
     const title = json.rus_name && json.rus_name.length > 0 ? json.rus_name : json.name;
-    const ageRestrictionId = json.ageRestriction?.id;
 
     return {
       id: generateUid(cfg.id, json.id),
@@ -556,16 +580,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       url: mangaUrl,
       publicUrl: `https://${domain}/ru/manga/${mangaUrl}`,
       rating: parseRating(json.rating),
-      contentRating:
-        ageRestrictionId != null
-          ? ageRestrictionId >= 4
-            ? CONTENT_RATING.SUGGESTIVE
-            : cfg.isNsfw
-              ? CONTENT_RATING.ADULT
-              : CONTENT_RATING.SAFE
-          : cfg.isNsfw
-            ? CONTENT_RATING.ADULT
-            : CONTENT_RATING.SAFE,
+      contentRating: contentRatingFor(json.ageRestriction?.id, cfg.isNsfw),
       coverUrl: json.cover.default,
       tags: allTags,
       state: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,

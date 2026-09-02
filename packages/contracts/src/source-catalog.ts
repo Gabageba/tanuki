@@ -118,7 +118,7 @@ export const SOURCE_CATALOG = {
     isBroken: false,
     isAdult: false,
     requiresVpn: true,
-    domains: ['im.manga-chan.me'],
+    domains: ['manga-chan.me', 'im.manga-chan.me'],
   },
   henchan: {
     title: 'Хентай-тян',
