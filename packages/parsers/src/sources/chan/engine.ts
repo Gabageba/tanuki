@@ -339,6 +339,9 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
         return { title: toTagName(text), key, source: cfg.id };
       })
       .filter((t): t is RawTag => t !== null);
+    // Confusingly named by the source's own markup — `div.tags` holds a truncated description
+    // preview (ends "..."), not the genre tags (those are `div.genre`, mapped above).
+    const description = textOrNull($row.find('div.tags').first());
 
     return {
       id: generateUid(cfg.id, relUrl),
@@ -354,7 +357,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       state: null,
       authors: author ? [author] : [],
       largeCoverUrl: null,
-      description: null,
+      description,
       chapters: null,
       chaptersCount: parseListChaptersCount($row, $),
       source: cfg.id,

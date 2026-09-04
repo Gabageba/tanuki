@@ -40,6 +40,8 @@ const LIST_HTML = `<!doctype html><html><body>
           </div>
         </div>
         <div class="genre"><a href="/tags/priklyucheniya">приключения</a></div>
+        <div class="line_break"></div>
+        <div class="tags">Пираты ищут сокровища на Гранд Лайн...</div>
       </div>
     </div>
   </div>
@@ -155,6 +157,7 @@ describe('Chan parser conformance', () => {
     expect(item!.altTitles).toEqual(['Ван-Пис']);
     expect(item!.authors).toEqual(['Oda Eiichiro']);
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
+    expect(item!.description).toBe('Пираты ищут сокровища на Гранд Лайн...');
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
