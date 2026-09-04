@@ -1,6 +1,6 @@
 import { Skeleton, Stack } from '@mantine/core';
 
-function MangaCardSkeleton() {
+function MangaGridCardSkeleton() {
   return (
     <Stack gap={8}>
       <Skeleton
@@ -17,4 +17,4 @@ function MangaCardSkeleton() {
   );
 }
 
-export default MangaCardSkeleton;
+export default MangaGridCardSkeleton;

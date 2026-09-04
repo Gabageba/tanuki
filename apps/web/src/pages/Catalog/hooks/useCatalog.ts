@@ -4,6 +4,7 @@ import type { CatalogResponse, FilterSelection, SortDirection, SortOrder } from 
 import { apiFetch } from '@/shared/api/client';
 import { serializeFilters } from '../utils/filterSelection';
 import { resolveOrder } from '../utils/sortOrder';
+import type { ViewMode } from '@/shared/lib/viewMode';
 import useSource from '@/entities/source/hooks/useSource';
 
 type Params = {
@@ -12,6 +13,8 @@ type Params = {
   filters?: FilterSelection[];
   order?: SortOrder;
   direction?: SortDirection;
+  // Не участвует в запросе — часть общего params-стейта страницы только ради синхронизации с урлом.
+  viewMode?: ViewMode;
 };
 
 function useCatalog({

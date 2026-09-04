@@ -11,7 +11,7 @@ import {
   Title,
 } from '@mantine/core';
 import { useSearchParams } from 'react-router';
-import MangaCard from '@/entities/manga/MangaCard';
+import MangaCard from '@/entities/manga/card/MangaCard';
 import useSearch from './hooks/useSearch';
 import { flattenSources } from '@/entities/source/lib';
 import useSources from '@/entities/source/hooks/useSources';

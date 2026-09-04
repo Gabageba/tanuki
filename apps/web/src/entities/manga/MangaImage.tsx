@@ -1,23 +1,20 @@
-import { Box, Center, Image, Paper, Skeleton } from '@mantine/core';
+import { Center, Image, Paper, Skeleton } from '@mantine/core';
 import { useState } from 'react';
 import { ImageBrokenIcon } from '@phosphor-icons/react';
-import MangaScoreBadge from './badge/MangaScoreBadge';
 import { type Manga } from '@tanuki/contracts';
-import MangaAdultBadge from './badge/MangaAdultBadge';
-import styles from './MangaCard.module.scss';
+import styles from './Manga.module.scss';
 
 type Props = {
   manga: Manga;
+  imageClassName?: string;
 };
 
-function MangaImage({ manga }: Props) {
+function MangaImage({ manga, imageClassName }: Props) {
   const [isCoverBroken, setIsCoverBroken] = useState(false);
   const [isCoverLoading, setIsCoverLoading] = useState(true);
 
   return (
-    <Box pos="relative" className={styles.wrapper}>
-      <MangaAdultBadge contentRating={manga.contentRating} />
-      <MangaScoreBadge manga={manga} />
+    <>
       {isCoverBroken || !manga.coverUrl ? (
         <Paper>
           <Center className={styles.cover} c="dimmed">
@@ -32,14 +29,14 @@ function MangaImage({ manga }: Props) {
             alt={manga.title}
             loading="lazy"
             decoding="async"
-            className={`${styles.cover} ${styles.image}`}
+            className={`${styles.cover}${imageClassName ? ' ' + imageClassName : ''}`}
             style={isCoverLoading ? { visibility: 'hidden' } : undefined}
             onLoad={() => setIsCoverLoading(false)}
             onError={() => setIsCoverBroken(true)}
           />
         </>
       )}
-    </Box>
+    </>
   );
 }
 

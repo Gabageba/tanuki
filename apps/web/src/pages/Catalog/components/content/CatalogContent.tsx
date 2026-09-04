@@ -1,6 +1,6 @@
 import PageLayout from '@/shared/ui/PageLayout';
 import CatalogSettings from './CatalogSettings';
-import CatalogContentGrid from './CatalogContentGrid';
+import CatalogContentGrid from './grid/CatalogContentGrid';
 
 type Props = {
   sourceId: string | undefined;

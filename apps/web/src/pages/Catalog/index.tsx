@@ -6,6 +6,7 @@ import useSource from '@/entities/source/hooks/useSource';
 import CatalogContent from './components/content/CatalogContent';
 import { parseFilters } from './utils/filterSelection';
 import { parseSortDirection, parseSortOrder } from './utils/sortOrder';
+import { getStoredViewMode } from '@/shared/lib/viewMode';
 
 function Catalog() {
   const { sourceId } = useParams<{ sourceId: string }>();
@@ -21,6 +22,7 @@ function Catalog() {
         order: parseSortOrder(searchParams.get('order')),
         direction: parseSortDirection(searchParams.get('direction')),
         filters: parseFilters(searchParams.getAll('filters')),
+        viewMode: getStoredViewMode(),
       }}
     >
       <CatalogHeader source={source} isLoading={isSourceLoading} />

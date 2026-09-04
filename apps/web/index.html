@@ -7,10 +7,11 @@
     <script>
       // Выставляем схему до первой отрисовки, иначе у пользователя с тёмной темой
       // успевает моргнуть светлый фон. Ключ и значение по умолчанию продублированы
-      // из src/app/components/Providers/models.ts.
+      // из src/shared/lib/settings.ts и src/app/Providers/models.ts.
       (function () {
         try {
-          var stored = window.localStorage.getItem('tanuki-color-scheme');
+          var raw = window.localStorage.getItem('tanuki-settings');
+          var stored = raw ? JSON.parse(raw).colorScheme : null;
           var scheme =
             stored === 'light' || stored === 'dark' || stored === 'auto' ? stored : 'auto';
           var computed =

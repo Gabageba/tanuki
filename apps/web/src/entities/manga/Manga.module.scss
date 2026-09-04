@@ -1,0 +1,41 @@
+.cover {
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.card {
+  text-decoration: none;
+  color: inherit;
+  padding: 0;
+
+  &[data-view-mode='grid'] {
+    background-color: transparent !important;
+
+    &:hover {
+      color: var(--mantine-primary-color-filled);
+    }
+  }
+
+  &[data-view-mode='list'] {
+    &:hover {
+      background-color: var(--tanuki-color-hover) !important;
+    }
+  }
+}
+
+.imageWrapper {
+  overflow: hidden;
+  border-radius: var(--mantine-radius-md);
+}
+
+.image {
+  transition: transform 0.2s ease;
+
+  .card:hover & {
+    transform: scale(1.05);
+  }
+}
+
+.title {
+  text-wrap: balance;
+}

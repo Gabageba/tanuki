@@ -1,15 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Button, Grid, Group, SegmentedControl, Stack, Text } from '@mantine/core';
+import { Button, Grid, Group, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useSearchParams } from 'react-router';
-import {
-  CaretDownIcon,
-  CaretUpIcon,
-  FunnelIcon,
-  RowsIcon,
-  SquaresFourIcon,
-} from '@phosphor-icons/react';
+import { CaretDownIcon, CaretUpIcon, FunnelIcon } from '@phosphor-icons/react';
 import PageLayout from '@/shared/ui/PageLayout';
+import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { SORT_DIRECTION, type FilterSelection } from '@tanuki/contracts';
 import useSource from '@/entities/source/hooks/useSource';
 import { resolveOrder } from '../../utils/sortOrder';
@@ -21,6 +16,7 @@ import CatalogFilterCard from '../filters/CatalogFilterCard';
 import CatalogFilterDrawer from '../filters/CatalogFilterDrawer';
 import CatalogSettingsSkeleton from './CatalogSettingsSkeleton';
 import CatalogSort from './CatalogSort';
+import CatalogViewMode from './CatalogViewMode';
 
 type Props = {
   sourceId: string | undefined;
@@ -28,7 +24,13 @@ type Props = {
 
 function CatalogSettings({ sourceId }: Props) {
   const { data: source, isLoading: isSourceLoading } = useSource({ sourceId });
-  const { data: filters, isLoading: isFiltersLoading } = useFilters({ sourceId });
+  const {
+    data: filters,
+    isLoading: isFiltersLoading,
+    isError: isFiltersError,
+    error: filtersError,
+    refetch: refetchFilters,
+  } = useFilters({ sourceId });
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
   const [, setSearchParams] = useSearchParams();
 
@@ -100,6 +102,14 @@ function CatalogSettings({ sourceId }: Props) {
               <Text>Фильтры</Text>
             </Button>
           )}
+          {isFiltersError && !params.query && (
+            <Group gap="xs" wrap="nowrap">
+              <ApiErrorText error={filtersError} />
+              <Button variant="subtle" size="compact-sm" onClick={() => refetchFilters()}>
+                Повторить
+              </Button>
+            </Group>
+          )}
         </Grid.Col>
         <Grid.Col span={{ base: 12, xs: 'content' }} order={{ base: 3, xs: 2 }}>
           <Group gap="xs">
@@ -107,12 +117,7 @@ function CatalogSettings({ sourceId }: Props) {
               sortOrders={source?.sortOrders ?? []}
               supportsDirection={source?.supportsDirection ?? false}
             />
-            <SegmentedControl
-              data={[
-                { label: <RowsIcon size={18} />, value: 'rows' },
-                { label: <SquaresFourIcon size={18} />, value: 'squares' },
-              ]}
-            />
+            <CatalogViewMode />
           </Group>
         </Grid.Col>
         {!params.query && (

@@ -4,9 +4,10 @@ import { CONTENT_RATING } from '@tanuki/contracts';
 
 type Props = {
   contentRating: ContentRating;
+  compact?: boolean;
 };
 
-function MangaAdultBadge({ contentRating }: Props) {
+function MangaAdultBadge({ contentRating, compact }: Props) {
   if (contentRating !== CONTENT_RATING.ADULT) {
     return null;
   }
@@ -14,15 +15,15 @@ function MangaAdultBadge({ contentRating }: Props) {
   return (
     <Badge
       pos="absolute"
-      top={6}
-      right={6}
+      top={compact ? 2 : 6}
+      right={compact ? 2 : 6}
       style={{ zIndex: 1 }}
       color="var(--mantine-color-red-2)"
-      size="lg"
+      size={compact ? 'xs' : 'lg'}
       fw={400}
-      fz={14}
-      px={8}
-      radius="md"
+      fz={compact ? 9 : 14}
+      px={compact ? 4 : 8}
+      radius={compact ? 'sm' : 'md'}
       variant="outline"
       bg="color-mix(in srgb, var(--mantine-color-red-8) 90%, transparent)"
     >

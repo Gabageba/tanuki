@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import type { ComboboxLikeRenderOptionInput, ComboboxItem } from '@mantine/core';
-import {
-  createTheme,
-  localStorageColorSchemeManager,
-  MantineProvider as ExternalMantineProvider,
+import type {
+  ComboboxLikeRenderOptionInput,
+  ComboboxItem,
+  MantineColorSchemeManager,
 } from '@mantine/core';
+import { createTheme, MantineProvider as ExternalMantineProvider } from '@mantine/core';
 import {
   COLOR_SCHEME,
   CSS_VARIABLES_RESOLVER,
@@ -27,6 +27,7 @@ import {
   STATUS_OK_COLOR,
   STATUS_OK_COLOR_SHADES,
 } from '@/shared/lib/palette';
+import { readSettings, SETTINGS_STORAGE_KEY, writeSettings } from '@/shared/lib/settings';
 import SelectOption from '../../../shared/ui/option/SelectOption';
 import styles from './MantineProvider.module.scss';
 
@@ -68,6 +69,11 @@ const THEME = createTheme({
       defaultProps: {
         radius: 'sm',
       },
+      vars: () => ({
+        root: {
+          '--badge-padding-x-md': '6px',
+        },
+      }),
     },
     Drawer: {
       classNames: {
@@ -204,11 +210,27 @@ const THEME = createTheme({
 });
 
 /**
- * Ключ продублирован в inline-скрипте в `index.html`: он выставляет
- * `data-mantine-color-scheme` до первой отрисовки, иначе у пользователя с тёмной темой
- * успевает моргнуть светлый фон. Меняете здесь — правьте и там.
+ * Схема хранится в том же объекте `settings` в localStorage, что и viewMode каталога
+ * (см. `@/shared/lib/settings`). Ключ продублирован в inline-скрипте в `index.html`: он
+ * выставляет `data-mantine-color-scheme` до первой отрисовки, иначе у пользователя с тёмной
+ * темой успевает моргнуть светлый фон. Меняете ключ или форму settings — правьте и там.
  */
-const COLOR_SCHEME_MANAGER = localStorageColorSchemeManager({ key: 'tanuki-color-scheme' });
+let handleStorageEvent: (event: StorageEvent) => void;
+
+const COLOR_SCHEME_MANAGER: MantineColorSchemeManager = {
+  get: (defaultValue) => readSettings().colorScheme ?? defaultValue,
+  set: (value) => writeSettings({ colorScheme: value }),
+  subscribe: (onUpdate) => {
+    handleStorageEvent = (event) => {
+      if (event.storageArea !== window.localStorage || event.key !== SETTINGS_STORAGE_KEY) return;
+      const next = readSettings().colorScheme;
+      if (next) onUpdate(next);
+    };
+    window.addEventListener('storage', handleStorageEvent);
+  },
+  unsubscribe: () => window.removeEventListener('storage', handleStorageEvent),
+  clear: () => writeSettings({ colorScheme: undefined }),
+};
 
 type Props = {
   children: ReactNode;
