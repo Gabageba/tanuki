@@ -25,6 +25,20 @@ const LIST_HTML = `<!doctype html><html><body>
   </div>
 </body></html>`;
 
+// getList browses the catalog with ?view=card-detailed — its cards trade the single .cards__info
+// genre for a full comma-separated list, so getList's tags come from here rather than getDetails.
+const LIST_HTML_DETAILED = `<!doctype html><html><body>
+  <div class="cards-detailed">
+    <a href="/manga/one-piece" class="cards-detailed__item">
+      <div class="cards-detailed__poster"><img src="/img/manga/posters/one-piece.jpg" /></div>
+      <div class="cards-detailed__type">Манга</div>
+      <div class="cards-detailed__name">Ван-Пис</div>
+      <div class="cards-detailed__genres">Экшен, Приключения</div>
+      <div class="cards-detailed__info">9.4 <span>1234</span></div>
+    </a>
+  </div>
+</body></html>`;
+
 // .manga__middle-links packs type/year/status as three <a>s told apart by href shape, not
 // position — /types/<slug> is the type, /types/<slug>/<year> the year, /manga?status_id[]= the
 // status. Genres live separately, under .tags, alongside the age-rating badge.
@@ -161,7 +175,10 @@ const setUpFixtures = (): FakeHttpClient => {
   // fetchFilters requests the bare catalog page (no query string) — fetchListPage always adds at
   // least ?sort=..., so the two never collide on the same rule.
   http.register((url) => url === `https://${DOMAIN}/manga`, { status: 200, body: FILTERS_HTML });
-  http.register((url) => url.includes('/manga?'), { status: 200, body: LIST_HTML });
+  // Catalog browsing always requests ?view=card-detailed; /search doesn't support that param and
+  // keeps returning the plain .cards__item markup.
+  http.register((url) => url.includes('/manga?'), { status: 200, body: LIST_HTML_DETAILED });
+  http.register((url) => url.includes('/search?'), { status: 200, body: LIST_HTML });
   return http;
 };
 
@@ -169,7 +186,7 @@ describe('MangaBuff parser conformance', () => {
   const http = setUpFixtures();
   const parser = createMangaBuffParser(makeContext(http));
 
-  it('getList: chapters null, rating/type from the card, url relative, id a safe integer', async () => {
+  it('getList: chapters null, rating/type/tags from the detailed card, url relative, id a safe integer', async () => {
     const items = await parser.getList({ offset: 0, limit: 20 });
     expect(items).toHaveLength(1);
     const [item] = items;
@@ -181,6 +198,17 @@ describe('MangaBuff parser conformance', () => {
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
+    expect(item!.tags.map((t) => t.title)).toEqual(['Экшен', 'Приключения']);
+    // The site never puts a synopsis on any list card, detailed view included.
+    expect(item!.description).toBeNull();
+  });
+
+  it('getList with a search query: falls back to the plain (non-detailed) card, no tags', async () => {
+    const items = await parser.getList({ offset: 0, limit: 20, query: 'ван-пис' });
+    expect(items).toHaveLength(1);
+    const [item] = items;
+    expect(item!.title).toBe('Ван-Пис');
+    expect(item!.tags).toEqual([]);
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {

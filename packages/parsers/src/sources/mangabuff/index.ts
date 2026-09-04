@@ -26,7 +26,7 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { parseHtml } from '../../core/html/dom';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
-import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
+import { attrOrNull, textOrNull, absUrl, ownText } from '../../core/html/selectors';
 import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { nullIfEmpty } from '../../core/text/strings';
 import { parseDdMmYyyy } from '../../core/text/dates';
@@ -110,6 +110,14 @@ const contentRatingByLabel = (label: string | null): RawContentRating | null => 
       return null;
   }
 };
+
+/** Genre/tag names on `?view=card-detailed` cards carry no href, unlike the details page's own
+ *  `.tags` anchors — so their key is always derived from the title, same fallback both use. */
+const slugifyTitle = (title: string): string =>
+  title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
 
 type MiddleLinks = { type: RawMangaType | null; year: number | null; stateText: string | null };
 
@@ -219,6 +227,70 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       .filter((m): m is RawManga => m !== null);
   };
 
+  /** `?view=card-detailed` swaps `.cards__item` for `.cards-detailed__item`, trading the single
+   *  `.cards__info` genre for the title's full genre list — still no description, the site never
+   *  puts that in a list card. `/search` doesn't support the param, so it stays on `parseMangaCard`. */
+  const parseMangaCardDetailed = ($item: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
+    const hrefRaw = attrOrNull($item, 'href');
+    if (!hrefRaw) return null;
+    const publicUrl = toAbsoluteUrl(hrefRaw, domain);
+    const relUrl = toRelativeUrl(publicUrl, domain);
+    const slug = relUrl.replace(/\/$/, '').split('/').pop() ?? relUrl;
+    const title =
+      nullIfEmpty(textOrNull($item.find('.cards-detailed__name').first())) ??
+      nullIfEmpty(textOrNull($item)) ??
+      slug;
+
+    const imgSrc = attrOrNull($item.find('.cards-detailed__poster img').first(), 'src');
+    const coverUrl = imgSrc
+      ? new URL(imgSrc, baseUrl).toString()
+      : `https://${domain}/img/manga/posters/${slug}.jpg`;
+
+    // "<rating> <span><views></span>" — ownText strips the nested views span, leaving the rating.
+    const ratingRaw = nullIfEmpty(ownText($item.find('.cards-detailed__info').first()));
+    const ratingPct = ratingRaw ? parseFloatOrNull(ratingRaw.replace(',', '.')) : null;
+
+    const typeLabel = textOrNull($item.find('.cards-detailed__type').first());
+
+    const genresRaw = textOrNull($item.find('.cards-detailed__genres').first());
+    const tags: RawTag[] = (genresRaw ?? '')
+      .split(',')
+      .map((genreTitle) => genreTitle.trim())
+      .filter((genreTitle) => genreTitle.length > 0)
+      .map((genreTitle) => ({
+        title: genreTitle,
+        key: slugifyTitle(genreTitle),
+        source: SOURCE_ID,
+      }));
+
+    return {
+      id: generateUid(SOURCE_ID, relUrl),
+      title,
+      altTitles: [],
+      url: relUrl,
+      publicUrl,
+      rating: ratingPct !== null ? ratingPct / 10 : RATING_UNKNOWN,
+      contentRating: null,
+      coverUrl,
+      tags,
+      state: null,
+      authors: [],
+      largeCoverUrl: null,
+      description: null,
+      chapters: null,
+      source: SOURCE_ID,
+      type: mangaTypeByLabel(typeLabel),
+    };
+  };
+
+  const parseMangaListDetailed = (doc: { $: CheerioAPI; baseUrl: string }): RawManga[] => {
+    return doc
+      .$('.cards-detailed .cards-detailed__item')
+      .toArray()
+      .map((el) => parseMangaCardDetailed(doc.$(el), doc.baseUrl))
+      .filter((m): m is RawManga => m !== null);
+  };
+
   const fetchListPage = async (
     page: number,
     order: string | undefined,
@@ -230,12 +302,13 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       url.searchParams.set('q', query);
     } else {
       url.searchParams.set('sort', getSortKey(order));
+      url.searchParams.set('view', 'card-detailed');
       applyFilterParams(url, filters);
     }
     if (page !== 1) url.searchParams.set('page', String(page));
 
     const doc = await ctx.http.getHtml(url.toString());
-    return parseMangaList(doc);
+    return query ? parseMangaList(doc) : parseMangaListDetailed(doc);
   };
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
@@ -448,13 +521,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       const title = (textOrNull($a) ?? '').trim();
       if (!title) continue;
       const hrefKey = (attrOrNull($a, 'href') ?? '').replace(/\/$/, '').split('/').pop();
-      const key =
-        hrefKey && hrefKey.length > 0
-          ? hrefKey
-          : title
-              .toLowerCase()
-              .replace(/[^\p{L}\p{N}]+/gu, '-')
-              .replace(/^-+|-+$/g, '');
+      const key = hrefKey && hrefKey.length > 0 ? hrefKey : slugifyTitle(title);
       if (seen.has(key)) continue;
       seen.add(key);
       tags.push({ title, key, source: SOURCE_ID });
