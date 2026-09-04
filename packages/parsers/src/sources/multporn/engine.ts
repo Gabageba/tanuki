@@ -1,6 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, SORT_ORDER } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_DIRECTION, SORT_ORDER } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -92,6 +92,21 @@ const extractGalleryImageSrcs = ($root: Cheerio<AnyNode>): string[] => {
   return srcs;
 };
 
+/** `/new`'s exposed Views sort form offers exactly these two fields — verified live against
+ *  both `multporn` and `multporn_hentai`, `sort_order` (ASC/DESC) applies to either. */
+const resolveSortBy = (order: string | undefined): string => {
+  switch (order) {
+    case SORT_ORDER.ADDED:
+      return 'created';
+    case SORT_ORDER.UPDATED:
+    default:
+      return 'changed';
+  }
+};
+
+const resolveSortOrder = (direction: string | undefined): string =>
+  direction === SORT_DIRECTION.ASC ? 'ASC' : 'DESC';
+
 export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
 
@@ -130,19 +145,27 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     };
   };
 
-  const buildBrowseUrl = (page: number): string => {
+  const buildBrowseUrl = (
+    page: number,
+    order: string | undefined,
+    direction: string | undefined,
+  ): string => {
     const url = new URL('/new', `https://${domain}/`);
     url.searchParams.set('type', cfg.typeParam);
     url.searchParams.set('language', 'All');
     url.searchParams.set('field_user_discription_value', 'All');
-    url.searchParams.set('sort_by', 'changed');
-    url.searchParams.set('sort_order', 'DESC');
+    url.searchParams.set('sort_by', resolveSortBy(order));
+    url.searchParams.set('sort_order', resolveSortOrder(direction));
     url.searchParams.set('page', String(page));
     return url.toString();
   };
 
-  const fetchBrowsePage = async (page: number): Promise<RawManga[]> => {
-    const doc = await ctx.http.getHtml(buildBrowseUrl(page));
+  const fetchBrowsePage = async (
+    page: number,
+    order: string | undefined,
+    direction: string | undefined,
+  ): Promise<RawManga[]> => {
+    const doc = await ctx.http.getHtml(buildBrowseUrl(page, order, direction));
     return doc
       .$('.view-content .masonry-item')
       .toArray()
@@ -179,7 +202,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     if (params.query) return fetchSearchList(params);
     return fetchPaged(params, { size: BROWSE_PAGE_SIZE, firstPage: 0 }, (page) =>
-      fetchBrowsePage(page),
+      fetchBrowsePage(page, params.order, params.direction),
     );
   };
 
@@ -271,8 +294,8 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
-      sortOrders: [SORT_ORDER.NEWEST],
-      supportsDirection: false,
+      sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.ADDED],
+      supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,

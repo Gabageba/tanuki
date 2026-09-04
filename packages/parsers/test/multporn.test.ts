@@ -113,6 +113,20 @@ describe('MultPorn parser conformance', () => {
     expect(items[0]!.url).toBe('/comics/one-piece');
   });
 
+  it('getList: defaults to sort_by=changed&sort_order=DESC when order/direction are unset', async () => {
+    await parser.getList({ offset: 0, limit: 20 });
+    const browseRequest = http.requests.findLast((r) => r.url.includes('/new'))!;
+    expect(browseRequest.url).toContain('sort_by=changed');
+    expect(browseRequest.url).toContain('sort_order=DESC');
+  });
+
+  it('getList: maps order=added/direction=asc to sort_by=created&sort_order=ASC', async () => {
+    await parser.getList({ offset: 0, limit: 20, order: 'added', direction: 'asc' });
+    const browseRequest = http.requests.findLast((r) => r.url.includes('/new'))!;
+    expect(browseRequest.url).toContain('sort_by=created');
+    expect(browseRequest.url).toContain('sort_order=ASC');
+  });
+
   it('getDetails: single synthetic chapter, cover/description from og: meta, rating and gallery page count, ids unique', async () => {
     const manga = await parser.getDetails('/comics/one-piece');
     expect(manga.chapters).not.toBeNull();
