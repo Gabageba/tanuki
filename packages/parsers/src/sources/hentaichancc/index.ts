@@ -6,6 +6,8 @@ import {
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
+  formatCompactNumber,
+  type FilterRangePreset,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -70,6 +72,53 @@ const TYPE_OPTIONS: RawFilterOption[] = [
  *  request per `fetchFilters()` call. `date_created` (upload date, the only date the collection
  *  has) doubles as the YEAR bound source: there's no separate "year of the original work" field. */
 const RANGE_AGGREGATE_FIELDS = 'date_created,views,likes,pages';
+
+/** Fixed buckets, not derived from the live bounds like YEAR's decades are — `views`/`likes`/`pages`
+ *  don't have a natural period to bucket by, so these are just sane quick picks sized off a live
+ *  aggregate (max views ~4.4M, likes ~17.5k, pages 100, checked against `backend.hentaichan.cc`). */
+const VIEWS_PRESETS: FilterRangePreset[] = [
+  { id: 'lt-1000', label: `< ${formatCompactNumber(1000)}`, max: 1000 },
+  {
+    id: '1000-10000',
+    label: `${formatCompactNumber(1000)}-${formatCompactNumber(10000)}`,
+    min: 1000,
+    max: 10000,
+  },
+  {
+    id: '10000-50000',
+    label: `${formatCompactNumber(10000)}-${formatCompactNumber(50000)}`,
+    min: 10000,
+    max: 50000,
+  },
+  {
+    id: '50000-200000',
+    label: `${formatCompactNumber(50000)}-${formatCompactNumber(200000)}`,
+    min: 50000,
+    max: 200000,
+  },
+  { id: '200000-plus', label: `${formatCompactNumber(200000)}+`, min: 200000 },
+];
+
+const LIKES_PRESETS: FilterRangePreset[] = [
+  { id: 'lt-100', label: '< 100', max: 100 },
+  { id: '100-1000', label: `100-${formatCompactNumber(1000)}`, min: 100, max: 1000 },
+  {
+    id: '1000-5000',
+    label: `${formatCompactNumber(1000)}-${formatCompactNumber(5000)}`,
+    min: 1000,
+    max: 5000,
+  },
+  { id: '5000-plus', label: `${formatCompactNumber(5000)}+`, min: 5000 },
+];
+
+/** `pages` is a single release's own page count (verified live max: 100), not a chapter tally, so
+ *  it needs its own scale instead of the shared `CHAPTERS_COUNT_PRESETS`. */
+const PAGES_PRESETS: FilterRangePreset[] = [
+  { id: 'lt-20', label: '< 20', max: 20 },
+  { id: '20-40', label: '20-40', min: 20, max: 40 },
+  { id: '40-60', label: '40-60', min: 40, max: 60 },
+  { id: '60-plus', label: '60+', min: 60 },
+];
 
 type RangeAggregateBounds = {
   date_created: string;
@@ -474,21 +523,30 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
         title: 'Просмотры',
         type: FILTER_TYPE.RANGE,
         options: [],
-        settings: { range: { min: bounds.min.views, max: bounds.max.views } },
+        settings: {
+          range: { min: bounds.min.views, max: bounds.max.views },
+          presets: VIEWS_PRESETS,
+        },
       },
       {
         id: HENTAICHAN_CC_FILTER_GROUP.LIKES,
         title: 'Лайки',
         type: FILTER_TYPE.RANGE,
         options: [],
-        settings: { range: { min: bounds.min.likes, max: bounds.max.likes } },
+        settings: {
+          range: { min: bounds.min.likes, max: bounds.max.likes },
+          presets: LIKES_PRESETS,
+        },
       },
       {
         id: HENTAICHAN_CC_FILTER_GROUP.PAGES,
         title: 'Страницы',
         type: FILTER_TYPE.RANGE,
         options: [],
-        settings: { range: { min: bounds.min.pages, max: bounds.max.pages } },
+        settings: {
+          range: { min: bounds.min.pages, max: bounds.max.pages },
+          presets: PAGES_PRESETS,
+        },
       },
       {
         id: HENTAICHAN_CC_FILTER_GROUP.YEAR,

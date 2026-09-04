@@ -280,14 +280,17 @@ describe('HentaiChan.cc parser conformance', () => {
     const views = groups.find((g) => g.id === HENTAICHAN_CC_FILTER_GROUP.VIEWS)!;
     expect(views.type).toBe(FILTER_TYPE.RANGE);
     expect(views.settings?.range).toEqual({ min: 0, max: 4377167 });
+    expect(views.settings?.presets?.length).toBeGreaterThan(0);
 
     const likes = groups.find((g) => g.id === HENTAICHAN_CC_FILTER_GROUP.LIKES)!;
     expect(likes.type).toBe(FILTER_TYPE.RANGE);
     expect(likes.settings?.range).toEqual({ min: 0, max: 17475 });
+    expect(likes.settings?.presets?.length).toBeGreaterThan(0);
 
     const pages = groups.find((g) => g.id === HENTAICHAN_CC_FILTER_GROUP.PAGES)!;
     expect(pages.type).toBe(FILTER_TYPE.RANGE);
     expect(pages.settings?.range).toEqual({ min: 0, max: 100 });
+    expect(pages.settings?.presets?.length).toBeGreaterThan(0);
 
     const year = groups.find((g) => g.id === HENTAICHAN_CC_FILTER_GROUP.YEAR)!;
     expect(year.type).toBe(FILTER_TYPE.RANGE);
