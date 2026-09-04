@@ -60,6 +60,27 @@ type LocalizedDescription = {
   description?: string;
 };
 
+/** A leaf/void node inside a `TiptapNodeNestedBlock.content` array — the description's rich-text
+ *  schema exposes only `text` on text leaves and `type` on void nodes (`hardBreak`) through this
+ *  API; every other node kind in the union (headings, lists, code blocks, mentions...) carries no
+ *  extractable field at all, confirmed live against api.senkuro.com, so it's silently dropped. */
+type TiptapInlineJson = {
+  text?: string;
+  type?: string;
+};
+
+/** One paragraph-like block of a rich-text description (`TiptapNodeNestedBlock`). Other top-level
+ *  block kinds (`TiptapNodeCodeBlock` and friends) expose no `content` through this API and so
+ *  contribute nothing. */
+type TiptapBlockJson = {
+  content?: TiptapInlineJson[];
+};
+
+type LocalizedRichDescription = {
+  lang?: string;
+  description?: TiptapBlockJson[];
+};
+
 type CoverJson = {
   original?: { url?: string };
 };
@@ -78,6 +99,10 @@ type MangaCardJson = {
   releasedOn?: string;
   chapters?: number;
   rating?: string;
+  score?: number;
+  status?: string;
+  labels?: LabelJson[];
+  localizations?: LocalizedRichDescription[];
 };
 
 /** One entry of `allLabels(subjectType: MANGA)` — a flat list mixing category roots (`depth: 0`,
@@ -93,7 +118,7 @@ type AllLabelJson = {
   titles?: LocalizedText[];
 };
 
-type MangaInfoJson = MangaCardJson & {
+type MangaInfoJson = Omit<MangaCardJson, 'localizations'> & {
   alternativeNames?: LocalizedText[];
   localizations?: LocalizedDescription[];
   status?: string;
@@ -175,6 +200,14 @@ const parseContentRating = (raw: string | undefined): RawContentRating | null =>
   }
 };
 
+/** `score` is on a 0..10 scale (confirmed live, e.g. 9.78 for the top-rated title) — divided by
+ *  10 to reach RawManga's 0..1 convention (see types.ts), same as libsocial's `rating.average`.
+ *  An unrated title reports exactly `0`, which the API exposes no vote-count field to tell apart
+ *  from a genuine bottom score, so it's folded into RATING_UNKNOWN same as everywhere else in
+ *  this parser. */
+const parseScore = (score: number | undefined): number =>
+  score !== undefined && score > 0 ? score / 10 : RATING_UNKNOWN;
+
 const pickLocalizedTitle = (items: LocalizedText[] | undefined): string | null => {
   if (!items || items.length === 0) return null;
   let first: string | null = null;
@@ -201,6 +234,49 @@ const parseLocalizationDescription = (items: LocalizedDescription[] | undefined)
   }
   return first;
 };
+
+// Senkuro pads blank lines in its rich-text editor with a Hangul filler character rather than an
+// empty paragraph — confirmed live — so it's stripped before a paragraph is judged empty.
+const TIPTAP_FILLER_CHAR = 'ᅠ';
+
+const extractTiptapPlainText = (blocks: TiptapBlockJson[] | undefined): string | null => {
+  if (!blocks || blocks.length === 0) return null;
+  const paragraphs: string[] = [];
+  for (const block of blocks) {
+    let text = '';
+    for (const node of block.content ?? []) {
+      if (node.text !== undefined) text += node.text;
+      else if (node.type === 'hardBreak') text += '\n';
+    }
+    text = text.replaceAll(TIPTAP_FILLER_CHAR, '').trim();
+    if (text) paragraphs.push(text);
+  }
+  return paragraphs.length > 0 ? paragraphs.join('\n\n') : null;
+};
+
+const parseRichLocalizationDescription = (
+  items: LocalizedRichDescription[] | undefined,
+): string | null => {
+  if (!items || items.length === 0) return null;
+  let first: string | null = null;
+  for (const item of items) {
+    const text = extractTiptapPlainText(item.description);
+    if (!text) continue;
+    first ??= text;
+    if (item.lang?.toUpperCase() === 'RU') return text;
+  }
+  return first;
+};
+
+const mapLabelsToTags = (labels: LabelJson[] | undefined, sourceId: string): RawTag[] =>
+  (labels ?? [])
+    .map((label): RawTag | null => {
+      const slug = label.slug;
+      const labelTitle = pickLocalizedTitle(label.titles);
+      if (!slug || !labelTitle) return null;
+      return { key: slug, title: toTitleCase(labelTitle), source: sourceId };
+    })
+    .filter((t): t is RawTag => t !== null);
 
 const parseTitleList = (items: LocalizedText[] | undefined): string[] => {
   const result: string[] = [];
@@ -522,14 +598,14 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       altTitles: [],
       url,
       publicUrl: `https://${domain}/manga/${info.slug}`,
-      rating: RATING_UNKNOWN,
+      rating: parseScore(info.score),
       contentRating: parseContentRating(info.rating),
       coverUrl: cover,
       largeCoverUrl: cover,
-      tags: [],
-      state: null,
+      tags: mapLabelsToTags(info.labels, SOURCE_ID),
+      state: parseState(info.status),
       authors: [],
-      description: null,
+      description: parseRichLocalizationDescription(info.localizations),
       chapters: null,
       source: SOURCE_ID,
       type: parseMangaType(info.type),
@@ -760,14 +836,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       ),
     ];
 
-    const tags: RawTag[] = (info.labels ?? [])
-      .map((label): RawTag | null => {
-        const slug = label.slug;
-        const labelTitle = pickLocalizedTitle(label.titles);
-        if (!slug || !labelTitle) return null;
-        return { key: slug, title: toTitleCase(labelTitle), source: SOURCE_ID };
-      })
-      .filter((t): t is RawTag => t !== null);
+    const tags = mapLabelsToTags(info.labels, SOURCE_ID);
 
     return {
       id: generateUid(SOURCE_ID, info.id),
@@ -775,7 +844,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       altTitles,
       url,
       publicUrl: `https://${domain}/manga/${info.slug}`,
-      rating: RATING_UNKNOWN,
+      rating: parseScore(info.score),
       contentRating: parseContentRating(info.rating),
       coverUrl: cover,
       largeCoverUrl: cover,
@@ -945,6 +1014,30 @@ query fetchMangas(
         releasedOn
         chapters
         rating
+        score
+        status
+        labels {
+          slug
+          titles {
+            lang
+            content
+          }
+        }
+        localizations {
+          lang
+          description {
+            ... on TiptapNodeNestedBlock {
+              content {
+                ... on TiptapNodeText {
+                  text
+                }
+                ... on TiptapNodeOnlyBlock {
+                  type
+                }
+              }
+            }
+          }
+        }
       }
     }
     pageInfo {
@@ -974,6 +1067,7 @@ query fetchTachiyomiManga($mangaId: ID!) {
     }
     type
     rating
+    score
     status
     formats
     labels {

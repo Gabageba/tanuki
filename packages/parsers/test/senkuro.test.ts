@@ -1,6 +1,12 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { FILTER_TYPE, MANGA_TYPE, RANGE_FORMAT, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import {
+  FILTER_TYPE,
+  MANGA_STATE,
+  MANGA_TYPE,
+  RANGE_FORMAT,
+  SOURCE_CONTENT_TYPE,
+} from '@tanuki/contracts';
 import { createSenkuroParser, SENKURO_FILTER_GROUP } from '../src/sources/senkuro/engine';
 import { SENKURO_CONFIGS } from '../src/sources/senkuro/config';
 import { SOURCE_ID } from '../src/sources/catalog';
@@ -25,6 +31,25 @@ const SEARCH_RESPONSE = JSON.stringify({
             type: 'MANGA',
             releasedOn: '1997-07-22',
             chapters: 1000,
+            score: 8.04,
+            status: 'ONGOING',
+            labels: [{ slug: 'adventure', titles: [{ lang: 'RU', content: 'приключения' }] }],
+            localizations: [
+              {
+                lang: 'RU',
+                description: [
+                  {
+                    content: [
+                      { text: 'Первый абзац.' },
+                      { type: 'hardBreak' },
+                      { text: 'Продолжение.' },
+                    ],
+                  },
+                  { content: [{ text: 'ᅠ' }] },
+                  { content: [{ text: 'Второй абзац.' }] },
+                ],
+              },
+            ],
           },
         },
       ],
@@ -43,6 +68,7 @@ const DETAILS_RESPONSE = JSON.stringify({
       localizations: [{ lang: 'RU', description: 'Описание тайтла.' }],
       type: 'MANGA',
       rating: 'GENERAL',
+      score: 9.16,
       status: 'ONGOING',
       labels: [{ slug: 'adventure', titles: [{ lang: 'RU', content: 'приключения' }] }],
       cover: { original: { url: 'https://cdn.senkuro.com/one-piece.jpg' } },
@@ -178,13 +204,13 @@ describe('Senkuro parser conformance', () => {
   const http = setUpFixtures();
   const parser = createSenkuroParser(SENKURO_CONFIG, makeContext(http));
 
-  it('getList: chapters null, rating -1, url relative, id a safe integer', async () => {
+  it('getList: chapters null, score parsed, url relative, id a safe integer', async () => {
     const items = await parser.getList({ offset: 0, limit: 20 });
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
     expect(item!.source).toBe(SOURCE_ID.SENKURO);
-    expect(item!.rating).toBe(-1);
+    expect(item!.rating).toBeCloseTo(0.804);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
@@ -193,6 +219,9 @@ describe('Senkuro parser conformance', () => {
     expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(1000);
+    expect(item!.state).toBe(MANGA_STATE.ONGOING);
+    expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
+    expect(item!.description).toBe('Первый абзац.\nПродолжение.\n\nВторой абзац.');
     expect(http.requests[0]!.headers['app-id']).toBe(SENKURO_CONFIG.appId);
   });
 
@@ -212,6 +241,26 @@ describe('Senkuro parser conformance', () => {
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
     expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.rating).toBeCloseTo(0.916);
+  });
+
+  it('getList: score of exactly 0 (no votes yet) falls back to RATING_UNKNOWN', async () => {
+    const zeroScoreResponse = JSON.stringify({
+      data: {
+        mangas: {
+          edges: [{ node: { id: '999', slug: 'unrated', titles: [], score: 0 } }],
+          pageInfo: { hasNextPage: false, endCursor: null },
+        },
+      },
+    });
+    const zeroScoreHttp = new FakeHttpClient();
+    zeroScoreHttp.register(
+      (url, body) => url === SENKURO_CONFIG.apiEndpoint && !!body?.includes('fetchMangas'),
+      { status: 200, body: zeroScoreResponse, contentType: 'application/json' },
+    );
+    const zeroScoreParser = createSenkuroParser(SENKURO_CONFIG, makeContext(zeroScoreHttp));
+    const items = await zeroScoreParser.getList({ offset: 0, limit: 20 });
+    expect(items[0]!.rating).toBe(-1);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {
