@@ -284,7 +284,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       tags: parseTags(jo),
       state: parseState(jo.statusTitle),
       authors: jo.authors ?? [],
-      description: null,
+      description: jo.description ?? null,
       chapters: null,
       source: SOURCE_ID,
       type: parseMangaType(jo.type),
@@ -375,7 +375,6 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
 
     return {
       ...parseManga(jo),
-      description: jo.description ?? null,
       chapters,
     };
   };

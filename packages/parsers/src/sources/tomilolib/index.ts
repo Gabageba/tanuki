@@ -262,7 +262,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       });
   };
 
-  const parseManga = (info: MangaJson | null, withDetails: boolean): RawManga | null => {
+  const parseManga = (info: MangaJson | null): RawManga | null => {
     if (!info || !info._id || !info.slug) return null;
     const slug = info.slug;
     const title = info.name ?? slug;
@@ -287,7 +287,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       tags: parseTags(info),
       state: parseState(info.status),
       authors: [...new Set(authors)],
-      description: withDetails ? (info.description ?? null) : null,
+      description: info.description ?? null,
       chapters: null,
       source: SOURCE_ID,
       type: parseMangaType(info.type),
@@ -348,7 +348,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
 
     const json = await ctx.http.getJson<{ data?: { titles?: MangaJson[] } }>(url.toString());
     const titles = json.data?.titles ?? [];
-    return titles.map((t) => parseManga(t, false)).filter((m): m is RawManga => m !== null);
+    return titles.map((t) => parseManga(t)).filter((m): m is RawManga => m !== null);
   };
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
@@ -438,7 +438,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     const json = await ctx.http.getJson<{ data?: MangaJson }>(url.toString());
     const info = json.data;
     if (!info) throw new ParseError('Cannot parse title details', SOURCE_ID);
-    const manga = parseManga(info, true);
+    const manga = parseManga(info);
     if (!manga) throw new ParseError('Cannot parse title details', SOURCE_ID);
 
     const titleId = info._id;

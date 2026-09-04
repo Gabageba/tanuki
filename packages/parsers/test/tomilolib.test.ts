@@ -23,6 +23,7 @@ const LIST_JSON = JSON.stringify({
         type: 'manga',
         releaseYear: 1997,
         totalChapters: 1100,
+        description: 'Описание из списка.',
       },
     ],
   },
@@ -118,6 +119,9 @@ describe('TomiloLib parser conformance', () => {
     expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(1100);
+    expect(item!.description).toBe('Описание из списка.');
+    expect(item!.state).toBe('ongoing');
+    expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
