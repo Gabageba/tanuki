@@ -24,6 +24,8 @@ const LIST_RESPONSE = JSON.stringify({
       name: '1 + 2 (Ato no Futari)',
       slug: '1-2-ato-no-futari',
       cover: { filename_disk: '4e209016-3118-4381-bc99-722f25beca24.jpg' },
+      description: 'Краткое описание.',
+      tags: [{ tags_id: { name: 'ahegao', slug: 'ahegao' } }],
       type: 'doujinshi',
       likes: 128,
       pages: 24,
@@ -179,6 +181,8 @@ describe('HentaiChan.cc parser conformance', () => {
     expect(item!.year).toBe(2025);
     expect(item!.likes).toBe(128);
     expect(item!.pages).toBe(24);
+    expect(item!.description).toBe('Краткое описание.');
+    expect(item!.tags.map((t) => t.title)).toEqual(['Ahegao']);
   });
 
   it('getList: sort maps order to field, direction to a `-` prefix', async () => {

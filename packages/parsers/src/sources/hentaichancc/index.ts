@@ -98,6 +98,8 @@ type MangaListItem = {
   name: string;
   slug: string;
   cover: FileRef | null;
+  description: string | null;
+  tags: TagRef[];
   type: HentaichanMangaType;
   likes: number;
   pages: number;
@@ -253,6 +255,10 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
 
   const parseListItem = (item: MangaListItem): RawManga => {
     const cover = assetUrl(item.cover);
+    const tags: RawTag[] = item.tags
+      .map((t) => t.tags_id)
+      .filter((t): t is { name: string; slug: string } => !!t)
+      .map((t) => ({ title: toTitleCase(t.name), key: t.slug, source: SOURCE_ID }));
     return {
       id: generateUid(SOURCE_ID, item.id),
       title: item.name,
@@ -263,10 +269,10 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       contentRating: CONTENT_RATING.ADULT,
       coverUrl: cover,
       largeCoverUrl: cover,
-      tags: [],
+      tags,
       state: null,
       authors: [],
-      description: null,
+      description: item.description,
       chapters: null,
       source: SOURCE_ID,
       type: mangaTypeFor(item.type),
@@ -281,7 +287,9 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       limit: String(params.limit),
       offset: String(params.offset),
       sort: sortFor(params.order, params.direction),
-      fields: 'id,name,slug,cover.filename_disk,type,likes,pages,date_created',
+      fields:
+        'id,name,slug,cover.filename_disk,description,type,likes,pages,date_created,' +
+        'tags.tags_id.name,tags.tags_id.slug',
       /** Excludes 4 live test/junk rows ("test", "1233", ...) sitting in `declined`/`moderation`
        *  status — verified live, never approved catalog entries a listing (filtered or not)
        *  should surface. */
