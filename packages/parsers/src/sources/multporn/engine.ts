@@ -20,6 +20,9 @@ const BROWSE_PAGE_SIZE = 15;
 const SEARCH_RAW_PAGE_SIZE = 20;
 
 const IMG_SRC_RE = /<img[^>]*\ssrc="([^"]+)"/g;
+/** Listing rows carry `<h5><span>Date: </span><span>23/04/2024 - 14:47</span></h5>` — the only
+ *  `<h5>` in a row with no `views-field-*` class, verified live across both content types. */
+const LISTING_DATE_RE = /(\d{2})\/(\d{2})\/(\d{4})/;
 
 /**
  * Drupal image styles serve a downsized derivative at `.../styles/<name>/public/<path>?itok=...`;
@@ -48,6 +51,26 @@ const parseCategoryLinks = (
     tags.push({ title, key, source: sourceId });
   });
   return tags;
+};
+
+/**
+ * The Drupal fivestar widget renders `<span class="average-rating">Average: <span>4.6</span>
+ * </span>` on a 0..5 star scale, same markup on listing rows and the detail page — verified live
+ * for both `multporn`/`multporn_hentai`. Every other parser normalizes its native rating scale
+ * down to 0..1 (see e.g. senkuro's `score / 10`), so a 0..5 average divides by 5 here instead.
+ */
+const parseAverageRating = ($scope: Cheerio<AnyNode>): number => {
+  const text = textOrNull($scope.find('.average-rating').first());
+  const match = text?.match(/[\d.]+/);
+  if (!match) return RATING_UNKNOWN;
+  const average = Number.parseFloat(match[0]);
+  return Number.isFinite(average) && average > 0 ? average / 5 : RATING_UNKNOWN;
+};
+
+const parseListingYear = ($row: Cheerio<AnyNode>): number | null => {
+  const text = textOrNull($row.find('h5:not([class])').first());
+  const match = text?.match(LISTING_DATE_RE);
+  return match ? Number.parseInt(match[3]!, 10) : null;
 };
 
 /**
@@ -93,7 +116,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       altTitles: [],
       url: relUrl,
       publicUrl,
-      rating: RATING_UNKNOWN,
+      rating: parseAverageRating($row),
       contentRating: CONTENT_RATING.ADULT,
       coverUrl,
       tags: parseCategoryLinks($row.find(cfg.listTagSelector), $, cfg.id),
@@ -103,6 +126,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       description: null,
       chapters: null,
       source: cfg.id,
+      year: parseListingYear($row),
     };
   };
 
@@ -180,6 +204,12 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       attrOrNull($('meta[property="og:description"]').first(), 'content'),
     );
 
+    // Same document getPages would otherwise re-fetch for this manga's one chapter (its url is
+    // the manga url itself) — counting the gallery here saves that round trip.
+    const galleryUrls = new Set(
+      extractGalleryImageSrcs(root).map((src) => originalFileUrl(toAbsoluteUrl(src, domain))),
+    );
+
     const chapter: RawChapter = {
       id: generateUid(cfg.id, mangaUrl),
       url: mangaUrl,
@@ -200,7 +230,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       altTitles: [],
       url: mangaUrl,
       publicUrl: absoluteUrl,
-      rating: RATING_UNKNOWN,
+      rating: parseAverageRating(root),
       contentRating: CONTENT_RATING.ADULT,
       coverUrl,
       largeCoverUrl: coverUrl,
@@ -210,6 +240,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       description,
       chapters: [chapter],
       source: cfg.id,
+      pages: galleryUrls.size > 0 ? galleryUrls.size : null,
     };
   };
 

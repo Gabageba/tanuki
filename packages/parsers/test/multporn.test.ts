@@ -23,6 +23,9 @@ const BROWSE_LIST_HTML = `<!doctype html><html><body>
       <div class="views-field views-field-title"><strong class="field-content"><a href="/comics/one-piece">One Piece</a></strong></div>
       <div class="views-field views-field-field-preview"><div class="field-content"><a href="/comics/one-piece"><img src="/styles/search_comics/public/one-piece-thumb.jpg?itok=abc" /></a></div></div>
       <div class="views-field views-field-field-category"><h5 class="field-content"><a href="/category/adventure">Adventure</a>, <a href="/category/comedy">Comedy</a></h5></div>
+      <h4 class="views-field views-field-field-vote"><div class="field-content"><div class="fivestar-summary fivestar-summary-average-count"><span class="average-rating">Average: <span>4.6</span></span> <span class="total-votes">(<span>641</span> votes)</span></div></div></h4>
+      <h5 class="views-field views-field-totalcount"><span class="field-content">Views: 941,111</span></h5>
+      <h5><span>Date: </span><span>23/04/2024 - 14:47</span></h5>
     </div>
   </div>
 </body></html>`;
@@ -52,6 +55,7 @@ const DETAILS_HTML = `<!doctype html><html><head>
     <div class="content clearfix">
       <div class="field field-name-field-author"><ul class="links"><li><a href="/authors_comics/oda">Oda Eiichiro</a></li></ul></div>
       <div class="field field-name-field-category"><ul class="links"><li><a href="/category/adventure">Adventure</a></li><li><a href="/category/comedy">Comedy</a></li></ul></div>
+      <div class="field field-name-field-vote"><div class="field-items"><div class="field-item even"><div class="fivestar-summary fivestar-summary-average-count"><span class="average-rating">Average: <span>4.6</span></span> <span class="total-votes">(<span>641</span> votes)</span></div></div></div></div>
       <div class="field field-name-field-com-pages"><div class="field-items"><div class="field-item even"><div class="juicebox-parent">
         <div class="juicebox-container">
           <noscript>
@@ -86,13 +90,15 @@ describe('MultPorn parser conformance', () => {
   const http = setUpFixtures();
   const parser = createMultpornParser(CFG, makeContext(http));
 
-  it('getList: chapters null, rating -1, url relative, id a safe integer', async () => {
+  it('getList: chapters null, rating/year from the vote+date widgets, url relative, id a safe integer', async () => {
     const items = await parser.getList({ offset: 0, limit: 20 });
     expect(items).toHaveLength(1);
     const [item] = items;
     expect(item!.chapters).toBeNull();
     expect(item!.source).toBe(SOURCE_ID.MULTPORN);
-    expect(item!.rating).toBe(-1);
+    expect(item!.rating).toBeCloseTo(0.92);
+    expect(item!.year).toBe(2024);
+    expect(item!.chaptersCount).toBeUndefined();
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
@@ -107,7 +113,7 @@ describe('MultPorn parser conformance', () => {
     expect(items[0]!.url).toBe('/comics/one-piece');
   });
 
-  it('getDetails: single synthetic chapter, cover/description from og: meta, ids unique', async () => {
+  it('getDetails: single synthetic chapter, cover/description from og: meta, rating and gallery page count, ids unique', async () => {
     const manga = await parser.getDetails('/comics/one-piece');
     expect(manga.chapters).not.toBeNull();
     expect(manga.chapters).toHaveLength(1);
@@ -118,6 +124,8 @@ describe('MultPorn parser conformance', () => {
     expect(manga.coverUrl).toBe(
       `https://${DOMAIN}/styles/juicebox_1500x1500/public/one-piece-cover.jpg?itok=xyz`,
     );
+    expect(manga.rating).toBeCloseTo(0.92);
+    expect(manga.pages).toBe(2);
   });
 
   it('getPages: absolute, pre-resolved, de-styled (original-file) urls', async () => {
