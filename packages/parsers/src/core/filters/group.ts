@@ -36,4 +36,6 @@ export const FILTER_GROUP = {
   VIEWS: 'views',
   LIKES: 'likes',
   PAGES: 'pages',
+  LANGUAGE: 'language',
+  CHARACTER: 'character',
 } as const;

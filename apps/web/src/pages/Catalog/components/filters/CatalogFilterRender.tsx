@@ -4,6 +4,7 @@ import CheckboxFilterListGroup from './CheckboxFilterListGroup';
 import SearchableCheckboxListFilterGroup from './SearchableCheckboxListFilterGroup';
 import RangeFilterGroup from './RangeFilterGroup';
 import RadioFilterGroup from './RadioFilterGroup';
+import SearchableRadioFilterGroup from './SearchableRadioFilterGroup';
 
 type Props = {
   group: FilterGroup;
@@ -45,6 +46,17 @@ function CatalogFilterRender({ group, selection, onChange, scrollAreaProps }: Pr
   if (group.type === FILTER_TYPE.RADIO) {
     return (
       <RadioFilterGroup
+        group={group}
+        selection={selection}
+        onChange={onChange}
+        scrollAreaProps={scrollAreaProps}
+      />
+    );
+  }
+
+  if (group.type === FILTER_TYPE.SEARCHABLE_RADIO) {
+    return (
+      <SearchableRadioFilterGroup
         group={group}
         selection={selection}
         onChange={onChange}

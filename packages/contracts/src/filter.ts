@@ -19,6 +19,9 @@ import type { EnumLiteralsOf } from './utils';
  * RADIO — ровно одна опция за раз, без исключения (как чекбокс-группы, но невзаимоисключающий
  * выбор внутри группы бессмысленен на источнике) — см. manga-chan: "Тип" и "Статус" переключают
  * весь путь листинга, а не добавляют query-параметр.
+ * SEARCHABLE_RADIO — то же самое, но для длинного списка (десятки+ опций), как RADIO относится к
+ * CHECKBOX/SEARCHABLE_CHECKBOX: скролл и поиск по названию вместо стены радиокнопок — см. multporn:
+ * Tags/Character собираются постранично и легко доходят до сотен опций.
  */
 export const FILTER_TYPE = {
   CHECKBOX: 'checkbox',
@@ -27,6 +30,7 @@ export const FILTER_TYPE = {
   SEARCHABLE_CHECKBOX_EXCLUDE: 'searchableCheckboxExclude',
   RANGE: 'range',
   RADIO: 'radio',
+  SEARCHABLE_RADIO: 'searchableRadio',
 } as const;
 export type FilterType = EnumLiteralsOf<typeof FILTER_TYPE>;
 

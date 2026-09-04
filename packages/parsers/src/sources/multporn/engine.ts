@@ -1,20 +1,52 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, SORT_DIRECTION, SORT_ORDER } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, SORT_DIRECTION, SORT_ORDER } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
-import type { ListParams } from '../../core/paging';
+import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawChapter, RawManga, RawPage, RawTag } from '../../types';
+import type {
+  RawChapter,
+  RawFilterGroup,
+  RawFilterOption,
+  RawManga,
+  RawPage,
+  RawTag,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
 import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
 import { nullIfEmpty } from '../../core/text/strings';
 import { ParseError } from '../../errors';
+import { FILTER_GROUP } from '../../core/filters/group';
 import { catalogEntryFor } from '../catalog';
 import type { MultpornConfig } from './config';
 
 const BROWSE_PAGE_SIZE = 15;
+/** Page size of every taxonomy-route listing (`/category_hentai/*`, `/characters_hentai/*`) —
+ *  verified live across several terms, always 10 regardless of the term. */
+const TAXONOMY_PAGE_SIZE = 10;
+
+/** `tag`/`character` replace `/new` as the listing route, and `language` only exists as a field
+ *  on `/new`'s own exposed form — verified live that none of the three combine with each other
+ *  (a taxonomy-route page's exposed form has no `language` field at all). */
+const ROUTE_EXCLUSIVE_GROUP = 'route';
+
+export const MULTPORN_FILTER_GROUP = {
+  TAG: FILTER_GROUP.TAG,
+  CHARACTER: FILTER_GROUP.CHARACTER,
+  LANGUAGE: FILTER_GROUP.LANGUAGE,
+} as const;
+
+/** `/new`'s exposed Views form's `language` field — verified live against multporn_hentai
+ *  (`/new?type=3`): `All` (no restriction) plus exactly these five. */
+const LANGUAGE_OPTIONS: RawFilterOption[] = [
+  { key: '1', title: 'English', count: null },
+  { key: '2', title: 'German', count: null },
+  { key: '3', title: 'Russian', count: null },
+  { key: '4', title: 'Chinese', count: null },
+  { key: '5', title: 'Spanish', count: null },
+];
 /** `/search`'s native Views page size — verified against several live queries, always 20 rows
  *  regardless of how many of them end up matching this source's `pathPrefix`. */
 const SEARCH_RAW_PAGE_SIZE = 20;
@@ -92,13 +124,20 @@ const extractGalleryImageSrcs = ($root: Cheerio<AnyNode>): string[] => {
   return srcs;
 };
 
-/** `/new`'s exposed Views sort form offers exactly these two fields — verified live against
- *  both `multporn` and `multporn_hentai`, `sort_order` (ASC/DESC) applies to either. */
+/**
+ * `/new`'s exposed Views sort form only accepts `created`/`changed` — verified live that
+ * `title`/`totalcount`/`value` (the extra fields `resolveTaxonomySortBy` maps VIEWS/RATING to
+ * below) all silently render an EMPTY page here instead of erroring or falling back. Since this
+ * route runs whenever no tag/character is selected, VIEWS/RATING fall back to `changed` (this
+ * route's own default) rather than reaching it — `sort_order` (ASC/DESC) applies to either.
+ */
 const resolveSortBy = (order: string | undefined): string => {
   switch (order) {
     case SORT_ORDER.ADDED:
       return 'created';
     case SORT_ORDER.UPDATED:
+    case SORT_ORDER.VIEWS:
+    case SORT_ORDER.RATING:
     default:
       return 'changed';
   }
@@ -106,6 +145,61 @@ const resolveSortBy = (order: string | undefined): string => {
 
 const resolveSortOrder = (direction: string | undefined): string =>
   direction === SORT_DIRECTION.ASC ? 'ASC' : 'DESC';
+
+/**
+ * Taxonomy-route views (`/category_hentai/*`, `/characters_hentai/*`) accept
+ * `sort_by=title|created|totalcount|value` — verified live, but only `created` respects
+ * `sort_order`; `totalcount` (views) and `value` (rating) each render one fixed order regardless
+ * of ASC/DESC, and `title` is a dead option entirely (byte-identical output to no `sort_by` at
+ * all, in an order that isn't actually alphabetical — a bug on the source's own end), so
+ * SortOrder.ALPHABETICAL isn't offered here at all. `sort_by=changed` (what `resolveSortBy` maps
+ * SortOrder.UPDATED to for `/new`) silently renders an EMPTY page on this route, so UPDATED falls
+ * back to `created` — the closest of the three working fields.
+ */
+const resolveTaxonomySortBy = (order: string | undefined): string => {
+  switch (order) {
+    case SORT_ORDER.VIEWS:
+      return 'totalcount';
+    case SORT_ORDER.RATING:
+      return 'value';
+    case SORT_ORDER.ADDED:
+    case SORT_ORDER.UPDATED:
+    default:
+      return 'created';
+  }
+};
+
+const findSingleSelection = (
+  filters: FilterSelection[] | undefined,
+  groupId: string,
+): string | null => {
+  const found = filters?.find(
+    (f): f is Extract<FilterSelection, { key: string }> => 'key' in f && f.groupId === groupId,
+  );
+  return found?.key ?? null;
+};
+
+/** Shared by every taxonomy full-listing page (`/manga_tags`, `/characters_hentai`) — each term's
+ *  `<a>` links to its own browse route (`pathPrefix`); the key is the slug after that prefix. */
+const parseFilterOptionLinks = (
+  $links: Cheerio<AnyNode>,
+  $: CheerioAPI,
+  pathPrefix: string,
+): RawFilterOption[] => {
+  const seen = new Set<string>();
+  const options: RawFilterOption[] = [];
+  $links.toArray().forEach((el) => {
+    const $a = $(el);
+    const title = textOrNull($a);
+    const href = attrOrNull($a, 'href');
+    if (!title || !href || !href.startsWith(pathPrefix)) return;
+    const key = href.slice(pathPrefix.length).split('?')[0];
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    options.push({ key, title, count: null });
+  });
+  return options;
+};
 
 export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
@@ -149,10 +243,11 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     page: number,
     order: string | undefined,
     direction: string | undefined,
+    language: string | null,
   ): string => {
     const url = new URL('/new', `https://${domain}/`);
     url.searchParams.set('type', cfg.typeParam);
-    url.searchParams.set('language', 'All');
+    url.searchParams.set('language', language ?? 'All');
     url.searchParams.set('field_user_discription_value', 'All');
     url.searchParams.set('sort_by', resolveSortBy(order));
     url.searchParams.set('sort_order', resolveSortOrder(direction));
@@ -164,10 +259,38 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     page: number,
     order: string | undefined,
     direction: string | undefined,
+    language: string | null,
   ): Promise<RawManga[]> => {
-    const doc = await ctx.http.getHtml(buildBrowseUrl(page, order, direction));
+    const doc = await ctx.http.getHtml(buildBrowseUrl(page, order, direction, language));
     return doc
       .$('.view-content .masonry-item')
+      .toArray()
+      .map((el) => parseRow(doc.$(el), doc.$, doc.baseUrl))
+      .filter((m): m is RawManga => m !== null);
+  };
+
+  /**
+   * A selected tag/character replaces `/new` with that term's own browse route
+   * (`<pathPrefix><key>`) — same page size (10) and row markup (`views-field-*` divs) as `/new`,
+   * just laid out as `<table class="views-view-grid"><td>` cells instead of masonry `<div>`s, so
+   * `parseRow` is reused unchanged. Page 0 has no `page` param; page N>0 uses this view's own
+   * two-pager syntax (`page=0,<n>` — position 0 is an unrelated teaser block above the grid,
+   * verified live to always stay 0 while position 1 advances the grid itself).
+   */
+  const fetchTaxonomyPage = async (
+    pathPrefix: string,
+    key: string,
+    page: number,
+    order: string | undefined,
+    direction: string | undefined,
+  ): Promise<RawManga[]> => {
+    const url = new URL(`${pathPrefix}${key}`, `https://${domain}/`);
+    if (page > 0) url.searchParams.set('page', `0,${page}`);
+    url.searchParams.set('sort_by', resolveTaxonomySortBy(order));
+    url.searchParams.set('sort_order', resolveSortOrder(direction));
+    const doc = await ctx.http.getHtml(url.toString());
+    return doc
+      .$('.view-content td')
       .toArray()
       .map((el) => parseRow(doc.$(el), doc.$, doc.baseUrl))
       .filter((m): m is RawManga => m !== null);
@@ -201,9 +324,123 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     if (params.query) return fetchSearchList(params);
+
+    if (cfg.filters) {
+      const tagKey = findSingleSelection(params.filters, MULTPORN_FILTER_GROUP.TAG);
+      if (tagKey !== null) {
+        return fetchPaged(params, { size: TAXONOMY_PAGE_SIZE, firstPage: 0 }, (page) =>
+          fetchTaxonomyPage(
+            cfg.filters!.tagPathPrefix,
+            tagKey,
+            page,
+            params.order,
+            params.direction,
+          ),
+        );
+      }
+      const characterKey = findSingleSelection(params.filters, MULTPORN_FILTER_GROUP.CHARACTER);
+      if (characterKey !== null) {
+        return fetchPaged(params, { size: TAXONOMY_PAGE_SIZE, firstPage: 0 }, (page) =>
+          fetchTaxonomyPage(
+            cfg.filters!.characterPathPrefix,
+            characterKey,
+            page,
+            params.order,
+            params.direction,
+          ),
+        );
+      }
+    }
+
+    const languageKey = findSingleSelection(params.filters, MULTPORN_FILTER_GROUP.LANGUAGE);
     return fetchPaged(params, { size: BROWSE_PAGE_SIZE, firstPage: 0 }, (page) =>
-      fetchBrowsePage(page, params.order, params.direction),
+      fetchBrowsePage(page, params.order, params.direction, languageKey),
     );
+  };
+
+  /**
+   * Both full-listing pages (`/manga_tags`, `/characters_hentai`) share this shape: page 0's
+   * markup plus a plain `?page=N` pager, term `<a>`s prefixed by the term's own browse route.
+   * Page 0 is fetched first to read `li.pager-last a`'s own `page=` value (absent entirely means
+   * page 0 is the only/last page) so the remaining pages can be fetched in parallel instead of
+   * walking them one at a time.
+   */
+  const fetchTaxonomyOptions = async (
+    basePath: string,
+    pathPrefix: string,
+  ): Promise<RawFilterOption[]> => {
+    const separator = basePath.includes('?') ? '&' : '?';
+    const pageUrl = (page: number) =>
+      `https://${domain}${basePath}${page > 0 ? `${separator}page=${page}` : ''}`;
+
+    const firstDoc = await ctx.http.getHtml(pageUrl(0));
+    const collect = (doc: typeof firstDoc) =>
+      parseFilterOptionLinks(doc.$(`a[href^="${pathPrefix}"]`), doc.$, pathPrefix);
+
+    const lastPageHref = attrOrNull(firstDoc.$('li.pager-last a').first(), 'href');
+    const lastPage = lastPageHref
+      ? Number.parseInt(new URL(lastPageHref, firstDoc.baseUrl).searchParams.get('page') ?? '0', 10)
+      : 0;
+
+    const restPages =
+      lastPage > 0
+        ? await Promise.all(
+            Array.from({ length: lastPage }, (_, i) => i + 1).map(async (page) => {
+              const doc = await ctx.http.getHtml(pageUrl(page));
+              return collect(doc);
+            }),
+          )
+        : [];
+
+    const seen = new Set<string>();
+    return [collect(firstDoc), ...restPages].flat().filter((option) => {
+      if (seen.has(option.key)) return false;
+      seen.add(option.key);
+      return true;
+    });
+  };
+
+  let filtersPromise: Promise<RawFilterGroup[]> | null = null;
+
+  const getFilters = (): Promise<RawFilterGroup[]> => {
+    if (!filtersPromise) filtersPromise = fetchFilters();
+    return filtersPromise;
+  };
+
+  const fetchFilters = async (): Promise<RawFilterGroup[]> => {
+    if (!cfg.filters) return [];
+    const [tagOptions, characterOptions] = await Promise.all([
+      fetchTaxonomyOptions(cfg.filters.tagListPath, cfg.filters.tagPathPrefix),
+      fetchTaxonomyOptions(cfg.filters.characterListPath, cfg.filters.characterPathPrefix),
+    ]);
+
+    const groups: RawFilterGroup[] = [];
+    if (tagOptions.length > 0) {
+      groups.push({
+        id: MULTPORN_FILTER_GROUP.TAG,
+        title: 'Tags',
+        type: FILTER_TYPE.SEARCHABLE_RADIO,
+        options: tagOptions,
+        exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+      });
+    }
+    if (characterOptions.length > 0) {
+      groups.push({
+        id: MULTPORN_FILTER_GROUP.CHARACTER,
+        title: 'Character',
+        type: FILTER_TYPE.SEARCHABLE_RADIO,
+        options: characterOptions,
+        exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+      });
+    }
+    groups.push({
+      id: MULTPORN_FILTER_GROUP.LANGUAGE,
+      title: 'Language',
+      type: FILTER_TYPE.RADIO,
+      options: LANGUAGE_OPTIONS,
+      exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+    });
+    return groups;
   };
 
   const getDetails = async (mangaUrl: string): Promise<RawManga> => {
@@ -294,15 +531,28 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
-      sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.ADDED],
+      // VIEWS/RATING only do anything once a tag/character is selected (resolveSortBy falls back
+      // to `changed` for them on plain `/new` browsing, same as UPDATED) — offered anyway since
+      // RawSourceInfo has no way to make a SortOrder conditional on the active filters, and
+      // falling back to the closest working field beats sending a value the source silently
+      // turns into an empty page (see resolveSortBy/resolveTaxonomySortBy). Comics has no
+      // verified tag/character route for these to ever do something on, so it skips both.
+      sortOrders: cfg.filters
+        ? [SORT_ORDER.UPDATED, SORT_ORDER.ADDED, SORT_ORDER.VIEWS, SORT_ORDER.RATING]
+        : [SORT_ORDER.UPDATED, SORT_ORDER.ADDED],
+      // Only `created` (SortOrder.ADDED, or UPDATED/VIEWS/RATING's fallback) respects ASC/DESC —
+      // `totalcount`/`value` (VIEWS/RATING) each render one fixed order on the taxonomy routes
+      // regardless of direction, verified live. No per-SortOrder granularity exists for this flag
+      // either, so it stays true rather than being wrong for the (more common) ADDED/UPDATED case.
       supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
-      isFiltersSupported: false,
+      isFiltersSupported: cfg.filters !== undefined,
     },
     getList,
     getDetails,
     getPages,
+    ...(cfg.filters ? { getFilters } : {}),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

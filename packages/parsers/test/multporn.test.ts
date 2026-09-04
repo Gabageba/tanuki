@@ -1,6 +1,7 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { createMultpornParser } from '../src/sources/multporn/engine';
+import { FILTER_TYPE, SORT_ORDER } from '@tanuki/contracts';
+import { createMultpornParser, MULTPORN_FILTER_GROUP } from '../src/sources/multporn/engine';
 import type { MultpornConfig } from '../src/sources/multporn/config';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -150,5 +151,242 @@ describe('MultPorn parser conformance', () => {
     }
     expect(pages[0]!.url).toBe(`https://${DOMAIN}/one-piece/001.png`);
     expect(pages[1]!.url).toBe(`https://${DOMAIN}/one-piece/002.png`);
+  });
+});
+
+const CFG_HENTAI: MultpornConfig = {
+  id: SOURCE_ID.MULTPORN_HENTAI,
+  typeParam: '3',
+  pathPrefix: '/hentai_manga/',
+  listTagSelector: '.views-field-field-h-category a',
+  detailTagSelector: '.field-name-field-h-category a',
+  authorSelector: '.field-name-field-author-hentai a',
+  filters: {
+    tagListPath: '/manga_tags?rule34=3',
+    tagPathPrefix: '/category_hentai/',
+    characterListPath: '/characters_hentai?r=2',
+    characterPathPrefix: '/characters_hentai/',
+  },
+};
+
+/** Modeled on `/manga_tags?rule34=3` page 0 — a `pager-last` pointing at page=1 means one more
+ *  page follows. */
+const TAG_LIST_PAGE0_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><div><strong><a href="/category_hentai/ahegao">Ahegao</a></strong></div></td>
+      <td><div><strong><a href="/category_hentai/big_tits">Big tits</a></strong></div></td>
+    </tr></tbody></table>
+  </div>
+  <ul class="pager">
+    <li class="pager-item"><a href="/manga_tags?rule34=3&page=1">2</a></li>
+    <li class="pager-last last"><a href="/manga_tags?rule34=3&page=1">Last</a></li>
+  </ul>
+</body></html>`;
+
+/** Page 1 — the last page, no `pager-last` link. */
+const TAG_LIST_PAGE1_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><div><strong><a href="/category_hentai/cosplay">Cosplay</a></strong></div></td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
+/** Modeled on `/characters_hentai?r=2` — single page, no pager. */
+const CHARACTER_LIST_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><h5><a href="/characters_hentai/nami">Nami</a></h5></td>
+      <td><h5><a href="/characters_hentai/abel">Abel</a></h5></td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
+/** Modeled on `/category_hentai/ahegao` and `/characters_hentai/nami` — a taxonomy-route browse
+ *  listing, laid out as `<table class="views-view-grid"><td>` cells rather than `/new`'s masonry
+ *  `<div>`s, but with the same `views-field-*` row markup underneath. */
+const TAXONOMY_BROWSE_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid cols-2"><tbody><tr>
+      <td class="col-1 col-first">
+        <div class="views-field views-field-title"><strong class="field-content"><a href="/hentai_manga/ahegao-title">Ahegao Title</a></strong></div>
+        <div class="views-field views-field-field-preview"><div class="field-content"><a href="/hentai_manga/ahegao-title"><img src="/styles/taxonomy_comics/public/ahegao-title.jpg?itok=abc" /></a></div></div>
+        <div class="views-field views-field-field-h-category"><h5 class="field-content"><a href="/category_hentai/ahegao">Ahegao</a></h5></div>
+        <h3 class="views-field views-field-field-vote"><div class="field-content"><span class="average-rating">Average: <span>3.0</span></span></div></h3>
+      </td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
+const HENTAI_NEW_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <div class="masonry-item views-row">
+      <div class="views-field views-field-title"><strong class="field-content"><a href="/hentai_manga/some-title">Some Title</a></strong></div>
+      <div class="views-field views-field-field-preview"><div class="field-content"><a href="/hentai_manga/some-title"><img src="/styles/taxonomy_comics/public/some-title.jpg?itok=abc" /></a></div></div>
+      <div class="views-field views-field-field-h-category"><h5 class="field-content"><a href="/category_hentai/ahegao">Ahegao</a></h5></div>
+    </div>
+  </div>
+</body></html>`;
+
+const makeHentaiContext = (http: FakeHttpClient): ParserContext => {
+  return {
+    http,
+    domain: DOMAIN,
+    jar: new CookieJar(),
+    logger: { info: () => {}, warn: () => {}, error: () => {} },
+    credentials: {},
+  };
+};
+
+describe('MultPorn Hentai parser filters', () => {
+  const setUpHentaiFixtures = (): FakeHttpClient => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/manga_tags') && url.includes('page=1'), {
+      status: 200,
+      body: TAG_LIST_PAGE1_HTML,
+    });
+    http.register((url) => url.includes('/manga_tags'), {
+      status: 200,
+      body: TAG_LIST_PAGE0_HTML,
+    });
+    http.register((url) => url.includes('/characters_hentai?r=2'), {
+      status: 200,
+      body: CHARACTER_LIST_HTML,
+    });
+    http.register((url) => url.includes('/category_hentai/'), {
+      status: 200,
+      body: TAXONOMY_BROWSE_HTML,
+    });
+    http.register((url) => url.includes('/characters_hentai/nami'), {
+      status: 200,
+      body: TAXONOMY_BROWSE_HTML,
+    });
+    http.register((url) => url.includes('/new'), { status: 200, body: HENTAI_NEW_HTML });
+    return http;
+  };
+
+  it('getFilters: merges paginated tag terms, single-page characters, and static languages', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    const groups = await parser.getFilters!();
+
+    const tag = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.TAG);
+    expect(tag?.type).toBe(FILTER_TYPE.SEARCHABLE_RADIO);
+    expect(tag?.options.map((o) => o.key)).toEqual(['ahegao', 'big_tits', 'cosplay']);
+
+    const character = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.CHARACTER);
+    expect(character?.type).toBe(FILTER_TYPE.SEARCHABLE_RADIO);
+    expect(character?.options.map((o) => o.key)).toEqual(['nami', 'abel']);
+
+    const language = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.LANGUAGE);
+    expect(language?.type).toBe(FILTER_TYPE.RADIO);
+    expect(language?.options.map((o) => o.key)).toEqual(['1', '2', '3', '4', '5']);
+    expect(groups.every((g) => g.exclusiveGroup === groups[0]!.exclusiveGroup)).toBe(true);
+  });
+
+  it('getFilters: memoizes — a second call issues no further requests', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    await parser.getFilters!();
+    const countAfterFirst = http.requests.length;
+    await parser.getFilters!();
+    expect(http.requests.length).toBe(countAfterFirst);
+  });
+
+  it('getList: a tag selection browses /category_hentai/<key> instead of /new', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    const items = await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.TAG, key: 'ahegao' }],
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0]!.url).toBe('/hentai_manga/ahegao-title');
+    const request = http.requests.findLast((r) => r.url.includes('/category_hentai/'))!;
+    expect(request.url).toContain('/category_hentai/ahegao');
+    expect(request.url).toContain('sort_by=created');
+    expect(request.url).not.toContain('page=');
+  });
+
+  it('getList: a character selection browses /characters_hentai/<key> instead of /new', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    const items = await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.CHARACTER, key: 'nami' }],
+    });
+    expect(items).toHaveLength(1);
+    const request = http.requests.findLast((r) => r.url.includes('/characters_hentai/nami'))!;
+    expect(request.url).toContain('/characters_hentai/nami');
+  });
+
+  it('getList: a language selection is forwarded as /new?language=<key>', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.LANGUAGE, key: '3' }],
+    });
+    const request = http.requests.findLast((r) => r.url.includes('/new'))!;
+    expect(request.url).toContain('language=3');
+  });
+
+  it('getList: with no filters, /new still defaults to language=All', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    await parser.getList({ offset: 0, limit: 20 });
+    const request = http.requests.findLast((r) => r.url.includes('/new'))!;
+    expect(request.url).toContain('language=All');
+  });
+
+  it('getFilters: exposes VIEWS/RATING alongside ADDED/UPDATED, never ALPHABETICAL', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    expect(parser.info.sortOrders).toEqual([
+      SORT_ORDER.UPDATED,
+      SORT_ORDER.ADDED,
+      SORT_ORDER.VIEWS,
+      SORT_ORDER.RATING,
+    ]);
+  });
+
+  it('getList: VIEWS/RATING map to totalcount/value when a tag route is active', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.VIEWS,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.TAG, key: 'ahegao' }],
+    });
+    expect(http.requests.findLast((r) => r.url.includes('/category_hentai/'))!.url).toContain(
+      'sort_by=totalcount',
+    );
+
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.RATING,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.TAG, key: 'ahegao' }],
+    });
+    expect(http.requests.findLast((r) => r.url.includes('/category_hentai/'))!.url).toContain(
+      'sort_by=value',
+    );
+  });
+
+  it('getList: VIEWS/RATING fall back to sort_by=changed on plain /new browsing', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+
+    await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.VIEWS });
+    expect(http.requests.findLast((r) => r.url.includes('/new'))!.url).toContain('sort_by=changed');
+
+    await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.RATING });
+    expect(http.requests.findLast((r) => r.url.includes('/new'))!.url).toContain('sort_by=changed');
   });
 });

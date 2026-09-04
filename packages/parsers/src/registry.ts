@@ -68,6 +68,7 @@ const FILTERS_SUPPORTED_IDS = new Set<SourceId>([
   SOURCE_ID.MANGALIB,
   SOURCE_ID.HENTAILIB,
   SOURCE_ID.YAOILIB,
+  SOURCE_ID.MULTPORN_HENTAI,
 ]);
 
 const cookieScopeFor = (id: string): string => {
