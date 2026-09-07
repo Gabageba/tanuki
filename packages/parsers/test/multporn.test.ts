@@ -343,15 +343,28 @@ describe('MultPorn Hentai parser filters', () => {
     expect(request.url).toContain('language=All');
   });
 
-  it('getFilters: exposes VIEWS/RATING alongside ADDED/UPDATED, never ALPHABETICAL', async () => {
+  it('info.sortOrders: only UPDATED/ADDED without a tag/character selected', async () => {
     const http = setUpHentaiFixtures();
     const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
-    expect(parser.info.sortOrders).toEqual([
-      SORT_ORDER.UPDATED,
-      SORT_ORDER.ADDED,
-      SORT_ORDER.VIEWS,
-      SORT_ORDER.RATING,
-    ]);
+    expect(parser.info.sortOrders).toEqual([SORT_ORDER.UPDATED, SORT_ORDER.ADDED]);
+    expect(parser.info.supportsDirection).toBe(true);
+  });
+
+  it('getFilters: TAG/CHARACTER narrow sortOrders to ADDED/VIEWS/RATING, never ALPHABETICAL, and drop direction', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    const groups = await parser.getFilters!();
+
+    const tag = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.TAG);
+    expect(tag?.sortOrders).toEqual([SORT_ORDER.ADDED, SORT_ORDER.VIEWS, SORT_ORDER.RATING]);
+    expect(tag?.supportsDirection).toBe(false);
+
+    const character = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.CHARACTER);
+    expect(character?.sortOrders).toEqual([SORT_ORDER.ADDED, SORT_ORDER.VIEWS, SORT_ORDER.RATING]);
+    expect(character?.supportsDirection).toBe(false);
+
+    const language = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.LANGUAGE);
+    expect(language?.sortOrders).toBeUndefined();
   });
 
   it('getList: VIEWS/RATING map to totalcount/value when a tag route is active', async () => {

@@ -1,6 +1,12 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, FILTER_TYPE, SORT_DIRECTION, SORT_ORDER } from '@tanuki/contracts';
+import {
+  CONTENT_RATING,
+  FILTER_TYPE,
+  SORT_DIRECTION,
+  SORT_ORDER,
+  SOURCE_LOCALE,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -156,6 +162,11 @@ const resolveSortOrder = (direction: string | undefined): string =>
  * SortOrder.UPDATED to for `/new`) silently renders an EMPTY page on this route, so UPDATED falls
  * back to `created` — the closest of the three working fields.
  */
+/** What TAG/CHARACTER FilterGroups declare via FilterGroup.sortOrders — UPDATED is left out since
+ *  it folds into ADDED's `created` here anyway (see resolveTaxonomySortBy), and title/ALPHABETICAL
+ *  is left out per the dead-option note above. */
+const TAXONOMY_SORT_ORDERS = [SORT_ORDER.ADDED, SORT_ORDER.VIEWS, SORT_ORDER.RATING];
+
 const resolveTaxonomySortBy = (order: string | undefined): string => {
   switch (order) {
     case SORT_ORDER.VIEWS:
@@ -422,6 +433,8 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
         type: FILTER_TYPE.SEARCHABLE_RADIO,
         options: tagOptions,
         exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+        sortOrders: TAXONOMY_SORT_ORDERS,
+        supportsDirection: false,
       });
     }
     if (characterOptions.length > 0) {
@@ -431,6 +444,8 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
         type: FILTER_TYPE.SEARCHABLE_RADIO,
         options: characterOptions,
         exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+        sortOrders: TAXONOMY_SORT_ORDERS,
+        supportsDirection: false,
       });
     }
     groups.push({
@@ -526,24 +541,20 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       id: cfg.id,
       title: catalogEntryFor(cfg.id).title,
       domain,
-      locale: 'en',
+      locale: SOURCE_LOCALE.EN,
       contentType: catalogEntryFor(cfg.id).contentType,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
       // VIEWS/RATING only do anything once a tag/character is selected (resolveSortBy falls back
-      // to `changed` for them on plain `/new` browsing, same as UPDATED) — offered anyway since
-      // RawSourceInfo has no way to make a SortOrder conditional on the active filters, and
-      // falling back to the closest working field beats sending a value the source silently
-      // turns into an empty page (see resolveSortBy/resolveTaxonomySortBy). Comics has no
-      // verified tag/character route for these to ever do something on, so it skips both.
-      sortOrders: cfg.filters
-        ? [SORT_ORDER.UPDATED, SORT_ORDER.ADDED, SORT_ORDER.VIEWS, SORT_ORDER.RATING]
-        : [SORT_ORDER.UPDATED, SORT_ORDER.ADDED],
-      // Only `created` (SortOrder.ADDED, or UPDATED/VIEWS/RATING's fallback) respects ASC/DESC —
-      // `totalcount`/`value` (VIEWS/RATING) each render one fixed order on the taxonomy routes
-      // regardless of direction, verified live. No per-SortOrder granularity exists for this flag
-      // either, so it stays true rather than being wrong for the (more common) ADDED/UPDATED case.
+      // to `changed` for them on plain `/new` browsing, same as UPDATED) — the TAG/CHARACTER
+      // FilterGroups below narrow this down to their own working set via FilterGroup.sortOrders.
+      sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.ADDED],
+      // Only `created` (SortOrder.ADDED) respects ASC/DESC on either route — `changed` (UPDATED,
+      // `/new` only) always sorts DESC, and `totalcount`/`value` (VIEWS/RATING, taxonomy routes
+      // only) each render one fixed order regardless of direction, verified live. The TAG/
+      // CHARACTER FilterGroups set their own supportsDirection: false to hide the toggle rather
+      // than exposing it for a lone ADDED case.
       supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
