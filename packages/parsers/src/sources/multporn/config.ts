@@ -1,11 +1,8 @@
 import { SOURCE_ID } from '../catalog';
 
 /**
- * Tag/character taxonomy routes for one content type — verified live only for hentai_manga
- * (see engine.ts's fetchTaxonomyOptions/fetchTaxonomyPage). Comics almost certainly has its own
- * equivalent pair (its listing rows already carry `/category/<slug>` links, see `listTagSelector`
- * below), but the full-listing pages that would enumerate every term (this type's `/manga_tags`
- * equivalent) haven't been found/verified live, so it stays unwired rather than guessed at.
+ * Tag/character taxonomy routes for one content type — verified live for both comics and
+ * hentai_manga (see engine.ts's fetchTaxonomyOptions/fetchTaxonomyPage).
  */
 export type MultpornFilterConfig = {
   /** Full, paginated (`?page=N`) listing of every tag term for this type — `/manga_tags` for
@@ -20,6 +17,12 @@ export type MultpornFilterConfig = {
    *  terms across 11 pages. */
   characterListPath: string;
   characterPathPrefix: string;
+  /** Same shape as `tagListPath`, for the series taxonomy — a series' own browse route lives at a
+   *  different path than this type's actual node prefix (hentai_manga: series `/manga/<slug>`
+   *  vs. nodes `/hentai_manga/<slug>`; comics: both happen to be `/comics/<slug>`, verified live
+   *  that's a coincidence of this type's URL scheme, not something to rely on). */
+  seriesListPath: string;
+  seriesPathPrefix: string;
 };
 
 export type MultpornConfig = {
@@ -50,6 +53,14 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
     listTagSelector: '.views-field-field-category a',
     detailTagSelector: '.field-name-field-category a',
     authorSelector: '.field-name-field-author a',
+    filters: {
+      tagListPath: '/category_comic?rule34=1',
+      tagPathPrefix: '/category/',
+      characterListPath: '/characters',
+      characterPathPrefix: '/characters/',
+      seriesListPath: '/comics?rule34=3',
+      seriesPathPrefix: '/comics/',
+    },
   },
   {
     id: SOURCE_ID.MULTPORN_HENTAI,
@@ -63,6 +74,8 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
       tagPathPrefix: '/category_hentai/',
       characterListPath: '/characters_hentai?r=2',
       characterPathPrefix: '/characters_hentai/',
+      seriesListPath: '/manga?rule34=3',
+      seriesPathPrefix: '/manga/',
     },
   },
 ];

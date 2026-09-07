@@ -16,6 +16,14 @@ const CFG: MultpornConfig = {
   listTagSelector: '.views-field-field-category a',
   detailTagSelector: '.field-name-field-category a',
   authorSelector: '.field-name-field-author a',
+  filters: {
+    tagListPath: '/category_comic?rule34=1',
+    tagPathPrefix: '/category/',
+    characterListPath: '/characters',
+    characterPathPrefix: '/characters/',
+    seriesListPath: '/comics?rule34=3',
+    seriesPathPrefix: '/comics/',
+  },
 };
 
 const BROWSE_LIST_HTML = `<!doctype html><html><body>
@@ -166,6 +174,8 @@ const CFG_HENTAI: MultpornConfig = {
     tagPathPrefix: '/category_hentai/',
     characterListPath: '/characters_hentai?r=2',
     characterPathPrefix: '/characters_hentai/',
+    seriesListPath: '/manga?rule34=3',
+    seriesPathPrefix: '/manga/',
   },
 };
 
@@ -219,6 +229,31 @@ const TAXONOMY_BROWSE_HTML = `<!doctype html><html><body>
   </div>
 </body></html>`;
 
+/** Modeled on `/manga?rule34=3` page 0 — a `pager-last` pointing at page=1 means one more page
+ *  follows. Series live at a different route (`/manga/<slug>`) than this type's node prefix
+ *  (`/hentai_manga/<slug>`). */
+const SERIES_LIST_PAGE0_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><div><strong><a href="/manga/aladdin">Aladdin</a></strong></div></td>
+      <td><div><strong><a href="/manga/bakemonogatari">Bakemonogatari</a></strong></div></td>
+    </tr></tbody></table>
+  </div>
+  <ul class="pager">
+    <li class="pager-item"><a href="/manga?rule34=3&page=1">2</a></li>
+    <li class="pager-last last"><a href="/manga?rule34=3&page=1">Last</a></li>
+  </ul>
+</body></html>`;
+
+/** Page 1 — the last page, no `pager-last` link. */
+const SERIES_LIST_PAGE1_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><div><strong><a href="/manga/attack_on_titan">Attack on Titan</a></strong></div></td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
 const HENTAI_NEW_HTML = `<!doctype html><html><body>
   <div class="view-content">
     <div class="masonry-item views-row">
@@ -262,11 +297,23 @@ describe('MultPorn Hentai parser filters', () => {
       status: 200,
       body: TAXONOMY_BROWSE_HTML,
     });
+    http.register((url) => url.includes('/manga?rule34=3') && url.includes('page=1'), {
+      status: 200,
+      body: SERIES_LIST_PAGE1_HTML,
+    });
+    http.register((url) => url.includes('/manga?rule34=3'), {
+      status: 200,
+      body: SERIES_LIST_PAGE0_HTML,
+    });
+    http.register((url) => url.includes('/manga/aladdin'), {
+      status: 200,
+      body: TAXONOMY_BROWSE_HTML,
+    });
     http.register((url) => url.includes('/new'), { status: 200, body: HENTAI_NEW_HTML });
     return http;
   };
 
-  it('getFilters: merges paginated tag terms, single-page characters, and static languages', async () => {
+  it('getFilters: merges paginated tag/series terms, single-page characters, and static languages', async () => {
     const http = setUpHentaiFixtures();
     const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
     const groups = await parser.getFilters!();
@@ -278,6 +325,14 @@ describe('MultPorn Hentai parser filters', () => {
     const character = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.CHARACTER);
     expect(character?.type).toBe(FILTER_TYPE.SEARCHABLE_RADIO);
     expect(character?.options.map((o) => o.key)).toEqual(['nami', 'abel']);
+
+    const series = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.SERIES);
+    expect(series?.type).toBe(FILTER_TYPE.SEARCHABLE_RADIO);
+    expect(series?.options.map((o) => o.key)).toEqual([
+      'aladdin',
+      'bakemonogatari',
+      'attack_on_titan',
+    ]);
 
     const language = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.LANGUAGE);
     expect(language?.type).toBe(FILTER_TYPE.RADIO);
@@ -323,6 +378,21 @@ describe('MultPorn Hentai parser filters', () => {
     expect(request.url).toContain('/characters_hentai/nami');
   });
 
+  it('getList: a series selection browses /manga/<key> instead of /new', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    const items = await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.SERIES, key: 'aladdin' }],
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0]!.url).toBe('/hentai_manga/ahegao-title');
+    const request = http.requests.findLast((r) => r.url.includes('/manga/aladdin'))!;
+    expect(request.url).toContain('/manga/aladdin');
+    expect(request.url).toContain('sort_by=created');
+  });
+
   it('getList: a language selection is forwarded as /new?language=<key>', async () => {
     const http = setUpHentaiFixtures();
     const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
@@ -350,21 +420,47 @@ describe('MultPorn Hentai parser filters', () => {
     expect(parser.info.supportsDirection).toBe(true);
   });
 
-  it('getFilters: TAG/CHARACTER narrow sortOrders to ADDED/VIEWS/RATING, never ALPHABETICAL, and drop direction', async () => {
+  it('getFilters: TAG/CHARACTER/SERIES narrow sortOrders to ADDED/VIEWS/RATING/ALPHABETICAL and drop direction', async () => {
     const http = setUpHentaiFixtures();
     const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
     const groups = await parser.getFilters!();
 
+    const expectedSortOrders = [
+      SORT_ORDER.ADDED,
+      SORT_ORDER.VIEWS,
+      SORT_ORDER.RATING,
+      SORT_ORDER.ALPHABETICAL,
+    ];
+
     const tag = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.TAG);
-    expect(tag?.sortOrders).toEqual([SORT_ORDER.ADDED, SORT_ORDER.VIEWS, SORT_ORDER.RATING]);
+    expect(tag?.sortOrders).toEqual(expectedSortOrders);
     expect(tag?.supportsDirection).toBe(false);
 
     const character = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.CHARACTER);
-    expect(character?.sortOrders).toEqual([SORT_ORDER.ADDED, SORT_ORDER.VIEWS, SORT_ORDER.RATING]);
+    expect(character?.sortOrders).toEqual(expectedSortOrders);
     expect(character?.supportsDirection).toBe(false);
+
+    const series = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.SERIES);
+    expect(series?.sortOrders).toEqual(expectedSortOrders);
+    expect(series?.supportsDirection).toBe(false);
 
     const language = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.LANGUAGE);
     expect(language?.sortOrders).toBeUndefined();
+  });
+
+  it('getList: ALPHABETICAL maps to sort_by=title when a tag route is active', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+
+    await parser.getList({
+      offset: 0,
+      limit: 20,
+      order: SORT_ORDER.ALPHABETICAL,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.TAG, key: 'ahegao' }],
+    });
+    expect(http.requests.findLast((r) => r.url.includes('/category_hentai/'))!.url).toContain(
+      'sort_by=title',
+    );
   });
 
   it('getList: VIEWS/RATING map to totalcount/value when a tag route is active', async () => {
@@ -401,5 +497,213 @@ describe('MultPorn Hentai parser filters', () => {
 
     await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.RATING });
     expect(http.requests.findLast((r) => r.url.includes('/new'))!.url).toContain('sort_by=changed');
+  });
+});
+
+/** Modeled on `/category_comic?rule34=1` page 0 — a `pager-last` pointing at page=1 means one
+ *  more page follows. */
+const COMIC_TAG_LIST_PAGE0_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><div><strong><a href="/category/adventure">Adventure</a></strong></div></td>
+      <td><div><strong><a href="/category/comedy">Comedy</a></strong></div></td>
+    </tr></tbody></table>
+  </div>
+  <ul class="pager">
+    <li class="pager-item"><a href="/category_comic?rule34=1&page=1">2</a></li>
+    <li class="pager-last last"><a href="/category_comic?rule34=1&page=1">Last</a></li>
+  </ul>
+</body></html>`;
+
+/** Page 1 — the last page, no `pager-last` link. */
+const COMIC_TAG_LIST_PAGE1_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><div><strong><a href="/category/superhero">Superhero</a></strong></div></td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
+/** Modeled on `/characters` — single page, no pager. */
+const COMIC_CHARACTER_LIST_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><h5><a href="/characters/aang">Aang</a></h5></td>
+      <td><h5><a href="/characters/2b">2B</a></h5></td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
+/** Modeled on `/category/adventure` and `/characters/aang` — a taxonomy-route browse listing,
+ *  laid out as `<table class="views-view-grid"><td>` cells rather than `/new`'s masonry `<div>`s,
+ *  but with the same `views-field-*` row markup underneath. */
+const COMIC_TAXONOMY_BROWSE_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid cols-2"><tbody><tr>
+      <td class="col-1 col-first">
+        <div class="views-field views-field-title"><strong class="field-content"><a href="/comics/avatar-comic">Avatar Comic</a></strong></div>
+        <div class="views-field views-field-field-preview"><div class="field-content"><a href="/comics/avatar-comic"><img src="/styles/taxonomy_comics/public/avatar-comic.jpg?itok=abc" /></a></div></div>
+        <div class="views-field views-field-field-category"><h5 class="field-content"><a href="/category/adventure">Adventure</a></h5></div>
+        <h3 class="views-field views-field-field-vote"><div class="field-content"><span class="average-rating">Average: <span>3.0</span></span></div></h3>
+      </td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
+/** Modeled on `/comics?rule34=3` page 0 — a `pager-last` pointing at page=1 means one more page
+ *  follows. Series happen to live at the same route prefix as this type's node prefix
+ *  (`/comics/<slug>`) — verified live that's a coincidence of comics' URL scheme, not something
+ *  the parser relies on (it always uses `seriesPathPrefix` from config, never `cfg.pathPrefix`). */
+const COMIC_SERIES_LIST_PAGE0_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><div><strong><a href="/comics/adventure_time">Adventure Time</a></strong></div></td>
+      <td><div><strong><a href="/comics/aggretsuko">Aggretsuko</a></strong></div></td>
+    </tr></tbody></table>
+  </div>
+  <ul class="pager">
+    <li class="pager-item"><a href="/comics?rule34=3&page=1">2</a></li>
+    <li class="pager-last last"><a href="/comics?rule34=3&page=1">Last</a></li>
+  </ul>
+</body></html>`;
+
+/** Page 1 — the last page, no `pager-last` link. */
+const COMIC_SERIES_LIST_PAGE1_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid"><tbody><tr>
+      <td><div><strong><a href="/comics/atomic_heart">Atomic Heart</a></strong></div></td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
+/** Modeled on `/comics/adventure_time` — a series' own browse listing. */
+const COMIC_SERIES_BROWSE_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <table class="views-view-grid cols-2"><tbody><tr>
+      <td class="col-1 col-first">
+        <div class="views-field views-field-title"><strong class="field-content"><a href="/comics/adventure_time_before_the_war">Adventure Time: Before the War</a></strong></div>
+        <div class="views-field views-field-field-category"><h5 class="field-content"><a href="/category/adventure">Adventure</a></h5></div>
+        <h3 class="views-field views-field-field-vote"><div class="field-content"><span class="average-rating">Average: <span>3.0</span></span></div></h3>
+      </td>
+    </tr></tbody></table>
+  </div>
+</body></html>`;
+
+const COMIC_NEW_HTML = `<!doctype html><html><body>
+  <div class="view-content">
+    <div class="masonry-item views-row">
+      <div class="views-field views-field-title"><strong class="field-content"><a href="/comics/one-piece">One Piece</a></strong></div>
+      <div class="views-field views-field-field-category"><h5 class="field-content"><a href="/category/adventure">Adventure</a></h5></div>
+    </div>
+  </div>
+</body></html>`;
+
+describe('MultPorn Comics parser filters', () => {
+  const setUpComicsFilterFixtures = (): FakeHttpClient => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/category_comic') && url.includes('page=1'), {
+      status: 200,
+      body: COMIC_TAG_LIST_PAGE1_HTML,
+    });
+    http.register((url) => url.includes('/category_comic'), {
+      status: 200,
+      body: COMIC_TAG_LIST_PAGE0_HTML,
+    });
+    http.register((url) => url.includes('/characters') && !url.includes('/characters/'), {
+      status: 200,
+      body: COMIC_CHARACTER_LIST_HTML,
+    });
+    http.register((url) => url.includes('/category/'), {
+      status: 200,
+      body: COMIC_TAXONOMY_BROWSE_HTML,
+    });
+    http.register((url) => url.includes('/characters/aang'), {
+      status: 200,
+      body: COMIC_TAXONOMY_BROWSE_HTML,
+    });
+    http.register((url) => url.includes('/comics?rule34=3') && url.includes('page=1'), {
+      status: 200,
+      body: COMIC_SERIES_LIST_PAGE1_HTML,
+    });
+    http.register((url) => url.includes('/comics?rule34=3'), {
+      status: 200,
+      body: COMIC_SERIES_LIST_PAGE0_HTML,
+    });
+    http.register((url) => url.includes('/comics/adventure_time'), {
+      status: 200,
+      body: COMIC_SERIES_BROWSE_HTML,
+    });
+    http.register((url) => url.includes('/new'), { status: 200, body: COMIC_NEW_HTML });
+    return http;
+  };
+
+  it('getFilters: merges paginated tag/series terms, single-page characters, and static languages', async () => {
+    const http = setUpComicsFilterFixtures();
+    const parser = createMultpornParser(CFG, makeContext(http));
+    const groups = await parser.getFilters!();
+
+    const tag = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.TAG);
+    expect(tag?.type).toBe(FILTER_TYPE.SEARCHABLE_RADIO);
+    expect(tag?.options.map((o) => o.key)).toEqual(['adventure', 'comedy', 'superhero']);
+
+    const character = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.CHARACTER);
+    expect(character?.type).toBe(FILTER_TYPE.SEARCHABLE_RADIO);
+    expect(character?.options.map((o) => o.key)).toEqual(['aang', '2b']);
+
+    const series = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.SERIES);
+    expect(series?.type).toBe(FILTER_TYPE.SEARCHABLE_RADIO);
+    expect(series?.options.map((o) => o.key)).toEqual([
+      'adventure_time',
+      'aggretsuko',
+      'atomic_heart',
+    ]);
+
+    const language = groups.find((g) => g.id === MULTPORN_FILTER_GROUP.LANGUAGE);
+    expect(language?.type).toBe(FILTER_TYPE.RADIO);
+    expect(language?.options.map((o) => o.key)).toEqual(['1', '2', '3', '4', '5']);
+    expect(groups.every((g) => g.exclusiveGroup === groups[0]!.exclusiveGroup)).toBe(true);
+  });
+
+  it('getList: a tag selection browses /category/<key> instead of /new', async () => {
+    const http = setUpComicsFilterFixtures();
+    const parser = createMultpornParser(CFG, makeContext(http));
+    const items = await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.TAG, key: 'adventure' }],
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0]!.url).toBe('/comics/avatar-comic');
+    const request = http.requests.findLast((r) => r.url.includes('/category/adventure'))!;
+    expect(request.url).toContain('/category/adventure');
+    expect(request.url).toContain('sort_by=created');
+  });
+
+  it('getList: a character selection browses /characters/<key> instead of /new', async () => {
+    const http = setUpComicsFilterFixtures();
+    const parser = createMultpornParser(CFG, makeContext(http));
+    const items = await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.CHARACTER, key: 'aang' }],
+    });
+    expect(items).toHaveLength(1);
+    const request = http.requests.findLast((r) => r.url.includes('/characters/aang'))!;
+    expect(request.url).toContain('/characters/aang');
+  });
+
+  it('getList: a series selection browses /comics/<key> instead of /new', async () => {
+    const http = setUpComicsFilterFixtures();
+    const parser = createMultpornParser(CFG, makeContext(http));
+    const items = await parser.getList({
+      offset: 0,
+      limit: 20,
+      filters: [{ groupId: MULTPORN_FILTER_GROUP.SERIES, key: 'adventure_time' }],
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0]!.url).toBe('/comics/adventure_time_before_the_war');
+    const request = http.requests.findLast((r) => r.url.includes('/comics/adventure_time'))!;
+    expect(request.url).toContain('/comics/adventure_time');
+    expect(request.url).toContain('sort_by=created');
   });
 });

@@ -29,18 +29,20 @@ import { catalogEntryFor } from '../catalog';
 import type { MultpornConfig } from './config';
 
 const BROWSE_PAGE_SIZE = 15;
-/** Page size of every taxonomy-route listing (`/category_hentai/*`, `/characters_hentai/*`) —
- *  verified live across several terms, always 10 regardless of the term. */
+/** Page size of every taxonomy-route listing (`/category_hentai/*`, `/characters_hentai/*`,
+ *  comics' `/category/*`, `/characters/*`) — verified live across several terms, always 10
+ *  regardless of the term. */
 const TAXONOMY_PAGE_SIZE = 10;
 
-/** `tag`/`character` replace `/new` as the listing route, and `language` only exists as a field
- *  on `/new`'s own exposed form — verified live that none of the three combine with each other
- *  (a taxonomy-route page's exposed form has no `language` field at all). */
+/** `tag`/`character`/`series` each replace `/new` as the listing route, and `language` only
+ *  exists as a field on `/new`'s own exposed form — verified live that none of the four combine
+ *  with each other (a taxonomy-route page's exposed form has no `language` field at all). */
 const ROUTE_EXCLUSIVE_GROUP = 'route';
 
 export const MULTPORN_FILTER_GROUP = {
   TAG: FILTER_GROUP.TAG,
   CHARACTER: FILTER_GROUP.CHARACTER,
+  SERIES: FILTER_GROUP.SERIES,
   LANGUAGE: FILTER_GROUP.LANGUAGE,
 } as const;
 
@@ -153,19 +155,25 @@ const resolveSortOrder = (direction: string | undefined): string =>
   direction === SORT_DIRECTION.ASC ? 'ASC' : 'DESC';
 
 /**
- * Taxonomy-route views (`/category_hentai/*`, `/characters_hentai/*`) accept
- * `sort_by=title|created|totalcount|value` — verified live, but only `created` respects
- * `sort_order`; `totalcount` (views) and `value` (rating) each render one fixed order regardless
- * of ASC/DESC, and `title` is a dead option entirely (byte-identical output to no `sort_by` at
- * all, in an order that isn't actually alphabetical — a bug on the source's own end), so
- * SortOrder.ALPHABETICAL isn't offered here at all. `sort_by=changed` (what `resolveSortBy` maps
- * SortOrder.UPDATED to for `/new`) silently renders an EMPTY page on this route, so UPDATED falls
- * back to `created` — the closest of the three working fields.
+ * Taxonomy-route views (`/category_hentai/*`, `/characters_hentai/*`, `/category/*`,
+ * `/characters/*`, `/comics/*`, `/manga/*`) accept `sort_by=title|created|totalcount|value` —
+ * verified live across all four taxonomies on both content types, but only `created` respects
+ * `sort_order`; `totalcount` (views), `value` (rating) and `title` (alphabetical) each render one
+ * fixed order regardless of ASC/DESC. `title` genuinely sorts alphabetically (verified across
+ * pages — e.g. `/category_hentai/ahegao`'s page 0 ends mid-A, page 7 continues into the B's) —
+ * it's just byte-identical to omitting `sort_by` entirely, since that's this view's own baked-in
+ * default order. `sort_by=changed` (what `resolveSortBy` maps SortOrder.UPDATED to for `/new`)
+ * silently renders an EMPTY page on this route, so UPDATED falls back to `created` — the closest
+ * of the working fields.
  */
-/** What TAG/CHARACTER FilterGroups declare via FilterGroup.sortOrders — UPDATED is left out since
- *  it folds into ADDED's `created` here anyway (see resolveTaxonomySortBy), and title/ALPHABETICAL
- *  is left out per the dead-option note above. */
-const TAXONOMY_SORT_ORDERS = [SORT_ORDER.ADDED, SORT_ORDER.VIEWS, SORT_ORDER.RATING];
+/** What TAG/CHARACTER/SERIES FilterGroups declare via FilterGroup.sortOrders — UPDATED is left
+ *  out since it folds into ADDED's `created` here anyway (see resolveTaxonomySortBy). */
+const TAXONOMY_SORT_ORDERS = [
+  SORT_ORDER.ADDED,
+  SORT_ORDER.VIEWS,
+  SORT_ORDER.RATING,
+  SORT_ORDER.ALPHABETICAL,
+];
 
 const resolveTaxonomySortBy = (order: string | undefined): string => {
   switch (order) {
@@ -173,6 +181,8 @@ const resolveTaxonomySortBy = (order: string | undefined): string => {
       return 'totalcount';
     case SORT_ORDER.RATING:
       return 'value';
+    case SORT_ORDER.ALPHABETICAL:
+      return 'title';
     case SORT_ORDER.ADDED:
     case SORT_ORDER.UPDATED:
     default:
@@ -361,6 +371,18 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
           ),
         );
       }
+      const seriesKey = findSingleSelection(params.filters, MULTPORN_FILTER_GROUP.SERIES);
+      if (seriesKey !== null) {
+        return fetchPaged(params, { size: TAXONOMY_PAGE_SIZE, firstPage: 0 }, (page) =>
+          fetchTaxonomyPage(
+            cfg.filters!.seriesPathPrefix,
+            seriesKey,
+            page,
+            params.order,
+            params.direction,
+          ),
+        );
+      }
     }
 
     const languageKey = findSingleSelection(params.filters, MULTPORN_FILTER_GROUP.LANGUAGE);
@@ -370,8 +392,9 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
   };
 
   /**
-   * Both full-listing pages (`/manga_tags`, `/characters_hentai`) share this shape: page 0's
-   * markup plus a plain `?page=N` pager, term `<a>`s prefixed by the term's own browse route.
+   * All full-listing pages (`/manga_tags`, `/characters_hentai`, `/manga`, ...) share this shape:
+   * page 0's markup plus a plain `?page=N` pager, term `<a>`s prefixed by the term's own browse
+   * route.
    * Page 0 is fetched first to read `li.pager-last a`'s own `page=` value (absent entirely means
    * page 0 is the only/last page) so the remaining pages can be fetched in parallel instead of
    * walking them one at a time.
@@ -420,9 +443,10 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
 
   const fetchFilters = async (): Promise<RawFilterGroup[]> => {
     if (!cfg.filters) return [];
-    const [tagOptions, characterOptions] = await Promise.all([
+    const [tagOptions, characterOptions, seriesOptions] = await Promise.all([
       fetchTaxonomyOptions(cfg.filters.tagListPath, cfg.filters.tagPathPrefix),
       fetchTaxonomyOptions(cfg.filters.characterListPath, cfg.filters.characterPathPrefix),
+      fetchTaxonomyOptions(cfg.filters.seriesListPath, cfg.filters.seriesPathPrefix),
     ]);
 
     const groups: RawFilterGroup[] = [];
@@ -443,6 +467,17 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
         title: 'Character',
         type: FILTER_TYPE.SEARCHABLE_RADIO,
         options: characterOptions,
+        exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
+        sortOrders: TAXONOMY_SORT_ORDERS,
+        supportsDirection: false,
+      });
+    }
+    if (seriesOptions.length > 0) {
+      groups.push({
+        id: MULTPORN_FILTER_GROUP.SERIES,
+        title: 'Series',
+        type: FILTER_TYPE.SEARCHABLE_RADIO,
+        options: seriesOptions,
         exclusiveGroup: ROUTE_EXCLUSIVE_GROUP,
         sortOrders: TAXONOMY_SORT_ORDERS,
         supportsDirection: false,
@@ -546,15 +581,16 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
       requiresVpn: catalogEntryFor(cfg.id).requiresVpn,
-      // VIEWS/RATING only do anything once a tag/character is selected (resolveSortBy falls back
-      // to `changed` for them on plain `/new` browsing, same as UPDATED) — the TAG/CHARACTER
-      // FilterGroups below narrow this down to their own working set via FilterGroup.sortOrders.
+      // VIEWS/RATING/ALPHABETICAL only do anything once a tag/character/series is selected
+      // (resolveSortBy falls back to `changed` for them on plain `/new` browsing, same as
+      // UPDATED) — the TAG/CHARACTER/SERIES FilterGroups below narrow this down to their own
+      // working set via FilterGroup.sortOrders.
       sortOrders: [SORT_ORDER.UPDATED, SORT_ORDER.ADDED],
       // Only `created` (SortOrder.ADDED) respects ASC/DESC on either route — `changed` (UPDATED,
-      // `/new` only) always sorts DESC, and `totalcount`/`value` (VIEWS/RATING, taxonomy routes
-      // only) each render one fixed order regardless of direction, verified live. The TAG/
-      // CHARACTER FilterGroups set their own supportsDirection: false to hide the toggle rather
-      // than exposing it for a lone ADDED case.
+      // `/new` only) always sorts DESC, and `totalcount`/`value`/`title` (VIEWS/RATING/
+      // ALPHABETICAL, taxonomy routes only) each render one fixed order regardless of direction,
+      // verified live. The TAG/CHARACTER/SERIES FilterGroups set their own
+      // supportsDirection: false to hide the toggle rather than exposing it for a lone ADDED case.
       supportsDirection: true,
       isSearchSupported: true,
       isMultipleTagsSupported: true,
