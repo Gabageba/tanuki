@@ -37,6 +37,7 @@ function MangaCardTags({ tags }: Props) {
             fw={400}
             styles={{
               label: {
+                color: 'var(--mantine-color-text)',
                 textTransform: 'none',
               },
             }}
@@ -44,7 +45,11 @@ function MangaCardTags({ tags }: Props) {
             {tag.title}
           </Badge>
         ))}
-        <Badge color="var(--mantine-color-default-border)" fw={400}>
+        <Badge
+          color="var(--mantine-color-default-border)"
+          fw={400}
+          styles={{ label: { color: 'var(--mantine-color-text)' } }}
+        >
           {`+${tags.length}`}
         </Badge>
       </Group>
@@ -57,7 +62,7 @@ function MangaCardTags({ tags }: Props) {
               color="var(--mantine-color-default-border)"
               fw={400}
               style={{ flexShrink: 0 }}
-              styles={{ label: { textTransform: 'none' } }}
+              styles={{ label: { color: 'var(--mantine-color-text)', textTransform: 'none' } }}
             >
               {tag.title}
             </Badge>
@@ -67,7 +72,7 @@ function MangaCardTags({ tags }: Props) {
             color="var(--mantine-color-default-border)"
             fw={400}
             style={{ flexShrink: 0 }}
-            styles={{ label: { textTransform: 'none' } }}
+            styles={{ label: { color: 'var(--mantine-color-text)', textTransform: 'none' } }}
           >
             {`+${hiddenCount}`}
           </Badge>

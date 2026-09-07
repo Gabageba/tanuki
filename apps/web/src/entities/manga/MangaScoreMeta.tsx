@@ -17,12 +17,7 @@ function MangaScoreMeta({ manga }: Props) {
 
   return (
     <Group gap={4}>
-      {isRatingEmpty ? (
-        <HeartIcon weight="fill" color="white" />
-      ) : (
-        <StarFourIcon weight="fill" color="white" />
-      )}
-
+      {isRatingEmpty ? <HeartIcon weight="fill" /> : <StarFourIcon weight="fill" />}
       {isRatingEmpty ? manga.likes : manga.rating}
     </Group>
   );
