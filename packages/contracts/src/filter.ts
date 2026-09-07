@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { EnumLiteralsOf } from './utils';
+import { SortOrderSchema } from './source';
 
 /**
  * Семантика выбора опции + способ отрисовки группы, одним полем. Раньше это были два независимых
@@ -112,6 +113,16 @@ export const FilterGroupSchema = z.object({
    * 404s on the source). The UI clears sibling groups' selections when one of them gets picked.
    */
   exclusiveGroup: z.string().optional(),
+  /**
+   * Narrower Source.sortOrders that applies while this group has an active selection — e.g.
+   * multporn's tag/character routes drop UPDATED in favor of VIEWS/RATING (fields that only do
+   * anything on those routes), and nudemoon's mangaka/seria/group/perevod routes drop PAGES
+   * (unsupported there). Omitted means this group doesn't change what's on offer. The UI falls
+   * back to the first entry here when the currently selected order isn't in it.
+   */
+  sortOrders: z.array(SortOrderSchema).optional(),
+  /** Same idea for Source.supportsDirection. Omitted means inherit it unchanged. */
+  supportsDirection: z.boolean().optional(),
 });
 
 export type FilterGroup = z.infer<typeof FilterGroupSchema>;

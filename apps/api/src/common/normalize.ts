@@ -38,6 +38,8 @@ export const normalizeFilterGroup = (raw: RawFilterGroup): FilterGroup => {
     options: raw.options.map(normalizeFilterOption),
     settings: raw.settings,
     exclusiveGroup: raw.exclusiveGroup,
+    sortOrders: raw.sortOrders,
+    supportsDirection: raw.supportsDirection,
   };
 };
 

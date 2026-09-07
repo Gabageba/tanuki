@@ -25,6 +25,14 @@ export type SourceStatus = EnumLiteralsOf<typeof SOURCE_STATUS>;
 
 export const SourceStatusSchema = z.enum(SOURCE_STATUS);
 
+export const SOURCE_LOCALE = {
+  RU: 'ru',
+  EN: 'en',
+} as const;
+export type SourceLocale = EnumLiteralsOf<typeof SOURCE_LOCALE>;
+
+export const SourceLocaleSchema = z.enum(SOURCE_LOCALE);
+
 /**
  * Canonical vocabulary of catalog sort orders. Each source only supports a subset — the actual
  * per-source list travels as Source.sortOrders — so this is just the shared key space, not a
@@ -32,12 +40,13 @@ export const SourceStatusSchema = z.enum(SOURCE_STATUS);
  */
 export const SORT_ORDER = {
   UPDATED: 'updated',
-  NEWEST: 'newest',
+  RELEASED: 'released',
   ADDED: 'added',
   POPULARITY: 'popularity',
   RATING: 'rating',
   RATING_COUNT: 'ratingCount',
   LIKES: 'likes',
+  COMMENTS: 'comments',
   VIEWS: 'views',
   VIEWS_TODAY: 'viewsToday',
   VIEWS_WEEK: 'viewsWeek',
@@ -73,7 +82,7 @@ export const SourceSchema = z.object({
    * — sources rotate domains, so use `id` (not this) as the stable key for anything persisted.
    */
   domain: z.string(),
-  locale: z.string(),
+  locale: SourceLocaleSchema,
   contentType: SourceContentTypeSchema,
   status: SourceStatusSchema,
   isAdult: z.boolean(),

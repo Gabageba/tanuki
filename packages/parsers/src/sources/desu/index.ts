@@ -8,6 +8,7 @@ import {
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type MangaState,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -107,7 +108,7 @@ const getSortKey = (order: string | undefined): string => {
       return 'name';
     case SORT_ORDER.POPULARITY:
       return 'popular';
-    case SORT_ORDER.NEWEST:
+    case SORT_ORDER.RELEASED:
       return 'id';
     default:
       return 'updated';
@@ -633,7 +634,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'Desu',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,

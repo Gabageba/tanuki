@@ -12,6 +12,7 @@ import {
   formatCompactNumber,
   type FilterRangePreset,
   type MangaState,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -304,7 +305,7 @@ const getSortBy = (order: string | undefined): string | null => {
       return 'last_chapter_at';
     case SORT_ORDER.ADDED:
       return 'created_at';
-    case SORT_ORDER.NEWEST:
+    case SORT_ORDER.RELEASED:
       return 'releaseDate';
     case SORT_ORDER.RATING:
       return 'rate_avg';
@@ -793,7 +794,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       id: cfg.id,
       title: catalogEntryFor(cfg.id).title,
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.HENTAI : SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,
@@ -803,7 +804,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
         SORT_ORDER.RATING,
         SORT_ORDER.VIEWS,
         SORT_ORDER.CHAPTERS,
-        SORT_ORDER.NEWEST,
+        SORT_ORDER.RELEASED,
         SORT_ORDER.ALPHABETICAL_EN,
         SORT_ORDER.ALPHABETICAL_RU,
         SORT_ORDER.UPDATED,

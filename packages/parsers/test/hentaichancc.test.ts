@@ -188,7 +188,7 @@ describe('HentaiChan.cc parser conformance', () => {
   it('getList: sort maps order to field, direction to a `-` prefix', async () => {
     const cases: [SortOrder | undefined, string | undefined, string][] = [
       [undefined, undefined, '-date_created'],
-      [SORT_ORDER.NEWEST, SORT_DIRECTION.ASC, 'date_created'],
+      [SORT_ORDER.RELEASED, SORT_DIRECTION.ASC, 'date_created'],
       [SORT_ORDER.UPDATED, undefined, '-date_updated'],
       [SORT_ORDER.UPDATED, SORT_DIRECTION.ASC, 'date_updated'],
       [SORT_ORDER.POPULARITY, undefined, '-views'],

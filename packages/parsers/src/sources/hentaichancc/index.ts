@@ -8,6 +8,7 @@ import {
   SOURCE_CONTENT_TYPE,
   formatCompactNumber,
   type FilterRangePreset,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -567,13 +568,13 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'HentaiChan',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.HENTAI,
       isBroken: false,
       isAdult: true,
       requiresVpn: true,
       sortOrders: [
-        SORT_ORDER.NEWEST,
+        SORT_ORDER.RELEASED,
         SORT_ORDER.UPDATED,
         SORT_ORDER.POPULARITY,
         SORT_ORDER.RATING,

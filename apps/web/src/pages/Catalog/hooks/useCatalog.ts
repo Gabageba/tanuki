@@ -3,9 +3,10 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import type { CatalogResponse, FilterSelection, SortDirection, SortOrder } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { serializeFilters } from '../utils/filterSelection';
-import { resolveOrder } from '../utils/sortOrder';
+import { resolveEffectiveSortOrders, resolveOrder } from '../utils/sortOrder';
 import type { ViewMode } from '@/shared/lib/viewMode';
 import useSource from '@/entities/source/hooks/useSource';
+import useFilters from './useFilters';
 
 type Params = {
   sourceId: string;
@@ -25,7 +26,15 @@ function useCatalog({
   direction,
 }: Params) {
   const { data: source, isLoading: isSourceLoading } = useSource({ sourceId });
-  const order = resolveOrder(explicitOrder, source?.sortOrders);
+  // Тот же queryKey ['filters', sourceId], что и в CatalogSettings — react-query отдаёт общий
+  // кэш/in-flight запрос, second call здесь не бьёт по сети отдельно.
+  const { data: filtersData } = useFilters({ sourceId });
+  const { sortOrders: effectiveSortOrders } = resolveEffectiveSortOrders(
+    source,
+    filtersData?.groups,
+    filters,
+  );
+  const order = resolveOrder(explicitOrder, effectiveSortOrders);
 
   const queryClient = useQueryClient();
   const forceNextFetch = useRef(false);

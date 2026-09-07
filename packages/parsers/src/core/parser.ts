@@ -40,6 +40,14 @@ export type ParserContext = {
   readonly jar: CookieJar;
   readonly logger: Logger;
   readonly credentials: Credentials;
+  /**
+   * Builds an extra HttpClient bound to a caller-supplied jar instead of `jar` — for a source
+   * that needs a second, isolated cookie session alongside its main one (e.g. one endpoint
+   * behaves differently under a cookie that would corrupt another endpoint's response if it sat
+   * on the shared jar). Optional: only sources that need it call it, so most `ParserContext`
+   * builders (including per-parser conformance tests) can leave it out.
+   */
+  createHttpClient?(jar: CookieJar): HttpClient;
 };
 
 export type Parser = {

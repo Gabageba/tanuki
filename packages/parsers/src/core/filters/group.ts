@@ -33,6 +33,7 @@ export const FILTER_GROUP = {
   AUTHOR: 'author',
   TRANSLATOR: 'translator',
   SERIES: 'series',
+  GROUP: 'group',
   VIEWS: 'views',
   LIKES: 'likes',
   PAGES: 'pages',

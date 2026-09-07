@@ -1,4 +1,4 @@
-import { SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { SORT_ORDER, SOURCE_CONTENT_TYPE, SOURCE_LOCALE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -198,7 +198,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'AComics',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.COMICS,
       isBroken: true,
       isAdult: false,

@@ -167,7 +167,7 @@ describe('Inkstory parser conformance', () => {
     [SORT_ORDER.CHAPTERS, 'chaptersCount,desc'],
     [SORT_ORDER.BOOKMARKS, 'bookmarksCount,desc'],
     [SORT_ORDER.RATING, 'averageRating,desc'],
-    [SORT_ORDER.NEWEST, 'createdAt,desc'],
+    [SORT_ORDER.RELEASED, 'createdAt,desc'],
   ])('getList: order %s maps to sort=%s', async (order, sortKey) => {
     await parser.getList({ offset: 0, limit: 20, order });
     const booksRequest = http.requests

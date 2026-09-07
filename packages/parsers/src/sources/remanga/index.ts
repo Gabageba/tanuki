@@ -9,6 +9,7 @@ import {
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type MangaState,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -536,7 +537,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'Реманга',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,

@@ -7,6 +7,7 @@ import {
   SORT_DIRECTION,
   SORT_ORDER,
   type MangaState,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -934,7 +935,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       id: SOURCE_ID,
       title: catalogEntryFor(SOURCE_ID).title,
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: catalogEntryFor(SOURCE_ID).contentType,
       isBroken: catalogEntryFor(SOURCE_ID).isBroken,
       isAdult: catalogEntryFor(SOURCE_ID).isAdult,

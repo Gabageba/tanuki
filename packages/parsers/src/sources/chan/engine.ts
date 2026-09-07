@@ -6,6 +6,7 @@ import {
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -664,7 +665,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       id: cfg.id,
       title: catalogEntryFor(cfg.id).title,
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: cfg.isNsfw ? SOURCE_CONTENT_TYPE.HENTAI : SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: catalogEntryFor(cfg.id).isAdult,

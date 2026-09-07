@@ -20,6 +20,7 @@ import type {
   MangaType,
   SortOrder,
   SourceContentType,
+  SourceLocale,
 } from '@tanuki/contracts';
 
 export const RATING_UNKNOWN = -1;
@@ -117,6 +118,12 @@ export type RawFilterGroup = {
   /** Groups sharing this tag are alternative browsing routes on the source, not combinable —
    *  see FilterGroup.exclusiveGroup in @tanuki/contracts. */
   exclusiveGroup?: string;
+  /** Narrower sort order list while this group has an active selection — see
+   *  FilterGroup.sortOrders in @tanuki/contracts. */
+  sortOrders?: SortOrder[];
+  /** Narrower supportsDirection while this group has an active selection — see
+   *  FilterGroup.supportsDirection in @tanuki/contracts. */
+  supportsDirection?: boolean;
 };
 
 export type RawSourceInfo = {
@@ -124,7 +131,7 @@ export type RawSourceInfo = {
   title: string;
   /** Host the parser is configured against — SOURCE_CATALOG[id].domains[0], no scheme. */
   domain: string;
-  locale: string;
+  locale: SourceLocale;
   contentType: SourceContentType;
   isBroken: boolean;
   isAdult: boolean;

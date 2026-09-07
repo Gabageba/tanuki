@@ -1,6 +1,6 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, SORT_ORDER, SOURCE_CONTENT_TYPE, SOURCE_LOCALE } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -215,12 +215,12 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'SexKomix2',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.COMICS,
       isBroken: false,
       isAdult: true,
       requiresVpn: false,
-      sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
+      sortOrders: [SORT_ORDER.RELEASED, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
       supportsDirection: false,
       isSearchSupported: true,
       isMultipleTagsSupported: true,

@@ -158,7 +158,7 @@ describe('WaManga parser conformance', () => {
     const cases: [string | undefined, string, string][] = [
       [undefined, 'updatedAt', 'true'],
       [SORT_ORDER.UPDATED, 'updatedAt', 'true'],
-      [SORT_ORDER.NEWEST, 'publicDate', 'true'],
+      [SORT_ORDER.RELEASED, 'publicDate', 'true'],
       [SORT_ORDER.ADDED, 'createdAt', 'true'],
       [SORT_ORDER.POPULARITY, 'views', 'true'],
       [SORT_ORDER.LIKES, 'likes', 'true'],
@@ -176,7 +176,7 @@ describe('WaManga parser conformance', () => {
   it("getList: explicit direction overrides each sort order's default", async () => {
     const cases: [string | undefined, string, string][] = [
       [SORT_ORDER.UPDATED, SORT_DIRECTION.ASC, 'false'],
-      [SORT_ORDER.NEWEST, SORT_DIRECTION.ASC, 'false'],
+      [SORT_ORDER.RELEASED, SORT_DIRECTION.ASC, 'false'],
       [SORT_ORDER.POPULARITY, SORT_DIRECTION.ASC, 'false'],
       [SORT_ORDER.ALPHABETICAL, SORT_DIRECTION.DESC, 'true'],
     ];

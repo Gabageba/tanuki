@@ -5,6 +5,7 @@ import { HttpClientImpl, type Timeouts } from './core/http/client';
 import { UserAgents } from './core/http/user-agents';
 import { jarFor } from './core/http/cookies';
 import { NotImplementedError, UnknownSourceError } from './errors';
+import { SOURCE_LOCALE } from '@tanuki/contracts';
 import { SOURCE_CATALOG, SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/catalog';
 export { SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/catalog';
 import { GROUPLE_CONFIGS } from './sources/grouple/config';
@@ -105,7 +106,7 @@ const buildDescriptor = (id: SourceId): SourceDescriptor => {
     id,
     title,
     domain: domains[0],
-    locale: 'ru',
+    locale: SOURCE_LOCALE.RU,
     contentType: catalogEntry.contentType,
     isBroken: catalogEntry.isBroken,
     isAdult: catalogEntry.isAdult,
@@ -248,6 +249,13 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       jar,
       logger: opts.logger,
       credentials: opts.credentials,
+      createHttpClient: (extraJar) =>
+        new HttpClientImpl({
+          sourceId: id,
+          jar: extraJar,
+          defaultHeaders: descriptor.defaultHeaders,
+          timeouts: opts.timeouts,
+        }),
     };
     parsers.set(id, descriptor.create(ctx));
   }

@@ -39,14 +39,14 @@ export const CHAN_CONFIGS: ChanConfig[] = [
   {
     id: SOURCE_ID.HENCHAN,
     isNsfw: true,
-    sortOrders: [SORT_ORDER.NEWEST, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
+    sortOrders: [SORT_ORDER.RELEASED, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
     supportsDirection: false,
     variant: 'henchan',
   },
   {
     id: SOURCE_ID.YAOICHAN,
     isNsfw: false,
-    sortOrders: [SORT_ORDER.NEWEST],
+    sortOrders: [SORT_ORDER.RELEASED],
     supportsDirection: false,
     variant: 'yaoichan',
   },

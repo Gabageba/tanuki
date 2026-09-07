@@ -8,6 +8,7 @@ import {
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type MangaState,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -112,7 +113,7 @@ const getApiSortBy = (order: string | undefined): string => {
     case SORT_ORDER.ADDED:
       return 'createdAt';
     // "Дате релиза" on the site — releaseYear, not createdAt.
-    case SORT_ORDER.NEWEST:
+    case SORT_ORDER.RELEASED:
       return 'releaseYear';
     case SORT_ORDER.RATING:
       return 'averageRating';
@@ -485,7 +486,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'TomiloLib',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
@@ -500,7 +501,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
         SORT_ORDER.ALPHABETICAL,
         SORT_ORDER.UPDATED,
         SORT_ORDER.ADDED,
-        SORT_ORDER.NEWEST,
+        SORT_ORDER.RELEASED,
       ],
       supportsDirection: true,
       isSearchSupported: true,

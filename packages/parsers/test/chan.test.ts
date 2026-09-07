@@ -13,7 +13,7 @@ const CFG: ChanConfig = {
   id: SOURCE_ID.MANGACHAN,
   isNsfw: false,
   sortOrders: [
-    SORT_ORDER.NEWEST,
+    SORT_ORDER.RELEASED,
     SORT_ORDER.POPULARITY,
     SORT_ORDER.ALPHABETICAL,
     SORT_ORDER.RATING,

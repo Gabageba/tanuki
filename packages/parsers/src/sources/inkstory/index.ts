@@ -9,6 +9,7 @@ import {
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type MangaState,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -227,7 +228,7 @@ const getSortKey = (order: string | undefined, direction: string | undefined): s
       return `bookmarksCount,${dir}`;
     case SORT_ORDER.RATING:
       return `averageRating,${dir}`;
-    case SORT_ORDER.NEWEST:
+    case SORT_ORDER.RELEASED:
       return `createdAt,${dir}`;
     default:
       return `updatedAt,${dir}`;
@@ -668,7 +669,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'Inkstory',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
@@ -680,7 +681,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         SORT_ORDER.CHAPTERS,
         SORT_ORDER.BOOKMARKS,
         SORT_ORDER.RATING,
-        SORT_ORDER.NEWEST,
+        SORT_ORDER.RELEASED,
       ],
       supportsDirection: true,
       isSearchSupported: true,

@@ -7,7 +7,7 @@ import PageLayout from '@/shared/ui/PageLayout';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { SORT_DIRECTION, type FilterSelection } from '@tanuki/contracts';
 import useSource from '@/entities/source/hooks/useSource';
-import { resolveOrder } from '../../utils/sortOrder';
+import { resolveEffectiveSortOrders, resolveOrder } from '../../utils/sortOrder';
 import { serializeFilters } from '../../utils/filterSelection';
 import type { CatalogParams } from '../../models';
 import useFilters from '../../hooks/useFilters';
@@ -40,16 +40,20 @@ function CatalogSettings({ sourceId }: Props) {
   // ScrollArea в десктопной CatalogFilterCard. Открываем Drawer только на мобильном вьюпорте.
   const isMobile = useMediaQuery('(max-width: 47.9375em)', false);
 
-  const order = resolveOrder(params.order, source?.sortOrders);
+  const { sortOrders: effectiveSortOrders, supportsDirection: effectiveSupportsDirection } =
+    resolveEffectiveSortOrders(source, filters?.groups, params.filters);
+  const order = resolveOrder(params.order, effectiveSortOrders);
   const direction = params.direction ?? SORT_DIRECTION.DESC;
 
-  // Сортировка (и направление, если источник его поддерживает) не может отсутствовать в
-  // урле — как только источник подгрузился и мы знаем дефолты, сразу закрепляем их в урле.
-  // Оба поля обновляются одним setParams/setSearchParams, чтобы не потерять одно
-  // изменение из-за того, что setParams — обычный useState-сеттер, а не функциональный.
+  // Сортировка (и направление, если источник его поддерживает) не может отсутствовать в урле
+  // и не может остаться той, что недоступна для активного фильтра (см.
+  // resolveEffectiveSortOrders) — как только источник/фильтры подгрузились, сразу закрепляем
+  // актуальные значения в урле. Оба поля обновляются одним setParams/setSearchParams, чтобы не
+  // потерять одно изменение из-за того, что setParams — обычный useState-сеттер, а не
+  // функциональный.
   useEffect(() => {
-    const needsOrder = !params.order && !!order;
-    const needsDirection = !!source?.supportsDirection && !params.direction;
+    const needsOrder = order !== undefined && params.order !== order;
+    const needsDirection = effectiveSupportsDirection && !params.direction;
     if (!needsOrder && !needsDirection) return;
 
     setParams({
@@ -66,7 +70,7 @@ function CatalogSettings({ sourceId }: Props) {
       },
       { replace: true },
     );
-  }, [order, direction, params, source?.supportsDirection, setParams, setSearchParams]);
+  }, [order, direction, params, effectiveSupportsDirection, setParams, setSearchParams]);
 
   const handleFiltersChange = (next: FilterSelection[]) => {
     setParams({ ...params, filters: next });
@@ -114,8 +118,8 @@ function CatalogSettings({ sourceId }: Props) {
         <Grid.Col span={{ base: 12, xs: 'content' }} order={{ base: 3, xs: 2 }}>
           <Group gap="xs">
             <CatalogSort
-              sortOrders={source?.sortOrders ?? []}
-              supportsDirection={source?.supportsDirection ?? false}
+              sortOrders={effectiveSortOrders}
+              supportsDirection={effectiveSupportsDirection}
             />
             <CatalogViewMode />
           </Group>

@@ -8,6 +8,7 @@ import {
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type MangaState,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -186,7 +187,7 @@ const collectAltTitles = (jo: MangaJson): string[] => {
  * what the site's homepage `freshUpdates` block is built from, so it's the default here — the
  * upstream default (`alphabetical`) pins the catalog to the same "100 девушек..." first page forever.
  * `createdAt` (added to the catalog) is ADDED, `publicDate` (the title's own release date) is
- * NEWEST — same split other sources draw between the two.
+ * RELEASED — same split other sources draw between the two.
  *
  * `likes` is mapped to LIKES for parity with the site's own sort dropdown, but verified live it's
  * server-side broken — the API silently returns alphabetical order for it regardless of
@@ -209,7 +210,7 @@ const getSortKey = (
         return { key: 'alphabetical', descending: false };
       case SORT_ORDER.ADDED:
         return { key: 'createdAt', descending: true };
-      case SORT_ORDER.NEWEST:
+      case SORT_ORDER.RELEASED:
         return { key: 'publicDate', descending: true };
       case SORT_ORDER.POPULARITY:
         return { key: 'views', descending: true };
@@ -395,7 +396,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'WaManga',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.MANGA,
       isBroken: false,
       isAdult: false,
@@ -406,7 +407,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
         SORT_ORDER.LIKES,
         SORT_ORDER.ADDED,
         SORT_ORDER.UPDATED,
-        SORT_ORDER.NEWEST,
+        SORT_ORDER.RELEASED,
       ],
       supportsDirection: true,
       isSearchSupported: true,

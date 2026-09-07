@@ -10,6 +10,7 @@ import {
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   type MangaState,
+  SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -86,7 +87,7 @@ const getSearchSortType = (order: string | undefined): string => {
       return 'USER_RATING';
     case SORT_ORDER.ALPHABETICAL:
       return 'NAME';
-    case SORT_ORDER.NEWEST:
+    case SORT_ORDER.RELEASED:
       return 'YEAR';
     case SORT_ORDER.POPULARITY:
       return 'POPULARITY';
@@ -945,7 +946,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       id: cfg.id,
       title: catalogEntryFor(cfg.id).title,
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: cfg.isNsfw
         ? SOURCE_CONTENT_TYPE.HENTAI
         : cfg.id === SOURCE_ID.SELFMANGA
@@ -960,7 +961,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         SORT_ORDER.ADDED,
         SORT_ORDER.RATING,
         SORT_ORDER.LIKES,
-        SORT_ORDER.NEWEST,
+        SORT_ORDER.RELEASED,
         SORT_ORDER.UPDATED,
       ],
       supportsDirection: false,

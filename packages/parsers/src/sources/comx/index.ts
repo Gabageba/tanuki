@@ -1,6 +1,12 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { MANGA_STATE, SORT_ORDER, SOURCE_CONTENT_TYPE, type MangaState } from '@tanuki/contracts';
+import {
+  MANGA_STATE,
+  SORT_ORDER,
+  SOURCE_CONTENT_TYPE,
+  SOURCE_LOCALE,
+  type MangaState,
+} from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
@@ -271,7 +277,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       id: SOURCE_ID,
       title: 'Com-X',
       domain,
-      locale: 'ru',
+      locale: SOURCE_LOCALE.RU,
       contentType: SOURCE_CONTENT_TYPE.COMICS,
       // Site gates every request behind a JS PoW + TLS/JA3 fingerprint challenge (custom
       // "guard" appliance, not Cloudflare) — verified the /_v verification endpoint 404s
