@@ -47,6 +47,12 @@ export class SourcesService {
     return source;
   }
 
+  /** Сбрасывает circuit breaker источника — дев-инструмент, аналог сброса кеша. */
+  async resetHealth(sourceId: string): Promise<void> {
+    await this.getSource(sourceId);
+    this.sourceHealth.reset(sourceId);
+  }
+
   async listGroupedSources(): Promise<SourcesResponse> {
     const groups = Object.fromEntries(
       CONTENT_TYPES.map((contentType) => [contentType, [] as Source[]]),

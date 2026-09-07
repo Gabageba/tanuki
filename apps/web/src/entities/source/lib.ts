@@ -1,7 +1,8 @@
-import type { MangaType } from '@tanuki/contracts';
+import type { MangaType, SourceLocale } from '@tanuki/contracts';
 import {
   MANGA_TYPE,
   SOURCE_CONTENT_TYPE,
+  SOURCE_LOCALE,
   SOURCE_STATUS,
   type Source,
   type SourceContentType,
@@ -62,5 +63,14 @@ export const getLabelByMangaType = (mangaType: MangaType) => {
       return 'Комикс';
     case MANGA_TYPE.OTHER:
       return 'Другое';
+  }
+};
+
+export const getFlagByLocale = (locale: SourceLocale) => {
+  switch (locale) {
+    case SOURCE_LOCALE.RU:
+      return '🇷🇺';
+    case SOURCE_LOCALE.EN:
+      return '🇺🇸';
   }
 };

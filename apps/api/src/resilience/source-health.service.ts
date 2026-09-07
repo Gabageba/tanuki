@@ -88,6 +88,11 @@ export class SourceHealthService {
       : SOURCE_STATUS.DEGRADED;
   }
 
+  /** Сбрасывает breaker источника в закрытое состояние — используется дев-инструментом. */
+  reset(sourceId: string): void {
+    this.sources.delete(sourceId);
+  }
+
   getRetryAfterSeconds(sourceId: string): number {
     const entry = this.stateOf(sourceId);
     if (entry.state !== BREAKER_STATE.OPEN) {
