@@ -5,13 +5,13 @@ import {
 } from 'react-router';
 import Layout from '@/app/Layout';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
-import MangaPage from '@/pages/Manga/MangaPage';
 import ReaderPage from '@/pages/Reader/ReaderPage';
 import SearchPage from '@/pages/Search/SearchPage';
 import Sources from '@/pages/Sources';
 import Notifications from '@/pages/Notifications';
 import Bookmarks from '@/pages/Bookmarks';
 import Catalog from '@/pages/Catalog';
+import Manga from '@/pages/Manga';
 
 const router = createBrowserRouter([
   {
@@ -35,7 +35,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTE_PATHS.MANGA,
-        element: <MangaPage />,
+        element: <Manga />,
       },
       {
         path: ROUTE_PATHS.NOTIFICATIONS,

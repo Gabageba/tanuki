@@ -6,7 +6,7 @@ import MangaMetaItems from '../../MangaMetaItems';
 import { getLabelByMangaType } from '@/entities/source/lib';
 import MangaCardTags from '../MangaCardTags';
 import MangaScoreMeta from '../../MangaScoreMeta';
-import MangaState from '../MangaState';
+import MangaState from '../../MangaState';
 import styles from '../../Manga.module.scss';
 
 type Props = {
@@ -30,7 +30,7 @@ function MangaListCard({ manga }: Props) {
             <Group gap={8}>
               {manga.contentRating === CONTENT_RATING.ADULT && <Badge color="red">18+</Badge>}
               <MangaMetaItems gap={6} items={metaItems} />
-              {manga.state && <MangaState state={manga.state} />}
+              {manga.releaseState && <MangaState state={manga.releaseState} />}
             </Group>
             <Text
               className={styles.title}

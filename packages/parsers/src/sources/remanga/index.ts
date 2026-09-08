@@ -62,7 +62,7 @@ const STATES: Record<number, MangaState> = {
 };
 
 /** status.id === 6 ("Лицензировано") means the publisher pulled scanlations after licensing the
- *  title — not a publication state, so it maps to `restriction` instead of `state`. */
+ *  title — not a publication state, so it maps to `restriction` instead of `releaseState`. */
 const LICENSED_STATUS_ID = 6;
 
 type CoverJson = {
@@ -258,7 +258,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       coverUrl: cover.mid ? toAbsoluteUrl(cover.mid, apiHost) : null,
       largeCoverUrl: cover.high ? toAbsoluteUrl(cover.high, apiHost) : null,
       tags: parseTags(jo.genres),
-      state: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
+      releaseState: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
       restriction: jo.status?.id === LICENSED_STATUS_ID ? MANGA_RESTRICTION.LEGAL : null,
       type: mangaTypeById(jo.type?.id),
       year: jo.issue_year ?? null,
@@ -492,7 +492,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       coverUrl: cover.mid ? toAbsoluteUrl(cover.mid, apiHost) : null,
       largeCoverUrl: cover.high ? toAbsoluteUrl(cover.high, apiHost) : null,
       tags: parseTags(json.genres),
-      state: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,
+      releaseState: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,
       restriction:
         json.status?.id === LICENSED_STATUS_ID
           ? MANGA_RESTRICTION.LEGAL

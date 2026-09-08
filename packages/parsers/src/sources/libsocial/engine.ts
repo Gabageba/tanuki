@@ -59,7 +59,7 @@ export const LIBSOCIAL_FILTER_GROUP = {
   OTHER: FILTER_GROUP.OTHER,
 } as const;
 
-const STATES: Record<number, RawManga['state']> = {
+const STATES: Record<number, RawManga['releaseState']> = {
   1: MANGA_STATE.ONGOING,
   2: MANGA_STATE.FINISHED,
   3: MANGA_STATE.UPCOMING,
@@ -372,7 +372,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       contentRating: contentRatingFor(jo.ageRestriction?.id, cfg.isNsfw),
       coverUrl: jo.cover.default,
       tags: [],
-      state: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
+      releaseState: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
       type: mangaTypeById(jo.type?.id),
       authors: [],
       largeCoverUrl: jo.cover.default,
@@ -584,7 +584,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       contentRating: contentRatingFor(json.ageRestriction?.id, cfg.isNsfw),
       coverUrl: json.cover.default,
       tags: allTags,
-      state: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,
+      releaseState: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,
       type: mangaTypeById(json.type?.id),
       restriction: isLicensedTakedown
         ? MANGA_RESTRICTION.LEGAL

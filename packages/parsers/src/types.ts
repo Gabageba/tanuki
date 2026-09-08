@@ -44,7 +44,8 @@ export type RawManga = {
   contentRating: RawContentRating | null;
   coverUrl: string | null;
   tags: RawTag[];
-  state: MangaState | null;
+  /** Статус выхода оригинала. */
+  releaseState: MangaState | null;
   authors: string[];
   largeCoverUrl: string | null;
   description: string | null;
@@ -69,9 +70,17 @@ export type RawManga = {
    *  own page list (RawPage). Omitted where the source has no such counter. */
   pages?: number | null;
   /** Why the source won't hand over the chapters (geo-block, takedown, paywall) — independent of
-   *  `state`, which is about publication, not access. Omitted where the source doesn't restrict
-   *  this title. */
+   *  `releaseState`, which is about publication, not access. Omitted where the source doesn't
+   *  restrict this title. */
   restriction?: MangaRestriction | null;
+  /** Status of the source's own translation, where the source tracks that separately from the
+   *  original's release (e.g. desu's "Перевод:" vs "Статус:"). Omitted where the source has no
+   *  such distinct concept. */
+  translationState?: MangaState | null;
+  /** Full release date of the original, where the source exposes more than just `year` (e.g.
+   *  desu's "с 14 июн 2012 г."). Epoch millis, 0 = unknown. Omitted where the source has no such
+   *  date. */
+  releaseDate?: number;
 };
 
 export type RawChapter = {

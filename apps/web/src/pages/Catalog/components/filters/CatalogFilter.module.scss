@@ -25,13 +25,6 @@
   color: var(--mantine-primary-color-filled);
 }
 
-.tag {
-  display: inline-flex;
-  background-color: var(--mantine-primary-color-filled);
-  color: var(--mantine-primary-color-contrast);
-  line-height: 1;
-}
-
 .radioCard {
   &[data-checked] {
     border-color: var(--mantine-primary-color-filled);

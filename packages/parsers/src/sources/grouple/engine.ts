@@ -491,7 +491,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         contentRatingByLimitation(limitation) ?? (cfg.isNsfw ? CONTENT_RATING.ADULT : null),
       coverUrl: item.picUrl,
       tags,
-      state: mapCatalogState(item.translationStatus),
+      releaseState: mapCatalogState(item.translationStatus),
       authors: [],
       largeCoverUrl: null,
       description: null,
@@ -856,7 +856,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         attrOrNull(coverImg, 'data-full') ??
         null,
       tags: [...tags.values()],
-      state: null,
+      releaseState: null,
       restriction: isRestricted ? MANGA_RESTRICTION.LEGAL : null,
       authors: root
         .find('.elem_author,.elem_illustrator,.elem_screenwriter')

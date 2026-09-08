@@ -28,7 +28,7 @@ const raw = (overrides: Partial<RawManga> = {}): RawManga => {
     contentRating: null,
     coverUrl: null,
     tags: [],
-    state: null,
+    releaseState: null,
     authors: [],
     largeCoverUrl: null,
     description: null,
@@ -57,7 +57,7 @@ describe('normalizeManga', () => {
   it('maps RATING_UNKNOWN (-1) to null, otherwise scales the 0..1 raw rating up to 0..10', () => {
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: -1 })).rating).toBeNull();
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: 0.42 })).rating).toBe(4.2);
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: 0.865 })).rating).toBe(8.65);
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: 0.865 })).rating).toBe(8.7);
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: 0 })).rating).toBe(0);
   });
 

@@ -126,7 +126,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       contentRating: null,
       coverUrl,
       tags: [],
-      state: null,
+      releaseState: null,
       authors: [],
       largeCoverUrl: null,
       description: null,
@@ -202,7 +202,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
 
     const author = nullIfEmpty(findLiValueAfter(doc.$, 'Publisher:'));
     const releaseType = findLiValueAfter(doc.$, 'Release type:');
-    const state: MangaState =
+    const releaseState: MangaState =
       releaseType === 'Ongoing' ? MANGA_STATE.ONGOING : MANGA_STATE.FINISHED;
 
     const tagLinks = doc
@@ -237,7 +237,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       coverUrl,
       largeCoverUrl: null,
       tags,
-      state,
+      releaseState,
       authors: author ? [author] : [],
       description: nullIfEmpty(textOrNull(doc.$('div.page__text.full-text.clearfix').first())),
       chapters,

@@ -224,7 +224,7 @@ describe('MangaBuff parser conformance', () => {
     expect(manga.chapters![0]!.number).toBe(1);
     expect(manga.chapters![1]!.number).toBe(2);
     expect(manga.rating).toBeCloseTo(0.87, 5);
-    expect(manga.state).toBe(MANGA_STATE.ONGOING);
+    expect(manga.releaseState).toBe(MANGA_STATE.ONGOING);
     expect(manga.type).toBe(MANGA_TYPE.MANGA);
     expect(manga.year).toBe(1997);
     expect(manga.contentRating).toBe(CONTENT_RATING.SUGGESTIVE);

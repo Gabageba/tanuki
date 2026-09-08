@@ -94,7 +94,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
           contentRating: null,
           coverUrl,
           tags: [],
-          state: null,
+          releaseState: null,
           authors: [],
           largeCoverUrl: null,
           description: null,
@@ -146,7 +146,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
       coverUrl: null,
       largeCoverUrl: null,
       tags,
-      state: null,
+      releaseState: null,
       authors: author ? [author] : [],
       description,
       chapters: [

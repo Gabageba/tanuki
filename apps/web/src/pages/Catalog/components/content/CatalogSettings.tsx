@@ -95,7 +95,7 @@ function CatalogSettings({ sourceId }: Props) {
     <Stack gap="xs" w="100%" mb="md">
       <Grid gap="sm">
         <Grid.Col span={{ base: 12, xs: 'auto' }} order={1}>
-          {!!filters?.groups.length && !params.query && (
+          {!!filters?.groups.length && (
             <Button
               w={{ base: '100%', xs: 'auto' }}
               leftSection={<FunnelIcon />}
@@ -106,7 +106,7 @@ function CatalogSettings({ sourceId }: Props) {
               <Text>Фильтры</Text>
             </Button>
           )}
-          {isFiltersError && !params.query && (
+          {isFiltersError && (
             <Group gap="xs" wrap="nowrap">
               <ApiErrorText error={filtersError} />
               <Button variant="subtle" size="compact-sm" onClick={() => refetchFilters()}>
@@ -124,13 +124,11 @@ function CatalogSettings({ sourceId }: Props) {
             <CatalogViewMode />
           </Group>
         </Grid.Col>
-        {!params.query && (
-          <CatalogFilterPills
-            selection={params.filters ?? []}
-            groups={filters?.groups}
-            onChange={handleFiltersChange}
-          />
-        )}
+        <CatalogFilterPills
+          selection={params.filters ?? []}
+          groups={filters?.groups}
+          onChange={handleFiltersChange}
+        />
       </Grid>
       {isFilterOpened && filters?.groups.length && (
         <CatalogFilterCard

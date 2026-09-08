@@ -173,7 +173,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       contentRating: CONTENT_RATING.ADULT,
       coverUrl,
       tags: parseTagLinks($item.find('ul.tags_ul a'), $),
-      state: null,
+      releaseState: null,
       authors: [],
       largeCoverUrl: null,
       description: null,
@@ -278,7 +278,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       coverUrl: null,
       largeCoverUrl,
       tags,
-      state: null,
+      releaseState: null,
       authors: author ? [author] : [],
       description: findDescriptionHtml(doc.$),
       chapters: [

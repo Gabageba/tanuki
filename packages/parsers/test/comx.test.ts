@@ -87,7 +87,7 @@ describe('Com-X parser conformance', () => {
     // oldest-first ordering after .reverse()
     expect(manga.chapters![0]!.number).toBe(1);
     expect(manga.chapters![1]!.number).toBe(2);
-    expect(manga.state).toBe(MANGA_STATE.ONGOING);
+    expect(manga.releaseState).toBe(MANGA_STATE.ONGOING);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
     expect(manga.description).toBe('Описание тайтла.');
   });

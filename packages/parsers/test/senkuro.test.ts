@@ -219,7 +219,7 @@ describe('Senkuro parser conformance', () => {
     expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(1000);
-    expect(item!.state).toBe(MANGA_STATE.ONGOING);
+    expect(item!.releaseState).toBe(MANGA_STATE.ONGOING);
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(item!.description).toBe('Первый абзац.\nПродолжение.\n\nВторой абзац.');
     expect(http.requests[0]!.headers['app-id']).toBe(SENKURO_CONFIG.appId);

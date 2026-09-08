@@ -52,7 +52,16 @@ const DETAILS_HTML = `<!doctype html><html><body>
     </div>
   </div>
   <div class="line-container">
-    <div class="line"><span class="key">Статус:</span><span class="value"><span class="b-anime_status_tag ongoing"></span></span></div>
+    <div class="line"><span class="key">Тип:</span><span class="value">Манга</span></div>
+  </div>
+  <div class="line-container">
+    <div class="line"><span class="key">Статус:</span><span class="value"><span class="b-anime_status_tag ongoing">выходит</span> с 14 июн 2012 г.</span></div>
+  </div>
+  <div class="line-container">
+    <div class="line"><span class="key">Перевод:</span><span class="value"><span class="b-anime_status_tag continued">продолжается</span></span></div>
+  </div>
+  <div class="line-container">
+    <div class="line"><span class="key">Авторы:</span><span class="value"><a href="/manga/?people=1-chugong">Chugong</a></span></div>
   </div>
   <div class="b-rate" data-score="8.7"></div>
   <div id="description"><div class="russian"><div class="prgrph">Первый абзац.</div><div class="prgrph">Второй абзац.</div></div></div>
@@ -174,7 +183,12 @@ describe('Desu parser conformance', () => {
       expect(chapter.uploadDate === 0 || chapter.uploadDate > 1e12).toBe(true);
     }
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
-    expect(manga.state).toBe(MANGA_STATE.ONGOING);
+    expect(manga.releaseState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.translationState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.year).toBe(2012);
+    expect(new Date(manga.releaseDate!).toISOString().slice(0, 10)).toBe('2012-06-14');
+    expect(manga.authors).toEqual(['Chugong']);
     expect(manga.rating).toBeCloseTo(0.87, 5);
     expect(manga.title).toBe('Поднятие уровня в одиночку');
     expect(manga.description).toBe('Первый абзац.\n\nВторой абзац.');

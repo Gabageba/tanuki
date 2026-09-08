@@ -1,7 +1,8 @@
-import { Box, Button, Grid, Group, Pill, Text } from '@mantine/core';
+import { Button, Grid, Group, Pill, Text } from '@mantine/core';
 import type { FilterGroup } from '@tanuki/contracts';
 import type { FilterSelection } from '../../../../../../../packages/contracts/dist/cjs';
 import { clearGroupSelection, getGroupSelectionOptions } from '../../utils/filterSelection';
+import OtherItemsTag from '@/shared/ui/OtherItemsTag';
 import styles from './CatalogFilter.module.scss';
 
 type Props = {
@@ -47,13 +48,7 @@ function CatalogFilterPills({ groups, selection, onChange }: Props) {
                 <Text fz={14} ml={4} td={options.firstItem.exclude ? 'line-through' : 'none'}>
                   {options.firstItem.label}
                 </Text>
-                {options.otherItemsLength ? (
-                  <Box bdrs="sm" p={4} ml={6} className={styles.tag} fz={12}>
-                    +{options.otherItemsLength}
-                  </Box>
-                ) : (
-                  ''
-                )}
+                <OtherItemsTag count={options.otherItemsLength} />
               </Pill>
             )
           );

@@ -26,7 +26,7 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { parseHtml } from '../../core/html/dom';
 import { attrOrNull, textOrNull, selectFirstOrThrow } from '../../core/html/selectors';
-import { parseRuRelativeDate } from '../../core/text/dates';
+import { parseRuRelativeDate, parseRuFullDate, parseRuBareYear } from '../../core/text/dates';
 import { parseIntOrNull, parseFloatOrNull } from '../../core/text/numbers';
 import { toTitleCase, nullIfEmpty } from '../../core/text/strings';
 import { ParseError } from '../../errors';
@@ -77,13 +77,19 @@ const toLargeCoverUrl = (coverUrl: string): string => {
   return coverUrl.replace(/\/(preview|snippet|x120)\//, '/original/');
 };
 
+/**
+ * `.b-anime_status_tag` class, shared by the details page's "Статус:" (release: ongoing/released)
+ * and "Перевод:" (translation: continued/completed) lines — the same four-value vocabulary the
+ * catalog's own .catalog-status filter uses (see fetchFilters' data-status options).
+ */
 const mangaStateByClass = (cls: string | null): MangaState | null => {
-  if (cls === 'ongoing') return MANGA_STATE.ONGOING;
+  if (cls === 'ongoing' || cls === 'continued') return MANGA_STATE.ONGOING;
   if (cls === 'released' || cls === 'completed') return MANGA_STATE.FINISHED;
   return null;
 };
 
-/** Catalog "Тип:" label — mirrors the .catalog-kinds filter's own vocabulary (data-kind values). */
+/** "Тип:" label — mirrors the .catalog-kinds filter's own vocabulary (data-kind values). Shared
+ *  by catalog cards and the details page, which render the same label/value pair. */
 const mangaTypeByLabel = (label: string | null): RawMangaType | null => {
   switch (label) {
     case 'Манга':
@@ -145,6 +151,18 @@ const detailValue = ($root: Cheerio<AnyNode>, label: string): Cheerio<AnyNode> |
     }
   }
   return null;
+};
+
+/** The `.b-anime_status_tag` class off a detailValue() result, e.g. "ongoing" or "continued". */
+const statusTagClass = ($value: Cheerio<AnyNode> | null): string | null => {
+  const $tag = $value?.find('.b-anime_status_tag').first();
+  if (!$tag || $tag.length === 0) return null;
+  return (
+    $tag
+      .attr('class')
+      ?.split(/\s+/)
+      .find((c) => c !== 'b-anime_status_tag') ?? null
+  );
 };
 
 /**
@@ -406,7 +424,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       coverUrl,
       largeCoverUrl: coverUrl ? toLargeCoverUrl(coverUrl) : null,
       tags,
-      state: null,
+      releaseState: null,
       authors: [],
       description: null,
       chapters: null,
@@ -443,7 +461,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       coverUrl,
       largeCoverUrl: coverUrl ? toLargeCoverUrl(coverUrl) : null,
       tags: [],
-      state: null,
+      releaseState: null,
       authors: [],
       description: null,
       chapters: null,
@@ -545,13 +563,24 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .filter((t): t is RawTag => t !== null);
 
     const statusValue = detailValue(root, 'Статус:');
-    const statusEl = statusValue?.find('.b-anime_status_tag').first();
-    const statusClass = statusEl
-      ? (statusEl
-          .attr('class')
-          ?.split(/\s+/)
-          .find((c) => c !== 'b-anime_status_tag') ?? null)
-      : null;
+    const statusClass = statusTagClass(statusValue);
+    // "Статус:" packs the release state tag and, right after it, a release date — either a full
+    // "с 14 июн 2012 г." or, for some titles, just a bare "с 2022 г." with no day/month.
+    const statusText = statusValue ? textOrNull(statusValue) : null;
+    const releaseDate = parseRuFullDate(statusText);
+    const year =
+      releaseDate > 0 ? new Date(releaseDate).getUTCFullYear() : parseRuBareYear(statusText);
+
+    // "Перевод:" is a separate line-container from "Статус:" — desu tracks the RU scanlation's
+    // own progress (continued/completed) independently of the original's release state.
+    const translationClass = statusTagClass(detailValue(root, 'Перевод:'));
+
+    const typeValue = detailValue(root, 'Тип:');
+    const type = mangaTypeByLabel(typeValue ? textOrNull(typeValue) : null);
+
+    const authors = (detailValue(root, 'Авторы:')?.find('a').toArray() ?? [])
+      .map((el) => textOrNull(doc.$(el)))
+      .filter((a): a is string => a !== null);
 
     const ratingRaw = attrOrNull(doc.$('.b-rate').first(), 'data-score');
     const ratingValue = parseFloatOrNull(ratingRaw);
@@ -588,11 +617,15 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       coverUrl,
       largeCoverUrl: coverUrl ? toLargeCoverUrl(coverUrl) : null,
       tags,
-      state: mangaStateByClass(statusClass),
-      authors: [],
+      releaseState: mangaStateByClass(statusClass),
+      translationState: mangaStateByClass(translationClass),
+      authors,
       description,
       chapters,
       source: SOURCE_ID,
+      type,
+      year,
+      releaseDate,
     };
   };
 

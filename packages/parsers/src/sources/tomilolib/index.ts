@@ -286,7 +286,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       coverUrl: cover,
       largeCoverUrl: cover,
       tags: parseTags(info),
-      state: parseState(info.status),
+      releaseState: parseState(info.status),
       authors: [...new Set(authors)],
       description: info.description ?? null,
       chapters: null,

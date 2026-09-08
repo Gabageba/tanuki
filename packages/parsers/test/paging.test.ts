@@ -13,7 +13,7 @@ const manga = (id: number): RawManga => {
     contentRating: null,
     coverUrl: null,
     tags: [],
-    state: null,
+    releaseState: null,
     authors: [],
     largeCoverUrl: null,
     description: null,

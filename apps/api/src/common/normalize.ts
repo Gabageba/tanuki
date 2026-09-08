@@ -11,7 +11,7 @@ import {
 import type { Env } from '../config/env';
 import { buildSignedImageUrl } from '../img-proxy/sign.util';
 import { IMAGE_FORMAT } from '../img-proxy/models';
-import { toServerDateTime } from './dates';
+import { toServerDate, toServerDateTime } from './dates';
 import { encodeChapterId, encodeMangaId } from './opaque-id';
 import type {
   RawChapter,
@@ -47,6 +47,13 @@ export const mangaIdOf = (sourceId: string, raw: Pick<RawManga, 'id' | 'url'>): 
   return `${sourceId}:${encodeMangaId({ id: raw.id, url: raw.url })}`;
 };
 
+/** Latest chapter's own upload date — `chapters` is only populated by getDetails (null on list
+ *  items), so this is null wherever a full chapter list wasn't fetched. */
+const latestChapterUploadDate = (chapters: RawChapter[] | null): number | null => {
+  const dates = (chapters ?? []).map((c) => c.uploadDate).filter((d) => d > 0);
+  return dates.length > 0 ? Math.max(...dates) : null;
+};
+
 export const normalizeManga = (
   env: Pick<Env, 'IMG_SIGN_SECRET'>,
   sourceId: string,
@@ -64,6 +71,7 @@ export const normalizeManga = (
         format: IMAGE_FORMAT.WEBP,
       })
     : null;
+  const lastChapterDate = latestChapterUploadDate(raw.chapters);
 
   return {
     id: mangaIdOf(sourceId, raw),
@@ -76,15 +84,18 @@ export const normalizeManga = (
     description: raw.description,
     authors: raw.authors,
     tags: raw.tags.map(normalizeTag),
-    state: raw.state,
+    releaseState: raw.releaseState,
+    translationState: raw.translationState ?? null,
     restriction: raw.restriction ?? null,
     contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
     type: raw.type ?? null,
     year: raw.year ?? null,
+    releaseDate: raw.releaseDate ? toServerDate(raw.releaseDate) : null,
+    lastUpdatedAt: lastChapterDate !== null ? toServerDateTime(lastChapterDate) : null,
     // raw.rating is normalized to 0..1 by every parser (see RawManga in @tanuki/parsers) —
-    // scale it up to the 0..10 the API exposes, rounded to 2 decimals to shake off float noise
-    // from the division parsers do to reach 0..1 in the first place.
-    rating: raw.rating >= 0 ? Math.round(raw.rating * 1000) / 100 : null,
+    // scale it up to the 0..10 the API exposes, rounded to 1 decimal so it's ready to display
+    // as-is, with no further formatting on the client.
+    rating: raw.rating >= 0 ? Math.round(raw.rating * 100) / 10 : null,
     likes: raw.likes ?? null,
     chaptersCount: raw.chapters?.length ?? raw.chaptersCount ?? null,
     pages: raw.pages ?? null,

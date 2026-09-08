@@ -283,7 +283,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       coverUrl: jo.coverUrl ? toAbsoluteUrl(jo.coverUrl, domain) : null,
       largeCoverUrl: jo.imageUrl ? toAbsoluteUrl(jo.imageUrl, domain) : null,
       tags: parseTags(jo),
-      state: parseState(jo.statusTitle),
+      releaseState: parseState(jo.statusTitle),
       authors: jo.authors ?? [],
       description: jo.description ?? null,
       chapters: null,

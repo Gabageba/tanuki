@@ -2,7 +2,11 @@ import { z } from 'zod';
 import { TagSchema } from './tag';
 import type { EnumLiteralsOf } from './utils';
 
-/** Публичные статусы тайтла — публикация как таковая, не доступность его глав. */
+/**
+ * Публичные статусы тайтла. Один и тот же набор значений обслуживает два независимых поля на
+ * `Manga` — `releaseState` (выход оригинала) и `translationState` (готовность перевода на
+ * источнике) — источник может знать одно, оба или ни одного из двух.
+ */
 export const MANGA_STATE = {
   ONGOING: 'ongoing',
   FINISHED: 'finished',
@@ -62,13 +66,16 @@ export const MangaSchema = z.object({
   authors: z.array(z.string()),
   tags: z.array(TagSchema),
 
-  state: MangaStateSchema.nullable(),
+  releaseState: MangaStateSchema.nullable(),
+  translationState: MangaStateSchema.nullable(),
   restriction: MangaRestrictionSchema.nullable(),
   contentRating: ContentRatingSchema,
   type: MangaTypeSchema.nullable(),
-  year: z.number().nullable(),
+  year: z.number().nullable(), // для карточек — см. releaseDate для полной даты
+  releaseDate: z.string().nullable(), // YYYY-MM-DD, если source отдаёт больше, чем один год
+  lastUpdatedAt: z.string().nullable(), // YYYY-MM-DDTHH:MM:SSZ — дата выхода последней главы
 
-  rating: z.number().min(0).max(10).nullable(), // приведено к единой шкале 0..10
+  rating: z.number().min(0).max(10).nullable(), // приведено к единой шкале 0..10, округлено до 1 знака после запятой
   likes: z.number().nullable(), // неограниченный счётчик лайков/плюсиков, если source не даёт rating
   chaptersCount: z.number().nullable(),
   pages: z.number().nullable(), // число страниц тайтла целиком, если source отдаёт его на уровне манги

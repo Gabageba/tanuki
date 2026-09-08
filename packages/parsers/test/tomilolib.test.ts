@@ -120,7 +120,7 @@ describe('TomiloLib parser conformance', () => {
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(1100);
     expect(item!.description).toBe('Описание из списка.');
-    expect(item!.state).toBe('ongoing');
+    expect(item!.releaseState).toBe('ongoing');
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
   });
 

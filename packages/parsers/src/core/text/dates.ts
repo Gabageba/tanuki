@@ -105,6 +105,32 @@ export const parseGroupleDate = (raw: string | null | undefined): number => {
   return 0;
 };
 
+const RU_FULL_DATE = /(\d{1,2})\s+([а-яё]+)\s+(\d{4})/i;
+
+/** "14 июн 2012 г." — a bare RU date, no time (desu's release-date line). Returns epoch millis, 0 = unknown. */
+export const parseRuFullDate = (raw: string | null | undefined): number => {
+  const match = RU_FULL_DATE.exec(raw ?? '');
+  if (!match) return 0;
+  const day = Number(match[1]);
+  const monthKey = match[2]!.toLowerCase().slice(0, 3);
+  const month = MONTHS_RU[monthKey];
+  if (month === undefined) return 0;
+  const year = Number(match[3]);
+  // No time-of-day on the source — anchor at UTC midnight so the calendar day survives the
+  // epoch-millis round trip regardless of the server's own timezone (a local-time Date here would
+  // shift the day by ±1 for any runner not on UTC once toServerDate() reads it back out).
+  const millis = Date.UTC(year, month, day);
+  return Number.isNaN(millis) ? 0 : millis;
+};
+
+const RU_BARE_YEAR = /(\d{4})\s*г\.?/;
+
+/** "с 2022 г." — desu's release line without a day/month, only a year. Returns null = unknown. */
+export const parseRuBareYear = (raw: string | null | undefined): number | null => {
+  const match = RU_BARE_YEAR.exec(raw ?? '');
+  return match ? Number(match[1]) : null;
+};
+
 const DD_MM_YYYY = /^(\d{2})\.(\d{2})\.(\d{4})$/;
 
 /** "dd.MM.yyyy" (full 4-digit year) — MangaBuff and Com-X chapter dates. Returns epoch millis, 0 = unknown. */

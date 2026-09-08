@@ -1,5 +1,5 @@
 function MidDot() {
-  return <>&middot;</>;
+  return <span>&middot;</span>;
 }
 
 export default MidDot;

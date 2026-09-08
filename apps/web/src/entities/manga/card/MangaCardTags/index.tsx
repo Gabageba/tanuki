@@ -1,7 +1,8 @@
-import { Badge, Box, Group } from '@mantine/core';
+import { Box, Group } from '@mantine/core';
 import type { Tag } from '@tanuki/contracts';
 import useVisibleTagsCount from '../hooks/useVisibleTagsCount';
 import MangaCardTagsSkeleton from './MangaCardTagsSkeleton';
+import TagBadge from '@/shared/ui/TagBadge';
 
 type Props = {
   tags: Tag[];
@@ -31,51 +32,20 @@ function MangaCardTags({ tags }: Props) {
         }}
       >
         {tags.map((tag) => (
-          <Badge
-            key={tag.id}
-            color="var(--mantine-color-default-border)"
-            fw={400}
-            styles={{
-              label: {
-                color: 'var(--mantine-color-text)',
-                textTransform: 'none',
-              },
-            }}
-          >
-            {tag.title}
-          </Badge>
+          <TagBadge key={tag.id}>{tag.title}</TagBadge>
         ))}
-        <Badge
-          color="var(--mantine-color-default-border)"
-          fw={400}
-          styles={{ label: { color: 'var(--mantine-color-text)' } }}
-        >
-          {`+${tags.length}`}
-        </Badge>
+        <TagBadge>{`+${tags.length}`}</TagBadge>
       </Group>
       <Group ref={containerRef} gap={6} flex={1} wrap="nowrap" style={{ overflow: 'hidden' }}>
         {!isReady && <MangaCardTagsSkeleton />}
         {isReady &&
           visibleTags.map((tag) => (
-            <Badge
-              key={tag.id}
-              color="var(--mantine-color-default-border)"
-              fw={400}
-              style={{ flexShrink: 0 }}
-              styles={{ label: { color: 'var(--mantine-color-text)', textTransform: 'none' } }}
-            >
+            <TagBadge key={tag.id} style={{ flexShrink: 0 }}>
               {tag.title}
-            </Badge>
+            </TagBadge>
           ))}
         {isReady && hiddenCount > 0 && (
-          <Badge
-            color="var(--mantine-color-default-border)"
-            fw={400}
-            style={{ flexShrink: 0 }}
-            styles={{ label: { color: 'var(--mantine-color-text)', textTransform: 'none' } }}
-          >
-            {`+${hiddenCount}`}
-          </Badge>
+          <TagBadge style={{ flexShrink: 0 }}>{`+${hiddenCount}`}</TagBadge>
         )}
       </Group>
     </>

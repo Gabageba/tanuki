@@ -316,7 +316,7 @@ describe('Grouple parser conformance', () => {
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
-    expect(item!.state).toBe(MANGA_STATE.FINISHED);
+    expect(item!.releaseState).toBe(MANGA_STATE.FINISHED);
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.chaptersCount).toBe(1057);

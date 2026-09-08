@@ -45,7 +45,7 @@ function CatalogSort({ sortOrders, supportsDirection }: Props) {
     );
   };
 
-  if (params.query || !sortOrders.length) {
+  if (!sortOrders.length) {
     return null;
   }
 

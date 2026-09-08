@@ -219,7 +219,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       contentRating: CONTENT_RATING.ADULT,
       coverUrl,
       tags: parseTagLinks($row.find('.tag-links a'), $),
-      state: null,
+      releaseState: null,
       authors: author ? [author] : [],
       largeCoverUrl: null,
       description: description ?? null,
@@ -445,7 +445,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       coverUrl: null,
       largeCoverUrl,
       tags,
-      state: null,
+      releaseState: null,
       authors: author ? [author] : [],
       description: description ?? null,
       chapters: [

@@ -19,14 +19,14 @@ export const getMangaStateColor = (state: MangaState) => {
 export const getMangaStateLabel = (state: MangaState) => {
   switch (state) {
     case MANGA_STATE.ONGOING:
-      return 'выходит';
+      return 'Выходит';
     case MANGA_STATE.FINISHED:
-      return 'завершён';
+      return 'Завершён';
     case MANGA_STATE.PAUSED:
-      return 'приостановлен';
+      return 'Приостановлен';
     case MANGA_STATE.ABANDONED:
-      return 'заброшен';
+      return 'Заброшен';
     case MANGA_STATE.UPCOMING:
-      return 'анонс';
+      return 'Анонс';
   }
 };
