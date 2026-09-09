@@ -39,18 +39,18 @@ export class SourcesService {
    * Кого имеет смысл опрашивать веером — этим пользуются и мультипоиск, и матчинг.
    *
    * Флаг isSearchSupported живёт только в метаданных парсера: наружу, в контракте Source, он не
-   * выходит, поэтому отбор делается здесь, а не у вызывающего. Заодно отсеиваются down: веер
-   * ограничен одним общим дедлайном, и заведомо мёртвый источник в нём отъедает время у живых.
-   * На /sources это не влияет — там отдаются все, включая degraded и down.
+   * выходит, поэтому отбор делается здесь, а не у вызывающего. Заодно отсеиваются down и degraded:
+   * веер ограничен одним общим дедлайном, и заведомо нездоровый источник в нём отъедает время у
+   * живых. На /sources это не влияет — там отдаются все, включая degraded и down.
    *
-   * Залипнуть в down источник при этом не может: ночной пробник ходит и в них тоже, независимо
-   * от того, шлёт ли туда кто-нибудь живые запросы.
+   * Залипнуть в down/degraded источник при этом не может: ночной пробник ходит и в них тоже,
+   * независимо от того, шлёт ли туда кто-нибудь живые запросы.
    */
   async listSearchableSources(): Promise<Source[]> {
     return (await this.enabledSources())
       .filter((source) => source.isSearchSupported)
       .map((source) => this.toSource(source))
-      .filter((source) => source.status !== SOURCE_STATUS.DOWN);
+      .filter((source) => source.status === SOURCE_STATUS.OK);
   }
 
   async getSource(sourceId: string): Promise<Source> {
