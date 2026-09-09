@@ -88,6 +88,21 @@ export class InvalidSignatureException extends ApiException {
   }
 }
 
+/**
+ * Постоянное хранилище недоступно. Возвращается только на запись: чтение при мёртвой базе
+ * деградирует до результата без пользовательских правок, а вот молча потерять правку нельзя —
+ * человек должен узнать, что его решение не сохранилось.
+ */
+export class StorageUnavailableException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.STORAGE_UNAVAILABLE,
+      'Хранилище недоступно, правка не сохранена',
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
+  }
+}
+
 export class RateLimitedException extends ApiException {
   constructor(sourceId?: string, retryAfter = 5) {
     super(

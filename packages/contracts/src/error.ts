@@ -10,6 +10,10 @@ export const API_ERROR_CODE = {
   NOT_FOUND: 'notFound',
   RATE_LIMITED: 'rateLimited',
   INVALID_SIGNATURE: 'invalidSignature',
+  // Постоянное хранилище (Postgres) недоступно. Возвращается только на запись: чтение при
+  // мёртвой базе деградирует до результата без пользовательских правок, а вот молча потерять
+  // запись нельзя — клиент должен узнать, что его правка не сохранилась.
+  STORAGE_UNAVAILABLE: 'storageUnavailable',
 } as const;
 export type ApiErrorCode = EnumLiteralsOf<typeof API_ERROR_CODE>;
 

@@ -39,11 +39,20 @@ const EnvSchema = z.object({
     .default(resolve(process.cwd(), '../../data/libsocial-tokens')),
   SOURCE_HTTP_TIMEOUT_MS: z.coerce.number().default(20_000),
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  // Значения по умолчанию совпадают с docker-compose.yml, чтобы локальный запуск не требовал
+  // настройки. База нужна только для ручных правок связей между тайтлами: без неё API
+  // работает, но правки сохранить нельзя.
+  DATABASE_URL: z.string().default('postgres://tanuki:tanuki@localhost:5432/tanuki'),
   SOURCE_BREAKER_FAILURE_THRESHOLD: z.coerce.number().default(5),
   SOURCE_BREAKER_RESET_MS: z.coerce.number().default(600_000),
   SOURCE_MAX_CONCURRENCY: z.coerce.number().default(4),
   SOURCE_QUEUE_LIMIT: z.coerce.number().default(20),
   SEARCH_TIMEOUT_MS: z.coerce.number().default(5_000),
+  // Заметно больше, чем у поиска: матчинг опрашивает два десятка источников в двух волнах и
+  // добирает детали, а результат кешируется на часы. Пользователя он при этом не блокирует —
+  // тот читает страницу тайтла, пока блок догружается. На живом прогоне полный веер по 22
+  // источникам укладывается примерно в 20 секунд.
+  MATCH_TIMEOUT_MS: z.coerce.number().default(20_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

@@ -95,3 +95,17 @@ export {
   type SearchResponse,
   SearchResponseSchema,
 } from './search';
+export {
+  MatchConfidenceSchema,
+  MangaLinkVerdictSchema,
+  MangaMatchSchema,
+  MangaMatchesResponseSchema,
+  MangaLinkRequestSchema,
+  MATCH_CONFIDENCE,
+  MANGA_LINK_VERDICT,
+  type MatchConfidence,
+  type MangaLinkVerdict,
+  type MangaMatch,
+  type MangaMatchesResponse,
+  type MangaLinkRequest,
+} from './match';

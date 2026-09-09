@@ -827,14 +827,37 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     });
     chapters.reverse();
 
+    // Сайты сети переехали на schema.org-разметку (`itemprop`), поэтому она проверяется первой,
+    // а прежние селекторы остаются запасными: домены обновляются не одновременно. Последним
+    // идёт <title> страницы — он содержит SEO-хвост вида «Манга X (Y) Автор Новые главы - Сайт»
+    // и годится только как крайняя мера.
+    const title =
+      attrOrNull(doc.$('meta[itemprop=name]').first(), 'content') ??
+      attrOrNull(doc.$('meta[name=name]').first(), 'content') ??
+      textOrNull(doc.$('h1.cr-hero-names__main').first()) ??
+      doc.$('title').text();
+
+    // Альтернативные названия сайт выводит одной строкой через «/» («Jujutsu Kaisen / 呪術廻戦 /
+    // Sorcery Fight»), а раньше держал списком в поповере — собираем из обоих мест.
+    const altTitles = [
+      ...new Set(
+        [
+          attrOrNull(doc.$('meta[itemprop=alternativeHeadline]').first(), 'content'),
+          ...(textOrNull(doc.$('.cr-hero-names__alt').first())?.split('/') ?? []),
+          ...doc
+            .$('.all-names-popover .name')
+            .toArray()
+            .map((el) => textOrNull(doc.$(el))),
+        ]
+          .map((value) => nullIfEmpty(value ?? null))
+          .filter((value): value is string => value !== null),
+      ),
+    ].filter((value) => value !== title.trim());
+
     return {
       id: generateUid(cfg.id, mangaUrl),
-      title: doc.$('meta[name=name]').attr('content') ?? doc.$('title').text(),
-      altTitles: doc
-        .$('.all-names-popover .name')
-        .toArray()
-        .map((el) => textOrNull(doc.$(el)))
-        .filter((t): t is string => t !== null),
+      title: title.trim(),
+      altTitles,
       url: mangaUrl,
       publicUrl: finalUrl,
       rating,
@@ -858,13 +881,25 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       tags: [...tags.values()],
       releaseState: null,
       restriction: isRestricted ? MANGA_RESTRICTION.LEGAL : null,
-      authors: root
-        .find('.elem_author,.elem_illustrator,.elem_screenwriter')
-        .find('a.person-link')
-        .toArray()
-        .map((el) => textOrNull(doc.$(el)))
-        .filter((t): t is string => t !== null),
-      description: root.find('div.manga-description').first().html(),
+      authors: [
+        ...new Set(
+          [
+            ...root
+              .find('.elem_author,.elem_illustrator,.elem_screenwriter')
+              .find('a.person-link')
+              .toArray(),
+            // В новой вёрстке авторы вынесены в карточки с портретами: часть ссылок обёрнута
+            // вокруг картинки и текста не содержит — такие отсеиваются как пустые.
+            ...doc.$(".cr-main-persons a[href*='/list/person/']").toArray(),
+          ]
+            .map((el) => nullIfEmpty(textOrNull(doc.$(el))))
+            .filter((t): t is string => t !== null),
+        ),
+      ],
+      description:
+        doc.$('.cr-description__content').first().html() ??
+        root.find('div.manga-description').first().html() ??
+        attrOrNull(doc.$('meta[itemprop=description]').first(), 'content'),
       chapters,
       source: cfg.id,
     };
