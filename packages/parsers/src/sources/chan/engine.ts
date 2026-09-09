@@ -376,7 +376,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
     const doc = await ctx.http.getHtml(url);
     const root = doc.$('div.main_fon').find('#content').first();
     if (root.length === 0) {
-      throw new ParseError('Cannot find root', cfg.id);
+      throw new ParseError(`Cannot find root: ${url}`, cfg.id);
     }
     return root
       .find('div.content_row')
@@ -581,7 +581,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
     const doc = await ctx.http.getHtml(absoluteUrl);
     const root = doc.$('#dle-content').first();
     if (root.length === 0) {
-      throw new ParseError('Cannot find #dle-content', cfg.id);
+      throw new ParseError(`Cannot find #dle-content: ${absoluteUrl}`, cfg.id);
     }
 
     const descHtml = root.find('#description').first().html();

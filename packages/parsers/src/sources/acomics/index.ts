@@ -177,7 +177,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
     const counterText = textOrNull(firstDoc.$('span.issueNumber').first());
     const total = Number.parseInt(counterText?.split('/').pop() ?? '', 10);
     if (!Number.isFinite(total) || total <= 0) {
-      throw new ParseError('Cannot parse issue count', SOURCE_ID);
+      throw new ParseError(`Cannot parse issue count: ${chapterUrl}`, SOURCE_ID);
     }
 
     const pages: RawPage[] = [];

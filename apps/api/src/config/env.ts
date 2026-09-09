@@ -44,9 +44,27 @@ const EnvSchema = z.object({
   // работает, но правки сохранить нельзя.
   DATABASE_URL: z.string().default('postgres://tanuki:tanuki@localhost:5432/tanuki'),
   SOURCE_BREAKER_FAILURE_THRESHOLD: z.coerce.number().default(5),
-  SOURCE_BREAKER_RESET_MS: z.coerce.number().default(600_000),
+  // Окно, на которое breaker перестаёт пускать запросы к источнику. Заметно короче прежних 10
+  // минут: раньше от него же зависел и статус источника, теперь статус живёт отдельно
+  // (SourceStatusService) и держится сам, так что окну незачем быть длинным — чем оно короче,
+  // тем быстрее ожившый источник наберёт серию успехов и вернётся в ok.
+  SOURCE_BREAKER_RESET_MS: z.coerce.number().default(180_000),
+  // Сколько живых запросов подряд должно пройти, чтобы снять degraded/down. Не один: одиночный
+  // удачный ответ от в целом неработающего источника ещё ничего не доказывает.
+  SOURCE_RECOVERY_SUCCESS_THRESHOLD: z.coerce.number().default(5),
   SOURCE_MAX_CONCURRENCY: z.coerce.number().default(4),
   SOURCE_QUEUE_LIMIT: z.coerce.number().default(20),
+  // Ночная проверка источников (SourceProbeService). Сколько прогонов подряд должно упасть,
+  // чтобы источник считался неработающим: одна упавшая ночь чаще означает проблему сети, чем
+  // сломанный сайт.
+  SOURCE_PROBE_FAILURE_THRESHOLD: z.coerce.number().default(3),
+  SOURCE_PROBE_CRON: z.string().default('0 3 * * *'),
+  SOURCE_PROBE_CONCURRENCY: z.coerce.number().default(3),
+  // Выключатель для локальной разработки: пробник ходит по реальным сайтам, в dev это лишнее.
+  SOURCE_PROBE_ENABLED: z
+    .string()
+    .default('true')
+    .transform((value) => value !== 'false'),
   SEARCH_TIMEOUT_MS: z.coerce.number().default(5_000),
   // Заметно больше, чем у поиска: матчинг опрашивает два десятка источников в двух волнах и
   // добирает детали, а результат кешируется на часы. Пользователя он при этом не блокирует —

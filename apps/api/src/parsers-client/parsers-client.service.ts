@@ -1,9 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { FilterSelection, Parser, ParsersRegistry } from '@tanuki/parsers';
+import { SOURCE_STATUS_REASON } from '@tanuki/contracts';
+import {
+  runSourceContract,
+  type FilterSelection,
+  type Parser,
+  type ParsersRegistry,
+} from '@tanuki/parsers';
 import { CacheService } from '../cache/cache.service';
 import { CACHE_TTL, type CacheTtlSpec } from '../cache/cache.constants';
 import { cacheKey } from '../cache/cache-keys';
 import { SourceHealthService } from '../resilience/source-health.service';
+import { SourceStatusService } from '../resilience/source-status.service';
 import {
   ConcurrencyLimiterService,
   QueueOverflowError,
@@ -30,6 +37,7 @@ export class ParsersClientService {
     @Inject(PARSERS) private readonly parsers: ParsersRegistry,
     private readonly cache: CacheService,
     private readonly sourceHealth: SourceHealthService,
+    private readonly sourceStatus: SourceStatusService,
     private readonly concurrencyLimiter: ConcurrencyLimiterService,
   ) {}
 
@@ -44,6 +52,26 @@ export class ParsersClientService {
       () => Promise.resolve({ items: this.parsers.listSources() }),
     );
     return { data: result.value, stale: result.stale };
+  }
+
+  /**
+   * Прогоняет по источнику полный путь чтения — проверка «жив ли он на самом деле» для
+   * SourceProbeService. Возвращает текст ошибки или null при успехе.
+   *
+   * Сознательно идёт мимо кеша и мимо breaker'а, в отличие от всего остального в этом классе:
+   * через guardedFetch пробник получал бы SOURCE_UNAVAILABLE на открытом breaker'е и не смог бы
+   * проверить ровно те источники, ради которых нужен. Лимитер при этом на месте — вежливость к
+   * сайту от способа вызова не зависит.
+   */
+  async probe(sourceId: string): Promise<string | null> {
+    await this.parsers.ready();
+    try {
+      const parser = this.parsers.get(sourceId);
+      await this.concurrencyLimiter.run(sourceId, () => runSourceContract(parser));
+      return null;
+    } catch (error) {
+      return (error as Error).message;
+    }
   }
 
   async listManga(
@@ -161,6 +189,7 @@ export class ParsersClientService {
     try {
       const value = await this.concurrencyLimiter.run(sourceId, () => doFetch(parser));
       this.sourceHealth.recordSuccess(sourceId);
+      this.sourceStatus.recordSuccess(sourceId);
       return value;
     } catch (error) {
       if (error instanceof QueueOverflowError) {
@@ -173,11 +202,19 @@ export class ParsersClientService {
       if (apiError instanceof SourceAuthRequiredException) {
         // Источник ответил, и ответ детерминирован (глава требует авторизации) — это не
         // признак того, что источник "лежит", остальные главы того же источника наверняка
-        // грузятся нормально. Не даём этому открыть breaker на весь источник на 10 минут.
+        // грузятся нормально. Не даём этому ни открыть breaker, ни уронить статус источника.
         this.sourceHealth.releaseProbe(sourceId);
         throw apiError;
       }
-      this.sourceHealth.recordFailure(sourceId);
+      // Статус источника меняет не каждая ошибка, а только та, что открыла breaker: до этого
+      // момента источник просто спотыкается, а не лежит.
+      if (this.sourceHealth.recordFailure(sourceId)) {
+        this.sourceStatus.markDegraded(
+          sourceId,
+          SOURCE_STATUS_REASON.REQUEST_FAILURES,
+          apiError.message,
+        );
+      }
       throw apiError;
     }
   }

@@ -27,24 +27,29 @@ describe('looksLikeAntibotChallenge', () => {
 });
 
 describe('classifyResponse', () => {
+  const URL = 'https://example.com/manga/1';
+
   it('returns null for a successful response', () => {
-    expect(classifyResponse(SOURCE_ID.DESUME, 200, {}, '')).toBeNull();
+    expect(classifyResponse(SOURCE_ID.DESUME, 200, URL, {}, '')).toBeNull();
   });
 
   it('maps antibot challenges to SourceBlockedError, checked before 404/generic', () => {
-    const err = classifyResponse(SOURCE_ID.DESUME, 403, {}, 'Just a moment...');
+    const err = classifyResponse(SOURCE_ID.DESUME, 403, URL, {}, 'Just a moment...');
     expect(err).toBeInstanceOf(SourceBlockedError);
+    expect(err?.message).toBe(`Antibot challenge (HTTP 403) at ${URL}`);
   });
 
-  it('maps 404 to NotFoundError', () => {
-    expect(classifyResponse(SOURCE_ID.DESUME, 404, {}, 'Not Found')).toBeInstanceOf(NotFoundError);
+  it('maps 404 to NotFoundError, url included', () => {
+    const err = classifyResponse(SOURCE_ID.DESUME, 404, URL, {}, 'Not Found');
+    expect(err).toBeInstanceOf(NotFoundError);
+    expect(err?.message).toBe(`Not found: ${URL}`);
   });
 
-  it('maps other 4xx/5xx to SourceUnavailableError', () => {
-    expect(classifyResponse(SOURCE_ID.DESUME, 500, {}, 'error')).toBeInstanceOf(
-      SourceUnavailableError,
-    );
-    expect(classifyResponse(SOURCE_ID.DESUME, 400, {}, 'bad request')).toBeInstanceOf(
+  it('maps other 4xx/5xx to SourceUnavailableError, url included', () => {
+    const serverError = classifyResponse(SOURCE_ID.DESUME, 500, URL, {}, 'error');
+    expect(serverError).toBeInstanceOf(SourceUnavailableError);
+    expect(serverError?.message).toBe(`Upstream HTTP 500 at ${URL}`);
+    expect(classifyResponse(SOURCE_ID.DESUME, 400, URL, {}, 'bad request')).toBeInstanceOf(
       SourceUnavailableError,
     );
   });

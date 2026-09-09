@@ -28,7 +28,7 @@ function SourceCard({ source }: Props) {
             <Text>{source.locale.toUpperCase()}</Text>
           </Group>
 
-          <SourceStatusBadge sourceId={source.id} status={source.status} />
+          <SourceStatusBadge source={source} />
         </Stack>
       </Group>
     </Card>

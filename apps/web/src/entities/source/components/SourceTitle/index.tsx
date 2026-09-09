@@ -23,7 +23,7 @@ function SourceTitle({ source, showStatus = false, isLoading = false }: Props) {
           <Title order={5}>{source.title}</Title>
           {source.isAdult && <Badge color="red">18+</Badge>}
           {source.requiresVpn && <Badge color="cyan">VPN</Badge>}
-          {showStatus && <SourceStatusBadge sourceId={source.id} status={source.status} />}
+          {showStatus && <SourceStatusBadge source={source} />}
         </Group>
         <Text size="sm" c="dimmed" ff="monospace" truncate>
           {source.domain}

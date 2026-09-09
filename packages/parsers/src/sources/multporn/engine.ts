@@ -498,7 +498,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     const doc = await ctx.http.getHtml(absoluteUrl);
     const $ = doc.$;
     const root = $('article.node').first();
-    if (root.length === 0) throw new ParseError('Cannot find article.node', cfg.id);
+    if (root.length === 0) throw new ParseError(`Cannot find article.node: ${absoluteUrl}`, cfg.id);
 
     const title = textOrNull($('h1.title').first()) ?? mangaUrl;
     const author = nullIfEmpty(textOrNull(root.find(cfg.authorSelector).first()));
@@ -566,7 +566,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       seen.add(url);
       pages.push({ id: generateUid(cfg.id, url), url, preview: null, source: cfg.id });
     }
-    if (pages.length === 0) throw new ParseError('No pages found', cfg.id);
+    if (pages.length === 0) throw new ParseError(`No pages found: ${absoluteUrl}`, cfg.id);
     return pages;
   };
 

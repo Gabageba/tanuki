@@ -8,6 +8,7 @@ import { ROUTE_PATHS } from '@/shared/consts/routes';
 import ReaderPage from '@/pages/Reader/ReaderPage';
 import SearchPage from '@/pages/Search/SearchPage';
 import Sources from '@/pages/Sources';
+import SourcesHealth from '@/pages/SourcesHealth';
 import Notifications from '@/pages/Notifications';
 import Bookmarks from '@/pages/Bookmarks';
 import Catalog from '@/pages/Catalog';
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
       {
         path: ROUTE_PATHS.SOURCES,
         element: <Sources />,
+      },
+      {
+        path: ROUTE_PATHS.SOURCES_HEALTH,
+        element: <SourcesHealth />,
       },
       {
         path: ROUTE_PATHS.SEARCH,

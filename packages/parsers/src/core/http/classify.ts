@@ -36,6 +36,7 @@ export const looksLikeAntibotChallenge = (
 export const classifyResponse = (
   sourceId: string,
   statusCode: number,
+  url: string,
   headers: Record<string, string | string[] | undefined>,
   bodySample: string,
 ): SourceBlockedError | NotFoundError | SourceUnavailableError | null => {
@@ -43,10 +44,10 @@ export const classifyResponse = (
     return null;
   }
   if (looksLikeAntibotChallenge(statusCode, headers, bodySample)) {
-    return new SourceBlockedError(`Antibot challenge (HTTP ${statusCode})`, sourceId);
+    return new SourceBlockedError(`Antibot challenge (HTTP ${statusCode}) at ${url}`, sourceId);
   }
   if (statusCode === 404) {
-    return new NotFoundError('Not found', sourceId);
+    return new NotFoundError(`Not found: ${url}`, sourceId);
   }
-  return new SourceUnavailableError(`Upstream HTTP ${statusCode}`, sourceId);
+  return new SourceUnavailableError(`Upstream HTTP ${statusCode} at ${url}`, sourceId);
 };

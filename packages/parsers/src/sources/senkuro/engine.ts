@@ -578,13 +578,18 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       body: JSON.stringify({ query, variables }),
     });
     if (res.status >= 400) {
-      throw new SourceUnavailableError(`Upstream HTTP ${res.status}`, SOURCE_ID);
+      throw new SourceUnavailableError(
+        `Upstream HTTP ${res.status}: ${cfg.apiEndpoint}`,
+        SOURCE_ID,
+      );
     }
     const json = res.json<{ errors?: unknown[]; data?: Record<string, unknown> }>();
     if (json.errors && json.errors.length > 0) {
       throw new ParseError(JSON.stringify(json.errors), SOURCE_ID);
     }
-    if (!json.data) throw new ParseError('GraphQL response has no data', SOURCE_ID);
+    if (!json.data) {
+      throw new ParseError(`GraphQL response has no data: ${cfg.apiEndpoint}`, SOURCE_ID);
+    }
     return json.data;
   };
 
@@ -904,9 +909,9 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       fetchChapters(mangaId, mangaSlug),
     ]);
     const info = data['mangaTachiyomiInfo'] as MangaInfoJson | undefined;
-    if (!info) throw new ParseError('Cannot parse manga details', SOURCE_ID);
+    if (!info) throw new ParseError(`Cannot parse manga details: ${mangaUrl}`, SOURCE_ID);
     const manga = parseMangaInfo(info);
-    if (!manga) throw new ParseError('Cannot parse manga details', SOURCE_ID);
+    if (!manga) throw new ParseError(`Cannot parse manga details: ${mangaUrl}`, SOURCE_ID);
     return { ...manga, chapters };
   };
 
@@ -914,8 +919,8 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
     const parts = chapterUrl.split(URL_DELIMITER);
     const mangaId = parts[0];
     const chapterId = parts[2];
-    if (!mangaId) throw new ParseError('Cannot parse manga id', SOURCE_ID);
-    if (!chapterId) throw new ParseError('Cannot parse chapter id', SOURCE_ID);
+    if (!mangaId) throw new ParseError(`Cannot parse manga id: ${chapterUrl}`, SOURCE_ID);
+    if (!chapterId) throw new ParseError(`Cannot parse chapter id: ${chapterUrl}`, SOURCE_ID);
 
     const data = await postGraphQl(CHAPTER_PAGES_QUERY, { mangaId, chapterId });
     const payload = data['mangaTachiyomiChapterPages'] as

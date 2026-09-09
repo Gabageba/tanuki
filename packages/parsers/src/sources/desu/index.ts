@@ -637,21 +637,22 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .toArray()
       .map((el) => doc.$(el).html() ?? '')
       .find((s) => s.includes('window.MangaReader'));
-    if (!script) throw new ParseError('Reader bootstrap not found', SOURCE_ID);
+    if (!script) throw new ParseError(`Reader bootstrap not found: ${absoluteUrl}`, SOURCE_ID);
 
     const bootstrapJson = READER_BOOTSTRAP_REGEX.exec(script)?.[1];
-    if (!bootstrapJson) throw new ParseError('Invalid reader response', SOURCE_ID);
+    if (!bootstrapJson) throw new ParseError(`Invalid reader response: ${absoluteUrl}`, SOURCE_ID);
     let bootstrap: ReaderBootstrapJson;
     try {
       bootstrap = JSON.parse(bootstrapJson) as ReaderBootstrapJson;
     } catch {
-      throw new ParseError('Invalid reader response', SOURCE_ID);
+      throw new ParseError(`Invalid reader response: ${absoluteUrl}`, SOURCE_ID);
     }
 
     const { chapter } = await ctx.http.getJson<ReaderApiChapterJson>(
       `https://${domain}${bootstrap.apiBaseUrl}/chapters/${bootstrap.chapter.id}`,
     );
-    if (chapter.pages.length === 0) throw new ParseError('No pages found', SOURCE_ID);
+    if (chapter.pages.length === 0)
+      throw new ParseError(`No pages found: ${absoluteUrl}`, SOURCE_ID);
 
     return chapter.pages.map((page) => ({
       id: generateUid(SOURCE_ID, page.url),

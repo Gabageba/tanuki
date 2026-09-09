@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   SOURCE_CONTENT_TYPE,
   SOURCE_STATUS,
+  SOURCE_STATUS_REASON,
   type Source,
   type SourceContentType,
   type SourcesResponse,
@@ -11,17 +12,22 @@ import { ENV } from '../config/env.module';
 import { NotFoundApiException } from '../common/errors';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawSourceInfo } from '../parsers-client/parsers-client.types';
-import { SourceHealthService } from '../resilience/source-health.service';
+import { SourceStatusService } from '../resilience/source-status.service';
 
 /** Order of the groups in the response — objects keep insertion order over JSON. */
 const CONTENT_TYPES = Object.values(SOURCE_CONTENT_TYPE) as SourceContentType[];
+
+/** Контракт требует строку — Date отдаётся в серверном формате YYYY-MM-DDTHH:MM:SSZ. */
+const toIsoSeconds = (value: Date | null): string | null => {
+  return value ? `${value.toISOString().slice(0, 19)}Z` : null;
+};
 
 @Injectable()
 export class SourcesService {
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly parsersClient: ParsersClientService,
-    private readonly sourceHealth: SourceHealthService,
+    private readonly sourceStatus: SourceStatusService,
   ) {}
 
   /** Плоский список — им пользуется SearchService, которому группировка только мешает. */
@@ -30,13 +36,21 @@ export class SourcesService {
   }
 
   /**
-   * Флаг isSearchSupported живёт только в метаданных парсера: наружу, в контракте Source, он
-   * не выходит, поэтому отбор источников для мультипоиска делается здесь, а не у вызывающего.
+   * Кого имеет смысл опрашивать веером — этим пользуются и мультипоиск, и матчинг.
+   *
+   * Флаг isSearchSupported живёт только в метаданных парсера: наружу, в контракте Source, он не
+   * выходит, поэтому отбор делается здесь, а не у вызывающего. Заодно отсеиваются down: веер
+   * ограничен одним общим дедлайном, и заведомо мёртвый источник в нём отъедает время у живых.
+   * На /sources это не влияет — там отдаются все, включая degraded и down.
+   *
+   * Залипнуть в down источник при этом не может: ночной пробник ходит и в них тоже, независимо
+   * от того, шлёт ли туда кто-нибудь живые запросы.
    */
   async listSearchableSources(): Promise<Source[]> {
     return (await this.enabledSources())
       .filter((source) => source.isSearchSupported)
-      .map((source) => this.toSource(source));
+      .map((source) => this.toSource(source))
+      .filter((source) => source.status !== SOURCE_STATUS.DOWN);
   }
 
   async getSource(sourceId: string): Promise<Source> {
@@ -45,12 +59,6 @@ export class SourcesService {
       throw new NotFoundApiException(`Источник ${sourceId} не найден`);
     }
     return source;
-  }
-
-  /** Сбрасывает circuit breaker источника — дев-инструмент, аналог сброса кеша. */
-  async resetHealth(sourceId: string): Promise<void> {
-    await this.getSource(sourceId);
-    this.sourceHealth.reset(sourceId);
   }
 
   async listGroupedSources(): Promise<SourcesResponse> {
@@ -73,6 +81,10 @@ export class SourcesService {
   }
 
   private toSource(raw: RawSourceInfo): Source {
+    // isBroken — жёсткий оверрайд, а не стартовое значение: это решение человека о том, что
+    // источник не парсится в принципе (JS-челлендж, мёртвый TLS). Автоматика его не трогает, и
+    // случайный удачный запрос не должен его снимать — такие источники даже не пробуются.
+    const entry = this.sourceStatus.get(raw.id);
     return {
       id: raw.id,
       title: raw.title,
@@ -81,7 +93,12 @@ export class SourcesService {
       // contentType парсеры берут из того же SOURCE_CONTENT_TYPE, что и контракт, — отдаём
       // значение как есть, без нормализации.
       contentType: raw.contentType,
-      status: raw.isBroken ? SOURCE_STATUS.DOWN : this.sourceHealth.getStatus(raw.id),
+      status: raw.isBroken ? SOURCE_STATUS.DOWN : entry.status,
+      statusReason: raw.isBroken ? SOURCE_STATUS_REASON.BROKEN : entry.reason,
+      statusChangedAt: raw.isBroken ? null : toIsoSeconds(entry.statusChangedAt),
+      checkedAt: raw.isBroken ? null : toIsoSeconds(entry.checkedAt),
+      failedProbeStreak: raw.isBroken ? 0 : entry.failedProbeStreak,
+      lastError: raw.isBroken ? null : entry.lastError,
       isAdult: raw.isAdult,
       requiresVpn: raw.requiresVpn,
       sortOrders: raw.sortOrders,

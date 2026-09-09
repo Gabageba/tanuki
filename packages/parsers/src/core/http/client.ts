@@ -152,13 +152,19 @@ export class HttpClientImpl implements HttpClient {
 
   private throwIfError(res: HttpResponse): void {
     const bodySample = res.status >= 400 ? res.text().slice(0, 4096) : '';
-    const error = classifyResponse(this.opts.sourceId, res.status, res.headers, bodySample);
+    const error = classifyResponse(
+      this.opts.sourceId,
+      res.status,
+      res.url,
+      res.headers,
+      bodySample,
+    );
     if (error) throw error;
   }
 
   private async sendWithRedirects(req: HttpRequest, depth: number): Promise<HttpResponse> {
     if (depth > MAX_REDIRECTS) {
-      throw new SourceUnavailableError('Too many redirects', this.opts.sourceId);
+      throw new SourceUnavailableError(`Too many redirects: ${req.url}`, this.opts.sourceId);
     }
 
     // Cookies are attached here, not by the caller — every hop of a redirect chain gets its
@@ -180,7 +186,7 @@ export class HttpClientImpl implements HttpClient {
       });
     } catch (err) {
       throw new SourceUnavailableError(
-        `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
+        `Connection failed: ${err instanceof Error ? err.message : String(err)} (${req.url})`,
         this.opts.sourceId,
       );
     }

@@ -70,6 +70,12 @@
   during render is recreated on every render, and `react-hooks/static-components` fails the lint.
   That makes it a `.tsx` helper, so it lives next to the component rather than in `models.ts`.
 
+## Text
+
+- Placeholder for a missing/empty value — no rating, no reason, no error — is never a raw `'—'`
+  string literal. Use the shared `<Mdash />` component (`apps/web/src/shared/ui/Mdash.tsx`), which
+  renders `&mdash;`.
+
 ## Placement
 
 - Keep code next to its only consumer: constants of a component go into its sibling `models.ts` or

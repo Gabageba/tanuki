@@ -25,6 +25,26 @@ export type SourceStatus = EnumLiteralsOf<typeof SOURCE_STATUS>;
 
 export const SourceStatusSchema = z.enum(SOURCE_STATUS);
 
+/**
+ * Почему источник в своём текущем статусе. Статус «липкий» — он держится, пока его не сменит
+ * явное событие, — поэтому без причины по нему нельзя понять, кто его выставил: ночной пробник
+ * или живой трафик. Ручного сброса нет намеренно (см. SourceStatusService) — статус меняет
+ * только реальный сигнал о состоянии источника, а не человек, нажавший кнопку.
+ */
+export const SOURCE_STATUS_REASON = {
+  /** isBroken в SOURCE_CATALOG — жёсткий оверрайд, автоматика такой источник не трогает. */
+  BROKEN: 'broken',
+  /** Упала ночная проверка полной цепочки getList → getDetails → getPages. */
+  PROBE_FAILED: 'probeFailed',
+  /** На живом трафике открылся circuit breaker источника. */
+  REQUEST_FAILURES: 'requestFailures',
+  /** Источник снова отвечает — успешный пробник или серия успешных живых запросов. */
+  RECOVERED: 'recovered',
+} as const;
+export type SourceStatusReason = EnumLiteralsOf<typeof SOURCE_STATUS_REASON>;
+
+export const SourceStatusReasonSchema = z.enum(SOURCE_STATUS_REASON);
+
 export const SOURCE_LOCALE = {
   RU: 'ru',
   EN: 'en',
@@ -85,6 +105,19 @@ export const SourceSchema = z.object({
   locale: SourceLocaleSchema,
   contentType: SourceContentTypeSchema,
   status: SourceStatusSchema,
+  /**
+   * Кто выставил текущий статус. null — до источника ещё не доходила ни автоматика, ни человек:
+   * он просто считается рабочим по умолчанию.
+   */
+  statusReason: SourceStatusReasonSchema.nullable(),
+  /** Когда статус стал текущим, YYYY-MM-DDTHH:MM:SSZ. */
+  statusChangedAt: z.string().nullable(),
+  /** Когда по источнику последний раз отработал ночной пробник. */
+  checkedAt: z.string().nullable(),
+  /** Сколько ночных проверок подряд упало — 0 у рабочего источника. */
+  failedProbeStreak: z.number(),
+  /** Текст ошибки, из-за которой статус стал текущим, — читается на странице здоровья. */
+  lastError: z.string().nullable(),
   isAdult: z.boolean(),
   /** Source is blocked for RU IPs and needs a VPN to reach. */
   requiresVpn: z.boolean(),

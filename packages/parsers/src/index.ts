@@ -44,5 +44,7 @@ export {
   type RegistryOptions,
 } from './registry';
 
+export { runSourceContract, SourceContractError } from './core/source-contract';
+
 export { decompress } from './core/http/decompress';
 export type { Timeouts } from './core/http/client';

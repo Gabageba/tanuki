@@ -4,10 +4,12 @@ import {
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
   SOURCE_STATUS,
+  SOURCE_STATUS_REASON,
   type Source,
   type SourceContentType,
   type SourcesResponse,
   type SourceStatus,
+  type SourceStatusReason,
 } from '@tanuki/contracts';
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
 
@@ -35,6 +37,19 @@ export const getSourceStatusLabel = (status: SourceStatus) => {
       return 'нестабилен';
     case SOURCE_STATUS.DOWN:
       return 'недоступен';
+  }
+};
+
+export const getSourceStatusReasonLabel = (statusReason: SourceStatusReason) => {
+  switch (statusReason) {
+    case SOURCE_STATUS_REASON.BROKEN:
+      return 'источник не парсится в принципе';
+    case SOURCE_STATUS_REASON.PROBE_FAILED:
+      return 'упала ночная проверка';
+    case SOURCE_STATUS_REASON.REQUEST_FAILURES:
+      return 'запросы перестали проходить';
+    case SOURCE_STATUS_REASON.RECOVERED:
+      return 'источник снова отвечает';
   }
 };
 
