@@ -402,7 +402,10 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
 
   const getList = async (params: ListParams): Promise<RawManga[]> => {
     if (params.query) {
-      throw new SourceAuthRequiredError('Search requires an authenticated session', SOURCE_ID);
+      throw new SourceAuthRequiredError(
+        `Search requires an authenticated session: query="${params.query}"`,
+        SOURCE_ID,
+      );
     }
     const { cacheKey, urlForRowstart } = resolveRoute(params.filters, params.order);
     const items = await ensureCatalogItems(cacheKey, params.offset + params.limit, urlForRowstart);
@@ -413,7 +416,8 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await mobileHttp.getHtml(absoluteUrl);
     const root = doc.$('table.news_pic2').first();
-    if (root.length === 0) throw new ParseError('Cannot find table.news_pic2', SOURCE_ID);
+    if (root.length === 0)
+      throw new ParseError(`Cannot find table.news_pic2: ${absoluteUrl}`, SOURCE_ID);
 
     const $titleLink = root.find('a[title]').first();
     const { title, altTitle } = splitTitle(attrOrNull($titleLink, 'title') ?? '');
@@ -422,7 +426,8 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     // gallery as `img[data-src]` right on this same details page — so both the cover placeholder
     // and the source's own page count fall out of the same query, no separate reader fetch needed.
     const $pageImages = doc.$('img[data-src]');
-    if ($pageImages.length === 0) throw new ParseError('Cover image not found', SOURCE_ID);
+    if ($pageImages.length === 0)
+      throw new ParseError(`Cover image not found: ${absoluteUrl}`, SOURCE_ID);
     const largeCoverUrl = absUrl($pageImages.first(), 'data-src', doc.baseUrl);
 
     const author = textOfLinkContaining(root, doc.$, '/mangaka/');

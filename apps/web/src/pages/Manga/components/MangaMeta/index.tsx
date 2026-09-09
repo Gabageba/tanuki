@@ -5,7 +5,7 @@ import MangaMetaItem from './MangaMetaItem';
 import { getLabelByMangaType } from '@/entities/source/lib';
 import OtherItemsTag from '@/shared/ui/OtherItemsTag';
 import MangaState from '@/entities/manga/MangaState';
-import { formatRuDate } from './lib';
+import { formatRuDate } from '@/shared/lib/formatDate';
 
 type Props = {
   manga: Manga;

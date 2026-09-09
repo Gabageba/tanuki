@@ -311,7 +311,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       seen.add(url);
       pages.push({ id: generateUid(SOURCE_ID, url), url, preview: null, source: SOURCE_ID });
     });
-    if (pages.length === 0) throw new ParseError('No pages found', SOURCE_ID);
+    if (pages.length === 0) throw new ParseError(`No pages found: ${absoluteUrl}`, SOURCE_ID);
     return pages;
   };
 

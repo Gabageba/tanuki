@@ -336,22 +336,25 @@ const parsePagesV3 = (data: string, pos: number, domain: string, sourceId: strin
   const tail = data.slice(pos);
   const openParen = tail.indexOf('(');
   if (openParen === -1) {
-    throw new ParseError('Invalid reader response', sourceId);
+    throw new ParseError('Invalid reader response: no readerInit( call found', sourceId);
   }
   const firstArrayStart = tail.indexOf('[', openParen);
   if (firstArrayStart === -1) {
-    throw new ParseError('Invalid reader response', sourceId);
+    throw new ParseError('Invalid reader response: no pages array after readerInit(', sourceId);
   }
   const arrayLiteral = extractBalancedArray(tail, firstArrayStart);
   if (!arrayLiteral) {
-    throw new ParseError('Invalid reader response', sourceId);
+    throw new ParseError('Invalid reader response: unbalanced pages array literal', sourceId);
   }
 
   let arr: unknown[][];
   try {
     arr = JSON.parse(jsArrayLiteralToJson(arrayLiteral)) as unknown[][];
   } catch {
-    throw new ParseError('Invalid reader response', sourceId);
+    throw new ParseError(
+      'Invalid reader response: pages array literal is not valid JSON',
+      sourceId,
+    );
   }
   return arr.map((entry) => {
     const server = String(entry[0] ?? '') || `https://${domain}`;
@@ -387,7 +390,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
 
     const lastSegment = pathname.split('/').filter(Boolean).pop();
     if (lastSegment === 'login') {
-      throw new SourceAuthRequiredError('Login required', cfg.id);
+      throw new SourceAuthRequiredError(`Login required: ${req.url}`, cfg.id);
     }
     if (res.status === 404) {
       const cookies = await ctx.jar.getCookies(`https://${domain}/`);
@@ -395,7 +398,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         (c) => c.key === 'gwt' || (cfg.extraAuthCookies ?? []).includes(c.key),
       );
       if (!hasAuthCookie) {
-        throw new SourceAuthRequiredError('Login required (soft 404)', cfg.id);
+        throw new SourceAuthRequiredError(`Login required (soft 404): ${req.url}`, cfg.id);
       }
       // The site 404s some member-only pages for guests instead of a real 404 — with a valid
       // session this is a false alarm, so let the caller treat it as a normal response.
@@ -739,7 +742,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       if (root.text().includes(COPYRIGHT_ALERT)) {
         isRestricted = true;
       } else {
-        throw new ParseError('No chapters found', cfg.id);
+        throw new ParseError(`No chapters found: ${absoluteUrl}`, cfg.id);
       }
     }
 

@@ -257,7 +257,15 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
           timeouts: opts.timeouts,
         }),
     };
-    parsers.set(id, descriptor.create(ctx));
+    // isBroken authoritatively comes from SOURCE_CATALOG (descriptor.info, built in
+    // buildDescriptor above) — not from whatever the individual engine's own `info` object
+    // says. Every engine but SENKURO hardcodes `isBroken: false` in its own info literal
+    // (copy-pasted boilerplate, not a per-source decision), which silently no-ops the catalog's
+    // isBroken flag for every source on that engine. Overriding it here, once, in the one place
+    // that already reads the catalog correctly, means a future engine can't reintroduce the
+    // same bug by copying the same boilerplate.
+    const parser = descriptor.create(ctx);
+    parsers.set(id, { ...parser, info: { ...parser.info, isBroken: descriptor.info.isBroken } });
   }
 
   return {

@@ -514,7 +514,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       url,
     );
     if (!json.pages) {
-      throw new NotFoundError('Chapter is not available yet', SOURCE_ID);
+      throw new NotFoundError(`Chapter is not available yet: ${url}`, SOURCE_ID);
     }
     const result: RawPage[] = [];
     for (const item of json.pages) {

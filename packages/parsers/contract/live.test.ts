@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import { describe, expect, it } from 'vitest';
 import { createRegistry } from '../src/registry';
+import { runSourceContract } from '../src/core/source-contract';
 import { SOURCE_ID, type SourceId } from '../src/sources/catalog';
 
 // Mirrors scripts/libsocial-login.ts: GROUPLE_USERNAME etc. live in apps/api/.env rather than
@@ -40,7 +41,10 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   // source if that directory/token isn't configured for this run.
   SOURCE_ID.HENTAILIB,
   SOURCE_ID.MANGACHAN,
-  SOURCE_ID.HENCHAN,
+  // HENCHAN intentionally excluded: marked broken (`isBroken: true` in source-catalog.ts) —
+  // domains[0] redirects to a dead 404, every other listed mirror sits behind a FingerprintJS
+  // antibot gate no undici client passes. Verified live 2026-09-09.
+  //
   // YAOICHAN intentionally excluded: marked broken (`isBroken: true` in source-catalog.ts) —
   // every request times out at the connect/TLS stage, reproduces from multiple networks.
   //
@@ -114,33 +118,10 @@ const registry = createRegistry({
 describe.each(RUN_SOURCE_IDS)('contract: %s', (sourceId) => {
   it('getList -> getDetails -> getPages resolves a full read path', async () => {
     await registry.init();
-    const parser = registry.get(sourceId);
 
-    const list = await parser.getList({ offset: 0, limit: 20 });
-    expect(list.length).toBeGreaterThan(0);
-    expect(list[0]!.chapters).toBeNull();
-
-    // Scan past a single catalog entry with genuinely empty chapters instead of failing outright
-    // on it — e.g. SENKURO's own `LAST_CHAPTER_AT` sort surfaced a title with an attached
-    // translation team but zero chapters from `mangaTachiyomiChapters`, an upstream data
-    // anomaly on their end rather than a parsing bug (every other entry in the same page had
-    // chapters). Still fails if no entry in the page has any.
-    let details: Awaited<ReturnType<typeof parser.getDetails>> | undefined;
-    for (const candidate of list) {
-      const candidateDetails = await parser.getDetails(candidate.url);
-      if (candidateDetails.chapters && candidateDetails.chapters.length > 0) {
-        details = candidateDetails;
-        break;
-      }
-    }
-    expect(details).toBeDefined();
-    expect(details!.chapters).not.toBeNull();
-    expect(details!.chapters!.length).toBeGreaterThan(0);
-
-    const pages = await parser.getPages(details!.chapters![0]!.url);
-    expect(pages.length).toBeGreaterThan(0);
-    for (const page of pages) {
-      expect(page.url).toMatch(/^https?:\/\//);
-    }
+    // Сама проверка живёт в src/core/source-contract.ts, а не здесь: тот же путь чтения гоняет
+    // рантаймовый пробник в apps/api, который и проставляет источникам статус. Будь описание
+    // «рабочего источника» в двух местах, статус в проде и результат этого теста разошлись бы.
+    await expect(runSourceContract(registry.get(sourceId))).resolves.toBeUndefined();
   });
 });

@@ -763,14 +763,17 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       pagesJson = await ctx.http.getJson<{ data: { pages: { id: number; url: string }[] } }>(url);
     } catch (err) {
       if (cfg.authRequiredOnMissingPages && err instanceof NotFoundError) {
-        throw new SourceAuthRequiredError('Pages require an authenticated session', cfg.id);
+        throw new SourceAuthRequiredError(
+          `Pages require an authenticated session: ${chapterUrl}`,
+          cfg.id,
+        );
       }
       throw err;
     }
     const servers = await getImageServers();
     const primary =
       servers.get(SERVER_MAIN) ?? servers.get(SERVER_DOWNLOAD) ?? servers.get(SERVER_SECONDARY);
-    if (!primary) throw new NotFoundError('No available image servers', cfg.id);
+    if (!primary) throw new NotFoundError(`No available image servers: ${chapterUrl}`, cfg.id);
     const compress = servers.get(SERVER_COMPRESS);
 
     return pagesJson.data.pages.map((page) => {

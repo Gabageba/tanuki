@@ -433,14 +433,14 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
 
   const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const slug = mangaUrl.replace(/\/$/, '').split('/').pop();
-    if (!slug) throw new ParseError('Cannot parse title slug', SOURCE_ID);
+    if (!slug) throw new ParseError(`Cannot parse title slug: ${mangaUrl}`, SOURCE_ID);
     const url = apiUrl(`titles/slug/${slug}`);
     url.searchParams.set('populateChapters', 'true');
     const json = await ctx.http.getJson<{ data?: MangaJson }>(url.toString());
     const info = json.data;
-    if (!info) throw new ParseError('Cannot parse title details', SOURCE_ID);
+    if (!info) throw new ParseError(`Cannot parse title details: ${mangaUrl}`, SOURCE_ID);
     const manga = parseManga(info);
-    if (!manga) throw new ParseError('Cannot parse title details', SOURCE_ID);
+    if (!manga) throw new ParseError(`Cannot parse title details: ${mangaUrl}`, SOURCE_ID);
 
     const titleId = info._id;
     const embeddedChapters =
@@ -460,12 +460,14 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       .split('/')
       .filter(Boolean)
       .pop();
-    if (!chapterId) throw new ParseError('Cannot parse chapter id', SOURCE_ID);
+    if (!chapterId) throw new ParseError(`Cannot parse chapter id: ${chapterUrl}`, SOURCE_ID);
     const json = await ctx.http.getJson<{ data?: { pages?: string[] } }>(
       apiUrl(`chapters/${chapterId}`).toString(),
     );
     const pages = json.data?.pages ?? [];
-    if (pages.length === 0) throw new ParseError('Cannot parse chapter pages', SOURCE_ID);
+    if (pages.length === 0) {
+      throw new ParseError(`Cannot parse chapter pages: ${chapterUrl}`, SOURCE_ID);
+    }
     return pages
       .map((path, i): RawPage | null => {
         const trimmed = path.trim();

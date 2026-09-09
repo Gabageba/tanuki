@@ -333,7 +333,11 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       'User-Agent': UserAgents.CHROME_DESKTOP,
     });
     const match = /"secret-key","([^"]+)"/.exec(res.text());
-    if (!match) throw new ParseError('inkstory secret-key not found in SSR payload', SOURCE_ID);
+    if (!match)
+      throw new ParseError(
+        `inkstory secret-key not found in SSR payload: https://${domain}/`,
+        SOURCE_ID,
+      );
     return match[1]!;
   };
 

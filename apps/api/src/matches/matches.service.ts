@@ -4,7 +4,6 @@ import {
   MATCH_CONFIDENCE,
   SEARCH_GROUP_STATUS,
   SOURCE_LOCALE,
-  SOURCE_STATUS,
   type MangaLinkVerdict,
   type MangaMatchesResponse,
   type MatchConfidence,
@@ -227,8 +226,9 @@ export class MatchesService {
     const primaryProbe = pickProbe(subject, MATCH_WAVE.PRIMARY);
     if (!primaryProbe) return { items: [], failures: [] };
 
+    // Отсев down живёт в listSearchableSources — он одинаково нужен и здесь, и в мультипоиске.
     const sources = (await this.sourcesService.listSearchableSources()).filter(
-      (source) => source.id !== sourceId && source.status !== SOURCE_STATUS.DOWN,
+      (source) => source.id !== sourceId,
     );
 
     const budget = this.env.MATCH_TIMEOUT_MS;

@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { SOURCE_STATUS, type SourceStatus } from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { BREAKER_STATE, type SourceState } from './models';
@@ -9,9 +8,15 @@ const initialState = (): SourceState => {
 };
 
 /**
- * Circuit breaker на источник: docs/03-parsers.md — "5 ошибок подряд → degraded на 10 минут".
- * Состояние живёт в памяти процесса (один инстанс api), не в Valkey — это допустимо, так как
- * это сигнал "не долби мёртвый источник", а не персистентные данные.
+ * Circuit breaker на источник: 5 ошибок подряд → запросы к источнику не пропускаются несколько
+ * минут, потом идёт одна пробная. Состояние живёт в памяти процесса (один инстанс api), не в
+ * Valkey — это допустимо, так как это сигнал "не долби мёртвый источник", а не персистентные
+ * данные.
+ *
+ * Статуса источника (ok/degraded/down) тут больше нет — им владеет SourceStatusService. Breaker
+ * только сообщает о факте открытия, а решение, что показать пользователю и надолго ли, принимает
+ * тот. Пока эти два понятия были одним, статус самопроизвольно возвращался в ok через окно
+ * блокировки, даже если источник продолжал лежать.
  */
 @Injectable()
 export class SourceHealthService {
@@ -31,7 +36,18 @@ export class SourceHealthService {
   /** true, если запрос можно попробовать выполнить прямо сейчас. */
   canAttempt(sourceId: string): boolean {
     const entry = this.stateOf(sourceId);
-    if (entry.state !== BREAKER_STATE.OPEN) {
+    if (entry.state === BREAKER_STATE.CLOSED) {
+      return true;
+    }
+
+    // Half-open пропускает ровно одну пробную и ждёт её исхода. Без этой проверки состояние
+    // "не open" читалось бы как "можно всем", и пока пробная висит на мёртвом источнике, туда
+    // уходил бы весь параллельный трафик — то самое, ради чего breaker и нужен.
+    if (entry.state === BREAKER_STATE.HALF_OPEN) {
+      if (entry.probeInFlight) {
+        return false;
+      }
+      entry.probeInFlight = true;
       return true;
     }
 
@@ -56,21 +72,25 @@ export class SourceHealthService {
     entry.probeInFlight = false;
   }
 
-  recordFailure(sourceId: string): void {
+  /** Возвращает true, если этой ошибкой breaker открылся, — сигнал сменить статус источника. */
+  recordFailure(sourceId: string): boolean {
     const entry = this.stateOf(sourceId);
     entry.probeInFlight = false;
 
     if (entry.state === BREAKER_STATE.HALF_OPEN) {
       entry.state = BREAKER_STATE.OPEN;
       entry.openedAt = Date.now();
-      return;
+      return true;
     }
 
     entry.consecutiveFailures += 1;
     if (entry.consecutiveFailures >= this.env.SOURCE_BREAKER_FAILURE_THRESHOLD) {
       entry.state = BREAKER_STATE.OPEN;
       entry.openedAt = Date.now();
+      return true;
     }
+
+    return false;
   }
 
   /**
@@ -82,13 +102,10 @@ export class SourceHealthService {
     this.stateOf(sourceId).probeInFlight = false;
   }
 
-  getStatus(sourceId: string): SourceStatus {
-    return this.stateOf(sourceId).state === BREAKER_STATE.CLOSED
-      ? SOURCE_STATUS.OK
-      : SOURCE_STATUS.DEGRADED;
-  }
-
-  /** Сбрасывает breaker источника в закрытое состояние — используется дев-инструментом. */
+  /**
+   * Сбрасывает breaker источника в закрытое состояние — используется успешным ночным пробником,
+   * чтобы breaker, открытый вечером, не блокировал утренний трафик до истечения своего окна.
+   */
   reset(sourceId: string): void {
     this.sources.delete(sourceId);
   }

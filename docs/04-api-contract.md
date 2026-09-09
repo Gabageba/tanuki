@@ -109,14 +109,26 @@ const PageSchema = z.object({
 GET /sources
     → { manga: Source[], hentai: Source[], comics: Source[], other: Source[] }
     Source: { id, title, domain, locale, contentType: 'manga'|'hentai'|'comics'|'other',
-              status: 'ok'|'degraded'|'down' }
+              status: 'ok'|'degraded'|'down',
+              statusReason: 'broken'|'probeFailed'|'requestFailures'|'recovered'|null,
+              statusChangedAt: string|null, checkedAt: string|null,
+              failedProbeStreak: number, lastError: string|null }
+
+POST /sources/probe             → SourcesResponse # прогнать проверку по всем
+POST /sources/:sourceId/probe   → Source          # прогнать проверку по одному
 ```
 
 Ответ сгруппирован по `contentType`; все четыре ключа присутствуют всегда — если источников
-типа нет (например, все выключены через `DISABLED_SOURCES`), приходит пустой массив.
+типа нет (например, все выключены через `DISABLED_SOURCES`), приходит пустой массив. Здесь
+отдаются все источники, включая `degraded` и `down`, — веер поиска и матчинга отбирает их
+отдельно, внутри API.
 
-`status` считается circuit breaker'ом. Фронт обязан его показывать: честное «источник
-недоступен» лучше вечного спиннера.
+`status` — липкий: он держится, пока его не сменит явное событие (открывшийся circuit breaker,
+ночная проверка), и переживает рестарт API. Ручного сброса нет и намеренно — см.
+`docs/03-parsers.md`. Правила переходов — там же. Фронт обязан его показывать: честное «источник
+недоступен» лучше вечного спиннера. Остальные поля объясняют, откуда статус взялся: `statusChangedAt` («нестабилен с 3
+сентября») и `checkedAt` («проверен 2 часа назад») отдаются в `YYYY-MM-DDTHH:MM:SSZ`, а
+`lastError` несёт текст последней ошибки.
 
 Возможности источника (поддержка поиска, доступные сортировки) наружу не отдаются: фронт их
 никак не использовал, а мультипоиск отбирает источники по этим флагам сам, внутри API.

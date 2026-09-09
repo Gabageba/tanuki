@@ -176,14 +176,14 @@ export const createComxParser = (ctx: ParserContext): Parser => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const scriptText = extractScript(doc, '__DATA__');
-    if (!scriptText) throw new ParseError('Script data not found', SOURCE_ID);
+    if (!scriptText) throw new ParseError(`Script data not found: ${absoluteUrl}`, SOURCE_ID);
     const jsonText = scriptText.split('window.__DATA__ = ')[1]?.trim().replace(/;\s*$/, '');
-    if (!jsonText) throw new ParseError('Script data not found', SOURCE_ID);
+    if (!jsonText) throw new ParseError(`Script data not found: ${absoluteUrl}`, SOURCE_ID);
     let data: DataJson;
     try {
       data = JSON.parse(jsonText) as DataJson;
     } catch {
-      throw new ParseError('Invalid script data', SOURCE_ID);
+      throw new ParseError(`Invalid script data: ${absoluteUrl}`, SOURCE_ID);
     }
 
     const chapters: RawChapter[] = data.chapters
@@ -253,15 +253,16 @@ export const createComxParser = (ctx: ParserContext): Parser => {
     const absoluteUrl = toAbsoluteUrl(chapterUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const scriptText = extractScript(doc, '__DATA__');
-    if (!scriptText) throw new ParseError('Image data not found', SOURCE_ID);
+    if (!scriptText) throw new ParseError(`Image data not found: ${absoluteUrl}`, SOURCE_ID);
     const afterImages = scriptText.split('"images":[')[1];
-    if (!afterImages) throw new ParseError('Image data not found', SOURCE_ID);
+    if (!afterImages) throw new ParseError(`Image data not found: ${absoluteUrl}`, SOURCE_ID);
     const imagesRaw = afterImages.split(']')[0] ?? '';
     const images = imagesRaw
       .split(',')
       .map((s) => s.trim().replace(/^"|"$/g, '').replace(/\\/g, ''))
       .filter((s) => s.length > 0);
-    if (images.length === 0) throw new ParseError('Image data not found', SOURCE_ID);
+    if (images.length === 0)
+      throw new ParseError(`Image data not found: ${absoluteUrl}`, SOURCE_ID);
 
     return images.map((imageUrl) => ({
       id: generateUid(SOURCE_ID, imageUrl),

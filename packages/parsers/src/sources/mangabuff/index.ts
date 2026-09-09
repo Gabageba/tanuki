@@ -448,7 +448,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     if (csrfToken) return csrfToken;
     const doc = await ctx.http.getHtml(`https://${domain}/`);
     const token = attrOrNull(doc.$('head meta[name*=csrf-token]').first(), 'content');
-    if (!token) throw new ParseError('Unable to find CSRF token', SOURCE_ID);
+    if (!token) throw new ParseError(`Unable to find CSRF token: https://${domain}/`, SOURCE_ID);
     csrfToken = token;
     return token;
   };
@@ -468,10 +468,16 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       });
       if (res.status === 419) {
         csrfToken = null;
-        throw new SourceUnavailableError('CSRF token expired', SOURCE_ID);
+        throw new SourceUnavailableError(
+          `CSRF token expired: https://${domain}/chapters/load`,
+          SOURCE_ID,
+        );
       }
       if (res.status >= 400) {
-        throw new SourceUnavailableError(`Upstream HTTP ${res.status}`, SOURCE_ID);
+        throw new SourceUnavailableError(
+          `Upstream HTTP ${res.status}: https://${domain}/chapters/load`,
+          SOURCE_ID,
+        );
       }
       const json = res.json<{ content?: string }>();
       const fragment = parseHtml(json.content ?? '', `https://${domain}/`);

@@ -123,7 +123,12 @@ export const SOURCE_CATALOG = {
   henchan: {
     title: 'Хентай-тян',
     contentType: SOURCE_CONTENT_TYPE.HENTAI,
-    isBroken: false,
+    // Проверено вживую 9 сентября 2026: domains[0] (x5.h-chan.me) редиректит на x1.h-chan.me,
+    // который отдаёт 404 на каталог; остальные зеркала в списке формально живы (200), но за
+    // FingerprintJS-гейтом (JS-редирект по результату фингерпринта) — то же самое, о чём уже
+    // предупреждает комментарий у chanSortField в sources/chan/engine.ts. Ни одно зеркало из
+    // списка сейчас не читается undici-клиентом, поэтому источник — как YAOICHAN/COMX/ACOMICS.
+    isBroken: true,
     isAdult: true,
     requiresVpn: true,
     domains: [
