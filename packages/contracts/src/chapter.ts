@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const ChapterSchema = z.object({
-  id: z.string(),
+  id: z.string(), // sourceId + opaqueId, see Manga.id — use as-is for routes/API calls
   mangaId: z.string(),
 
   number: z.number().nullable(), // 145.5 — дробные бывают

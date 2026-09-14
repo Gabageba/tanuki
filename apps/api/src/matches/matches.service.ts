@@ -13,8 +13,7 @@ import {
 import { CacheService } from '../cache/cache.service';
 import { CACHE_TTL } from '../cache/cache.constants';
 import { cacheKey } from '../cache/cache-keys';
-import { NotFoundApiException } from '../common/errors';
-import { decodeMangaId } from '../common/opaque-id';
+import { decodeMangaId, splitCompositeId } from '../common/opaque-id';
 import { normalizeManga } from '../common/normalize';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
@@ -205,11 +204,8 @@ export class MatchesService {
     const ref = decodeMangaId(mangaId);
     const { data: refRaw } = await this.parsersClient.getDetails(sourceId, ref.url);
 
-    const separator = targetId.indexOf(':');
-    if (separator <= 0) throw new NotFoundApiException(`Некорректный идентификатор ${targetId}`);
-
-    const targetSourceId = targetId.slice(0, separator);
-    const targetUrl = decodeMangaId(targetId.slice(separator + 1)).url;
+    const { sourceId: targetSourceId, opaqueId: targetOpaqueId } = splitCompositeId(targetId);
+    const targetUrl = decodeMangaId(targetOpaqueId).url;
     const { data: targetRaw } = await this.parsersClient.getDetails(targetSourceId, targetUrl);
 
     await this.links.set(

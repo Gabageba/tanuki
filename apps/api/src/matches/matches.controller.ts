@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Put } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import type { MangaMatchesResponse } from '@tanuki/contracts';
+import { splitCompositeId } from '../common/opaque-id';
 import { MangaLinkRequestDto, MangaMatchesResponseDto } from './matches.dto';
 import { MatchesService } from './matches.service';
 
@@ -10,20 +11,17 @@ import { MatchesService } from './matches.service';
  * спокойно держит два контроллера на пересекающихся префиксах.
  */
 @ApiTags('manga')
-@ApiParam({ name: 'sourceId', description: 'Идентификатор источника, напр. readmanga_ru' })
-@ApiParam({ name: 'mangaId' })
-@Controller('manga/:sourceId/:mangaId')
+@ApiParam({ name: 'mangaId', description: 'Составной id тайтла — "sourceId:opaqueId"' })
+@Controller('manga/:mangaId')
 export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
 
   @ApiOperation({ summary: 'Ищет тот же тайтл на других источниках' })
   @ApiOkResponse({ type: MangaMatchesResponseDto })
   @Get('matches')
-  async matches(
-    @Param('sourceId') sourceId: string,
-    @Param('mangaId') mangaId: string,
-  ): Promise<MangaMatchesResponse> {
-    return this.matchesService.findMatches(sourceId, mangaId);
+  async matches(@Param('mangaId') mangaId: string): Promise<MangaMatchesResponse> {
+    const { sourceId, opaqueId } = splitCompositeId(mangaId);
+    return this.matchesService.findMatches(sourceId, opaqueId);
   }
 
   /**
@@ -42,10 +40,10 @@ export class MatchesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @Put('links')
   async setLink(
-    @Param('sourceId') sourceId: string,
     @Param('mangaId') mangaId: string,
     @Body() body: MangaLinkRequestDto,
   ): Promise<void> {
-    await this.matchesService.setLink(sourceId, mangaId, body.targetId, body.verdict);
+    const { sourceId, opaqueId } = splitCompositeId(mangaId);
+    await this.matchesService.setLink(sourceId, opaqueId, body.targetId, body.verdict);
   }
 }

@@ -42,3 +42,12 @@ export const decodeChapterId = (id: string): ChapterRef => {
     throw new NotFoundApiException('Некорректный id главы');
   }
 };
+
+/** Разбирает составной id вида «sourceId:opaqueId» (см. Manga.id/Chapter.id в контрактах) —
+ *  формат, в котором клиент теперь передаёт id тайтла и главы целиком, без разбора на части. */
+export const splitCompositeId = (id: string): { sourceId: string; opaqueId: string } => {
+  const separator = id.indexOf(':');
+  if (separator <= 0) throw new NotFoundApiException(`Некорректный идентификатор ${id}`);
+
+  return { sourceId: id.slice(0, separator), opaqueId: id.slice(separator + 1) };
+};

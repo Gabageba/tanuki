@@ -52,7 +52,7 @@ export type MangaType = EnumLiteralsOf<typeof MANGA_TYPE>;
 export const MangaTypeSchema = z.enum(MANGA_TYPE);
 
 export const MangaSchema = z.object({
-  id: z.string(), // "READMANGA:solo-leveling"
+  id: z.string(), // "READMANGA:solo-leveling" — sourceId + opaqueId, use as-is for routes/API calls
   sourceId: z.string(),
   slug: z.string(),
 
