@@ -16,7 +16,7 @@ function MangaImage({ manga, imageClassName }: Props) {
   return (
     <>
       {isCoverBroken || !manga.coverUrl ? (
-        <Paper>
+        <Paper h="100%">
           <Center className={styles.cover} c="dimmed">
             <ImageBrokenIcon size={38} />
           </Center>

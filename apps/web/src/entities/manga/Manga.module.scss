@@ -1,5 +1,6 @@
 .cover {
-  aspect-ratio: 3 / 4;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
@@ -24,6 +25,7 @@
 }
 
 .imageWrapper {
+  aspect-ratio: 3 / 4;
   overflow: hidden;
   border-radius: var(--mantine-radius-md);
 }

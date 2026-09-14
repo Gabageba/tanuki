@@ -21,23 +21,24 @@ function MangaScoreBadge({ manga }: Props) {
       bottom={6}
       right={6}
       style={{ zIndex: 1 }}
-      color="white"
+      color="color-mix(in srgb, var(--mantine-color-dark-filled) 85%, transparent)"
       size="lg"
       fw={400}
       leftSection={
         isRatingEmpty ? (
-          <HeartIcon weight="fill" color="white" />
+          <HeartIcon weight="fill" color="var(--mantine-color-terracotta-text)" />
         ) : (
-          <StarFourIcon weight="fill" color="white" />
+          <StarFourIcon weight="fill" color="var(--mantine-color-terracotta-text)" />
         )
       }
       fz={14}
       px={8}
       radius="md"
-      variant="outline"
-      bg="color-mix(in srgb, var(--mantine-color-dark-filled) 85%, transparent)"
+      variant="filled"
     >
-      <Text c="white">{isRatingEmpty ? manga.likes : manga.rating}</Text>
+      <Text c="white" fw={600}>
+        {isRatingEmpty ? manga.likes : manga.rating}
+      </Text>
     </Badge>
   );
 }

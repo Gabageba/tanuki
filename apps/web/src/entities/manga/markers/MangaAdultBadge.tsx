@@ -18,16 +18,17 @@ function MangaAdultBadge({ contentRating, compact }: Props) {
       top={compact ? 2 : 6}
       right={compact ? 2 : 6}
       style={{ zIndex: 1 }}
-      color="var(--mantine-color-red-2)"
       size={compact ? 'xs' : 'lg'}
       fw={400}
       fz={compact ? 9 : 14}
       px={compact ? 4 : 8}
       radius={compact ? 'sm' : 'md'}
-      variant="outline"
-      bg="color-mix(in srgb, var(--mantine-color-red-8) 90%, transparent)"
+      variant="filled"
+      color="color-mix(in srgb, var(--mantine-color-crimson-7) 90%, transparent)"
     >
-      <Text c="white">18+</Text>
+      <Text c="white" fw={600}>
+        18+
+      </Text>
     </Badge>
   );
 }

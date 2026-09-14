@@ -6,11 +6,12 @@ import MangaListCard from './MangaListCard';
 type Props = {
   manga: Manga;
   viewMode?: ViewMode;
+  showSource?: boolean;
 };
 
-function MangaCard({ manga, viewMode = VIEW_MODE.GRID }: Props) {
+function MangaCard({ manga, viewMode = VIEW_MODE.GRID, showSource }: Props) {
   if (viewMode === VIEW_MODE.GRID) {
-    return <MangaGridCard manga={manga} />;
+    return <MangaGridCard manga={manga} showSource={showSource} />;
   }
 
   if (viewMode === VIEW_MODE.LIST) {

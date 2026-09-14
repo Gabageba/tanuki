@@ -26,6 +26,8 @@ export type CatalogEntry = {
   /** Source is blocked for RU IPs — drives the requiresVpn flag surfaced by sources.service.ts. */
   requiresVpn: boolean;
   domains: [string, ...string[]];
+  /** Source's brand color — used for its ribbon/accent in the web UI. */
+  color: string;
 };
 
 // `satisfies` (not `: Record<string, CatalogEntry>`) keeps the literal key union so `SourceId`
@@ -39,6 +41,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['a.zazaza.me', '3.readmanga.ru'],
+    color: '#1847C5',
   },
   mintmanga: {
     title: 'MintManga',
@@ -47,6 +50,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['2.mintmanga.one', '24.mintmanga.one', 'mintmanga.live', 'mintmanga.com'],
+    color: '#CBF446',
   },
   selfmanga: {
     title: 'SelfManga',
@@ -55,6 +59,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['1.selfmanga.live', 'selfmanga.live'],
+    color: '#ECD166',
   },
   seimanga: {
     title: 'SeiManga',
@@ -63,6 +68,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['1.seimanga.me', 'seimanga.me'],
+    color: '#75B9F7',
   },
   usagi: {
     title: 'Usagi',
@@ -71,6 +77,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['web.usagi.one'],
+    color: '#0872AC',
   },
   allhentai: {
     title: 'AllHentai',
@@ -79,6 +86,7 @@ export const SOURCE_CATALOG = {
     isAdult: true,
     requiresVpn: false,
     domains: ['20.allhen.online', 'z.ahen.me', '24.allhen.online', '2023.allhen.online'],
+    color: '#CA1717',
   },
   desume: {
     title: 'Desu',
@@ -87,6 +95,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['desu.uno', 'x.desu.city', 'desu.city', 'desu.work', 'desu.store', 'desu.win'],
+    color: '#915806',
   },
   mangalib: {
     title: 'MangaLib',
@@ -95,6 +104,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['mangalib.org', 'mangalib.me'],
+    color: '#FF8C02',
   },
   hentailib: {
     title: 'HentaiLib',
@@ -103,6 +113,7 @@ export const SOURCE_CATALOG = {
     isAdult: true,
     requiresVpn: true,
     domains: ['v1.hentailib.org', 'hentailib.me'],
+    color: '#FF0048',
   },
   yaoilib: {
     title: 'SlashLib',
@@ -111,6 +122,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['v2.slashlib.me'],
+    color: '#D91A60',
   },
   mangachan: {
     title: 'Манга-тян',
@@ -119,6 +131,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: true,
     domains: ['im.manga-chan.me', 'manga-chan.me'],
+    color: '#399DB7',
   },
   henchan: {
     title: 'Хентай-тян',
@@ -141,6 +154,7 @@ export const SOURCE_CATALOG = {
       'x.henchan.pro',
       'hentaichan.live',
     ],
+    color: '#9EBE75',
   },
   yaoichan: {
     title: 'Яой-тян',
@@ -156,6 +170,7 @@ export const SOURCE_CATALOG = {
       'v1.yaoi-chan.me',
       'yaoi-chan.me',
     ],
+    color: '#DC60A1',
   },
   remanga: {
     title: 'Реманга',
@@ -164,6 +179,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['remanga.org'],
+    color: '#000000',
   },
   nudemoon: {
     title: 'Nude-Moon',
@@ -172,6 +188,7 @@ export const SOURCE_CATALOG = {
     isAdult: true,
     requiresVpn: true,
     domains: ['g.nude-moon.fun', 'nude-moon.net', 'nude-moon.org', 'b.nude-moon.fun'],
+    color: '#ED0102',
   },
   acomics: {
     title: 'AComics',
@@ -180,6 +197,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['acomics.ru'],
+    color: '#D31434',
   },
   comx: {
     title: 'Com-X',
@@ -188,6 +206,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['com-x.life', 'comx.life'],
+    color: '#FFA331',
   },
   mangabuff: {
     title: 'MangaBuff',
@@ -196,6 +215,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['mangabuff.ru'],
+    color: '#8C00FF',
   },
   senkuro: {
     title: 'Senkuro',
@@ -206,6 +226,7 @@ export const SOURCE_CATALOG = {
     // ne.senkuro.com is a mirror hostname for the same frontend (senkuro.com is ISP-blocked for
     // some RU users); both hit the same api.senkuro.com backend, see sources/senkuro/config.ts.
     domains: ['senkuro.me', 'ne.senkuro.com', 'senkuro.com'],
+    color: '#FE6E00',
   },
   senkognito: {
     title: 'Senkognito',
@@ -217,6 +238,7 @@ export const SOURCE_CATALOG = {
     // and selected by the `app-id` header. Same mirror pattern as senkuro.* — ne.* is the
     // unblocked hostname. See sources/senkuro/config.ts for how the two are split.
     domains: ['ne.senkognito.com', 'senkognito.com'],
+    color: '#FE6E00',
   },
   tomilolib: {
     title: 'TomiloLib',
@@ -225,6 +247,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['tomilo-lib.ru'],
+    color: '#DC3933',
   },
   wamanga: {
     title: 'WaManga',
@@ -233,6 +256,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['wamanga.ru'],
+    color: '#5A5EE7',
   },
   inkstory: {
     title: 'Inkstory',
@@ -241,6 +265,7 @@ export const SOURCE_CATALOG = {
     isAdult: false,
     requiresVpn: false,
     domains: ['inkstory.net'],
+    color: '#2B7FFF',
   },
   hentaichan_cc: {
     title: 'HentaiChan',
@@ -249,6 +274,7 @@ export const SOURCE_CATALOG = {
     isAdult: true,
     requiresVpn: true,
     domains: ['hentaichan.cc'],
+    color: '#5CA656',
   },
   sexkomix2: {
     title: 'SexKomix2',
@@ -257,6 +283,7 @@ export const SOURCE_CATALOG = {
     isAdult: true,
     requiresVpn: false,
     domains: ['super.sexkomix22.com', 'sexkomix2.com'],
+    color: '#FF3248',
   },
   multporn: {
     title: 'MultPorn',
@@ -265,6 +292,7 @@ export const SOURCE_CATALOG = {
     isAdult: true,
     requiresVpn: true,
     domains: ['multporn.net'],
+    color: '#A42511',
   },
   multporn_hentai: {
     title: 'MultPorn Hentai',
@@ -273,6 +301,7 @@ export const SOURCE_CATALOG = {
     isAdult: true,
     requiresVpn: true,
     domains: ['multporn.net'],
+    color: '#A42511',
   },
 } satisfies Record<string, CatalogEntry>;
 

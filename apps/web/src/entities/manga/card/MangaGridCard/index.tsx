@@ -9,9 +9,10 @@ import styles from '../../Manga.module.scss';
 
 type Props = {
   manga: Manga;
+  showSource?: boolean;
 };
 
-function MangaGridCard({ manga }: Props) {
+function MangaGridCard({ manga, showSource = false }: Props) {
   const metaItems = [
     !!manga.type && getLabelByMangaType(manga.type),
     !!manga.year && String(manga.year),
@@ -27,7 +28,7 @@ function MangaGridCard({ manga }: Props) {
   return (
     <NavigateToMangaCard manga={manga} data-view-mode="grid" className={styles.card}>
       <Stack gap={8}>
-        <MangaCardImage manga={manga} showBadges />
+        <MangaCardImage manga={manga} showBadges showSource={showSource} />
         <Stack gap={4}>
           <MangaMetaItems items={metaItems} gap={metaGap} />
           <Text className={styles.title} lineClamp={2} lh={1}>
