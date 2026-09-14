@@ -1,6 +1,4 @@
 .switcherOption {
-  border-color: var(--mantine-color-default) !important;
-
   :global(.mantine-Button-label) {
     flex: 1;
   }
@@ -8,37 +6,4 @@
   &:active {
     transform: none !important;
   }
-
-  &[data-active] {
-    background: var(--tanuki-color-primary-light-transparent);
-    border-color: var(--mantine-primary-color-filled) !important;
-
-    &:hover {
-      background: var(--tanuki-color-primary-light-transparent);
-    }
-  }
 }
-
-// .mobileNavigationButton {
-//   @media (width < 48em) {
-//     :global(.mantine-Button-inner) {
-//       flex-direction: column;
-//       justify-content: center;
-//       gap: 4px;
-//     }
-
-//     :global(.mantine-Button-section) {
-//       margin: 0;
-//     }
-
-//     :global(.mantine-Button-label) {
-//       display: block;
-//       max-width: 100%;
-//       height: auto;
-//       overflow: hidden;
-//       text-overflow: ellipsis;
-//       font-size: var(--mantine-font-size-xs);
-//       line-height: 1;
-//     }
-//   }
-// }

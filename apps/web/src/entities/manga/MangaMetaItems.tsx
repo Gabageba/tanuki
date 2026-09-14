@@ -1,7 +1,7 @@
-import { Fragment, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { GroupProps } from '@mantine/core';
-import { Group, Text } from '@mantine/core';
-import MidDot from '@/shared/ui/MidDot';
+import { Text } from '@mantine/core';
+import MidDotGroup from '@/shared/ui/MidDotGroup';
 
 type Props = {
   items: ReactNode[];
@@ -9,25 +9,16 @@ type Props = {
 };
 
 function MangaMetaItems({ items, gap }: Props) {
-  if (!items.length) {
-    return null;
-  }
-
   return (
-    <Group gap={gap}>
-      {items.map((item, index) => (
-        <Fragment key={index}>
-          {index > 0 && (
-            <Text c="dimmed" fz={12} lh={1}>
-              <MidDot />
-            </Text>
-          )}
-          <Text c="dimmed" fz={12} lh={1}>
-            {item}
-          </Text>
-        </Fragment>
+    <MidDotGroup
+      gap={gap}
+      separatorProps={{ c: 'dimmed', fz: 12, lh: 1 }}
+      items={items.map((item, index) => (
+        <Text key={index} c="dimmed" fz={12} lh={1}>
+          {item}
+        </Text>
       ))}
-    </Group>
+    />
   );
 }
 

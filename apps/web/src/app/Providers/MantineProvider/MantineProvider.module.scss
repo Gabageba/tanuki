@@ -19,3 +19,17 @@
     border-top-right-radius: 0;
   }
 }
+
+// Base colors for the `selectable` variant come from `THEME.variantColorResolver`. Only the
+// active-state tint lives here — it's driven by the `isActive`/`data-active` prop, which a
+// `variantColorResolver` has no access to.
+.selectableButton {
+  &[data-variant='selectable'][data-active] {
+    background: var(--tanuki-color-primary-light-transparent);
+    border-color: var(--mantine-primary-color-filled) !important;
+
+    &:hover {
+      background: var(--tanuki-color-primary-light-transparent);
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import type { MantineStyleProps } from '@mantine/core';
-import { Box, Group, Text } from '@mantine/core';
 import type { MangaState as MangaStateType } from '@tanuki/contracts';
+import StatusIndicator from '@/shared/ui/StatusIndicator';
 import { getMangaStateColor, getMangaStateLabel } from './card/lib';
 
 type Props = {
@@ -12,15 +12,16 @@ type Props = {
 };
 
 function MangaState({ state, fz = 12, dotMt = 2, coloredText = false, fw = 400 }: Props) {
-  const color = getMangaStateColor(state);
-
   return (
-    <Group gap={6} align="center" wrap="nowrap">
-      <Box bg={color} bdrs="50%" w={fz / 2} h={fz / 2} flex="none" mt={dotMt} />
-      <Text c={coloredText ? color : undefined} fz={fz} fw={fw} lh={1} visibleFrom="xxs">
-        {getMangaStateLabel(state)}
-      </Text>
-    </Group>
+    <StatusIndicator
+      color={getMangaStateColor(state)}
+      label={getMangaStateLabel(state)}
+      fz={fz}
+      dotMt={dotMt}
+      coloredText={coloredText}
+      fw={fw}
+      visibleFrom="xxs"
+    />
   );
 }
 

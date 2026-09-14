@@ -1,9 +1,9 @@
 import type { GroupProps } from '@mantine/core';
-import { Group, Text } from '@mantine/core';
+import { Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 import type { FilterSelection } from '@tanuki/contracts';
 import { countGroupSelections } from '../../utils/filterSelection';
-import MidDot from '@/shared/ui/MidDot';
+import MidDotGroup from '@/shared/ui/MidDotGroup';
 
 type Props = {
   groupId: string;
@@ -20,23 +20,22 @@ function SelectedCatalogFiltersCount({ groupId, draft, renderEmpty, mt }: Props)
   }
 
   return (
-    <Group gap={4} mt={mt}>
-      {!!included && (
-        <Text fz={12} c="terracotta">
-          {`${included} выбрано`}
-        </Text>
-      )}
-      {!!included && !!excluded && (
-        <Text fz={12} c="terracotta">
-          <MidDot />
-        </Text>
-      )}
-      {!!excluded && (
-        <Text fz={12} c="red">
-          {`${excluded} исключено`}
-        </Text>
-      )}
-    </Group>
+    <MidDotGroup
+      mt={mt}
+      separatorProps={{ c: 'terracotta' }}
+      items={[
+        !!included && (
+          <Text key="included" fz={12} c="terracotta">
+            {`${included} выбрано`}
+          </Text>
+        ),
+        !!excluded && (
+          <Text key="excluded" fz={12} c="red">
+            {`${excluded} исключено`}
+          </Text>
+        ),
+      ]}
+    />
   );
 }
 

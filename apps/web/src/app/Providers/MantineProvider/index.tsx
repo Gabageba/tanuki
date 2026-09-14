@@ -4,7 +4,12 @@ import type {
   ComboboxItem,
   MantineColorSchemeManager,
 } from '@mantine/core';
-import { createTheme, MantineProvider as ExternalMantineProvider } from '@mantine/core';
+import {
+  createTheme,
+  defaultVariantColorsResolver,
+  MantineProvider as ExternalMantineProvider,
+  rem,
+} from '@mantine/core';
 import {
   COLOR_SCHEME,
   CSS_VARIABLES_RESOLVER,
@@ -54,6 +59,13 @@ const THEME = createTheme({
   autoContrast: true,
   defaultRadius: 'md',
   cursorType: 'pointer',
+  variantColorResolver: (input) =>
+    input.variant === 'selectable'
+      ? {
+          ...defaultVariantColorsResolver({ ...input, variant: 'subtle', color: 'gray' }),
+          border: `${rem(1)} solid var(--mantine-color-default)`,
+        }
+      : defaultVariantColorsResolver(input),
   components: {
     Avatar: {
       defaultProps: {
@@ -113,6 +125,9 @@ const THEME = createTheme({
         label: {
           fontWeight: 400,
         },
+      },
+      classNames: {
+        root: styles.selectableButton,
       },
     },
     Card: {

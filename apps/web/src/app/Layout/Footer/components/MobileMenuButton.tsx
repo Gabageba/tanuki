@@ -37,8 +37,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
           <Button
             className={styles.switcherOption}
             onClick={() => setIsThemeOpened((prev) => !prev)}
-            variant="subtle"
-            color="gray"
+            variant="selectable"
             justify="flex-start"
             size="md"
             leftSection={<PaletteIcon />}
@@ -54,8 +53,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
                   data-active={colorScheme === value || undefined}
                   className={styles.switcherOption}
                   onClick={() => setColorScheme(value)}
-                  variant="subtle"
-                  color="gray"
+                  variant="selectable"
                   justify="flex-start"
                   size="md"
                   leftSection={getColorSchemeIcon(value)}
