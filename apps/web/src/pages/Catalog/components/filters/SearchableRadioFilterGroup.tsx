@@ -1,6 +1,7 @@
 import type { ScrollAreaAutosizeProps } from '@mantine/core';
 import { Stack } from '@mantine/core';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import SearchInput from '@/shared/ui/SearcInput';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import VirtualizedRadioGrid from './VirtualizedRadioGrid';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 function SearchableRadioFilterGroup({ group, selection, onChange, scrollAreaProps }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
 
   const filteredOptions = useMemo(() => {
@@ -28,7 +30,7 @@ function SearchableRadioFilterGroup({ group, selection, onChange, scrollAreaProp
       <SearchInput
         handleSearch={setQuery}
         debounceMs={100}
-        placeholder={`Искать в "${group.title}"`}
+        placeholder={t('searchIn', { title: group.title })}
       />
       <VirtualizedRadioGrid
         options={filteredOptions}

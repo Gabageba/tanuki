@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useMemo } from 'react';
 import type {
   ComboboxLikeRenderOptionInput,
   ComboboxItem,
@@ -10,6 +11,8 @@ import {
   MantineProvider as ExternalMantineProvider,
   rem,
 } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   COLOR_SCHEME,
   CSS_VARIABLES_RESOLVER,
@@ -38,191 +41,192 @@ import styles from './MantineProvider.module.scss';
 
 const DEFAULT_COLOR_SCHEME: ColorScheme = COLOR_SCHEME.AUTO;
 
-const THEME = createTheme({
-  fontFamily: FONT_FAMILY_SANS,
-  fontFamilyMonospace: FONT_FAMILY_MONOSPACE,
-  // `xxs` — промежуточный брейкпоинт между `base` и стандартным `xs` (36em) Mantine.
-  breakpoints: {
-    xxs: '26em',
-  },
-  colors: {
-    [PRIMARY_COLOR]: PRIMARY_COLOR_SHADES,
-    [RATING_COLOR]: RATING_COLOR_SHADES,
-    [STATUS_OK_COLOR]: STATUS_OK_COLOR_SHADES,
-    [STATUS_DEGRADED_COLOR]: STATUS_DEGRADED_COLOR_SHADES,
-    [STATUS_DOWN_COLOR]: STATUS_DOWN_COLOR_SHADES,
-    gray: NEUTRAL_LIGHT_SHADES,
-    dark: NEUTRAL_DARK_SHADES,
-  },
-  primaryColor: PRIMARY_COLOR,
-  primaryShade: PRIMARY_SHADE,
-  autoContrast: true,
-  defaultRadius: 'md',
-  cursorType: 'pointer',
-  variantColorResolver: (input) =>
-    input.variant === 'selectable'
-      ? {
-          ...defaultVariantColorsResolver({ ...input, variant: 'subtle', color: 'gray' }),
-          border: `${rem(1)} solid var(--mantine-color-default)`,
-        }
-      : defaultVariantColorsResolver(input),
-  components: {
-    Avatar: {
-      defaultProps: {
-        radius: 'md',
-      },
+const createAppTheme = (t: TFunction) =>
+  createTheme({
+    fontFamily: FONT_FAMILY_SANS,
+    fontFamilyMonospace: FONT_FAMILY_MONOSPACE,
+    // `xxs` — промежуточный брейкпоинт между `base` и стандартным `xs` (36em) Mantine.
+    breakpoints: {
+      xxs: '26em',
     },
-    Paper: {
-      defaultProps: {
-        bg: 'var(--tanuki-color-surface)',
-      },
+    colors: {
+      [PRIMARY_COLOR]: PRIMARY_COLOR_SHADES,
+      [RATING_COLOR]: RATING_COLOR_SHADES,
+      [STATUS_OK_COLOR]: STATUS_OK_COLOR_SHADES,
+      [STATUS_DEGRADED_COLOR]: STATUS_DEGRADED_COLOR_SHADES,
+      [STATUS_DOWN_COLOR]: STATUS_DOWN_COLOR_SHADES,
+      gray: NEUTRAL_LIGHT_SHADES,
+      dark: NEUTRAL_DARK_SHADES,
     },
-    Badge: {
-      defaultProps: {
-        radius: 'sm',
-      },
-      vars: () => ({
-        root: {
-          '--badge-padding-x-md': '6px',
-        },
-      }),
-    },
-    Drawer: {
-      classNames: {
-        content: styles.drawerContent,
-      },
-      styles: {
-        header: {
-          backgroundColor: 'var(--tanuki-color-surface)',
-          borderTop: 'var(--mantine-radius-md)',
-        },
-        title: {
-          fontWeight: 600,
-        },
-        content: {
-          paddingBottom: 'var(--app-shell-footer-height)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        },
-        body: {
-          display: 'flex',
-          flex: 1,
-          flexDirection: 'column',
-          minHeight: 0,
-          overflow: 'hidden',
+    primaryColor: PRIMARY_COLOR,
+    primaryShade: PRIMARY_SHADE,
+    autoContrast: true,
+    defaultRadius: 'md',
+    cursorType: 'pointer',
+    variantColorResolver: (input) =>
+      input.variant === 'selectable'
+        ? {
+            ...defaultVariantColorsResolver({ ...input, variant: 'subtle', color: 'gray' }),
+            border: `${rem(1)} solid var(--mantine-color-default)`,
+          }
+        : defaultVariantColorsResolver(input),
+    components: {
+      Avatar: {
+        defaultProps: {
+          radius: 'md',
         },
       },
-    },
-    EmptyState: {
-      defaultProps: {
-        title: 'Ничего не найдено',
-        description: 'Попробуйте изменить запрос',
-      },
-    },
-    Button: {
-      styles: {
-        label: {
-          fontWeight: 400,
+      Paper: {
+        defaultProps: {
+          bg: 'var(--tanuki-color-surface)',
         },
       },
-      classNames: {
-        root: styles.selectableButton,
-      },
-    },
-    Card: {
-      defaultProps: {
-        padding: 'sm',
-      },
-    },
-    Chip: {
-      defaultProps: {
-        radius: 'md',
-        color: PRIMARY_COLOR,
-      },
-    },
-    Pill: {
-      defaultProps: {
-        radius: 'md',
-      },
-    },
-    SegmentedControl: {
-      defaultProps: {
-        size: 'md',
-      },
-      styles: {
-        root: {
-          height: 36,
-          padding: 0,
-          border: '1px solid var(--mantine-color-default-border)',
-          backgroundColor: 'var(--mantine-color-default)',
+      Badge: {
+        defaultProps: {
+          radius: 'sm',
         },
-        label: {
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          paddingInline: 10,
+        vars: () => ({
+          root: {
+            '--badge-padding-x-md': '6px',
+          },
+        }),
+      },
+      Drawer: {
+        classNames: {
+          content: styles.drawerContent,
         },
-        indicator: {
-          height: '100%',
-          borderRadius: 0,
-          backgroundColor: 'var(--mantine-color-default-border)',
-        },
-        innerLabel: {
-          display: 'flex',
+        styles: {
+          header: {
+            backgroundColor: 'var(--tanuki-color-surface)',
+            borderTop: 'var(--mantine-radius-md)',
+          },
+          title: {
+            fontWeight: 600,
+          },
+          content: {
+            paddingBottom: 'var(--app-shell-footer-height)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          },
+          body: {
+            display: 'flex',
+            flex: 1,
+            flexDirection: 'column',
+            minHeight: 0,
+            overflow: 'hidden',
+          },
         },
       },
-    },
-    Select: {
-      defaultProps: {
-        renderOption: (data: ComboboxLikeRenderOptionInput<ComboboxItem>) => (
-          <SelectOption {...data} />
-        ),
+      EmptyState: {
+        defaultProps: {
+          title: t('nothingFound'),
+          description: t('tryChangingQuery'),
+        },
       },
-      classNames: {
-        option: 'selectableOption',
+      Button: {
+        styles: {
+          label: {
+            fontWeight: 400,
+          },
+        },
+        classNames: {
+          root: styles.selectableButton,
+        },
       },
-    },
-    Text: {
-      defaultProps: {
-        fz: 14,
+      Card: {
+        defaultProps: {
+          padding: 'sm',
+        },
       },
-    },
-    NavLink: {
-      defaultProps: {
-        radius: 'md',
+      Chip: {
+        defaultProps: {
+          radius: 'md',
+          color: PRIMARY_COLOR,
+        },
       },
-      classNames: {
-        root: styles.navLink,
+      Pill: {
+        defaultProps: {
+          radius: 'md',
+        },
       },
-      styles: {
-        root: {
-          borderRadius: 'var(--mantine-radius-md)',
+      SegmentedControl: {
+        defaultProps: {
+          size: 'md',
+        },
+        styles: {
+          root: {
+            height: 36,
+            padding: 0,
+            border: '1px solid var(--mantine-color-default-border)',
+            backgroundColor: 'var(--mantine-color-default)',
+          },
+          label: {
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            paddingInline: 10,
+          },
+          indicator: {
+            height: '100%',
+            borderRadius: 0,
+            backgroundColor: 'var(--mantine-color-default-border)',
+          },
+          innerLabel: {
+            display: 'flex',
+          },
+        },
+      },
+      Select: {
+        defaultProps: {
+          renderOption: (data: ComboboxLikeRenderOptionInput<ComboboxItem>) => (
+            <SelectOption {...data} />
+          ),
+        },
+        classNames: {
+          option: 'selectableOption',
+        },
+      },
+      Text: {
+        defaultProps: {
+          fz: 14,
+        },
+      },
+      NavLink: {
+        defaultProps: {
+          radius: 'md',
+        },
+        classNames: {
+          root: styles.navLink,
+        },
+        styles: {
+          root: {
+            borderRadius: 'var(--mantine-radius-md)',
+          },
+        },
+      },
+      RangeSlider: {
+        defaultProps: {
+          size: 'sm',
+        },
+      },
+      Image: {
+        defaultProps: {
+          radius: 'md',
+        },
+      },
+      Checkbox: {
+        classNames: {
+          input: styles.checkboxInput,
+        },
+      },
+      Radio: {
+        defaultProps: {
+          variant: 'outline',
         },
       },
     },
-    RangeSlider: {
-      defaultProps: {
-        size: 'sm',
-      },
-    },
-    Image: {
-      defaultProps: {
-        radius: 'md',
-      },
-    },
-    Checkbox: {
-      classNames: {
-        input: styles.checkboxInput,
-      },
-    },
-    Radio: {
-      defaultProps: {
-        variant: 'outline',
-      },
-    },
-  },
-});
+  });
 
 /**
  * Схема хранится в том же объекте `settings` в localStorage, что и viewMode каталога
@@ -252,9 +256,12 @@ type Props = {
 };
 
 function MantineProvider({ children }: Props) {
+  const { t } = useTranslation();
+  const theme = useMemo(() => createAppTheme(t), [t]);
+
   return (
     <ExternalMantineProvider
-      theme={THEME}
+      theme={theme}
       cssVariablesResolver={CSS_VARIABLES_RESOLVER}
       colorSchemeManager={COLOR_SCHEME_MANAGER}
       defaultColorScheme={DEFAULT_COLOR_SCHEME}

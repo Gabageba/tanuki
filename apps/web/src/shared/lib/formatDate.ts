@@ -1,5 +1,5 @@
-export const formatRuDate = (isoDate: string) => {
-  const parts = new Intl.DateTimeFormat('ru', {
+export const formatDate = (isoDate: string, locale: string) => {
+  const parts = new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -10,12 +10,12 @@ export const formatRuDate = (isoDate: string) => {
 };
 
 /** «9 сент 2026, 14:32» — точный момент, когда важна не только дата, но и время. */
-export const formatRuDateTime = (isoDate: string) => {
-  const time = new Intl.DateTimeFormat('ru', { hour: '2-digit', minute: '2-digit' }).format(
+export const formatDateTime = (isoDate: string, locale: string) => {
+  const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(
     new Date(isoDate),
   );
 
-  return `${formatRuDate(isoDate)}, ${time}`;
+  return `${formatDate(isoDate, locale)}, ${time}`;
 };
 
 const RELATIVE_UNITS: readonly (readonly [seconds: number, unit: Intl.RelativeTimeFormatUnit])[] = [
@@ -27,15 +27,15 @@ const RELATIVE_UNITS: readonly (readonly [seconds: number, unit: Intl.RelativeTi
 ];
 
 /** «2 часа назад», «3 дня назад» — для дат, где важна давность, а не сам день. */
-export const formatRelativeRu = (isoDate: string) => {
+export const formatRelative = (isoDate: string, locale: string, justNow: string) => {
   const elapsedSeconds = (Date.now() - new Date(isoDate).getTime()) / 1000;
   const unit = RELATIVE_UNITS.find(([seconds]) => elapsedSeconds >= seconds);
   if (!unit) {
-    return 'только что';
+    return justNow;
   }
 
   const [seconds, name] = unit;
-  return new Intl.RelativeTimeFormat('ru', { numeric: 'auto' }).format(
+  return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
     -Math.floor(elapsedSeconds / seconds),
     name,
   );

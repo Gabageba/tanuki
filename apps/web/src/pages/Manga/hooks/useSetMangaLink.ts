@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
+import { useTranslation } from 'react-i18next';
 import type { MangaLinkVerdict } from '@tanuki/contracts';
 import { apiFetch, ApiRequestError } from '@/shared/api/client';
 
@@ -17,6 +18,7 @@ type Variables = {
  * и применяются поверх кеша матчей, поэтому достаточно перезапросить именно его.
  */
 function useSetMangaLink({ mangaId }: Params) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -30,8 +32,8 @@ function useSetMangaLink({ mangaId }: Params) {
     onError: (error) =>
       notifications.show({
         color: 'red',
-        title: 'Не удалось сохранить',
-        message: error instanceof ApiRequestError ? error.message : 'Попробуйте позже',
+        title: t('failedToSave'),
+        message: error instanceof ApiRequestError ? error.message : t('tryAgainLater'),
       }),
   });
 }

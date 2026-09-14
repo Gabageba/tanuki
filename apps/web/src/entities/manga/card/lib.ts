@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { MANGA_STATE, type MangaState } from '@tanuki/contracts';
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
 
@@ -16,17 +17,17 @@ export const getMangaStateColor = (state: MangaState) => {
   }
 };
 
-export const getMangaStateLabel = (state: MangaState) => {
+export const getMangaStateLabel = (state: MangaState, t: TFunction) => {
   switch (state) {
     case MANGA_STATE.ONGOING:
-      return 'Выходит';
+      return t('ongoing');
     case MANGA_STATE.FINISHED:
-      return 'Завершён';
+      return t('finished');
     case MANGA_STATE.PAUSED:
-      return 'Приостановлен';
+      return t('paused');
     case MANGA_STATE.ABANDONED:
-      return 'Заброшен';
+      return t('abandoned');
     case MANGA_STATE.UPCOMING:
-      return 'Анонс';
+      return t('announcement');
   }
 };

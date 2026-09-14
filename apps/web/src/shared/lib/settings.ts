@@ -1,4 +1,5 @@
 import type { MantineColorScheme } from '@mantine/core';
+import type { Language } from './language';
 import type { ViewMode } from './viewMode';
 
 export const SETTINGS_STORAGE_KEY = 'tanuki-settings';
@@ -6,6 +7,7 @@ export const SETTINGS_STORAGE_KEY = 'tanuki-settings';
 type Settings = {
   colorScheme?: MantineColorScheme;
   viewMode?: ViewMode;
+  language?: Language;
 };
 
 export const readSettings = (): Settings => {

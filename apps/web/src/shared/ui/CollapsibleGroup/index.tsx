@@ -1,5 +1,6 @@
 import type { GroupProps } from '@mantine/core';
 import { Anchor, Group, Stack } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import useRowClamp from './hooks/useRowClamp';
 
 const DEFAULT_MAX_ROWS = 2;
@@ -9,6 +10,7 @@ type Props = {
 } & GroupProps;
 
 function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restProps }: Props) {
+  const { t } = useTranslation();
   const { ref, expanded, toggle, isClamped, clampHeight } = useRowClamp<HTMLDivElement>(
     children,
     maxRows,
@@ -27,7 +29,7 @@ function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restPr
       </Group>
       {(isClamped || expanded) && (
         <Anchor component="button" type="button" onClick={toggle} fw={500} lh={1} w="fit-content">
-          {expanded ? 'Свернуть' : 'Показать все'}
+          {expanded ? t('collapse') : t('showAll')}
         </Anchor>
       )}
     </Stack>

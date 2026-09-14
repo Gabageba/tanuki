@@ -1,11 +1,14 @@
 import { Divider, Group, Rating, Stack, Text } from '@mantine/core';
 import { StarFourIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   rating: number | null;
 };
 
 function MangaRating({ rating }: Props) {
+  const { t } = useTranslation();
+
   if (!rating) {
     return null;
   }
@@ -14,7 +17,7 @@ function MangaRating({ rating }: Props) {
     <>
       <Stack gap={4}>
         <Text fz={12} c="terracotta" lh={1}>
-          Оценка
+          {t('score')}
         </Text>
         <Group align="flex-end" gap={2}>
           <Text fz={40} lh={1} fw={600}>

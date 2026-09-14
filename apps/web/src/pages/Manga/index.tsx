@@ -1,5 +1,6 @@
 import { useParams } from 'react-router';
 import { Divider, Grid } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import PageLayout from '@/shared/ui/PageLayout';
 import useMangaDetails from './hooks/useMangaDetails';
 import MangaImageSection from './components/MangaImageSection';
@@ -8,6 +9,7 @@ import MangaImageSectionSkeleton from './components/MangaImageSection/MangaImage
 import MangaDetailsSectionSkeleton from './components/MangaDetailsSection/MangaDetailsSectionSkeleton';
 
 function Manga() {
+  const { t } = useTranslation();
   const { mangaId = '' } = useParams<{ mangaId: string }>();
 
   return (
@@ -25,8 +27,8 @@ function Manga() {
         </Grid>
       </PageLayout.Content>
       <PageLayout.ErrorNotification
-        title="Не удалось загрузить мангу"
-        fallbackMessage="Источник недоступен. Попробуйте позже."
+        title={t('failedToLoadManga')}
+        fallbackMessage={t('sourceUnavailableTryLater')}
       />
     </PageLayout>
   );

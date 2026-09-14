@@ -1,8 +1,10 @@
 import { Button } from '@mantine/core';
 import { StethoscopeIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import useProbeAllSources from './hooks/useProbeAllSources';
 
 function ProbeAllButton() {
+  const { t } = useTranslation();
   const { isPending, mutate } = useProbeAllSources();
 
   return (
@@ -12,7 +14,7 @@ function ProbeAllButton() {
       loading={isPending}
       onClick={() => mutate()}
     >
-      Проверить все
+      {t('checkAll')}
     </Button>
   );
 }

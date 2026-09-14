@@ -53,17 +53,21 @@
   `default` branch, so TypeScript points at the missing case when a value is added to the enum:
 
   ```ts
-  export const getColorSchemeLabel = (colorScheme: ColorScheme) => {
+  export const getColorSchemeLabel = (colorScheme: ColorScheme, t: TFunction) => {
     switch (colorScheme) {
       case COLOR_SCHEME.LIGHT:
-        return 'Светлая';
+        return t('light');
       case COLOR_SCHEME.DARK:
-        return 'Тёмная';
+        return t('dark');
       case COLOR_SCHEME.AUTO:
-        return 'Системная';
+        return t('system');
     }
   };
   ```
+
+  A helper like this can't call `useTranslation()` itself — it isn't a hook — so it takes the
+  already-obtained `t` as a parameter; the calling component still calls the hook directly (see
+  Localization below).
 
   When such a function has to produce a React icon, it returns the rendered element
   (`return <SunIcon size={size} />`), not the component itself — a component obtained from a call
@@ -134,3 +138,42 @@
 
 - Always send dates and times in the standard server format: `YYYY-MM-DD`, or
   `YYYY-MM-DDTHH:MM:SSZ` when the time is needed.
+
+## Localization
+
+- All UI text goes through `react-i18next`. Call the library hook directly in the component —
+  `const { t } = useTranslation();` — no wrapper hook. Dictionaries live in
+  `apps/web/src/shared/locales/{ru,en}.json`.
+- **Russian is the base language.** `ru.json` holds the source text, `en.json` is its translation,
+  so a key is named after the Russian value.
+- **A key name is the literal English translation of that value**, or the closest thing to it:
+  «Нестабилен» → `unstable`, not `degraded`; «Это он» → `thisIsIt`, not `matchConfirm`; «Анонс» →
+  `announcement`, not `upcoming`.
+- **One value, one key.** Before adding a key, look for the same Russian text in `ru.json` and reuse
+  that key — never a second name for a string that's already there (`bookmarks` _and_
+  `byBookmarks`). Two keys colliding only in `en.json` while their Russian differs
+  (`miscellaneous` «Прочее» / `other` «Другое», both "Other") are not duplicates.
+- **The name never depends on where the string is used** — not the page or component
+  (`catalog.filters.cancel`), not the UI role it fills at its first call site (no `xxxPlaceholder`,
+  `xxxTitle`, `xxxTooltip`, `xxxMessage` suffix), and not the enum whose value it renders
+  (`colorSchemeLight`, `cacheResetTitle`). The same key has to fit just as well the next time that
+  text is needed as a label, a tooltip or a button.
+- **The name makes the text itself obvious.** `main` for «Основная» — yes; `mainBranch` — no, that's
+  already a guess about the call site rather than the content.
+- **A long value gets a short name that keeps the point.** A whole sentence never turns into a key:
+  «Откройте нужный тайтл на другом источнике и вставьте сюда ссылку из адресной строки.» →
+  `pasteLinkFromOtherSource`. It's the name that gets shortened, not the text.
+- **A word form is a suffix, and only when two keys collide.** While a word appears in one form, its
+  key carries no form suffix. The moment the same text is needed in another form, the base form
+  keeps the plain name and the new one spells the form out in full —
+  `chapters` / `chaptersGenitive` / `chaptersDative`, `light` / `lightMasculine` — never a
+  `chaptersGen`-style abbreviation.
+- Keys are flat — no nesting by feature area, not even for generic, everywhere-reused action words
+  (`cancel`, `apply`, `add`, `reset`, `retry`, `error` live at the top level, not under `common`).
+- A pure helper (not a component/hook) that needs translated text — the `getXxxLabel` switch
+  helpers from the Constants section above are the common case — takes `t: TFunction` (from
+  `i18next`) as a parameter and calls `t('key')` in each branch; it does not call the hook itself.
+- Numbers that decline by count use i18next plural keys (`_one`/`_few`/`_many`/`_other` for `ru`,
+  `_one`/`_other` for `en`) with `t('key', { count })` — not a single hardcoded word form. Skip the
+  plural suffixes only when the word genuinely doesn't decline (an abbreviation like `гл.`, an
+  invariant participle like `выбрано`).

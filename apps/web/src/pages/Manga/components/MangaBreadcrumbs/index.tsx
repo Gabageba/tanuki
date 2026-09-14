@@ -1,6 +1,7 @@
 import { Anchor, Breadcrumbs, Group, Text } from '@mantine/core';
 import { generatePath, Link } from 'react-router';
 import { ArrowSquareOutIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
 import type { Manga } from '@tanuki/contracts';
 import useSource from '@/entities/source/hooks/useSource';
@@ -11,6 +12,7 @@ type Props = {
 };
 
 function MangaBreadcrumbs({ manga }: Props) {
+  const { t } = useTranslation();
   const { data: source, isPending } = useSource({ sourceId: manga.sourceId });
 
   if (isPending) {
@@ -22,7 +24,7 @@ function MangaBreadcrumbs({ manga }: Props) {
   }
 
   const items = [
-    { title: 'Все источники', href: ROUTE_PATHS.SOURCES },
+    { title: t('allSources'), href: ROUTE_PATHS.SOURCES },
     {
       title: source.title,
       href: generatePath(ROUTE_PATHS.CATALOG, { sourceId: source.id }),
@@ -66,7 +68,7 @@ function MangaBreadcrumbs({ manga }: Props) {
         <Group gap={4} c="dimmed">
           <ArrowSquareOutIcon />
           <Text lh={1} c="dimmed" fz={12}>
-            Открыть на сайте
+            {t('openOnSite')}
           </Text>
         </Group>
       </Anchor>

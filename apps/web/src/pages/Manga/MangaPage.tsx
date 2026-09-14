@@ -15,24 +15,27 @@ import {
 } from '@mantine/core';
 import { WarningIcon } from '@phosphor-icons/react';
 import { Link, useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { MANGA_RESTRICTION, type MangaRestriction } from '@tanuki/contracts';
 import useChapters from './hooks/useChapters';
 import useMangaDetails from './hooks/useMangaDetails';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { STATUS_DOWN_COLOR } from '@/shared/lib/palette';
 
-const getRestrictionMessage = (restriction: MangaRestriction): string => {
+const getRestrictionMessage = (restriction: MangaRestriction, t: TFunction): string => {
   switch (restriction) {
     case MANGA_RESTRICTION.GEO:
-      return 'Источник закрыл доступ к главам по гео-ограничению';
+      return t('chaptersGeoRestricted');
     case MANGA_RESTRICTION.LEGAL:
-      return 'Источник закрыл доступ к главам по требованию правообладателя';
+      return t('chaptersBlockedByRightsHolder');
     case MANGA_RESTRICTION.PAYWALL:
-      return 'Все главы этого тайтла платные на источнике';
+      return t('allChaptersPaid');
   }
 };
 
 function MangaPage() {
+  const { t } = useTranslation();
   const { mangaId = '' } = useParams<{ mangaId: string }>();
   const { data, error, isPending, isError } = useMangaDetails({ mangaId });
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
@@ -75,7 +78,7 @@ function MangaPage() {
           {manga.authors.length > 0 && <Text c="dimmed">{manga.authors.join(', ')}</Text>}
           {manga.restriction && (
             <Alert color={STATUS_DOWN_COLOR} icon={<WarningIcon weight="fill" />} mt="sm" py={8}>
-              {getRestrictionMessage(manga.restriction)}
+              {getRestrictionMessage(manga.restriction, t)}
             </Alert>
           )}
           <Group gap="xs" my="sm">
@@ -93,7 +96,7 @@ function MangaPage() {
             mt="sm"
             display="inline-block"
           >
-            Читать на источнике
+            {t('readOnSource')}
           </Anchor>
         </Grid.Col>
       </Grid>
@@ -103,19 +106,22 @@ function MangaPage() {
           mt="lg"
           value={branchId ?? undefined}
           onChange={setSelectedBranchId}
-          data={branches.map((branch) => ({ value: branch.id, label: branch.name ?? 'Основная' }))}
+          data={branches.map((branch) => ({
+            value: branch.id,
+            label: branch.name ?? t('main'),
+          }))}
         />
       )}
 
       <Title order={2} mt="lg" mb="sm">
-        Главы
+        {t('chapters')}
       </Title>
       {chaptersPending && <Loader />}
       <List spacing="xs" listStyleType="none">
         {chapters.map((chapter) => (
           <List.Item key={chapter.id}>
             <Anchor component={Link} to={`/manga/${mangaId}/read/${chapter.id}`}>
-              {chapter.title || `Глава ${chapter.number ?? '?'}`}
+              {chapter.title || t('chapterNumber', { number: chapter.number ?? '?' })}
             </Anchor>
           </List.Item>
         ))}

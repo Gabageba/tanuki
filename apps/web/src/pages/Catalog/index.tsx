@@ -1,4 +1,5 @@
 import { useParams, useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import useCatalog from './hooks/useCatalog';
 import PageLayout from '@/shared/ui/PageLayout';
 import CatalogHeader from './components/header/CatalogHeader';
@@ -9,6 +10,7 @@ import { parseSortDirection, parseSortOrder } from './utils/sortOrder';
 import { getStoredViewMode } from '@/shared/lib/viewMode';
 
 function Catalog() {
+  const { t } = useTranslation();
   const { sourceId } = useParams<{ sourceId: string }>();
   const { data: source, isPending: isSourcePending } = useSource({ sourceId });
   const [searchParams] = useSearchParams();
@@ -27,8 +29,8 @@ function Catalog() {
     >
       <CatalogHeader source={source} isPending={isSourcePending} />
       <PageLayout.ErrorNotification
-        title="Не удалось загрузить каталог"
-        fallbackMessage="Источник недоступен. Попробуйте позже."
+        title={t('failedToLoadCatalog')}
+        fallbackMessage={t('sourceUnavailableTryLater')}
       />
       <PageLayout.PullToRefresh />
       <CatalogContent sourceId={sourceId} />

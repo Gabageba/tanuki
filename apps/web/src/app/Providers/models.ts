@@ -1,4 +1,5 @@
 import type { CSSVariablesResolver, MantineColorScheme, MantineColorsTuple } from '@mantine/core';
+import type { TFunction } from 'i18next';
 import type { EnumLiteralsOf } from '@tanuki/contracts';
 import { PRIMARY_COLOR, PRIMARY_SHADE } from '@/shared/lib/palette';
 
@@ -18,14 +19,14 @@ export const COLOR_SCHEME = {
 } as const satisfies Record<string, MantineColorScheme>;
 export type ColorScheme = EnumLiteralsOf<typeof COLOR_SCHEME>;
 
-export const getColorSchemeLabel = (colorScheme: ColorScheme) => {
+export const getColorSchemeLabel = (colorScheme: ColorScheme, t: TFunction) => {
   switch (colorScheme) {
     case COLOR_SCHEME.LIGHT:
-      return 'Светлая';
+      return t('light');
     case COLOR_SCHEME.DARK:
-      return 'Тёмная';
+      return t('dark');
     case COLOR_SCHEME.AUTO:
-      return 'Системная';
+      return t('system');
   }
 };
 

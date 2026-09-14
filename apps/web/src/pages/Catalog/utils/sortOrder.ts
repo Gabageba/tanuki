@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import {
   SORT_ORDER,
   SORT_DIRECTION,
@@ -58,52 +59,52 @@ export const parseSortDirection = (raw: string | null): SortDirection | undefine
   return result.success ? result.data : undefined;
 };
 
-export const getSortOrderLabel = (order: SortOrder): string => {
+export const getSortOrderLabel = (order: SortOrder, t: TFunction): string => {
   switch (order) {
     case SORT_ORDER.UPDATED:
-      return 'Дате обновления';
+      return t('updateDate');
     case SORT_ORDER.RELEASED:
-      return 'Дате релиза';
+      return t('releaseDate');
     case SORT_ORDER.ADDED:
-      return 'Дате добавления';
+      return t('addedDate');
     case SORT_ORDER.POPULARITY:
-      return 'По популярности';
+      return t('popularity');
     case SORT_ORDER.VIEWS_TODAY:
-      return 'Просмотры за день';
+      return t('viewsToday');
     case SORT_ORDER.VIEWS_WEEK:
-      return 'Просмотры за неделю';
+      return t('viewsWeek');
     case SORT_ORDER.VIEWS_MONTH:
-      return 'Просмотры за месяц';
+      return t('viewsMonth');
     case SORT_ORDER.RATING:
-      return 'По рейтингу';
+      return t('rating');
     case SORT_ORDER.RATING_COUNT:
-      return 'Коли-ву оценок';
+      return t('scoresCount');
     case SORT_ORDER.LIKES:
-      return 'По лайкам';
+      return t('likes');
     case SORT_ORDER.COMMENTS:
-      return 'По отзывам';
+      return t('reviews');
     case SORT_ORDER.VIEWS:
-      return 'По просмотрам';
+      return t('views');
     case SORT_ORDER.CHAPTERS:
-      return 'По Кол-ву глав';
+      return t('chaptersCount');
     case SORT_ORDER.PAGES:
-      return 'По Кол-ву страниц';
+      return t('pagesCount');
     case SORT_ORDER.BOOKMARKS:
-      return 'По закладкам';
+      return t('bookmarks');
     case SORT_ORDER.ALPHABETICAL:
-      return 'По названию';
+      return t('title');
     case SORT_ORDER.ALPHABETICAL_EN:
-      return 'По названию (A-Z)';
+      return t('titleLatin');
     case SORT_ORDER.ALPHABETICAL_RU:
-      return 'По названию (А-Я)';
+      return t('titleCyrillic');
   }
 };
 
-export const getSortDirectionLabel = (direction: SortDirection): string => {
+export const getSortDirectionLabel = (direction: SortDirection, t: TFunction): string => {
   switch (direction) {
     case SORT_DIRECTION.DESC:
-      return 'По убыванию';
+      return t('descending');
     case SORT_DIRECTION.ASC:
-      return 'По возрастанию';
+      return t('ascending');
   }
 };

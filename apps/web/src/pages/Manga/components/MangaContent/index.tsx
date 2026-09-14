@@ -1,6 +1,7 @@
 import { Tabs } from '@mantine/core';
 import { InfoIcon, ListDashesIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import MangaInfoTabContent from './MangaInfoTabContent';
 import type { Branch, Manga } from '@tanuki/contracts';
 
@@ -15,22 +16,23 @@ type Props = {
 };
 
 function MangaContent({ manga }: Props) {
+  const { t } = useTranslation();
   const TABS = useMemo(
     () => [
       {
         id: MANGA_CONTENT_TABS.INFO,
-        title: 'О тайтле',
+        title: t('aboutTitle'),
         icon: <InfoIcon />,
         content: <MangaInfoTabContent manga={manga} />,
       },
       {
         id: MANGA_CONTENT_TABS.CHAPTERS,
-        title: 'Главы',
+        title: t('chapters'),
         icon: <ListDashesIcon />,
         content: <>chapters</>,
       },
     ],
-    [manga],
+    [manga, t],
   );
 
   return (

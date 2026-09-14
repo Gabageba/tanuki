@@ -1,5 +1,6 @@
 import { ScrollArea, Stack, TextInput } from '@mantine/core';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import type { Dispatch } from 'react';
 import type { ActiveSelection } from '../models';
 import { getFilteredSources } from '../models';
@@ -23,13 +24,14 @@ function SourceSelectMenu({
   activeSelection,
   fillHeight,
 }: Props) {
+  const { t } = useTranslation();
   const filteredSources = getFilteredSources(sources, query);
 
   return (
     <Stack gap="xs" h={fillHeight ? '100%' : undefined}>
       <TextInput
         leftSection={<MagnifyingGlassIcon />}
-        placeholder="Найти источник"
+        placeholder={t('findSource')}
         value={query}
         onChange={(event) => setQuery(event.currentTarget.value)}
       />

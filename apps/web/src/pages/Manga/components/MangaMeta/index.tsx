@@ -1,11 +1,12 @@
 import { DataList, Group, SimpleGrid } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import type { Manga } from '@tanuki/contracts';
 import MangaRating from './MangaRating';
 import MangaMetaItem from './MangaMetaItem';
 import { getLabelByMangaType } from '@/entities/source/lib';
 import OtherItemsTag from '@/shared/ui/OtherItemsTag';
 import MangaState from '@/entities/manga/MangaState';
-import { formatRuDate } from '@/shared/lib/formatDate';
+import { formatDate } from '@/shared/lib/formatDate';
 
 type Props = {
   manga: Manga;
@@ -13,20 +14,22 @@ type Props = {
 };
 
 function MangaMeta({ manga, branchesCount }: Props) {
+  const { t, i18n } = useTranslation();
+
   return (
     <Group align="flex-start" gap="lg">
       <MangaRating rating={manga.rating} />
       <SimpleGrid cols={3} flex={1}>
         <DataList orientation="vertical">
           <MangaMetaItem
-            value={[!!manga.type && getLabelByMangaType(manga.type), manga.year].filter(
+            value={[!!manga.type && getLabelByMangaType(manga.type, t), manga.year].filter(
               (item): item is string | number => Boolean(item),
             )}
-            label="Тип и год"
+            label={t('typeAndYear')}
           />
           <MangaMetaItem
             value={manga.releaseState ? <MangaState state={manga.releaseState} fz={14} /> : null}
-            label="Оригинал"
+            label={t('original')}
           />
         </DataList>
         <DataList orientation="vertical">
@@ -39,23 +42,26 @@ function MangaMeta({ manga, branchesCount }: Props) {
                 </Group>
               ) : null
             }
-            label="Автор"
+            label={t('author')}
           />
           <MangaMetaItem
             value={[
               manga.translationState && (
                 <MangaState key="manga-state" state={manga.translationState} fz={14} />
               ),
-              `${branchesCount} ветки`,
+              t('countBranches', { count: branchesCount }),
             ].filter(Boolean)}
-            label="Перевод"
+            label={t('translation')}
           />
         </DataList>
         <DataList orientation="vertical">
-          <MangaMetaItem value={`${manga.chaptersCount} глав`} label="Объем" />
           <MangaMetaItem
-            value={manga.lastUpdatedAt ? formatRuDate(manga.lastUpdatedAt) : null}
-            label="Последняя глава"
+            value={t('countChapters', { count: manga.chaptersCount })}
+            label={t('volume')}
+          />
+          <MangaMetaItem
+            value={manga.lastUpdatedAt ? formatDate(manga.lastUpdatedAt, i18n.language) : null}
+            label={t('lastChapter')}
           />
         </DataList>
       </SimpleGrid>

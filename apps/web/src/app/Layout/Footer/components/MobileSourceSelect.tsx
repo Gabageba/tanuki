@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useState } from 'react';
 import { CaretUpDownIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import MobileNavigationButton from './MobileNavigationButton';
 import SourceSelectMenu from '../../components/SourceSelectMenu';
 import useSources from '@/entities/source/hooks/useSources';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 function MobileSourceSelect({ isActive, setIsOpened, isOpened }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
 
   const { data: sources } = useSources();
@@ -39,7 +41,7 @@ function MobileSourceSelect({ isActive, setIsOpened, isOpened }: Props) {
       <MobileNavigationDrawer
         opened={isOpened}
         onClose={() => setIsOpened(false)}
-        title="Источники"
+        title={t('sources')}
       >
         <SourceSelectMenu
           sources={sources}

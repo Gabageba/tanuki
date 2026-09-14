@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
 } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import Mdash from '@/shared/ui/Mdash';
 import { getRangeSelection, setRangeSelection } from '../../utils/filterSelection';
@@ -21,6 +22,8 @@ type Props = {
 };
 
 function RangeFilterGroup({ group, selection, onChange }: Props) {
+  const { t } = useTranslation();
+
   if (!group.settings) {
     return null;
   }
@@ -52,7 +55,7 @@ function RangeFilterGroup({ group, selection, onChange }: Props) {
             flex={1}
             allowNegative={false}
             allowDecimal={allowDecimal}
-            leftSection={<Text fz={12}>от</Text>}
+            leftSection={<Text fz={12}>{t('from')}</Text>}
             hideControls
             min={range.min}
             max={range.max}
@@ -71,7 +74,7 @@ function RangeFilterGroup({ group, selection, onChange }: Props) {
             flex={1}
             allowNegative={false}
             allowDecimal={allowDecimal}
-            leftSection={<Text fz={12}>до</Text>}
+            leftSection={<Text fz={12}>{t('to')}</Text>}
             hideControls
             min={range.min}
             max={range.max}
@@ -114,7 +117,7 @@ function RangeFilterGroup({ group, selection, onChange }: Props) {
             }}
           >
             <SimpleGrid cols={{ base: 1, xxs: 2, sm: 3, md: 2 }} spacing={8}>
-              <RangeFilterPresetCard id="any" label="Любой" />
+              <RangeFilterPresetCard id="any" label={t('any')} />
               {presets.map((preset) => (
                 <RangeFilterPresetCard key={preset.id} label={preset.label} id={preset.id} />
               ))}

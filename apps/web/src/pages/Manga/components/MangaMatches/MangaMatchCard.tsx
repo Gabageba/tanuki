@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AspectRatio, Box, Button, Center, Overlay, Stack } from '@mantine/core';
 import { useClickOutside } from '@mantine/hooks';
 import { ThumbsDownIcon, ThumbsUpIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import MangaCard from '@/entities/manga/card/MangaCard';
 import { MANGA_LINK_VERDICT, type MangaLinkVerdict, type MangaMatch } from '@tanuki/contracts';
 import useLongPress from '@/shared/hooks/useLongPress';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 function MangaMatchCard({ match, mutateMangaLink, isMangaLinkPending }: Props) {
+  const { t } = useTranslation();
   const [opened, setOpened] = useState(false);
   const ref = useClickOutside<HTMLDivElement>(() => setOpened(false));
   const longPressHandlers = useLongPress(() => setOpened(true));
@@ -35,7 +37,7 @@ function MangaMatchCard({ match, mutateMangaLink, isMangaLinkPending }: Props) {
                   loading={isMangaLinkPending}
                   onClick={() => handleVerdict(MANGA_LINK_VERDICT.CONFIRMED)}
                 >
-                  Это он
+                  {t('thisIsIt')}
                 </Button>
                 <Button
                   w="100%"
@@ -44,7 +46,7 @@ function MangaMatchCard({ match, mutateMangaLink, isMangaLinkPending }: Props) {
                   loading={isMangaLinkPending}
                   onClick={() => handleVerdict(MANGA_LINK_VERDICT.REJECTED)}
                 >
-                  Не он
+                  {t('notIt')}
                 </Button>
               </Stack>
             </Center>

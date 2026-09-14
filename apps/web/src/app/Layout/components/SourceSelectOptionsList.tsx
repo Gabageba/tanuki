@@ -1,5 +1,6 @@
 import { EmptyState, Stack } from '@mantine/core';
 import { generatePath } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import SourceSelectOption from './SourceSelectOption';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
 import AllElementsIcon from './AllElementsIcon';
@@ -15,12 +16,14 @@ type Props = {
 };
 
 function SourceSelectOptionsList({ activeSelection, filteredSources, onClose }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Stack gap="md">
       <Stack gap={4}>
         <SourceSelectOption
           to={ROUTE_PATHS.SOURCES}
-          label={'Все источники'}
+          label={t('allSources')}
           onClick={onClose}
           leftSection={<AllElementsIcon size={22} />}
           isActive={activeSelection.kind === ACTIVE_SELECTION_KINDS.ALL}

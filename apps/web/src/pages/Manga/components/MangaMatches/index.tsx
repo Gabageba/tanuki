@@ -1,6 +1,7 @@
 import { Button, Divider, Group, Scroller, Stack, Title } from '@mantine/core';
 import { Fragment, useState } from 'react';
 import { PlusIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { MATCH_CONFIDENCE, type Manga } from '@tanuki/contracts';
 import useMangaMatches from '../../hooks/useMangaMatches';
 import MangaMatchCard from './MangaMatchCard';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 function MangaMatches({ manga }: Props) {
+  const { t } = useTranslation();
   const { data, isPending: isMatchesPending } = useMangaMatches({ mangaId: manga.id });
   const { mutate: mutateMangaLink, isPending: isMangaLinkPending } = useSetMangaLink({
     mangaId: manga.id,
@@ -39,7 +41,7 @@ function MangaMatches({ manga }: Props) {
   return (
     <Stack gap={8}>
       <Group gap={8} justify="space-between">
-        <Title order={5}>Найдено на других источниках</Title>
+        <Title order={5}>{t('foundOnOtherSources')}</Title>
         <Button
           size="xs"
           variant="default"
@@ -47,7 +49,7 @@ function MangaMatches({ manga }: Props) {
           loading={isMangaLinkPending}
           onClick={() => setIsAddModalOpen(true)}
         >
-          Добавить вручную
+          {t('addManually')}
         </Button>
       </Group>
 

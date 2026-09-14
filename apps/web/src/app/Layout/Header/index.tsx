@@ -1,6 +1,7 @@
 import { Anchor, AppShell, Group, Typography } from '@mantine/core';
 import { Link, useNavigate } from 'react-router';
 import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import LogoHorizontal from './LogoHorizontal';
 import DesktopNavigateButton from './components/DesktopNavigateButton';
 import Avatar from './components/Avatar';
@@ -9,6 +10,7 @@ import SearchInput from '@/shared/ui/SearcInput';
 import styles from './Header.module.scss';
 
 function Header() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleSearch = (query: string) =>
@@ -29,7 +31,7 @@ function Header() {
           <SearchInput
             handleSearch={handleSearch}
             className={styles.form}
-            placeholder="Искать по всем источникам"
+            placeholder={t('searchAllSources')}
           />
           <Group gap={4} visibleFrom="md">
             <DesktopNavigateButton icon={<BookmarkSimpleIcon size={20} />} />

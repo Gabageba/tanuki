@@ -1,4 +1,5 @@
 import { Tooltip } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import type { Source } from '@tanuki/contracts';
 import { getSourceStatusColor, getSourceStatusLabel } from '@/entities/source/lib';
 import StatusIndicator from '@/shared/ui/StatusIndicator';
@@ -9,11 +10,13 @@ type Props = {
 };
 
 function SourceStatusBadge({ source }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Tooltip label={<SourceStatusBadgeTooltip source={source} />} multiline maw={280}>
       <StatusIndicator
         color={getSourceStatusColor(source.status)}
-        label={getSourceStatusLabel(source.status)}
+        label={getSourceStatusLabel(source.status, t)}
         dotMt={3}
         coloredText
       />

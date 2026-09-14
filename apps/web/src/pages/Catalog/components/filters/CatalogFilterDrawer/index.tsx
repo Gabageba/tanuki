@@ -1,5 +1,6 @@
 import { Button, Drawer, Group, Stack } from '@mantine/core';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import useAutoCloseDrawer from '@/shared/hooks/useAutoCloseDrawer';
 import useExclusiveFilterConfirm from '../../../hooks/useExclusiveFilterConfirm';
@@ -17,6 +18,7 @@ type Props = {
 };
 
 function CatalogFilterDrawer({ groups, selection, opened, onClose, onChange }: Props) {
+  const { t } = useTranslation();
   useAutoCloseDrawer(opened, onClose);
 
   const [draft, setDraft] = useState(selection);
@@ -74,7 +76,7 @@ function CatalogFilterDrawer({ groups, selection, opened, onClose, onChange }: P
                 onClose();
               }}
             >
-              Отменить
+              {t('cancel')}
             </Button>
             <Button
               flex={1}
@@ -83,7 +85,7 @@ function CatalogFilterDrawer({ groups, selection, opened, onClose, onChange }: P
                 onClose();
               }}
             >
-              Применить
+              {t('apply')}
             </Button>
           </Group>
         </Stack>

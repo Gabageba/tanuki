@@ -1,5 +1,6 @@
 import { NavLink, ScrollArea, Stack } from '@mantine/core';
 import { CaretRightIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import type { Dispatch, SetStateAction } from 'react';
 import type { FilterGroup } from '@tanuki/contracts';
 import type { FilterSelection } from '../../../../../../../../packages/contracts/dist/cjs';
@@ -13,6 +14,8 @@ type Props = {
 };
 
 function CatalogFilterDrawerGroups({ groups, draft, setActiveGroupId }: Props) {
+  const { t } = useTranslation();
+
   return (
     <ScrollArea type="auto" offsetScrollbars="y" flex={1} mih={0}>
       <Stack gap={0} flex={1}>
@@ -22,7 +25,11 @@ function CatalogFilterDrawerGroups({ groups, draft, setActiveGroupId }: Props) {
               key={group.id}
               label={<CatalogFilterGroupTitle group={group} />}
               description={
-                <SelectedCatalogFiltersCount groupId={group.id} draft={draft} renderEmpty="Любой" />
+                <SelectedCatalogFiltersCount
+                  groupId={group.id}
+                  draft={draft}
+                  renderEmpty={t('any')}
+                />
               }
               rightSection={<CaretRightIcon />}
               onClick={() => setActiveGroupId(group.id)}

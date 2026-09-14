@@ -1,4 +1,5 @@
 import { Button, Grid, Group, Pill, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import type { FilterGroup } from '@tanuki/contracts';
 import type { FilterSelection } from '../../../../../../../packages/contracts/dist/cjs';
 import { clearGroupSelection, getGroupSelectionOptions } from '../../utils/filterSelection';
@@ -12,13 +13,15 @@ type Props = {
 };
 
 function CatalogFilterPills({ groups, selection, onChange }: Props) {
+  const { t } = useTranslation();
+
   if (!groups) {
     return null;
   }
 
   const groupOptions = groups.map((group) => ({
     group,
-    options: getGroupSelectionOptions(group, selection),
+    options: getGroupSelectionOptions(group, selection, t),
   }));
 
   if (groupOptions.every(({ options }) => !options)) {
@@ -55,7 +58,7 @@ function CatalogFilterPills({ groups, selection, onChange }: Props) {
         })}
         {!!selection.length && (
           <Button variant="subtle" color="gray" onClick={() => onChange([])}>
-            Сбросить
+            {t('reset')}
           </Button>
         )}
       </Group>

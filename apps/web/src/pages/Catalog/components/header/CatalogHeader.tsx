@@ -1,6 +1,5 @@
-import { ActionIcon, Flex, Group } from '@mantine/core';
-import { CaretLeftIcon } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router';
+import { Flex, Group } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import CatalogHeaderSkeleton from './CatalogHeaderSkeleton';
 import SourceTitle from '@/entities/source/components/SourceTitle';
 import SearchInput from '@/shared/ui/SearcInput';
@@ -8,6 +7,7 @@ import PageLayout from '@/shared/ui/PageLayout';
 import type { CatalogParams } from '../../models';
 import type { Source } from '@tanuki/contracts';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
+import GoBackButton from '@/shared/ui/GoBackButton';
 
 type Props = {
   source: Source | undefined;
@@ -15,7 +15,7 @@ type Props = {
 };
 
 function CatalogHeader({ source, isPending }: Props) {
-  const navigate = useNavigate();
+  const { t } = useTranslation();
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
 
   const handleSearch = (query: string) => {
@@ -34,16 +34,14 @@ function CatalogHeader({ source, isPending }: Props) {
     <PageLayout.Header>
       <Flex justify="space-between" direction={{ base: 'column', sm: 'row' }} gap="sm">
         <Group gap="xs">
-          <ActionIcon variant="subtle" color="gray" onClick={() => navigate(ROUTE_PATHS.SOURCES)}>
-            <CaretLeftIcon />
-          </ActionIcon>
+          <GoBackButton path={ROUTE_PATHS.SOURCES} />
           <SourceTitle source={source} showStatus />
         </Group>
         <SearchInput
           w={{ base: '100%', sm: 300 }}
           allowClear
           handleSearch={handleSearch}
-          placeholder={`Искать в ${source.title}`}
+          placeholder={t('searchIn', { title: source.title })}
           debounceMs={400}
         />
       </Flex>

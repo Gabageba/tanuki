@@ -1,6 +1,7 @@
 import { Button, Card, Group, Stack, Tabs, Text, Title } from '@mantine/core';
 import { useElementSize } from '@mantine/hooks';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import { countGroupSelections } from '../../utils/filterSelection';
 import { calcFilterMah } from '../../utils/calcFilterMah';
@@ -19,6 +20,7 @@ type Props = {
 };
 
 function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(selection);
   const { applyChange, pending, confirmPending, cancelPending } = useExclusiveFilterConfirm();
   const { ref: listRef, height: listHeight } = useElementSize<HTMLDivElement>();
@@ -86,7 +88,7 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
                       onClose();
                     }}
                   >
-                    Отменить
+                    {t('cancel')}
                   </Button>
                   <Button
                     onClick={() => {
@@ -94,7 +96,7 @@ function CatalogFilterCard({ groups, selection, onClose, onChange }: Props) {
                       onClose();
                     }}
                   >
-                    Применить
+                    {t('apply')}
                   </Button>
                 </Group>
               </Stack>

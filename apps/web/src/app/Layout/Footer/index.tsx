@@ -2,6 +2,7 @@ import { AppShell, Group } from '@mantine/core';
 import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
 import { closeAllDrawers } from '@/shared/lib/drawerRegistry';
 import MobileNavigationButton from './components/MobileNavigationButton';
@@ -11,9 +12,11 @@ import MobileMenuButton from './components/MobileMenuButton';
 import styles from './Footer.module.scss';
 
 function Footer() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isSourcesActive = useIsActiveUrl([
     ROUTE_PATHS.SOURCES,
+    ROUTE_PATHS.SOURCES_HEALTH,
     ROUTE_PATHS.CATALOG,
     ROUTE_PATHS.MANGA,
   ]);
@@ -40,7 +43,7 @@ function Footer() {
             setIsSourcesOpened(false);
             setIsMenuOpened(false);
           }}
-          title="Закладки"
+          title={t('bookmarks')}
           isActive={isBookmarksActive && !isSourcesOpened && !isMenuOpened}
           leftSection={<BookmarkSimpleIcon size={20} />}
         />
@@ -50,7 +53,7 @@ function Footer() {
             setIsSourcesOpened(false);
             setIsMenuOpened(false);
           }}
-          title="Уведомления"
+          title={t('notifications')}
           isActive={isNotificationsActive && !isSourcesOpened && !isMenuOpened}
           leftSection={<BellIcon size={20} />}
         />

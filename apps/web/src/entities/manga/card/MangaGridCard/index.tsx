@@ -1,5 +1,6 @@
 import { Stack, Text } from '@mantine/core';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MANGA_TYPE, type Manga } from '@tanuki/contracts';
 import NavigateToMangaCard from '../../NavigateToMangaCard';
 import MangaMetaItems from '../../MangaMetaItems';
@@ -13,11 +14,12 @@ type Props = {
 };
 
 function MangaGridCard({ manga, showSource = false }: Props) {
+  const { t } = useTranslation();
   const metaItems = [
-    !!manga.type && getLabelByMangaType(manga.type),
+    !!manga.type && getLabelByMangaType(manga.type, t),
     !!manga.year && String(manga.year),
-    !!manga.chaptersCount && `${manga.chaptersCount} гл.`,
-    !manga.chaptersCount && !!manga.pages && `${manga.pages} стр.`,
+    !!manga.chaptersCount && t('countChaptersAbbrev', { count: manga.chaptersCount }),
+    !manga.chaptersCount && !!manga.pages && t('countPagesAbbrev', { count: manga.pages }),
   ].filter((item): item is string => Boolean(item));
 
   const metaGap = useMemo(

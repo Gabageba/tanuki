@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Modal, Stack, Text, TextInput } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { MANGA_LINK_VERDICT } from '@tanuki/contracts';
 import type useSetMangaLink from '../../hooks/useSetMangaLink';
 import { parseMangaLink } from '../../lib';
@@ -12,6 +13,7 @@ type Props = {
 };
 
 function MangaMatchAddModal({ opened, onClose, mutateMangaLink, isMangaLinkPending }: Props) {
+  const { t } = useTranslation();
   const [value, setValue] = useState('');
   const targetId = parseMangaLink(value);
   const isInvalid = value.trim().length > 0 && targetId === null;
@@ -30,20 +32,20 @@ function MangaMatchAddModal({ opened, onClose, mutateMangaLink, isMangaLinkPendi
   };
 
   return (
-    <Modal opened={opened} onClose={handleClose} title="Добавить тайтл вручную" centered>
+    <Modal opened={opened} onClose={handleClose} title={t('addTitleManually')} centered>
       <Stack gap="sm">
         <Text fz={14} c="dimmed">
-          Откройте нужный тайтл на другом источнике и вставьте сюда ссылку из адресной строки.
+          {t('pasteLinkFromOtherSource')}
         </Text>
         <TextInput
           value={value}
           onChange={(event) => setValue(event.currentTarget.value)}
           placeholder="/manga/desume:eyJpZCI6..."
-          error={isInvalid ? 'Не похоже на ссылку на страницу тайтла' : null}
+          error={isInvalid ? t('notATitleLink') : null}
           data-autofocus
         />
         <Button onClick={handleSubmit} disabled={!targetId} loading={isMangaLinkPending}>
-          Добавить
+          {t('add')}
         </Button>
       </Stack>
     </Modal>

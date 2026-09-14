@@ -1,5 +1,6 @@
 import { Combobox, Input, InputBase, useCombobox } from '@mantine/core';
 import { useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { SORT_DIRECTION, type SortDirection, type SortOrder } from '@tanuki/contracts';
 import { getSortDirectionLabel, getSortOrderLabel, resolveOrder } from '../../utils/sortOrder';
 import PageLayout from '@/shared/ui/PageLayout';
@@ -13,6 +14,7 @@ type Props = {
 };
 
 function CatalogSort({ sortOrders, supportsDirection }: Props) {
+  const { t } = useTranslation();
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
   const [, setSearchParams] = useSearchParams();
   const combobox = useCombobox();
@@ -74,7 +76,7 @@ function CatalogSort({ sortOrders, supportsDirection }: Props) {
           rightSectionPointerEvents="none"
           onClick={() => combobox.toggleDropdown()}
         >
-          {order ? getSortOrderLabel(order) : <Input.Placeholder>Сортировка</Input.Placeholder>}
+          {order ? getSortOrderLabel(order, t) : <Input.Placeholder>{t('sort')}</Input.Placeholder>}
         </InputBase>
       </Combobox.Target>
       <Combobox.Dropdown>
@@ -82,7 +84,7 @@ function CatalogSort({ sortOrders, supportsDirection }: Props) {
           {sortOrders.map((value) => (
             <ComboboxOption
               key={value}
-              label={getSortOrderLabel(value)}
+              label={getSortOrderLabel(value, t)}
               value={value}
               selected={value === order}
             />
@@ -91,12 +93,12 @@ function CatalogSort({ sortOrders, supportsDirection }: Props) {
         {supportsDirection && (
           <Combobox.Footer p={4}>
             <ComboboxOption
-              label={getSortDirectionLabel(SORT_DIRECTION.DESC)}
+              label={getSortDirectionLabel(SORT_DIRECTION.DESC, t)}
               value={SORT_DIRECTION.DESC}
               selected={direction === SORT_DIRECTION.DESC}
             />
             <ComboboxOption
-              label={getSortDirectionLabel(SORT_DIRECTION.ASC)}
+              label={getSortDirectionLabel(SORT_DIRECTION.ASC, t)}
               value={SORT_DIRECTION.ASC}
               selected={direction === SORT_DIRECTION.ASC}
             />

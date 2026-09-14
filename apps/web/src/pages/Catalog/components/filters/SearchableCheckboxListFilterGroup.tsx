@@ -1,6 +1,7 @@
 import type { ScrollAreaAutosizeProps } from '@mantine/core';
 import { Stack } from '@mantine/core';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import SearchInput from '@/shared/ui/SearcInput';
 import { FILTER_TYPE, type FilterGroup, type FilterSelection } from '@tanuki/contracts';
 import VirtualizedCheckboxGrid from './VirtualizedCheckboxGrid';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 function SearchableCheckboxListFilterGroup({ group, selection, onChange, scrollAreaProps }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
 
   const filteredOptions = useMemo(() => {
@@ -26,7 +28,7 @@ function SearchableCheckboxListFilterGroup({ group, selection, onChange, scrollA
       <SearchInput
         handleSearch={setQuery}
         debounceMs={100}
-        placeholder={`Искать в "${group.title}"`}
+        placeholder={t('searchIn', { title: group.title })}
       />
       <VirtualizedCheckboxGrid
         options={filteredOptions}

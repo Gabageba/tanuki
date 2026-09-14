@@ -1,17 +1,18 @@
+import type { TFunction } from 'i18next';
 import type { MatchConfidence } from '@tanuki/contracts';
 import { MATCH_CONFIDENCE } from '@tanuki/contracts';
 import { PRIMARY_COLOR, STATUS_DEGRADED_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
 
-export const getMatchConfidenceLabelByKey = (confidence: MatchConfidence) => {
+export const getMatchConfidenceLabelByKey = (confidence: MatchConfidence, t: TFunction) => {
   switch (confidence) {
     case MATCH_CONFIDENCE.CONFIRMED:
-      return 'Подтверждено';
+      return t('confirmed');
     case MATCH_CONFIDENCE.EXACT:
-      return 'Точное совпадение';
+      return t('exactMatch');
     case MATCH_CONFIDENCE.HIGH:
-      return 'Скорее всего';
+      return t('likely');
     case MATCH_CONFIDENCE.LOW:
-      return 'Не точно';
+      return t('uncertain');
   }
 };
 

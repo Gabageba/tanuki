@@ -1,5 +1,6 @@
 import { useLocation, useParams } from 'react-router';
 import { SelectionIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { flattenSources } from '@/entities/source/lib';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
@@ -10,6 +11,7 @@ import AllElementsIcon from '../components/AllElementsIcon';
 function useGetActiveSelection(sources?: SourcesResponse): ActiveSelection {
   // На /catalog/:sourceId источник приходит напрямую, а на /manga/:mangaId — только внутри
   // составного id тайтла («sourceId:opaqueId»), так что при его отсутствии достаём префикс сами.
+  const { t } = useTranslation();
   const { sourceId, mangaId } = useParams<{ sourceId?: string; mangaId?: string }>();
   const { pathname } = useLocation();
 
@@ -31,14 +33,14 @@ function useGetActiveSelection(sources?: SourcesResponse): ActiveSelection {
     return {
       kind: ACTIVE_SELECTION_KINDS.ALL,
       icon: <AllElementsIcon />,
-      title: 'Все источники',
+      title: t('allSources'),
     };
   }
 
   return {
     kind: ACTIVE_SELECTION_KINDS.NONE,
     icon: <SelectionIcon size={20} />,
-    title: 'Без источника',
+    title: t('withoutSource'),
   };
 }
 

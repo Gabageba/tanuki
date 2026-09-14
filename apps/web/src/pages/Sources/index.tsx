@@ -1,18 +1,21 @@
 import { Button } from '@mantine/core';
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import useSources from '@/entities/source/hooks/useSources';
 import PageLayout from '@/shared/ui/PageLayout';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
 import SourcesList from './SourcesList';
 
 function Sources() {
+  const { t } = useTranslation();
+
   return (
     <PageLayout useQuery={useSources}>
       <PageLayout.Content
-        title="Источники"
+        title={t('sources')}
         actions={
           <Button component={Link} to={ROUTE_PATHS.SOURCES_HEALTH} variant="default">
-            Здоровье источников
+            {t('sourcesHealth')}
           </Button>
         }
       >

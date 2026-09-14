@@ -3,6 +3,7 @@ import { Button, Grid, Group, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useSearchParams } from 'react-router';
 import { CaretDownIcon, CaretUpIcon, FunnelIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import PageLayout from '@/shared/ui/PageLayout';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { SORT_DIRECTION, type FilterSelection } from '@tanuki/contracts';
@@ -23,6 +24,7 @@ type Props = {
 };
 
 function CatalogSettings({ sourceId }: Props) {
+  const { t } = useTranslation();
   const { data: source, isPending: isSourcePending } = useSource({ sourceId });
   const {
     data: filters,
@@ -103,14 +105,14 @@ function CatalogSettings({ sourceId }: Props) {
               onClick={() => setIsFilterOpened((prev) => !prev)}
               style={{ alignSelf: 'flex-start' }}
             >
-              <Text>Фильтры</Text>
+              <Text>{t('filters')}</Text>
             </Button>
           )}
           {isFiltersError && (
             <Group gap="xs" wrap="nowrap">
               <ApiErrorText error={filtersError} />
               <Button variant="subtle" size="compact-sm" onClick={() => refetchFilters()}>
-                Повторить
+                {t('retry')}
               </Button>
             </Group>
           )}

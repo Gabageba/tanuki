@@ -1,11 +1,12 @@
 import { Anchor, Group, Stack, Table, Text, Tooltip } from '@mantine/core';
 import { generatePath, Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { SOURCE_STATUS, type Source } from '@tanuki/contracts';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
 import PageLayout from '@/shared/ui/PageLayout';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import { flattenSources, getSourceStatusReasonLabel } from '@/entities/source/lib';
-import { formatRelativeRu, formatRuDate, formatRuDateTime } from '@/shared/lib/formatDate';
+import { formatDate, formatDateTime, formatRelative } from '@/shared/lib/formatDate';
 import Mdash from '@/shared/ui/Mdash';
 import type { SourcesHealthQuery } from './models';
 import SourceHealthRowActions from './SourceHealthRowActions';
@@ -23,6 +24,7 @@ const getStatusWeight = (status: Source['status']) => {
 };
 
 function SourcesHealthTable() {
+  const { t, i18n } = useTranslation();
   const { data } = PageLayout.useQuery<SourcesHealthQuery>();
   const sources = flattenSources(data).sort(
     (left, right) =>
@@ -35,12 +37,12 @@ function SourcesHealthTable() {
       <Table verticalSpacing="sm" highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Источник</Table.Th>
-            <Table.Th>Статус</Table.Th>
-            <Table.Th>Причина</Table.Th>
-            <Table.Th>Проверен</Table.Th>
-            <Table.Th>Ночей подряд</Table.Th>
-            <Table.Th>Последняя ошибка</Table.Th>
+            <Table.Th>{t('source')}</Table.Th>
+            <Table.Th>{t('status')}</Table.Th>
+            <Table.Th>{t('reason')}</Table.Th>
+            <Table.Th>{t('checked')}</Table.Th>
+            <Table.Th>{t('consecutiveNights')}</Table.Th>
+            <Table.Th>{t('lastError')}</Table.Th>
             <Table.Th />
           </Table.Tr>
         </Table.Thead>
@@ -62,14 +64,14 @@ function SourcesHealthTable() {
                 <SourceStatusBadge source={source} />
                 {source.statusChangedAt && (
                   <Text fz={11} c="dimmed" ff="monospace">
-                    {`с ${formatRuDate(source.statusChangedAt)}`}
+                    {t('sinceDate', { date: formatDate(source.statusChangedAt, i18n.language) })}
                   </Text>
                 )}
               </Table.Td>
               <Table.Td>
                 <Text fz={13}>
                   {source.statusReason ? (
-                    getSourceStatusReasonLabel(source.statusReason)
+                    getSourceStatusReasonLabel(source.statusReason, t)
                   ) : (
                     <Mdash />
                   )}
@@ -77,7 +79,11 @@ function SourcesHealthTable() {
               </Table.Td>
               <Table.Td>
                 <Text fz={13} ff="monospace" c="dimmed">
-                  {source.checkedAt ? formatRelativeRu(source.checkedAt) : <Mdash />}
+                  {source.checkedAt ? (
+                    formatRelative(source.checkedAt, i18n.language, t('justNow'))
+                  ) : (
+                    <Mdash />
+                  )}
                 </Text>
               </Table.Td>
               <Table.Td>
@@ -92,7 +98,7 @@ function SourcesHealthTable() {
                       <Stack gap={2}>
                         {source.checkedAt && (
                           <Text fz={11} c="dimmed" ff="monospace">
-                            {formatRuDateTime(source.checkedAt)}
+                            {formatDateTime(source.checkedAt, i18n.language)}
                           </Text>
                         )}
                         <Text fz={12} style={{ whiteSpace: 'pre-wrap' }}>

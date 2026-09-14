@@ -1,5 +1,6 @@
 import { ActionIcon, Flex, Group, Title } from '@mantine/core';
 import { CaretLeftIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import type { Dispatch, SetStateAction } from 'react';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import SelectedCatalogFiltersCount from '../SelectedCatalogFiltersCount';
@@ -11,6 +12,8 @@ type Props = {
 };
 
 function CatalogFilterDrawerTitle({ activeGroup, setActiveGroupId, draft }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Group gap={4}>
       {activeGroup?.id && (
@@ -19,7 +22,7 @@ function CatalogFilterDrawerTitle({ activeGroup, setActiveGroupId, draft }: Prop
         </ActionIcon>
       )}
       <Flex direction={{ base: 'column', xxs: 'row' }} columnGap="md">
-        <Title order={5}>{activeGroup?.id ? activeGroup.title : 'Все фильтры'}</Title>
+        <Title order={5}>{activeGroup?.id ? activeGroup.title : t('allFilters')}</Title>
         {activeGroup?.id !== undefined && (
           <SelectedCatalogFiltersCount
             groupId={activeGroup.id}

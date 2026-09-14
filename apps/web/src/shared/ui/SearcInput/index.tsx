@@ -3,6 +3,7 @@ import { TextInput } from '@mantine/core';
 import { useDebouncedCallback } from '@mantine/hooks';
 import { MagnifyingGlassIcon, XCircleIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './SearchInput.module.scss';
 
 type Props = {
@@ -22,6 +23,7 @@ function SearchInput({
   allowClear = false,
   ...restProps
 }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const debouncedSearch = useDebouncedCallback(handleSearch, debounceMs ?? 0);
 
@@ -49,7 +51,7 @@ function SearchInput({
         enterKeyHint="search"
         leftSection={<MagnifyingGlassIcon />}
         rightSection={
-          !!query && allowClear && <XCircleIcon onClick={clear} aria-label="Очистить поиск" />
+          !!query && allowClear && <XCircleIcon onClick={clear} aria-label={t('clearSearch')} />
         }
         value={query}
         onChange={(event) => {

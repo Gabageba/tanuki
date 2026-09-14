@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import {
   FILTER_TYPE,
   type EnumLiteralsOf,
@@ -171,6 +172,7 @@ type GroupSelectionOptions = {
 const getRangeGroupSelectionOptions = (
   group: FilterGroup,
   selection: FilterSelection[],
+  t: TFunction,
 ): GroupSelectionOptions => {
   const range = getRangeSelection(selection, group.id);
   if (!range) {
@@ -183,9 +185,9 @@ const getRangeGroupSelectionOptions = (
     if (range.min !== undefined && range.max !== undefined) {
       label = `${range.min}–${range.max}`;
     } else if (range.min !== undefined) {
-      label = `от ${range.min}`;
+      label = t('fromValue', { value: range.min });
     } else if (range.max !== undefined) {
-      label = `до ${range.max}`;
+      label = t('toValue', { value: range.max });
     }
   }
 
@@ -221,9 +223,10 @@ const getCheckboxGroupSelectionOptions = (
 export const getGroupSelectionOptions = (
   group: FilterGroup,
   selection: FilterSelection[],
+  t: TFunction,
 ): GroupSelectionOptions => {
   if (group.type === FILTER_TYPE.RANGE) {
-    return getRangeGroupSelectionOptions(group, selection);
+    return getRangeGroupSelectionOptions(group, selection, t);
   }
   return getCheckboxGroupSelectionOptions(group, selection);
 };

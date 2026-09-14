@@ -1,5 +1,6 @@
 import type { GroupProps } from '@mantine/core';
 import { Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 import type { FilterSelection } from '@tanuki/contracts';
 import { countGroupSelections } from '../../utils/filterSelection';
@@ -13,6 +14,7 @@ type Props = {
 };
 
 function SelectedCatalogFiltersCount({ groupId, draft, renderEmpty, mt }: Props) {
+  const { t } = useTranslation();
   const { excluded, included } = countGroupSelections(draft, groupId);
 
   if (!excluded && !included) {
@@ -26,12 +28,12 @@ function SelectedCatalogFiltersCount({ groupId, draft, renderEmpty, mt }: Props)
       items={[
         !!included && (
           <Text key="included" fz={12} c="terracotta">
-            {`${included} выбрано`}
+            {t('countSelected', { count: included })}
           </Text>
         ),
         !!excluded && (
           <Text key="excluded" fz={12} c="red">
-            {`${excluded} исключено`}
+            {t('countExcluded', { count: excluded })}
           </Text>
         ),
       ]}

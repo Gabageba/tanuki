@@ -1,10 +1,12 @@
 import { Button, Center, Loader, Text } from '@mantine/core';
 import { useNavigate, useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import useChapterPages from './hooks/useChapterPages';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
 import styles from './ReaderPage.module.scss';
 
 function ReaderPage() {
+  const { t } = useTranslation();
   const { mangaId = '', chapterId = '' } = useParams<{ mangaId: string; chapterId: string }>();
   const navigate = useNavigate();
   const { data, error, isPending, isError } = useChapterPages({ mangaId, chapterId });
@@ -33,7 +35,7 @@ function ReaderPage() {
         <img
           key={page.index}
           src={page.url}
-          alt={`Страница ${page.index + 1} из ${data.items.length}`}
+          alt={t('pageOfTotal', { page: page.index + 1, total: data.items.length })}
           loading="lazy"
           decoding="async"
           className={styles.page}
@@ -43,10 +45,10 @@ function ReaderPage() {
       <Center py="xl">
         {nextChapterId ? (
           <Button onClick={() => void navigate(`/manga/${mangaId}/read/${nextChapterId}`)}>
-            Следующая глава
+            {t('nextChapter')}
           </Button>
         ) : (
-          <Text className={styles.hint}>Это последняя глава</Text>
+          <Text className={styles.hint}>{t('thisIsLastChapter')}</Text>
         )}
       </Center>
     </div>

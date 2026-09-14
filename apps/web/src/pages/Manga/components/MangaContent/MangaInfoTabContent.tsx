@@ -1,4 +1,5 @@
 import { Stack, Title } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import CollapsibleGroup from '@/shared/ui/CollapsibleGroup';
 import CollapsibleText from '@/shared/ui/CollapsibleText';
 import TagBadge from '@/shared/ui/TagBadge';
@@ -10,14 +11,16 @@ type Props = {
 };
 
 function MangaInfoTabContent({ manga }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Stack gap="md">
       <Stack gap={8}>
-        <Title order={5}>Описание</Title>
+        <Title order={5}>{t('description')}</Title>
         <CollapsibleText lineClamp={3}>{manga.description}</CollapsibleText>
       </Stack>
       <Stack gap={8}>
-        <Title order={5}>Теги</Title>
+        <Title order={5}>{t('tags')}</Title>
         <CollapsibleGroup gap={6} maxRows={2}>
           {manga.tags.map((tag) => (
             <TagBadge key={tag.id}>{tag.title}</TagBadge>

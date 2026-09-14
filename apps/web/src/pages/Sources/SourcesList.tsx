@@ -1,4 +1,5 @@
 import { Divider, SimpleGrid, Stack, Title } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
 import { getLabelByContentType } from '@/entities/source/lib';
 import PageLayout from '@/shared/ui/PageLayout';
@@ -6,6 +7,7 @@ import type { SourcesQuery } from './models';
 import SourceCard from '@/entities/source/components/SourceCard';
 
 function SourcesList() {
+  const { t } = useTranslation();
   const { data } = PageLayout.useQuery<SourcesQuery>();
 
   return (
@@ -18,7 +20,7 @@ function SourcesList() {
             <Divider
               label={
                 <Title order={4} fw={600}>
-                  {getLabelByContentType(contentType)}
+                  {getLabelByContentType(contentType, t)}
                 </Title>
               }
               labelPosition="left"

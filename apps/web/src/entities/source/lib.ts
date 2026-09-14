@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { MangaType, SourceLocale } from '@tanuki/contracts';
 import {
   MANGA_TYPE,
@@ -29,55 +30,55 @@ export const getSourceStatusColor = (status: SourceStatus) => {
   }
 };
 
-export const getSourceStatusLabel = (status: SourceStatus) => {
+export const getSourceStatusLabel = (status: SourceStatus, t: TFunction) => {
   switch (status) {
     case SOURCE_STATUS.OK:
-      return 'онлайн';
+      return t('online');
     case SOURCE_STATUS.DEGRADED:
-      return 'нестабилен';
+      return t('unstable');
     case SOURCE_STATUS.DOWN:
-      return 'недоступен';
+      return t('unavailable');
   }
 };
 
-export const getSourceStatusReasonLabel = (statusReason: SourceStatusReason) => {
+export const getSourceStatusReasonLabel = (statusReason: SourceStatusReason, t: TFunction) => {
   switch (statusReason) {
     case SOURCE_STATUS_REASON.BROKEN:
-      return 'источник не парсится в принципе';
+      return t('sourceNotParsing');
     case SOURCE_STATUS_REASON.PROBE_FAILED:
-      return 'упала ночная проверка';
+      return t('nightlyCheckFailed');
     case SOURCE_STATUS_REASON.REQUEST_FAILURES:
-      return 'запросы перестали проходить';
+      return t('requestsFailing');
     case SOURCE_STATUS_REASON.RECOVERED:
-      return 'источник снова отвечает';
+      return t('sourceRespondingAgain');
   }
 };
 
-export const getLabelByContentType = (contentType: SourceContentType) => {
+export const getLabelByContentType = (contentType: SourceContentType, t: TFunction) => {
   switch (contentType) {
     case SOURCE_CONTENT_TYPE.MANGA:
-      return 'Манга и манхва';
+      return t('mangaAndManhwa');
     case SOURCE_CONTENT_TYPE.HENTAI:
-      return 'Хентай';
+      return t('hentai');
     case SOURCE_CONTENT_TYPE.COMICS:
-      return 'Комиксы';
+      return t('comics');
     case SOURCE_CONTENT_TYPE.OTHER:
-      return 'Прочее';
+      return t('other');
   }
 };
 
-export const getLabelByMangaType = (mangaType: MangaType) => {
+export const getLabelByMangaType = (mangaType: MangaType, t: TFunction) => {
   switch (mangaType) {
     case MANGA_TYPE.MANGA:
-      return 'Манга';
+      return t('manga');
     case MANGA_TYPE.MANHUA:
-      return 'Маньхуа';
+      return t('manhua');
     case MANGA_TYPE.MANHWA:
-      return 'Манхва';
+      return t('manhwa');
     case MANGA_TYPE.COMICS:
-      return 'Комикс';
+      return t('comic');
     case MANGA_TYPE.OTHER:
-      return 'Другое';
+      return t('other');
   }
 };
 

@@ -18,6 +18,7 @@ import {
   HardDrivesIcon,
   ShareNetworkIcon,
 } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { MangaDetailsQuery } from '../../models';
 import MangaImageSectionSkeleton from './MangaImageSectionSkeleton';
@@ -25,6 +26,7 @@ import MidDot from '@/shared/ui/MidDot';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 
 function MangaImageSection() {
+  const { t } = useTranslation();
   const { data, isFetching } = PageLayout.useQuery<MangaDetailsQuery>();
 
   if (isFetching) {
@@ -43,7 +45,7 @@ function MangaImageSection() {
         <Image src={manga.largeCoverUrl || manga.coverUrl} alt={manga.title} radius="md" />
         <Stack gap={8}>
           <Button>
-            Продолжить <MidDot /> Гл.97
+            {t('continue')} <MidDot /> {t('chapterNumberAbbrev', { number: 97 })}
           </Button>
           <Group gap={8}>
             <Progress value={30} size="sm" flex={1} />
@@ -52,8 +54,8 @@ function MangaImageSection() {
             </Text>
           </Group>
           <Select
-            data={['Читаю']}
-            value="Читаю"
+            data={[t('reading')]}
+            value={t('reading')}
             c="terracotta"
             leftSection={
               <Center c="terracotta">
@@ -63,7 +65,7 @@ function MangaImageSection() {
           />
           <Group gap={8}>
             <Button leftSection={<ArrowsClockwiseIcon />} variant="default" flex={1}>
-              Обновить
+              {t('update')}
             </Button>
             <ActionIcon size={36} variant="default">
               <ShareNetworkIcon />
@@ -80,10 +82,10 @@ function MangaImageSection() {
               separatorProps={{ c: 'dimmed', fz: 12 }}
               items={[
                 <Text key="chapters" c="dimmed" fz={12}>
-                  Скачано 42 гл.
+                  {t('downloaded')} {t('countChaptersAbbrev', { count: 42 })}
                 </Text>,
                 <Text key="size" c="dimmed" fz={12}>
-                  1.8 ГБ
+                  1.8 {t('gb')}
                 </Text>,
               ]}
             />

@@ -11,15 +11,17 @@ import {
   Title,
 } from '@mantine/core';
 import { useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import MangaCard from '@/entities/manga/card/MangaCard';
 import useSearch from './hooks/useSearch';
 import { flattenSources } from '@/entities/source/lib';
 import useSources from '@/entities/source/hooks/useSources';
 import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
-import { GROUP_STATUS_LABEL } from './models';
+import { getGroupStatusLabel } from './models';
 
 function SearchPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query') ?? '';
   const [input, setInput] = useState(query);
@@ -39,12 +41,12 @@ function SearchPage() {
   return (
     <Container py="xl">
       <Title order={1} mb="md">
-        Поиск
+        {t('search')}
       </Title>
 
       <form onSubmit={handleSubmit}>
         <TextInput
-          placeholder="Искать по всем источникам…"
+          placeholder={t('searchAllSources')}
           value={input}
           onChange={(event) => setInput(event.currentTarget.value)}
           mb="lg"
@@ -64,13 +66,13 @@ function SearchPage() {
                   color={group.status === SEARCH_GROUP_STATUS.TIMEOUT ? 'yellow' : 'red'}
                   variant="light"
                 >
-                  {GROUP_STATUS_LABEL[group.status]}
+                  {getGroupStatusLabel(group.status, t)}
                 </Badge>
               )}
             </Group>
             {group.items.length === 0 && group.status === SEARCH_GROUP_STATUS.OK && (
               <Text c="dimmed" size="sm">
-                Ничего не найдено
+                {t('nothingFound')}
               </Text>
             )}
             <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="md">
