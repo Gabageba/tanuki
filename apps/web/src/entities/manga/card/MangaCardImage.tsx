@@ -4,8 +4,8 @@ import type { SourceId } from '@tanuki/contracts';
 import { type Manga } from '@tanuki/contracts';
 import MangaAdultBadge from '../markers/MangaAdultBadge';
 import MangaScoreBadge from '../markers/MangaScoreBadge';
-import MangaImage from '../MangaImage';
 import MangaSourceRibbon from '../markers/MangaSourceRibbon';
+import CoverImage from '@/shared/ui/CoverImage';
 import styles from '../Manga.module.scss';
 
 type Props = {
@@ -24,7 +24,7 @@ function MangaCardImage({ manga, showBadges = false, showSource = false, ...rest
           <MangaScoreBadge manga={manga} />
         </>
       )}
-      <MangaImage manga={manga} imageClassName={styles.image} />
+      <CoverImage src={manga.coverUrl} alt={manga.title} className={styles.image} />
     </Box>
   );
 }

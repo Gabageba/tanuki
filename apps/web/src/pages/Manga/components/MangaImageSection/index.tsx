@@ -1,11 +1,11 @@
 import {
   ActionIcon,
   Alert,
+  Box,
   Button,
   Center,
   Grid,
   Group,
-  Image,
   Progress,
   Select,
   Stack,
@@ -19,11 +19,13 @@ import {
   ShareNetworkIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import CoverImage from '@/shared/ui/CoverImage';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { MangaDetailsQuery } from '../../models';
 import MangaImageSectionSkeleton from './MangaImageSectionSkeleton';
 import MidDot from '@/shared/ui/MidDot';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
+import mangaStyles from '@/entities/manga/Manga.module.scss';
 
 function MangaImageSection() {
   const { t } = useTranslation();
@@ -42,7 +44,9 @@ function MangaImageSection() {
   return (
     <Grid.Col span={3}>
       <Stack gap={16}>
-        <Image src={manga.largeCoverUrl || manga.coverUrl} alt={manga.title} radius="md" />
+        <Box pos="relative" className={mangaStyles.imageWrapper}>
+          <CoverImage src={manga.largeCoverUrl || manga.coverUrl} alt={manga.title} />
+        </Box>
         <Stack gap={8}>
           <Button>
             {t('continue')} <MidDot /> {t('chapterNumberAbbrev', { number: 97 })}
