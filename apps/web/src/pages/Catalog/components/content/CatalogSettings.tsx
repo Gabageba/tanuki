@@ -23,10 +23,10 @@ type Props = {
 };
 
 function CatalogSettings({ sourceId }: Props) {
-  const { data: source, isLoading: isSourceLoading } = useSource({ sourceId });
+  const { data: source, isPending: isSourcePending } = useSource({ sourceId });
   const {
     data: filters,
-    isLoading: isFiltersLoading,
+    isPending: isFiltersPending,
     isError: isFiltersError,
     error: filtersError,
     refetch: refetchFilters,
@@ -87,7 +87,7 @@ function CatalogSettings({ sourceId }: Props) {
     );
   };
 
-  if (!sourceId || isSourceLoading || isFiltersLoading) {
+  if (!sourceId || isSourcePending || isFiltersPending) {
     return <CatalogSettingsSkeleton />;
   }
 

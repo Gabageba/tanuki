@@ -1,4 +1,4 @@
-import { Group, SimpleGrid } from '@mantine/core';
+import { DataList, Group, SimpleGrid } from '@mantine/core';
 import type { Manga } from '@tanuki/contracts';
 import MangaRating from './MangaRating';
 import MangaMetaItem from './MangaMetaItem';
@@ -14,44 +14,50 @@ type Props = {
 
 function MangaMeta({ manga, branchesCount }: Props) {
   return (
-    <Group align="flex-start" gap="xl">
+    <Group align="flex-start" gap="lg">
       <MangaRating rating={manga.rating} />
       <SimpleGrid cols={3} flex={1}>
-        <MangaMetaItem
-          value={[!!manga.type && getLabelByMangaType(manga.type), manga.year].filter(
-            (item): item is string | number => Boolean(item),
-          )}
-          title="Тип и год"
-        />
-        <MangaMetaItem
-          value={
-            manga.authors ? (
-              <Group gap={4}>
-                {manga.authors[0]}
-                <OtherItemsTag count={manga.authors.slice(1).length} />
-              </Group>
-            ) : null
-          }
-          title="Автор"
-        />
-        <MangaMetaItem value={`${manga.chaptersCount} глав`} title="Объем" />
-        <MangaMetaItem
-          value={manga.releaseState ? <MangaState state={manga.releaseState} fz={16} /> : null}
-          title="Оригинал"
-        />
-        <MangaMetaItem
-          value={[
-            manga.translationState && (
-              <MangaState key="manga-state" state={manga.translationState} fz={16} />
-            ),
-            `${branchesCount} ветки`,
-          ].filter(Boolean)}
-          title="Перевод"
-        />
-        <MangaMetaItem
-          value={manga.lastUpdatedAt ? formatRuDate(manga.lastUpdatedAt) : null}
-          title="Последняя глава"
-        />
+        <DataList orientation="vertical">
+          <MangaMetaItem
+            value={[!!manga.type && getLabelByMangaType(manga.type), manga.year].filter(
+              (item): item is string | number => Boolean(item),
+            )}
+            label="Тип и год"
+          />
+          <MangaMetaItem
+            value={manga.releaseState ? <MangaState state={manga.releaseState} fz={14} /> : null}
+            label="Оригинал"
+          />
+        </DataList>
+        <DataList orientation="vertical">
+          <MangaMetaItem
+            value={
+              manga.authors ? (
+                <Group gap={4}>
+                  {manga.authors[0]}
+                  <OtherItemsTag count={manga.authors.slice(1).length} />
+                </Group>
+              ) : null
+            }
+            label="Автор"
+          />
+          <MangaMetaItem
+            value={[
+              manga.translationState && (
+                <MangaState key="manga-state" state={manga.translationState} fz={14} />
+              ),
+              `${branchesCount} ветки`,
+            ].filter(Boolean)}
+            label="Перевод"
+          />
+        </DataList>
+        <DataList orientation="vertical">
+          <MangaMetaItem value={`${manga.chaptersCount} глав`} label="Объем" />
+          <MangaMetaItem
+            value={manga.lastUpdatedAt ? formatRuDate(manga.lastUpdatedAt) : null}
+            label="Последняя глава"
+          />
+        </DataList>
       </SimpleGrid>
     </Group>
   );

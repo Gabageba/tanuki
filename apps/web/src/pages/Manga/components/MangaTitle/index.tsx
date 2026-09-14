@@ -9,19 +9,21 @@ type Props = {
 
 function MangaTitle({ manga }: Props) {
   return (
-    <Stack gap="md">
+    <Stack gap="sm">
       <MangaBreadcrumbs manga={manga} />
       <Stack gap={8}>
-        <Title lh={1}>{manga.title}</Title>
+        <Title lh={1} size={30}>
+          {manga.title}
+        </Title>
         <Group gap={8}>
           {manga.altTitles.map((altTitle, index) => (
             <>
               {index > 0 && (
-                <Text c="dimmed" lh={1} fz={16}>
+                <Text c="dimmed" lh={1}>
                   <MidDot />
                 </Text>
               )}
-              <Text c="dimmed" lh={1} fz={16}>
+              <Text c="dimmed" lh={1}>
                 {altTitle}
               </Text>
             </>

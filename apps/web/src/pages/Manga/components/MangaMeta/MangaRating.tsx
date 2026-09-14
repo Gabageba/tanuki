@@ -12,50 +12,48 @@ function MangaRating({ rating }: Props) {
 
   return (
     <>
-      <Stack gap={6}>
+      <Stack gap={4}>
         <Text fz={12} c="terracotta" lh={1}>
-          ОЦЕНКА
+          Оценка
         </Text>
-        <Stack gap={4}>
-          <Group align="flex-end" gap={2}>
-            <Text fz={40} lh={1} fw={600}>
-              {rating}
-            </Text>
-            <Text lh={1} mb={4} fz={12} c="dimmed">
-              /
-            </Text>
-            <Text mb={2} c="dimmed" lh={1}>
-              10
-            </Text>
-          </Group>
-          <Rating
-            value={rating / 2}
-            readOnly
-            fractions={2}
-            size={18}
-            color="terracotta"
-            styles={{ symbolBody: { lineHeight: 1 } }}
-            emptySymbol={
-              <StarFourIcon
-                size={18}
-                weight="regular"
-                style={{
-                  color: 'var(--mantine-primary-color-filled)',
-                }}
-              />
-            }
-            fullSymbol={
-              <StarFourIcon
-                size={18}
-                weight="fill"
-                style={{
-                  color: 'var(--mantine-primary-color-filled)',
-                }}
-              />
-            }
-            count={5}
-          />
-        </Stack>
+        <Group align="flex-end" gap={2}>
+          <Text fz={40} lh={1} fw={600}>
+            {rating}
+          </Text>
+          <Text lh={1} mb={4} fz={12} c="dimmed">
+            /
+          </Text>
+          <Text mb={2} c="dimmed" lh={1}>
+            10
+          </Text>
+        </Group>
+        <Rating
+          value={rating / 2}
+          readOnly
+          fractions={2}
+          size={18}
+          color="terracotta"
+          styles={{ symbolBody: { lineHeight: 1 } }}
+          emptySymbol={
+            <StarFourIcon
+              size={18}
+              weight="regular"
+              style={{
+                color: 'var(--mantine-primary-color-filled)',
+              }}
+            />
+          }
+          fullSymbol={
+            <StarFourIcon
+              size={18}
+              weight="fill"
+              style={{
+                color: 'var(--mantine-primary-color-filled)',
+              }}
+            />
+          }
+          count={5}
+        />
       </Stack>
       <Divider orientation="vertical" />
     </>

@@ -23,7 +23,7 @@ function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query') ?? '';
   const [input, setInput] = useState(query);
-  const { data, error, isLoading, isError } = useSearch({ query });
+  const { data, error, isPending, isError } = useSearch({ query });
   const { data: sourcesData } = useSources();
 
   const sourceTitle = (sourceId: string) =>
@@ -51,7 +51,7 @@ function SearchPage() {
         />
       </form>
 
-      {isLoading && <Loader />}
+      {isPending && <Loader />}
       {isError && <ApiErrorText error={error} />}
 
       <Stack gap="xl">

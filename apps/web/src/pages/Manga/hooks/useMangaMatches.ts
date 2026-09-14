@@ -3,7 +3,6 @@ import type { MangaMatchesResponse } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 
 type Params = {
-  sourceId: string;
   mangaId: string;
 };
 
@@ -12,10 +11,10 @@ type Params = {
  * медленный, зато его результат живёт в серверном кеше часами — на клиенте держим его свежим
  * долго, чтобы переходы между вкладками не перезапускали веер.
  */
-function useMangaMatches({ sourceId, mangaId }: Params) {
+function useMangaMatches({ mangaId }: Params) {
   return useQuery({
-    queryKey: ['manga', sourceId, mangaId, 'matches'],
-    queryFn: () => apiFetch<MangaMatchesResponse>(`/manga/${sourceId}/${mangaId}/matches`),
+    queryKey: ['manga', mangaId, 'matches'],
+    queryFn: () => apiFetch<MangaMatchesResponse>(`/manga/${mangaId}/matches`),
     staleTime: 30 * 60 * 1000,
   });
 }

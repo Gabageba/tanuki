@@ -2,7 +2,7 @@ import { Tabs } from '@mantine/core';
 import { InfoIcon, ListDashesIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import MangaInfoTabContent from './MangaInfoTabContent';
-import type { Manga } from '@tanuki/contracts';
+import type { Branch, Manga } from '@tanuki/contracts';
 
 const MANGA_CONTENT_TABS = {
   INFO: 'info',
@@ -11,6 +11,7 @@ const MANGA_CONTENT_TABS = {
 
 type Props = {
   manga: Manga;
+  branches: Branch[];
 };
 
 function MangaContent({ manga }: Props) {

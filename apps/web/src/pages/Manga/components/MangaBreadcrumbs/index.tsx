@@ -11,9 +11,9 @@ type Props = {
 };
 
 function MangaBreadcrumbs({ manga }: Props) {
-  const { data: source, isLoading } = useSource({ sourceId: manga.sourceId });
+  const { data: source, isPending } = useSource({ sourceId: manga.sourceId });
 
-  if (isLoading) {
+  if (isPending) {
     return <MangaBreadcrumbsSkeleton />;
   }
 
@@ -31,15 +31,25 @@ function MangaBreadcrumbs({ manga }: Props) {
   ];
   return (
     <Group gap={8} justify="space-between">
-      <Breadcrumbs>
+      <Breadcrumbs
+        separatorMargin={8}
+        styles={{
+          separator: {
+            fontSize: 12,
+          },
+          breadcrumb: {
+            fontSize: 12,
+          },
+        }}
+      >
         {items.map((item, index) => (
           <>
             {index < items.length - 1 ? (
-              <Anchor component={Link} to={item.href} key={index} c="dimmed" lh={1}>
+              <Anchor component={Link} to={item.href} key={index} c="dimmed" lh={1} fz={12}>
                 {item.title}
               </Anchor>
             ) : (
-              <Text c="dimmed" lh={1}>
+              <Text c="dimmed" lh={1} fz={12}>
                 {item.title}
               </Text>
             )}
@@ -55,7 +65,7 @@ function MangaBreadcrumbs({ manga }: Props) {
       >
         <Group gap={4} c="dimmed">
           <ArrowSquareOutIcon />
-          <Text lh={1} c="dimmed">
+          <Text lh={1} c="dimmed" fz={12}>
             Открыть на сайте
           </Text>
         </Group>

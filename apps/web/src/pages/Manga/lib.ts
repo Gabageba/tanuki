@@ -1,0 +1,40 @@
+import type { MatchConfidence } from '@tanuki/contracts';
+import { MATCH_CONFIDENCE } from '@tanuki/contracts';
+import { PRIMARY_COLOR, STATUS_DEGRADED_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
+
+export const getMatchConfidenceLabelByKey = (confidence: MatchConfidence) => {
+  switch (confidence) {
+    case MATCH_CONFIDENCE.CONFIRMED:
+      return 'Подтверждено';
+    case MATCH_CONFIDENCE.EXACT:
+      return 'Точное совпадение';
+    case MATCH_CONFIDENCE.HIGH:
+      return 'Скорее всего';
+    case MATCH_CONFIDENCE.LOW:
+      return 'Не точно';
+  }
+};
+
+export const getMatchConfidenceColorByKey = (confidence: MatchConfidence) => {
+  switch (confidence) {
+    case MATCH_CONFIDENCE.CONFIRMED:
+      return PRIMARY_COLOR;
+    case MATCH_CONFIDENCE.EXACT:
+      return STATUS_OK_COLOR;
+    case MATCH_CONFIDENCE.HIGH:
+      return STATUS_DEGRADED_COLOR;
+    case MATCH_CONFIDENCE.LOW:
+      return 'gray';
+  }
+};
+
+/**
+ * Достаёт составной id тайтла из ссылки на его страницу («/manga/sourceId:opaqueId», в том числе
+ * полный URL) — он уже в том виде, в котором его ждёт API, — «sourceId:opaqueId».
+ */
+export const parseMangaLink = (value: string): string | null => {
+  const targetId = /\/manga\/([^/\s?#]+)/.exec(value.trim())?.[1];
+  if (!targetId || !targetId.includes(':')) return null;
+
+  return targetId;
+};

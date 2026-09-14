@@ -4,7 +4,6 @@ import type { MangaLinkVerdict } from '@tanuki/contracts';
 import { apiFetch, ApiRequestError } from '@/shared/api/client';
 
 type Params = {
-  sourceId: string;
   mangaId: string;
 };
 
@@ -17,18 +16,17 @@ type Variables = {
  * Ручная правка связи между тайтлами. Правки глобальны — их видят все, кто откроет тайтл, —
  * и применяются поверх кеша матчей, поэтому достаточно перезапросить именно его.
  */
-function useSetMangaLink({ sourceId, mangaId }: Params) {
+function useSetMangaLink({ mangaId }: Params) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ targetId, verdict }: Variables) =>
-      apiFetch(`/manga/${sourceId}/${mangaId}/links`, {
+      apiFetch(`/manga/${mangaId}/links`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ targetId, verdict }),
       }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['manga', sourceId, mangaId, 'matches'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manga', mangaId, 'matches'] }),
     onError: (error) =>
       notifications.show({
         color: 'red',

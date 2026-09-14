@@ -5,19 +5,11 @@ import ApiErrorText from '@/shared/ui/ApiErrorText';
 import styles from './ReaderPage.module.scss';
 
 function ReaderPage() {
-  const {
-    sourceId = '',
-    mangaId = '',
-    chapterId = '',
-  } = useParams<{
-    sourceId: string;
-    mangaId: string;
-    chapterId: string;
-  }>();
+  const { mangaId = '', chapterId = '' } = useParams<{ mangaId: string; chapterId: string }>();
   const navigate = useNavigate();
-  const { data, error, isLoading, isError } = useChapterPages({ sourceId, mangaId, chapterId });
+  const { data, error, isPending, isError } = useChapterPages({ mangaId, chapterId });
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <Center className={styles.reader} mih="100vh">
         <Loader />
@@ -33,7 +25,7 @@ function ReaderPage() {
     );
   }
 
-  const nextChapterId = data.nextChapterId?.slice(sourceId.length + 1);
+  const nextChapterId = data.nextChapterId;
 
   return (
     <div className={styles.reader}>
@@ -50,9 +42,7 @@ function ReaderPage() {
 
       <Center py="xl">
         {nextChapterId ? (
-          <Button
-            onClick={() => void navigate(`/manga/${sourceId}/${mangaId}/read/${nextChapterId}`)}
-          >
+          <Button onClick={() => void navigate(`/manga/${mangaId}/read/${nextChapterId}`)}>
             Следующая глава
           </Button>
         ) : (

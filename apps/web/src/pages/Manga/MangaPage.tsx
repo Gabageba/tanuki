@@ -33,21 +33,20 @@ const getRestrictionMessage = (restriction: MangaRestriction): string => {
 };
 
 function MangaPage() {
-  const { sourceId = '', mangaId = '' } = useParams<{ sourceId: string; mangaId: string }>();
-  const { data, error, isLoading, isError } = useMangaDetails({ sourceId, mangaId });
+  const { mangaId = '' } = useParams<{ mangaId: string }>();
+  const { data, error, isPending, isError } = useMangaDetails({ mangaId });
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 
   const branches = data?.branches ?? [];
   const branchId = selectedBranchId ?? branches[0]?.id ?? null;
   const selectedBranch = branches.find((branch) => branch.id === branchId);
-  const { data: chaptersData, isLoading: chaptersLoading } = useChapters({
-    sourceId,
+  const { data: chaptersData, isPending: chaptersPending } = useChapters({
     mangaId,
     branch: selectedBranch?.name ?? undefined,
   });
   const chapters = chaptersData?.items.slice().reverse() ?? [];
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <Container py="xl">
         <Loader />
@@ -111,14 +110,11 @@ function MangaPage() {
       <Title order={2} mt="lg" mb="sm">
         Главы
       </Title>
-      {chaptersLoading && <Loader />}
+      {chaptersPending && <Loader />}
       <List spacing="xs" listStyleType="none">
         {chapters.map((chapter) => (
           <List.Item key={chapter.id}>
-            <Anchor
-              component={Link}
-              to={`/manga/${sourceId}/${mangaId}/read/${chapter.id.slice(sourceId.length + 1)}`}
-            >
+            <Anchor component={Link} to={`/manga/${mangaId}/read/${chapter.id}`}>
               {chapter.title || `Глава ${chapter.number ?? '?'}`}
             </Anchor>
           </List.Item>

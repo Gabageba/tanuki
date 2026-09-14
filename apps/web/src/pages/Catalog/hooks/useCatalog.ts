@@ -25,7 +25,7 @@ function useCatalog({
   order: explicitOrder,
   direction,
 }: Params) {
-  const { data: source, isLoading: isSourceLoading } = useSource({ sourceId });
+  const { data: source, isPending: isSourcePending } = useSource({ sourceId });
   // Тот же queryKey ['filters', sourceId], что и в CatalogSettings — react-query отдаёт общий
   // кэш/in-flight запрос, second call здесь не бьёт по сети отдельно.
   const { data: filtersData } = useFilters({ sourceId });
@@ -67,7 +67,7 @@ function useCatalog({
     getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.page + 1 : undefined),
     // Ждём, пока не подгрузится источник (а с ним и order по умолчанию) — иначе первый
     // запрос уходит без order и почти сразу рефетчится с ним, то есть каталог грузится дважды.
-    enabled: !isSourceLoading,
+    enabled: !isSourcePending,
     // Обновляем только вручную (кнопка/pull-to-refresh) или по перезагрузке вкладки —
     // не рефетчим сами на маунте и не ретраим упавший запрос.
     // refetchOnWindowFocus: false задан глобально в query-client.ts.

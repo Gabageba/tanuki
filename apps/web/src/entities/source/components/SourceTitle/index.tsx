@@ -7,11 +7,11 @@ import SourceTitleSkeleton from './SourceTitleSkeleton';
 type Props = {
   source: Source;
   showStatus?: boolean;
-  isLoading?: boolean;
+  isPending?: boolean;
 };
 
-function SourceTitle({ source, showStatus = false, isLoading = false }: Props) {
-  if (isLoading) {
+function SourceTitle({ source, showStatus = false, isPending = false }: Props) {
+  if (isPending) {
     return <SourceTitleSkeleton />;
   }
 

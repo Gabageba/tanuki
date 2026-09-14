@@ -22,6 +22,7 @@ import PageLayout from '@/shared/ui/PageLayout';
 import type { MangaDetailsQuery } from '../../models';
 import MangaImageSectionSkeleton from './MangaImageSectionSkeleton';
 import MidDot from '@/shared/ui/MidDot';
+import MidDotGroup from '@/shared/ui/MidDotGroup';
 
 function MangaImageSection() {
   const { data, isFetching } = PageLayout.useQuery<MangaDetailsQuery>();
@@ -75,9 +76,17 @@ function MangaImageSection() {
         <Alert variant="default" px={12} py={10}>
           <Group gap={8} c="dimmed">
             <HardDrivesIcon size={16} />
-            <Text c="dimmed" fz={12}>
-              Скачано 42 гл. <MidDot /> 1.8 ГБ
-            </Text>
+            <MidDotGroup
+              separatorProps={{ c: 'dimmed', fz: 12 }}
+              items={[
+                <Text key="chapters" c="dimmed" fz={12}>
+                  Скачано 42 гл.
+                </Text>,
+                <Text key="size" c="dimmed" fz={12}>
+                  1.8 ГБ
+                </Text>,
+              ]}
+            />
           </Group>
         </Alert>
       </Stack>

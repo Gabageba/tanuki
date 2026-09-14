@@ -3,14 +3,13 @@ import type { MangaDetailsResponse } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 
 type Params = {
-  sourceId: string;
   mangaId: string;
 };
 
-function useMangaDetails({ sourceId, mangaId }: Params) {
+function useMangaDetails({ mangaId }: Params) {
   return useQuery({
-    queryKey: ['manga', sourceId, mangaId],
-    queryFn: () => apiFetch<MangaDetailsResponse>(`/manga/${sourceId}/${mangaId}`),
+    queryKey: ['manga', mangaId],
+    queryFn: () => apiFetch<MangaDetailsResponse>(`/manga/${mangaId}`),
   });
 }
 

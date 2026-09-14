@@ -11,10 +11,10 @@ import { ROUTE_PATHS } from '@/shared/consts/routes';
 
 type Props = {
   source: Source | undefined;
-  isLoading: boolean;
+  isPending: boolean;
 };
 
-function CatalogHeader({ source, isLoading }: Props) {
+function CatalogHeader({ source, isPending }: Props) {
   const navigate = useNavigate();
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
 
@@ -22,7 +22,7 @@ function CatalogHeader({ source, isLoading }: Props) {
     setParams({ ...params, query });
   };
 
-  if (isLoading) {
+  if (isPending) {
     return <CatalogHeaderSkeleton />;
   }
 

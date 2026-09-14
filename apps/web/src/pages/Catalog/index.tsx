@@ -10,7 +10,7 @@ import { getStoredViewMode } from '@/shared/lib/viewMode';
 
 function Catalog() {
   const { sourceId } = useParams<{ sourceId: string }>();
-  const { data: source, isLoading: isSourceLoading } = useSource({ sourceId });
+  const { data: source, isPending: isSourcePending } = useSource({ sourceId });
   const [searchParams] = useSearchParams();
 
   return (
@@ -25,7 +25,7 @@ function Catalog() {
         viewMode: getStoredViewMode(),
       }}
     >
-      <CatalogHeader source={source} isLoading={isSourceLoading} />
+      <CatalogHeader source={source} isPending={isSourcePending} />
       <PageLayout.ErrorNotification
         title="Не удалось загрузить каталог"
         fallbackMessage="Источник недоступен. Попробуйте позже."

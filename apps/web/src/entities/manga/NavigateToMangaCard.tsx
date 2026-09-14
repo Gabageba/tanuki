@@ -8,13 +8,7 @@ type Props = {
 } & Omit<CardProps, 'component' | 'to'>;
 
 function NavigateToMangaCard({ manga, ...restProps }: Props) {
-  return (
-    <Card
-      component={Link}
-      to={`/manga/${manga.sourceId}/${manga.id.slice(manga.sourceId.length + 1)}`}
-      {...restProps}
-    />
-  );
+  return <Card component={Link} to={`/manga/${manga.id}`} {...restProps} />;
 }
 
 export default NavigateToMangaCard;
