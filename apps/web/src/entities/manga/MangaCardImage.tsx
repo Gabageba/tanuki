@@ -2,11 +2,11 @@ import type { BoxProps } from '@mantine/core';
 import { Box } from '@mantine/core';
 import type { SourceId } from '@tanuki/contracts';
 import { type Manga } from '@tanuki/contracts';
-import MangaAdultBadge from '../markers/MangaAdultBadge';
-import MangaScoreBadge from '../markers/MangaScoreBadge';
-import MangaSourceRibbon from '../markers/MangaSourceRibbon';
+import MangaAdultBadge from './markers/MangaAdultBadge';
+import MangaScoreBadge from './markers/MangaScoreBadge';
+import MangaSourceRibbon from './markers/MangaSourceRibbon';
 import CoverImage from '@/shared/ui/CoverImage';
-import styles from '../Manga.module.scss';
+import styles from './Manga.module.scss';
 
 type Props = {
   manga: Manga;

@@ -2,7 +2,7 @@ import { Badge, Group, Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { CONTENT_RATING, type Manga } from '@tanuki/contracts';
 import NavigateToMangaCard from '../../NavigateToMangaCard';
-import MangaCardImage from '../MangaCardImage';
+import MangaCardImage from '../../MangaCardImage';
 import MangaMetaItems from '../../MangaMetaItems';
 import { getLabelByMangaType } from '@/entities/source/lib';
 import MangaCardTags from '../MangaCardTags';
@@ -17,7 +17,7 @@ type Props = {
 function MangaListCard({ manga }: Props) {
   const { t } = useTranslation();
   const metaItems = [
-    !!manga.type && getLabelByMangaType(manga.type, t),
+    getLabelByMangaType(manga.type, t),
     !!manga.year && String(manga.year),
     !!manga.chaptersCount && t('countChaptersAbbrev', { count: manga.chaptersCount }),
     !manga.chaptersCount && !!manga.pages && t('countPagesAbbrev', { count: manga.pages }),
@@ -32,7 +32,7 @@ function MangaListCard({ manga }: Props) {
             <Group gap={8}>
               {manga.contentRating === CONTENT_RATING.ADULT && <Badge color="red">18+</Badge>}
               <MangaMetaItems gap={6} items={metaItems} />
-              {manga.releaseState && <MangaState state={manga.releaseState} />}
+              <MangaState state={manga.releaseState} visibleFrom="xxs" />
             </Group>
             <Text
               className={styles.title}

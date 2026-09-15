@@ -1,4 +1,4 @@
-import { DataList, Space } from '@mantine/core';
+import { Stack, Text } from '@mantine/core';
 import { useMemo, type ReactNode } from 'react';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import Mdash from '@/shared/ui/Mdash';
@@ -18,20 +18,19 @@ function MangaMetaItem<T extends MetaItemValue = MetaItemValue>({
 }: Props<T>) {
   const value = useMemo(() => {
     if (Array.isArray(rawValue)) {
-      return <MidDotGroup items={rawValue} />;
+      return <MidDotGroup items={rawValue.filter(Boolean)} text={{ lh: 1 }} />;
     }
 
     return rawValue;
   }, [rawValue]);
 
   return (
-    <DataList.Item>
-      <DataList.ItemLabel fz={12} lh={1}>
+    <Stack gap={8}>
+      <Text lh={1} c="dimmed" fz={12}>
         {label}
-      </DataList.ItemLabel>
-      <Space h={8} />
-      <DataList.ItemValue lh={1}>{isEmpty(value) ? <Mdash /> : value}</DataList.ItemValue>
-    </DataList.Item>
+      </Text>
+      <Text lh={1}>{isEmpty(value) ? <Mdash /> : value}</Text>
+    </Stack>
   );
 }
 

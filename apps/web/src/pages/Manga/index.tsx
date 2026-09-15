@@ -5,8 +5,6 @@ import PageLayout from '@/shared/ui/PageLayout';
 import useMangaDetails from './hooks/useMangaDetails';
 import MangaImageSection from './components/MangaImageSection';
 import MangaDetailsSection from './components/MangaDetailsSection';
-import MangaImageSectionSkeleton from './components/MangaImageSection/MangaImageSectionSkeleton';
-import MangaDetailsSectionSkeleton from './components/MangaDetailsSection/MangaDetailsSectionSkeleton';
 
 function Manga() {
   const { t } = useTranslation();
@@ -17,13 +15,8 @@ function Manga() {
       <PageLayout.Content showLoading={false}>
         <Grid columnGap="lg">
           <MangaImageSection />
-          <Divider orientation="vertical" />
+          <Divider orientation="vertical" visibleFrom="md" />
           <MangaDetailsSection />
-        </Grid>
-        <Grid columnGap="lg">
-          <MangaImageSectionSkeleton />
-          <Divider orientation="vertical" />
-          <MangaDetailsSectionSkeleton />
         </Grid>
       </PageLayout.Content>
       <PageLayout.ErrorNotification

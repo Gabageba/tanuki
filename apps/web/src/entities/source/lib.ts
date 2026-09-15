@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
-import type { MangaType, SourceLocale } from '@tanuki/contracts';
+import type { ContentRating, MangaType, SourceLocale } from '@tanuki/contracts';
 import {
+  CONTENT_RATING,
   MANGA_TYPE,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
@@ -67,7 +68,11 @@ export const getLabelByContentType = (contentType: SourceContentType, t: TFuncti
   }
 };
 
-export const getLabelByMangaType = (mangaType: MangaType, t: TFunction) => {
+export const getLabelByMangaType = (mangaType: MangaType | null, t: TFunction) => {
+  if (!mangaType) {
+    return null;
+  }
+
   switch (mangaType) {
     case MANGA_TYPE.MANGA:
       return t('manga');
@@ -79,6 +84,28 @@ export const getLabelByMangaType = (mangaType: MangaType, t: TFunction) => {
       return t('comic');
     case MANGA_TYPE.OTHER:
       return t('other');
+  }
+};
+
+export const getLabelByContentRating = (contentRating: ContentRating) => {
+  switch (contentRating) {
+    case CONTENT_RATING.SAFE:
+      return '0+';
+    case CONTENT_RATING.SUGGESTIVE:
+      return '16+';
+    case CONTENT_RATING.ADULT:
+      return '18+';
+  }
+};
+
+export const getColorByContentRating = (contentRating: ContentRating) => {
+  switch (contentRating) {
+    case CONTENT_RATING.SAFE:
+      return STATUS_OK_COLOR;
+    case CONTENT_RATING.SUGGESTIVE:
+      return STATUS_DEGRADED_COLOR;
+    case CONTENT_RATING.ADULT:
+      return STATUS_DOWN_COLOR;
   }
 };
 

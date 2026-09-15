@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ActionIcon,
   Alert,
@@ -6,6 +7,9 @@ import {
   Center,
   Grid,
   Group,
+  Image,
+  Menu,
+  Overlay,
   Progress,
   Select,
   Stack,
@@ -25,11 +29,12 @@ import type { MangaDetailsQuery } from '../../models';
 import MangaImageSectionSkeleton from './MangaImageSectionSkeleton';
 import MidDot from '@/shared/ui/MidDot';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
-import mangaStyles from '@/entities/manga/Manga.module.scss';
+import styles from '../../Manga.module.scss';
 
 function MangaImageSection() {
   const { t } = useTranslation();
   const { data, isFetching } = PageLayout.useQuery<MangaDetailsQuery>();
+  const [isBackgroundLoaded, setIsBackgroundLoaded] = useState(false);
 
   if (isFetching) {
     return <MangaImageSectionSkeleton />;
@@ -40,12 +45,34 @@ function MangaImageSection() {
   }
 
   const { manga } = data;
+  const coverImg = manga.largeCoverUrl || manga.coverUrl;
 
   return (
-    <Grid.Col span={3}>
+    <Grid.Col span={{ base: 12, md: 3 }}>
       <Stack gap={16}>
-        <Box pos="relative" className={mangaStyles.imageWrapper}>
-          <CoverImage src={manga.largeCoverUrl || manga.coverUrl} alt={manga.title} />
+        <Box pos="relative" py={{ base: 'xl', md: 0 }} className={styles.imageBackground}>
+          <Box pos="absolute" inset={0} className={styles.imageWrapper} hiddenFrom="md">
+            <Image
+              src={coverImg}
+              w="100%"
+              h="100%"
+              fit="cover"
+              style={isBackgroundLoaded ? undefined : { visibility: 'hidden' }}
+              onLoad={() => setIsBackgroundLoaded(true)}
+            />
+            {isBackgroundLoaded && <Overlay zIndex={0} blur={20} opacity={30} />}
+            <Box
+              pos="absolute"
+              bottom={0}
+              left={0}
+              right={0}
+              h={180}
+              className={styles.imageFade}
+            />
+          </Box>
+          <Center pos="relative">
+            <CoverImage src={coverImg} alt={manga.title} fit="contain" className={styles.cover} />
+          </Center>
         </Box>
         <Stack gap={8}>
           <Button>
@@ -57,44 +84,44 @@ function MangaImageSection() {
               97 / 214
             </Text>
           </Group>
-          <Select
-            data={[t('reading')]}
-            value={t('reading')}
-            c="terracotta"
-            leftSection={
-              <Center c="terracotta">
-                <BookmarkSimpleIcon weight="fill" size={14} />
-              </Center>
-            }
-          />
           <Group gap={8}>
-            <Button leftSection={<ArrowsClockwiseIcon />} variant="default" flex={1}>
-              {t('update')}
-            </Button>
-            <ActionIcon size={36} variant="default">
-              <ShareNetworkIcon />
-            </ActionIcon>
-            <ActionIcon size={36} variant="default">
-              <DotsThreeIcon />
-            </ActionIcon>
-          </Group>
-        </Stack>
-        <Alert variant="default" px={12} py={10}>
-          <Group gap={8} c="dimmed">
-            <HardDrivesIcon size={16} />
-            <MidDotGroup
-              separatorProps={{ c: 'dimmed', fz: 12 }}
-              items={[
-                <Text key="chapters" c="dimmed" fz={12}>
-                  {t('downloaded')} {t('countChaptersAbbrev', { count: 42 })}
-                </Text>,
-                <Text key="size" c="dimmed" fz={12}>
-                  1.8 {t('gb')}
-                </Text>,
-              ]}
+            <Select
+              flex={1}
+              data={[t('reading')]}
+              value={t('reading')}
+              c="terracotta"
+              leftSection={
+                <Center c="terracotta">
+                  <BookmarkSimpleIcon weight="fill" size={14} />
+                </Center>
+              }
             />
+            <Menu>
+              <Menu.Target>
+                <ActionIcon size={36} variant="default">
+                  <DotsThreeIcon />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<ArrowsClockwiseIcon />}>{t('update')}</Menu.Item>
+                <Menu.Item leftSection={<ShareNetworkIcon />}>{t('share')}</Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
           </Group>
-        </Alert>
+          <Alert variant="transparent" px={10} py={0}>
+            <Group gap={8} c="dimmed">
+              <HardDrivesIcon size={16} />
+              <MidDotGroup
+                separatorProps={{ c: 'dimmed', fz: 12 }}
+                text={{
+                  c: 'dimmed',
+                  fz: 12,
+                }}
+                items={[t('downloadedChaptersAbbrev', { count: 42 }), t('sizeGb', { size: 1.8 })]}
+              />
+            </Group>
+          </Alert>
+        </Stack>
       </Stack>
     </Grid.Col>
   );

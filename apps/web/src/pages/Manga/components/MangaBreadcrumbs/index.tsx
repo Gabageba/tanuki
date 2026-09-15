@@ -67,7 +67,7 @@ function MangaBreadcrumbs({ manga }: Props) {
       >
         <Group gap={4} c="dimmed">
           <ArrowSquareOutIcon />
-          <Text lh={1} c="dimmed" fz={12}>
+          <Text lh={1} c="dimmed" fz={12} visibleFrom="xxs">
             {t('openOnSite')}
           </Text>
         </Group>

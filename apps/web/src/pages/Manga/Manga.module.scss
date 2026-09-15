@@ -1,0 +1,45 @@
+@use '../../styles/breakpoints';
+
+.imageWrapper {
+  overflow: hidden;
+}
+
+.imageBackground {
+  @include breakpoints.smaller-than(md) {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    padding-inline: var(--mantine-spacing-md);
+    margin-block-start: calc(var(--mantine-spacing-md) * -1);
+  }
+}
+
+%cover-size {
+  width: 100%;
+  height: auto;
+
+  @include breakpoints.smaller-than(md) {
+    width: auto;
+    height: 350px;
+  }
+}
+
+.cover {
+  @extend %cover-size;
+}
+
+.coverSkeleton {
+  @extend %cover-size;
+
+  aspect-ratio: 3 / 4;
+}
+
+.imageFade {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--mantine-color-body) 10%, transparent) 25%,
+    color-mix(in srgb, var(--mantine-color-body) 40%, transparent) 50%,
+    color-mix(in srgb, var(--mantine-color-body) 75%, transparent) 75%,
+    var(--mantine-color-body) 100%
+  );
+}

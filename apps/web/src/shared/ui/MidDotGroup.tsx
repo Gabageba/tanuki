@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
-import type { BoxProps, GroupProps } from '@mantine/core';
-import { Group } from '@mantine/core';
+import type { BoxProps, GroupProps, TextProps } from '@mantine/core';
+import { Group, Text } from '@mantine/core';
 import MidDot from './MidDot';
 
 type Props = {
@@ -8,9 +8,10 @@ type Props = {
   gap?: GroupProps['gap'];
   mt?: GroupProps['mt'];
   separatorProps?: BoxProps;
+  text?: TextProps | boolean;
 };
 
-function MidDotGroup({ items, gap = 4, mt, separatorProps }: Props) {
+function MidDotGroup({ items, gap = 4, mt, separatorProps = {}, text }: Props) {
   const visibleItems = items.filter(
     (item) => item !== null && item !== undefined && item !== false,
   );
@@ -24,7 +25,7 @@ function MidDotGroup({ items, gap = 4, mt, separatorProps }: Props) {
       {visibleItems.map((item, index) => (
         <Fragment key={index}>
           {index > 0 && <MidDot {...separatorProps} />}
-          {item}
+          {text ? <Text {...(typeof text === 'object' ? text : {})}>{item}</Text> : item}
         </Fragment>
       ))}
     </Group>

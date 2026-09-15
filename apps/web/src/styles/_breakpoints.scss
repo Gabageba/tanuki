@@ -1,0 +1,19 @@
+@use 'sass:map';
+
+// Брейкпоинты Mantine: стандартная шкала плюс `xxs` из темы
+// (apps/web/src/app/Providers/MantineProvider/index.tsx). Sass не видит тему из JS, поэтому
+// значения продублированы здесь — при изменении темы правим оба места.
+$breakpoints: (
+  xxs: 26em,
+  xs: 36em,
+  sm: 48em,
+  md: 62em,
+  lg: 75em,
+  xl: 88em,
+);
+
+@mixin smaller-than($breakpoint) {
+  @media (width < map.get($breakpoints, $breakpoint)) {
+    @content;
+  }
+}

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import type { GroupProps } from '@mantine/core';
-import { Text } from '@mantine/core';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 
 type Props = {
@@ -13,11 +12,12 @@ function MangaMetaItems({ items, gap }: Props) {
     <MidDotGroup
       gap={gap}
       separatorProps={{ c: 'dimmed', fz: 12, lh: 1 }}
-      items={items.map((item, index) => (
-        <Text key={index} c="dimmed" fz={12} lh={1}>
-          {item}
-        </Text>
-      ))}
+      text={{
+        c: 'dimmed',
+        fz: 12,
+        lh: 1,
+      }}
+      items={items}
     />
   );
 }

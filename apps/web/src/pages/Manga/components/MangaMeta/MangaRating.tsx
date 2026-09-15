@@ -58,7 +58,8 @@ function MangaRating({ rating }: Props) {
           count={5}
         />
       </Stack>
-      <Divider orientation="vertical" />
+      <Divider orientation="vertical" visibleFrom="xs" />
+      <Divider orientation="horizontal" hiddenFrom="xs" w="100%" />
     </>
   );
 }

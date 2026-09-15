@@ -6,7 +6,7 @@ import { ROUTE_PATHS } from '@/shared/consts/routes';
 import PageLayout from '@/shared/ui/PageLayout';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import { flattenSources, getSourceStatusReasonLabel } from '@/entities/source/lib';
-import { formatDate, formatDateTime, formatRelative } from '@/shared/lib/formatDate';
+import useDateFormat from '@/shared/hooks/useDateFormat';
 import Mdash from '@/shared/ui/Mdash';
 import type { SourcesHealthQuery } from './models';
 import SourceHealthRowActions from './SourceHealthRowActions';
@@ -24,7 +24,8 @@ const getStatusWeight = (status: Source['status']) => {
 };
 
 function SourcesHealthTable() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { formatDate, formatDateTime, formatRelative } = useDateFormat();
   const { data } = PageLayout.useQuery<SourcesHealthQuery>();
   const sources = flattenSources(data).sort(
     (left, right) =>
@@ -64,7 +65,7 @@ function SourcesHealthTable() {
                 <SourceStatusBadge source={source} />
                 {source.statusChangedAt && (
                   <Text fz={11} c="dimmed" ff="monospace">
-                    {t('sinceDate', { date: formatDate(source.statusChangedAt, i18n.language) })}
+                    {t('sinceDate', { date: formatDate(source.statusChangedAt) })}
                   </Text>
                 )}
               </Table.Td>
@@ -79,11 +80,7 @@ function SourcesHealthTable() {
               </Table.Td>
               <Table.Td>
                 <Text fz={13} ff="monospace" c="dimmed">
-                  {source.checkedAt ? (
-                    formatRelative(source.checkedAt, i18n.language, t('justNow'))
-                  ) : (
-                    <Mdash />
-                  )}
+                  {formatRelative(source.checkedAt) ?? <Mdash />}
                 </Text>
               </Table.Td>
               <Table.Td>
@@ -98,7 +95,7 @@ function SourcesHealthTable() {
                       <Stack gap={2}>
                         {source.checkedAt && (
                           <Text fz={11} c="dimmed" ff="monospace">
-                            {formatDateTime(source.checkedAt, i18n.language)}
+                            {formatDateTime(source.checkedAt)}
                           </Text>
                         )}
                         <Text fz={12} style={{ whiteSpace: 'pre-wrap' }}>

@@ -5,7 +5,7 @@ import { MANGA_TYPE, type Manga } from '@tanuki/contracts';
 import NavigateToMangaCard from '../../NavigateToMangaCard';
 import MangaMetaItems from '../../MangaMetaItems';
 import { getLabelByMangaType } from '@/entities/source/lib';
-import MangaCardImage from '../MangaCardImage';
+import MangaCardImage from '../../MangaCardImage';
 import styles from '../../Manga.module.scss';
 
 type Props = {
@@ -16,7 +16,7 @@ type Props = {
 function MangaGridCard({ manga, showSource = false }: Props) {
   const { t } = useTranslation();
   const metaItems = [
-    !!manga.type && getLabelByMangaType(manga.type, t),
+    getLabelByMangaType(manga.type, t),
     !!manga.year && String(manga.year),
     !!manga.chaptersCount && t('countChaptersAbbrev', { count: manga.chaptersCount }),
     !manga.chaptersCount && !!manga.pages && t('countPagesAbbrev', { count: manga.pages }),

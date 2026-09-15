@@ -6,7 +6,10 @@ function MangaTitleSkeleton() {
     <Stack gap="sm">
       <MangaBreadcrumbsSkeleton />
       <Stack gap={8}>
-        <Skeleton h={30} w="100%" />
+        <Group gap={8}>
+          <Skeleton h={30} flex={1} />
+          <Skeleton h={20} w={30} radius="sm" />
+        </Group>
         <Group gap={8}>
           {Array.from({ length: 2 }).map((_, index) => (
             <Skeleton key={index} h={14} w={250} />

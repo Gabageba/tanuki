@@ -1,5 +1,14 @@
-.cover {
+// :where() keeps the default sizing at zero specificity, so a consumer class wins over it
+:where(.cover) {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+}
+
+.placeholder {
+  aspect-ratio: 3 / 4;
+}
+
+.hidden {
+  position: absolute;
+  visibility: hidden;
 }

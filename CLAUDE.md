@@ -177,3 +177,9 @@
   `_one`/`_other` for `en`) with `t('key', { count })` — not a single hardcoded word form. Skip the
   plural suffixes only when the word genuinely doesn't decline (an abbreviation like `гл.`, an
   invariant participle like `выбрано`).
+- **Never build a sentence out of several `t()` calls placed side by side**
+  (`{t('downloaded')} {t('countChaptersAbbrev', { count })}`). Word order and grammar differ
+  between languages, so a phrase assembled from independently-translated pieces breaks the moment
+  it's translated. Give the whole phrase its own single key with interpolation instead
+  (`downloadedChaptersAbbrev`: «Скачано {{count}} гл.»), even if part of that value duplicates
+  another key's text.

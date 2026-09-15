@@ -2,14 +2,15 @@ import { Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { Source } from '@tanuki/contracts';
 import { getSourceStatusLabel, getSourceStatusReasonLabel } from '../../lib';
-import { formatDate, formatRelative } from '@/shared/lib/formatDate';
+import useDateFormat from '@/shared/hooks/useDateFormat';
 
 type Props = {
   source: Source;
 };
 
 function SourceStatusBadgeTooltip({ source }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { formatDate, formatRelative } = useDateFormat();
 
   return (
     <Stack gap={2}>
@@ -17,7 +18,7 @@ function SourceStatusBadgeTooltip({ source }: Props) {
         {getSourceStatusLabel(source.status, t)}
         {source.statusChangedAt && (
           <Text span ff="monospace" fz={12}>
-            {` ${t('sinceDate', { date: formatDate(source.statusChangedAt, i18n.language) })}`}
+            {` ${t('sinceDate', { date: formatDate(source.statusChangedAt) })}`}
           </Text>
         )}
       </Text>
@@ -29,7 +30,7 @@ function SourceStatusBadgeTooltip({ source }: Props) {
       {source.checkedAt && (
         <Text fz={12} c="dimmed" ff="monospace">
           {t('checkedAgo', {
-            relative: formatRelative(source.checkedAt, i18n.language, t('justNow')),
+            relative: formatRelative(source.checkedAt),
           })}
         </Text>
       )}
