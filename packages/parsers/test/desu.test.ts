@@ -63,7 +63,15 @@ const DETAILS_HTML = `<!doctype html><html><body>
   <div class="line-container">
     <div class="line"><span class="key">Авторы:</span><span class="value"><a href="/manga/?people=1-chugong">Chugong</a></span></div>
   </div>
-  <div class="b-rate" data-score="8.7"></div>
+  <div class="line-container">
+    <div class="line"><span class="key">Просмотров:</span><span class="value"><span class="value">23921</span></span></div>
+  </div>
+  <div class="line-container">
+    <div class="line"><span class="key">Переводчики:</span><span class="value"><a href="https://vk.com/team">Dead Inside Team</a></span></div>
+  </div>
+  <div class="b-rate" data-score="8.7">
+    <meta content="39" itemprop="ratingCount">
+  </div>
   <div id="description"><div class="russian"><div class="prgrph">Первый абзац.</div><div class="prgrph">Второй абзац.</div></div></div>
   <div class="c-poster"><img itemprop="image" src="https://desu.uno/img/123-full.jpg" /></div>
   <ul class="chlist">
@@ -192,6 +200,13 @@ describe('Desu parser conformance', () => {
     expect(manga.rating).toBeCloseTo(0.87, 5);
     expect(manga.title).toBe('Поднятие уровня в одиночку');
     expect(manga.description).toBe('Первый абзац.\n\nВторой абзац.');
+    expect(manga.originalTitle).toBe('Solo Leveling');
+    // The original title has its own dedicated field now — altTitles only carries the site's
+    // own "Другие названия:" list, not a duplicate of it.
+    expect(manga.altTitles).toEqual(['Only I Level Up', '나 혼자만 레벨업']);
+    expect(manga.translators).toEqual(['Dead Inside Team']);
+    expect(manga.views).toBe(23921);
+    expect(manga.votesCount).toBe(39);
   });
 
   it('getList with query: parses AniMangaSearchCard results', async () => {

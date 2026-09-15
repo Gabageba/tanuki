@@ -78,11 +78,13 @@ export const normalizeManga = (
     sourceId,
     slug: String(raw.id),
     title: raw.title,
+    originalTitle: raw.originalTitle ?? null,
     altTitles: raw.altTitles,
     coverUrl,
     largeCoverUrl,
     description: raw.description,
     authors: raw.authors,
+    translators: raw.translators ?? [],
     tags: raw.tags.map(normalizeTag),
     releaseState: raw.releaseState,
     translationState: raw.translationState ?? null,
@@ -96,7 +98,9 @@ export const normalizeManga = (
     // scale it up to the 0..10 the API exposes, rounded to 1 decimal so it's ready to display
     // as-is, with no further formatting on the client.
     rating: raw.rating >= 0 ? Math.round(raw.rating * 100) / 10 : null,
+    votesCount: raw.votesCount ?? null,
     likes: raw.likes ?? null,
+    views: raw.views ?? null,
     chaptersCount: raw.chapters?.length ?? raw.chaptersCount ?? null,
     pages: raw.pages ?? null,
     publicUrl: raw.publicUrl,

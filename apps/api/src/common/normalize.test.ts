@@ -71,6 +71,31 @@ describe('normalizeManga', () => {
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ pages: 24 })).pages).toBe(24);
   });
 
+  it('passes votesCount/views through, defaulting to null when the parser omits them', () => {
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).votesCount).toBeNull();
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).views).toBeNull();
+    expect(
+      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ votesCount: 39, views: 23921 })).votesCount,
+    ).toBe(39);
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ votesCount: 39, views: 23921 })).views).toBe(
+      23921,
+    );
+  });
+
+  it('passes originalTitle through, defaulting to null when the parser omits it', () => {
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).originalTitle).toBeNull();
+    expect(
+      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ originalTitle: 'Solo Leveling' })).originalTitle,
+    ).toBe('Solo Leveling');
+  });
+
+  it('defaults translators to an empty array when the parser omits them', () => {
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).translators).toEqual([]);
+    expect(
+      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ translators: ['Dead Inside Team'] })).translators,
+    ).toEqual(['Dead Inside Team']);
+  });
+
   it('passes type/year through, defaulting to null when the parser omits them', () => {
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).type).toBeNull();
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).year).toBeNull();

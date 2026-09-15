@@ -81,6 +81,18 @@ export type RawManga = {
    *  desu's "с 14 июн 2012 г."). Epoch millis, 0 = unknown. Omitted where the source has no such
    *  date. */
   releaseDate?: number;
+  /** Original-language title, where the source keeps it distinct from the localized `title`
+   *  (e.g. desu's `h1 .name` vs `.rus-name`). Omitted where the source has no such concept. */
+  originalTitle?: string | null;
+  /** Scanlation team names, where the source lists them separately from `authors` (e.g. desu's
+   *  "Переводчики:"). Omitted where the source has no such list. */
+  translators?: string[];
+  /** Vote count backing `rating`, where the source exposes it distinctly from the score itself
+   *  (e.g. desu's `itemprop="ratingCount"`). Omitted where the source doesn't expose it. */
+  votesCount?: number | null;
+  /** View/read counter, where the source tracks it (e.g. desu's "Просмотров:"). Omitted where
+   *  the source has no such counter. */
+  views?: number | null;
 };
 
 export type RawChapter = {

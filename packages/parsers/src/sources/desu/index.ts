@@ -554,7 +554,6 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .split(',')
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
-    if (originalTitle && originalTitle !== russianTitle) altTitles.push(originalTitle);
 
     const tags = doc
       .$('.c-info-left .tagList a[itemprop=genre]')
@@ -582,8 +581,18 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .map((el) => textOrNull(doc.$(el)))
       .filter((a): a is string => a !== null);
 
+    const translators = (detailValue(root, 'Переводчики:')?.find('a').toArray() ?? [])
+      .map((el) => textOrNull(doc.$(el)))
+      .filter((t): t is string => t !== null);
+
+    const viewsValue = detailValue(root, 'Просмотров:');
+    const views = parseIntOrNull(viewsValue ? textOrNull(viewsValue) : null);
+
     const ratingRaw = attrOrNull(doc.$('.b-rate').first(), 'data-score');
     const ratingValue = parseFloatOrNull(ratingRaw);
+    const votesCount = parseIntOrNull(
+      attrOrNull(doc.$('meta[itemprop=ratingCount]').first(), 'content'),
+    );
 
     const description = nullIfEmpty(
       doc
@@ -626,6 +635,10 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       type,
       year,
       releaseDate,
+      originalTitle,
+      translators,
+      votesCount,
+      views,
     };
   };
 

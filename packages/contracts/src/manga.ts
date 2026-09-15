@@ -57,6 +57,7 @@ export const MangaSchema = z.object({
   slug: z.string(),
 
   title: z.string(), // локализованное название источника
+  originalTitle: z.string().nullable(), // название на языке оригинала, если source отдаёт его отдельно
   altTitles: z.array(z.string()), // оригинал, англ., синонимы
 
   coverUrl: z.string(), // уже проксированный /api/v1/img?...
@@ -64,6 +65,7 @@ export const MangaSchema = z.object({
 
   description: z.string().nullable(),
   authors: z.array(z.string()),
+  translators: z.array(z.string()),
   tags: z.array(TagSchema),
 
   releaseState: MangaStateSchema.nullable(),
@@ -76,7 +78,9 @@ export const MangaSchema = z.object({
   lastUpdatedAt: z.string().nullable(), // YYYY-MM-DDTHH:MM:SSZ — дата выхода последней главы
 
   rating: z.number().min(0).max(10).nullable(), // приведено к единой шкале 0..10, округлено до 1 знака после запятой
+  votesCount: z.number().nullable(), // число голосов, формирующих rating, если source отдаёт его отдельно
   likes: z.number().nullable(), // неограниченный счётчик лайков/плюсиков, если source не даёт rating
+  views: z.number().nullable(), // счётчик просмотров/прочтений, если source его ведёт
   chaptersCount: z.number().nullable(),
   pages: z.number().nullable(), // число страниц тайтла целиком, если source отдаёт его на уровне манги
 
