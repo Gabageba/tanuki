@@ -1,14 +1,13 @@
-import { Button, Divider, Group, Scroller, Stack, Title } from '@mantine/core';
-import { Fragment, useState } from 'react';
+import { Button, Group, Stack, Title } from '@mantine/core';
+import { useState } from 'react';
 import { PlusIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { MATCH_CONFIDENCE, type Manga } from '@tanuki/contracts';
+import { type Manga } from '@tanuki/contracts';
 import useMangaMatches from '../../hooks/useMangaMatches';
-import MangaMatchCard from './MangaMatchCard';
-import MatchConfidenceLabel from './MatchConfidenceLabel';
 import useSetMangaLink from '../../hooks/useSetMangaLink';
-import MangaMatchAddModal from './MangaMatchAddModal';
 import MangaMatchesSkeleton from './MangaMatchesSkeleton';
+import MangaMatchesScroller from './MangaMatchesScroller';
+import MangaMatchAddModal from './MangaMatchAddModal';
 
 type Props = {
   manga: Manga;
@@ -27,17 +26,6 @@ function MangaMatches({ manga }: Props) {
     return <MangaMatchesSkeleton />;
   }
 
-  if (!data || data.items.length === 0) {
-    return null;
-  }
-
-  const groups = Object.values(MATCH_CONFIDENCE)
-    .map((confidence) => ({
-      confidence,
-      matches: data.items.filter((match) => match.confidence === confidence),
-    }))
-    .filter((group) => group.matches.length > 0);
-
   return (
     <Stack gap={8}>
       <Group gap={8} justify="space-between">
@@ -53,31 +41,11 @@ function MangaMatches({ manga }: Props) {
         </Button>
       </Group>
 
-      <Scroller flex={1} styles={{ control: { zIndex: 2 } }}>
-        <Group wrap="nowrap" align="stretch" gap="xs">
-          {groups.map(({ confidence, matches }, index) => (
-            <Fragment key={confidence}>
-              <Stack gap={6}>
-                <Group wrap="nowrap" gap="xs">
-                  {index > 0 && <Divider orientation="vertical" style={{ visibility: 'hidden' }} />}
-                  <MatchConfidenceLabel confidence={confidence} matchesCount={matches.length} />
-                </Group>
-                <Group wrap="nowrap" h="100%" align="stretch" gap="xs">
-                  {index > 0 && <Divider orientation="vertical" />}
-                  {matches.map((match) => (
-                    <MangaMatchCard
-                      key={match.manga.id}
-                      match={match}
-                      mutateMangaLink={mutateMangaLink}
-                      isMangaLinkPending={isMangaLinkPending}
-                    />
-                  ))}
-                </Group>
-              </Stack>
-            </Fragment>
-          ))}
-        </Group>
-      </Scroller>
+      <MangaMatchesScroller
+        matches={data?.items}
+        mutateMangaLink={mutateMangaLink}
+        isMangaLinkPending={isMangaLinkPending}
+      />
       <MangaMatchAddModal
         opened={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
