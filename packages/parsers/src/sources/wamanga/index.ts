@@ -35,6 +35,7 @@ const SOURCE_ID = CATALOG_SOURCE_ID.WAMANGA;
 const PAGE_SIZE = 20;
 const YEAR_RANGE_MIN = 1990;
 const YEAR_RANGE_CUTOFF = 2000;
+const URL_DELIMITER = ',,';
 
 export const WAMANGA_FILTER_GROUP = {
   TYPE: FILTER_GROUP.TYPE,
@@ -76,6 +77,13 @@ const PEGI_RATING_OPTIONS: RawFilterOption[] = [
   { key: '18+', title: '18+', count: null },
 ];
 
+type ChapterJson = {
+  id: string;
+  position?: number;
+  title?: string;
+  createdAt?: string;
+};
+
 type MangaJson = {
   id: string;
   slug: string;
@@ -86,7 +94,10 @@ type MangaJson = {
   imageUrl?: string;
   genres?: string[];
   statusTitle?: string;
+  translationStatus?: string;
   authors?: string[];
+  artists?: string[];
+  publishers?: string[];
   isAdult?: boolean;
   description?: string;
   teams?: { name?: string }[];
@@ -94,13 +105,17 @@ type MangaJson = {
   type?: string;
   pegiRating?: string;
   likes?: number;
+  views?: number;
+  createdAt?: string;
 };
 
-type ChapterJson = {
-  id: string;
-  position?: number;
-  title?: string;
-  createdAt?: string;
+/** `/manga/get/{type}/{slug}?chapters=true` is the site's own manga-page endpoint (it doubles as
+ *  view-count tracking) and, verified live, is the only one that carries likes/views/teams and the
+ *  full chapter list together — `/manga/{id}` and `/manga/{id}/additional` each expose only part of
+ *  that set. Using it for getDetails means one request instead of two, and it's why RawManga.url
+ *  is built from `type,,slug` rather than the bare id the list endpoint also returns. */
+type MangaDetailsJson = MangaJson & {
+  chapters?: ChapterJson[];
 };
 
 type PageFileJson = {
@@ -179,6 +194,12 @@ const collectAltTitles = (jo: MangaJson): string[] => {
     if (t) result.push(t);
   }
   return [...new Set(result)];
+};
+
+/** `teams` is only carried by the details endpoint, so this returns [] for list items — same
+ *  shape scanlator (below, per-chapter) is built from. */
+const parseTranslators = (teams: { name?: string }[] | undefined): string[] => {
+  return [...new Set((teams ?? []).map((t) => t.name).filter((n): n is string => !!n))];
 };
 
 /**
@@ -274,7 +295,9 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       id: generateUid(SOURCE_ID, jo.id),
       title: jo.title,
       altTitles: collectAltTitles(jo),
-      url: jo.id,
+      // The list endpoint only ever hands out the bare id, but getDetails needs type+slug to hit
+      // the one endpoint that carries likes/views/teams/chapters together — see MangaDetailsJson.
+      url: `${jo.type}${URL_DELIMITER}${jo.slug}`,
       publicUrl: `https://${domain}/manga/${jo.slug}`,
       // The site has no bounded 0..10 rating axis, only an unbounded "likes" tally — see
       // RawManga.likes doc on why the two can't be merged.
@@ -284,13 +307,21 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       largeCoverUrl: jo.imageUrl ? toAbsoluteUrl(jo.imageUrl, domain) : null,
       tags: parseTags(jo),
       releaseState: parseState(jo.statusTitle),
+      // translationStatus shares the same seven-value enum as statusTitle (see STATUS_OPTIONS),
+      // so the same mapper applies to both.
+      translationState: parseState(jo.translationStatus),
       authors: jo.authors ?? [],
+      artists: jo.artists ?? [],
+      publishers: jo.publishers ?? [],
+      translators: parseTranslators(jo.teams),
       description: jo.description ?? null,
       chapters: null,
       source: SOURCE_ID,
       type: parseMangaType(jo.type),
       year: jo.year ?? null,
       likes: jo.likes ?? null,
+      views: jo.views ?? null,
+      addedAt: parseIsoDate(jo.createdAt),
     };
   };
 
@@ -351,10 +382,10 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
   };
 
   const getDetails = async (mangaUrl: string): Promise<RawManga> => {
-    const [jo, chaptersJson] = await Promise.all([
-      ctx.http.getJson<MangaJson>(`${apiUrl}/manga/${mangaUrl}`),
-      ctx.http.getJson<ChapterJson[]>(`${apiUrl}/manga/${mangaUrl}/chapters`),
-    ]);
+    const [type, slug] = mangaUrl.split(URL_DELIMITER);
+    const jo = await ctx.http.getJson<MangaDetailsJson>(
+      `${apiUrl}/manga/get/${type}/${slug}?chapters=true`,
+    );
 
     const scanlator =
       (jo.teams ?? [])
@@ -362,7 +393,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
         .filter((n): n is string => !!n)
         .join(', ') || null;
 
-    const chapters: RawChapter[] = chaptersJson.map((ch) => ({
+    const chapters: RawChapter[] = (jo.chapters ?? []).map((ch) => ({
       id: generateUid(SOURCE_ID, ch.id),
       url: ch.id,
       title: ch.title && ch.title.length > 0 ? ch.title : null,

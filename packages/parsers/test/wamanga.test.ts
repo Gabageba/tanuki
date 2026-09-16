@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_STATE,
   MANGA_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
@@ -14,47 +15,59 @@ import { FakeHttpClient } from './support/fake-http';
 
 const DOMAIN = 'wamanga.example';
 const MANGA_ID = 'manga-1';
+const MANGA_SLUG = 'one-piece';
+const MANGA_URL = `manga,,${MANGA_SLUG}`;
 
 const LIST_JSON = JSON.stringify([
   {
     id: MANGA_ID,
-    slug: 'one-piece',
+    slug: MANGA_SLUG,
     title: 'Ван-Пис',
     titleEnglish: 'One Piece',
     coverUrl: '/covers/op.jpg',
     genres: ['приключения'],
     statusTitle: 'ongoing',
+    translationStatus: 'completed',
     authors: ['Oda Eiichiro'],
+    artists: ['Oda Eiichiro'],
+    publishers: ['Shueisha'],
     isAdult: false,
     year: 1997,
     type: 'manga',
     pegiRating: '16+',
     likes: 26,
+    views: 9276,
+    createdAt: '2024-01-01T09:30:00.000Z',
   },
 ]);
 
 const DETAILS_JSON = JSON.stringify({
   id: MANGA_ID,
-  slug: 'one-piece',
+  slug: MANGA_SLUG,
   title: 'Ван-Пис',
   titleEnglish: 'One Piece',
   coverUrl: '/covers/op.jpg',
   imageUrl: '/covers/op-full.jpg',
   genres: ['приключения'],
   statusTitle: 'ongoing',
+  translationStatus: 'completed',
   authors: ['Oda Eiichiro'],
+  artists: ['Oda Eiichiro'],
+  publishers: ['Shueisha'],
   isAdult: false,
   description: 'Описание тайтла.',
   teams: [{ name: 'TeamA' }],
   year: 1997,
   type: 'manga',
   pegiRating: '16+',
+  likes: 26,
+  views: 9276,
+  createdAt: '2024-01-01T09:30:00.000Z',
+  chapters: [
+    { id: 'ch-1', position: 1, title: 'Глава 1', createdAt: '2024-01-01T09:30:00.000Z' },
+    { id: 'ch-2', position: 2, title: 'Глава 2', createdAt: '2024-01-02T10:00:00.000Z' },
+  ],
 });
-
-const CHAPTERS_JSON = JSON.stringify([
-  { id: 'ch-1', position: 1, title: 'Глава 1', createdAt: '2024-01-01T09:30:00.000Z' },
-  { id: 'ch-2', position: 2, title: 'Глава 2', createdAt: '2024-01-02T10:00:00.000Z' },
-]);
 
 const PAGES_JSON = JSON.stringify({
   files: [{ diskFile: '/files/001.jpg' }, { diskFile: '/files/002.jpg' }],
@@ -77,12 +90,7 @@ const setUpFixtures = (): FakeHttpClient => {
     body: PAGES_JSON,
     contentType: 'application/json',
   });
-  http.register((url) => url.endsWith(`/manga/${MANGA_ID}/chapters`), {
-    status: 200,
-    body: CHAPTERS_JSON,
-    contentType: 'application/json',
-  });
-  http.register((url) => url.endsWith(`/manga/${MANGA_ID}`), {
+  http.register((url) => url.includes(`/manga/get/manga/${MANGA_SLUG}`), {
     status: 200,
     body: DETAILS_JSON,
     contentType: 'application/json',
@@ -115,10 +123,15 @@ describe('WaManga parser conformance', () => {
     expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.likes).toBe(26);
+    expect(item!.views).toBe(9276);
+    expect(item!.artists).toEqual(['Oda Eiichiro']);
+    expect(item!.publishers).toEqual(['Shueisha']);
+    expect(item!.translationState).toBe(MANGA_STATE.FINISHED);
+    expect(item!.addedAt).toBeGreaterThan(0);
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
-    const manga = await parser.getDetails(MANGA_ID);
+    const manga = await parser.getDetails(MANGA_URL);
     expect(manga.chapters).not.toBeNull();
     expect(manga.chapters).toHaveLength(2);
     for (const chapter of manga.chapters!) {
@@ -128,6 +141,10 @@ describe('WaManga parser conformance', () => {
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
+    expect(manga.translators).toEqual(['TeamA']);
+    expect(manga.views).toBe(9276);
+    expect(manga.likes).toBe(26);
+    expect(manga.translationState).toBe(MANGA_STATE.FINISHED);
   });
 
   it('getList: pegiRating maps to contentRating tiers, isAdult overrides to adult', async () => {
