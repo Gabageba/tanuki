@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Anchor, Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import useCollapsible from './hooks/useCollapsible';
@@ -5,7 +6,7 @@ import useCollapsible from './hooks/useCollapsible';
 const DEFAULT_LINE_CLAMP = 6;
 
 type Props = {
-  children: string | null;
+  children: ReactNode;
   lineClamp?: number;
 };
 

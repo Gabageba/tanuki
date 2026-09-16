@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Stack, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import CollapsibleGroup from '@/shared/ui/CollapsibleGroup';
@@ -6,6 +7,7 @@ import TagBadge from '@/shared/ui/TagBadge';
 import type { Manga } from '@tanuki/contracts';
 import MangaMatches from '../MangaMatches';
 import MangaInfo from '../MangaInfo';
+import { renderDescriptionHtml } from './renderDescriptionHtml';
 
 type Props = {
   manga: Manga;
@@ -13,12 +15,16 @@ type Props = {
 
 function MangaInfoTabContent({ manga }: Props) {
   const { t } = useTranslation();
+  const description = useMemo(
+    () => (manga.description ? renderDescriptionHtml(manga.description) : null),
+    [manga.description],
+  );
 
   return (
     <Stack gap="md">
       <Stack gap={8}>
         <Title order={5}>{t('description')}</Title>
-        <CollapsibleText lineClamp={3}>{manga.description}</CollapsibleText>
+        <CollapsibleText lineClamp={3}>{description}</CollapsibleText>
       </Stack>
       <Stack gap={8}>
         <Title order={5}>{t('tags')}</Title>
