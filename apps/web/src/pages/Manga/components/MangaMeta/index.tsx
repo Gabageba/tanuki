@@ -43,7 +43,7 @@ function MangaMeta({ manga, branchesCount }: Props) {
 
         <MangaMetaItem
           value={
-            manga.authors ? (
+            manga.authors?.length ? (
               <Group gap={4}>
                 {manga.authors[0]}
                 <OtherItemsTag count={manga.authors.slice(1).length} />
