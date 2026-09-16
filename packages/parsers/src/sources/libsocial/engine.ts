@@ -146,6 +146,7 @@ type CoverJson = {
 
 type RatingJson = {
   average?: number;
+  votes?: number;
 };
 
 type StatusJson = {
@@ -202,14 +203,47 @@ type AuthorJson = {
   name?: string;
 };
 
+/** `format` on manga details — same id/name vocabulary as `/api/constants?fields[]=format`
+ *  (toFormatFilterOptions below), just embedded per-title instead of as a flat list. */
+type FormatJson = {
+  name?: string;
+};
+
+/** `views` on manga details — `total` is the raw counter, `short`/`formated` are the site's own
+ *  pre-formatted display strings (unused here, RawManga.views wants the raw number). */
+type ViewsJson = {
+  total?: number;
+};
+
 type MangaDetailsJson = {
   id: number;
   name: string;
   rus_name?: string;
+  /** Official English title, distinct from `name` (a romanization) — confirmed live against
+   *  api.cdnlibs.org, absent from every type below this point until now because nothing read it. */
+  eng_name?: string;
+  /** Full alias list — confirmed live to carry every alternate name (cross-script included), not
+   *  just one; requires `fields[]=otherNames`, unlike `eng_name`/`name` which are always present. */
+  otherNames?: string[];
   cover: CoverJson;
   genres: TagJson[];
   tags: TagJson[];
   authors: AuthorJson[];
+  /** Requires `fields[]=artists` — same author-record shape as `authors`, just the illustrator
+   *  relation instead of the writer one. */
+  artists?: AuthorJson[];
+  /** Requires `fields[]=publisher` — singular field name, plural array value, confirmed live. */
+  publisher?: AuthorJson[];
+  /** Requires `fields[]=teams` — every scanlation team that ever worked a branch of this title,
+   *  fetched once here instead of de-duping `chapters[].branches[].teams` per chapter. */
+  teams?: AuthorJson[];
+  /** Requires `fields[]=format`. Can be `[]` — plenty of titles carry no format tag at all. */
+  format?: FormatJson[];
+  /** Requires `fields[]=releaseDate`. A bare year string (e.g. "1997"), confirmed live — despite
+   *  the name there is no day/month granularity, so it maps to RawManga.year, not releaseDate. */
+  releaseDate?: string;
+  /** Requires `fields[]=views`. */
+  views?: ViewsJson;
   summary?: unknown;
   close_view?: number;
   is_licensed?: boolean;
@@ -548,6 +582,13 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       'close_view',
       'rate',
       'rate_avg',
+      'otherNames',
+      'artists',
+      'publisher',
+      'teams',
+      'format',
+      'releaseDate',
+      'views',
     ]) {
       detailsUrl.searchParams.append('fields[]', field);
     }
@@ -567,17 +608,43 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       return true;
     });
     const authors = json.authors.map((a) => a.name).filter((n): n is string => !!n);
+    const artists = (json.artists ?? []).map((a) => a.name).filter((n): n is string => !!n);
+    const publishers = (json.publisher ?? []).map((p) => p.name).filter((n): n is string => !!n);
+    const translators = (json.teams ?? []).map((t) => t.name).filter((n): n is string => !!n);
+    const releaseFormats = (json.format ?? []).map((f) => f.name).filter((n): n is string => !!n);
     // close_view flags premium (МангаЛib+/Hentailib+) content — combined with an empty chapters
     // list (every branch came back restricted_view.is_open === false), every chapter is paid.
     const isPaywalled = chapters.length === 0 && (json.close_view ?? 0) > 0;
     // is_licensed with no chapters means the publisher pulled the scanlation for a legal release.
     const isLicensedTakedown = chapters.length === 0 && json.is_licensed === true;
     const title = json.rus_name && json.rus_name.length > 0 ? json.rus_name : json.name;
+    // `name` is the romanization/native title kept apart from the localized `title` above — only
+    // worth surfacing as originalTitle when it actually differs (title falls back to it when
+    // rus_name is absent, e.g. untranslated titles).
+    const originalTitle = json.name !== title ? [json.name] : [];
+    // `otherNames` (confirmed live to carry the *full* alias list, unlike the single `name` this
+    // used to fall back to) plus eng_name, minus whatever's already shown as title/originalTitle.
+    const altTitles = [
+      ...new Set(
+        [json.eng_name, ...(json.otherNames ?? [])].filter(
+          (n): n is string => !!n && n !== title && n !== json.name,
+        ),
+      ),
+    ];
+    const year = json.releaseDate ? Number.parseInt(json.releaseDate, 10) : null;
 
+    // country, magazines, likes and translationState have no equivalent on api.cdnlibs.org —
+    // confirmed live: no `country` field exists (type.id is the only origin signal, and per
+    // mangaTypeById above that's derived the opposite way from inkstory's country->type link, so
+    // it can't be reversed back into a country string); `fields[]=magazine(s)` 422s; there's no
+    // like/favorite counter distinct from rating.votes; and `fields[]=scanlateStatus` 422s on this
+    // endpoint (unlike on /api/manga for list filtering) with no other per-title field for it —
+    // scanlation status here only exists per-team (teams[].details.is_active), not for the title
+    // as a whole.
     return {
       id: generateUid(cfg.id, json.id),
       title,
-      altTitles: [json.name],
+      altTitles,
       url: mangaUrl,
       publicUrl: `https://${domain}/ru/manga/${mangaUrl}`,
       rating: parseRating(json.rating),
@@ -592,6 +659,14 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
           ? MANGA_RESTRICTION.PAYWALL
           : null,
       authors,
+      artists,
+      publishers,
+      translators,
+      releaseFormats,
+      originalTitle,
+      year: year != null && !Number.isNaN(year) ? year : null,
+      votesCount: json.rating?.votes ?? null,
+      views: json.views?.total ?? null,
       largeCoverUrl: json.cover.default,
       description: summaryText(json.summary) || null,
       chapters,

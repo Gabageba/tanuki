@@ -47,6 +47,8 @@ const DETAILS_JSON = JSON.stringify({
     id: 123,
     name: 'One Piece',
     rus_name: 'Ван-Пис',
+    eng_name: 'One Piece',
+    otherNames: ['Wan Pīsu', 'Большой куш'],
     cover: {
       thumbnail: `https://${LIBSOCIAL_API_HOST}/uploads/123-thumb.jpg`,
       default: `https://${LIBSOCIAL_API_HOST}/uploads/123-full.jpg`,
@@ -54,6 +56,12 @@ const DETAILS_JSON = JSON.stringify({
     genres: [{ id: 34, name: 'Приключения' }],
     tags: [{ id: 56, name: 'Пираты' }],
     authors: [{ name: 'Oda Eiichiro' }],
+    artists: [{ name: 'Oda Eiichiro' }],
+    publisher: [{ name: 'Shueisha' }],
+    teams: [{ name: 'TeamA' }],
+    format: [{ name: 'В цвете' }],
+    releaseDate: '1997',
+    views: { total: 32161893 },
     summary: {
       type: 'doc',
       content: [
@@ -62,7 +70,7 @@ const DETAILS_JSON = JSON.stringify({
       ],
     },
     close_view: 0,
-    rating: { average: 8.7 },
+    rating: { average: 8.7, votes: 35800 },
     status: { id: 1 },
     ageRestriction: { id: 1 },
     type: { id: 1 },
@@ -266,6 +274,17 @@ describe('LibSocial parser conformance', () => {
     expect(manga.tags.map((t) => t.title).sort()).toEqual(['Пираты', 'Приключения']);
     expect(manga.restriction).toBeNull();
     expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    // name === rus_name's romanized counterpart here differs from title ('Ван-Пис'), so it
+    // surfaces as originalTitle rather than getting folded into altTitles.
+    expect(manga.originalTitle).toEqual(['One Piece']);
+    expect(manga.altTitles.sort()).toEqual(['Wan Pīsu', 'Большой куш']);
+    expect(manga.artists).toEqual(['Oda Eiichiro']);
+    expect(manga.publishers).toEqual(['Shueisha']);
+    expect(manga.translators).toEqual(['TeamA']);
+    expect(manga.releaseFormats).toEqual(['В цвете']);
+    expect(manga.year).toBe(1997);
+    expect(manga.votesCount).toBe(35800);
+    expect(manga.views).toBe(32161893);
   });
 
   it('getDetails: is_licensed with no chapters reports LEGAL restriction', async () => {
