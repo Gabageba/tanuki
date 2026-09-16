@@ -171,5 +171,6 @@
   "viewsCount": "View count",
   "translators": "Translators",
   "publicationDate": "Publication date",
-  "releaseFormat": "Release format"
+  "releaseFormat": "Release format",
+  "algorithmFoundNoSimilarTitles": "The algorithm found no similar titles"
 }

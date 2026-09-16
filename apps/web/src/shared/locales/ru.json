@@ -175,5 +175,6 @@
   "viewsCount": "Кол-во просмотров",
   "translators": "Переводчики",
   "publicationDate": "Дата выхода",
-  "releaseFormat": "Формат выпуска"
+  "releaseFormat": "Формат выпуска",
+  "algorithmFoundNoSimilarTitles": "Алгоритм не нашел похожих тайтлов"
 }
