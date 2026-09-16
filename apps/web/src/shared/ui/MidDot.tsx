@@ -4,7 +4,11 @@ import { Box } from '@mantine/core';
 type Props = BoxProps;
 
 function MidDot({ ...restProps }: Props) {
-  return <Box {...restProps}>&middot;</Box>;
+  return (
+    <Box component="span" {...restProps}>
+      &middot;
+    </Box>
+  );
 }
 
 export default MidDot;

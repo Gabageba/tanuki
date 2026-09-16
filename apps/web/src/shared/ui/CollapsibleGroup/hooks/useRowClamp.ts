@@ -3,8 +3,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { useDisclosure } from '@mantine/hooks';
 
 function useRowClamp<T extends HTMLElement>(children: ReactNode, maxRows: number) {
-  const [expanded, { toggle }] = useDisclosure(false);
-  const [clampHeight, setClampHeight] = useState<number>();
+  const [expanded, { open: expand }] = useDisclosure(false);
+  const [visibleCount, setVisibleCount] = useState<number>();
   const [isClamped, setIsClamped] = useState(false);
   const ref = useRef<T>(null);
 
@@ -12,34 +12,33 @@ function useRowClamp<T extends HTMLElement>(children: ReactNode, maxRows: number
     const node = ref.current;
     const items = node ? Array.from(node.children) : [];
     if (!node || items.length === 0) {
-      setClampHeight(undefined);
+      setVisibleCount(undefined);
       setIsClamped(false);
       return;
     }
 
-    const containerTop = node.getBoundingClientRect().top;
     let rows = 0;
-    let lastTop: number | null = null;
-    let visibleBottom = 0;
-    let totalHeight = 0;
+    let rowBottom = -Infinity;
+    let lastVisibleIndex = -1;
 
-    items.forEach((item) => {
+    items.forEach((item, index) => {
       const rect = item.getBoundingClientRect();
-      if (lastTop === null || rect.top !== lastTop) {
+      if (rect.top >= rowBottom) {
         rows += 1;
-        lastTop = rect.top;
+        rowBottom = rect.bottom;
+      } else {
+        rowBottom = Math.max(rowBottom, rect.bottom);
       }
       if (rows <= maxRows) {
-        visibleBottom = rect.bottom - containerTop;
+        lastVisibleIndex = index;
       }
-      totalHeight = rect.bottom - containerTop;
     });
 
-    setClampHeight(visibleBottom);
-    setIsClamped(totalHeight > visibleBottom);
+    setVisibleCount(lastVisibleIndex + 1);
+    setIsClamped(rows > maxRows);
   }, [children, maxRows]);
 
-  return { ref, expanded, toggle, isClamped, clampHeight };
+  return { ref, expanded, expand, isClamped, visibleCount };
 }
 
 export default useRowClamp;

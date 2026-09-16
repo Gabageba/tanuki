@@ -18,8 +18,11 @@ type Props = {
   manga: Manga;
 };
 
+const formatNumber = (value: number | null, locale: string) =>
+  value === null ? null : new Intl.NumberFormat(locale).format(value);
+
 function MangaInfo({ manga }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { formatDate } = useDateFormat();
 
   const infoData: InfoData[] = [
@@ -50,13 +53,13 @@ function MangaInfo({ manga }: Props) {
         {
           label: t('originalNeuter'),
           value: isEmpty(manga.originalTitle) ? undefined : (
-            <MidDotGroup items={manga.originalTitle} text={{ lh: 1 }} />
+            <MidDotGroup items={manga.originalTitle} text={{ lh: 1.2 }} />
           ),
         },
         {
           label: t('alternative'),
           value: isEmpty(manga.altTitles) ? undefined : (
-            <MidDotGroup items={manga.altTitles} text={{ lh: 1 }} />
+            <MidDotGroup items={manga.altTitles} text={{ lh: 1.2 }} />
           ),
         },
       ],
@@ -67,25 +70,25 @@ function MangaInfo({ manga }: Props) {
         {
           label: t('authors'),
           value: isEmpty(manga.authors) ? undefined : (
-            <MidDotGroup items={manga.authors} text={{ lh: 1 }} />
+            <MidDotGroup items={manga.authors} text={{ lh: 1.2 }} />
           ),
         },
         {
           label: t('artist'),
           value: isEmpty(manga.artists) ? undefined : (
-            <MidDotGroup items={manga.artists} text={{ lh: 1 }} />
+            <MidDotGroup items={manga.artists} text={{ lh: 1.2 }} />
           ),
         },
         {
           label: t('publisher'),
           value: isEmpty(manga.publishers) ? undefined : (
-            <MidDotGroup items={manga.publishers} text={{ lh: 1 }} />
+            <MidDotGroup items={manga.publishers} text={{ lh: 1.2 }} />
           ),
         },
         {
           label: t('magazine'),
           value: isEmpty(manga.magazines) ? undefined : (
-            <MidDotGroup items={manga.magazines} text={{ lh: 1 }} />
+            <MidDotGroup items={manga.magazines} text={{ lh: 1.2 }} />
           ),
         },
       ],
@@ -99,15 +102,15 @@ function MangaInfo({ manga }: Props) {
         },
         {
           label: t('votesCount'),
-          value: manga.votesCount,
+          value: formatNumber(manga.votesCount, i18n.language),
         },
         {
           label: t('likesCount'),
-          value: manga.likes,
+          value: formatNumber(manga.likes, i18n.language),
         },
         {
           label: t('viewsCount'),
-          value: manga.views,
+          value: formatNumber(manga.views, i18n.language),
         },
       ],
     },
@@ -117,12 +120,12 @@ function MangaInfo({ manga }: Props) {
         {
           label: t('status'),
           value: isEmpty(manga.translationState) ? undefined : (
-            <MangaState state={manga.translationState} />
+            <MangaState state={manga.translationState} fz={14} />
           ),
         },
         {
           label: t('chaptersCount'),
-          value: manga.chaptersCount,
+          value: formatNumber(manga.chaptersCount, i18n.language),
         },
         {
           label: t('lastChapter'),
@@ -131,7 +134,7 @@ function MangaInfo({ manga }: Props) {
         {
           label: t('translators'),
           value: isEmpty(manga.translators) ? undefined : (
-            <MidDotGroup items={manga.translators} text={{ lh: 1 }} />
+            <MidDotGroup items={manga.translators} text={{ lh: 1.2 }} />
           ),
         },
       ],
@@ -141,16 +144,16 @@ function MangaInfo({ manga }: Props) {
       items: [
         {
           label: t('status'),
-          value: <MangaState state={manga.releaseState} />,
+          value: <MangaState state={manga.releaseState} fz={14} />,
         },
         {
           label: t('publicationDate'),
-          value: formatDate(manga.releaseDate),
+          value: formatDate(manga.releaseDate) ?? manga.year,
         },
         {
           label: t('releaseFormat'),
           value: isEmpty(manga.releaseFormats) ? undefined : (
-            <MidDotGroup items={manga.releaseFormats} text={{ lh: 1 }} />
+            <MidDotGroup items={manga.releaseFormats} text={{ lh: 1.2 }} />
           ),
         },
         {
@@ -178,7 +181,7 @@ function MangaInfo({ manga }: Props) {
                     {item.label}
                   </DataList.ItemLabel>
                   <Space h={8} />
-                  <DataList.ItemValue lh={1}>
+                  <DataList.ItemValue lh={1.2}>
                     {isEmpty(item.value) ? <Mdash /> : item.value}
                   </DataList.ItemValue>
                 </DataList.Item>
