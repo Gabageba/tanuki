@@ -1,7 +1,7 @@
 import { Flex, Group, SimpleGrid } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { Manga } from '@tanuki/contracts';
-import MangaRating from './MangaRating';
+import MangaScore from './MangaScore';
 import MangaMetaItem from './MangaMetaItem';
 import { getLabelByMangaType } from '@/entities/source/lib';
 import OtherItemsTag from '@/shared/ui/OtherItemsTag';
@@ -24,7 +24,7 @@ function MangaMeta({ manga, branchesCount }: Props) {
       gap={{ base: 'md', xs: 'lg' }}
       direction={{ base: 'column', xs: 'row' }}
     >
-      <MangaRating rating={manga.rating} />
+      <MangaScore rating={manga.rating} likes={manga.likes} />
       <SimpleGrid cols={{ base: 2, sm: 3 }} flex={1} w="100%">
         <MangaMetaItem
           value={[getLabelByMangaType(manga.type, t), manga.year].filter(
