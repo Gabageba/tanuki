@@ -1,6 +1,7 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
 import {
+  CONTENT_RATING,
   FILTER_TYPE,
   MANGA_RESTRICTION,
   MANGA_TYPE,
@@ -18,15 +19,21 @@ const MANGA_ID = 'aaaa-bbbb-1111';
 
 const LIST_MANGA_JSON = {
   id: MANGA_ID,
-  name: { ru: 'Ван-Пис', en: 'One Piece' },
+  name: { ru: 'Ван-Пис', en: 'One Piece', original: 'ワンピース' },
+  altNames: [{ language: 'EN', name: 'OP' }],
   slug: 'one-piece',
   averageRating: 8.5,
   contentStatus: 'SAFE',
   poster: 'https://cdn.inkstory.me/one-piece.jpg',
   status: 'ONGOING',
   country: 'JAPAN',
+  formats: ['WEB'],
   year: 1997,
   chaptersCount: 219,
+  viewsCount: 1000,
+  likesCount: 500,
+  ratingVotesCount: 42,
+  createdAt: '2022-01-01T00:00:00Z',
 };
 
 // /v2/books?sort=updatedAt,desc sorts by book metadata edits, not chapter releases, so the
@@ -37,18 +44,29 @@ const LIST_JSON = JSON.stringify([LIST_MANGA_JSON]);
 
 const DETAILS_JSON = JSON.stringify({
   id: MANGA_ID,
-  name: { ru: 'Ван-Пис', en: 'One Piece' },
+  name: { ru: 'Ван-Пис', en: 'One Piece', original: 'ワンピース' },
+  altNames: [{ language: 'EN', name: 'OP' }],
   slug: 'one-piece',
   averageRating: 8.7,
-  contentStatus: 'SAFE',
+  contentStatus: 'UNSAFE',
   poster: 'https://cdn.inkstory.me/one-piece.jpg',
   labels: [{ name: 'приключения', slug: 'adventure' }],
   status: 'ONGOING',
-  relations: [{ type: 'AUTHOR', publisher: { name: 'Oda Eiichiro' } }],
+  relations: [
+    { type: 'AUTHOR', publisher: { name: 'Oda Eiichiro' } },
+    { type: 'ARTIST', publisher: { name: 'Some Artist' } },
+    { type: 'PUBLISHER', publisher: { name: 'Shueisha' } },
+    { type: 'MAGAZINE', publisher: { name: 'Weekly Shonen Jump' } },
+  ],
   description: 'Описание тайтла.',
   country: 'JAPAN',
+  formats: ['WEB'],
   year: 1997,
   chaptersCount: 219,
+  viewsCount: 1000,
+  likesCount: 500,
+  ratingVotesCount: 42,
+  createdAt: '2022-01-01T00:00:00Z',
 });
 
 const CHAPTERS_JSON = JSON.stringify([
@@ -148,11 +166,21 @@ describe('Inkstory parser conformance', () => {
     expect(item!.rating).toBeCloseTo(0.85, 5);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
+    // /manga/<slug> 404s on the site — the real route is /content/<slug>.
+    expect(item!.publicUrl).toBe('https://inkstory.net/content/one-piece');
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
+    expect(item!.originalTitle).toEqual(['One Piece', 'ワンピース']);
+    expect(item!.altTitles).toEqual(['OP']);
     expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.country).toBe('Япония');
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(219);
+    expect(item!.releaseFormats).toEqual(['Веб']);
+    expect(item!.votesCount).toBe(42);
+    expect(item!.likes).toBe(500);
+    expect(item!.views).toBe(1000);
+    expect(item!.addedAt).toBe(Date.UTC(2022, 0, 1));
   });
 
   it('getList: non-UPDATED order still reads /v2/books with a sort key', async () => {
@@ -383,9 +411,47 @@ describe('Inkstory parser conformance', () => {
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
+    expect(manga.artists).toEqual(['Some Artist']);
+    expect(manga.publishers).toEqual(['Shueisha']);
+    expect(manga.magazines).toEqual(['Weekly Shonen Jump']);
+    // Comes from the chapters' own resolved branch names, reusing getBranchName's result —
+    // no separate translators endpoint on the site.
+    expect(manga.translators).toEqual(['TeamA']);
+    expect(manga.originalTitle).toEqual(['One Piece', 'ワンピース']);
+    expect(manga.altTitles).toEqual(['OP']);
+    expect(manga.contentRating).toBe(CONTENT_RATING.SUGGESTIVE);
     expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.country).toBe('Япония');
     expect(manga.year).toBe(1997);
+    expect(manga.publicUrl).toBe('https://inkstory.net/content/one-piece');
     expect(manga.restriction).toBeNull();
+  });
+
+  it.each([
+    ['SAFE', CONTENT_RATING.SAFE],
+    ['UNSAFE', CONTENT_RATING.SUGGESTIVE],
+    ['EROTIC', CONTENT_RATING.ADULT],
+    ['PORNOGRAPHIC', CONTENT_RATING.ADULT],
+  ])('getDetails: contentStatus %s maps to contentRating %s', async (contentStatus, expected) => {
+    const freshHttp = new FakeHttpClient();
+    freshHttp.register((url) => url.includes('/v2/chapters?'), {
+      status: 200,
+      body: '[]',
+      contentType: 'application/json',
+    });
+    freshHttp.register((url) => url.startsWith(`https://${API_HOST}/v2/books/${MANGA_ID}`), {
+      status: 200,
+      body: JSON.stringify({ ...JSON.parse(DETAILS_JSON), contentStatus }),
+      contentType: 'application/json',
+    });
+    freshHttp.register((url) => url.includes('/v2/content-notices'), {
+      status: 200,
+      body: '[]',
+      contentType: 'application/json',
+    });
+    const parser = createInkStoryParser(makeContext(freshHttp));
+    const manga = await parser.getDetails(MANGA_ID);
+    expect(manga.contentRating).toBe(expected);
   });
 
   it.each([

@@ -26,6 +26,7 @@ import type {
   RawPage,
   RawTag,
   RawMangaType,
+  RawContentRating,
   RawFilterGroup,
   RawFilterOption,
 } from '../../types';
@@ -57,6 +58,14 @@ const YEAR_RANGE_CUTOFF = 2000;
 type NameJson = {
   ru: string;
   en?: string;
+  /** Native-script title — kept separate from `en` because the site's own header shows both,
+   *  "<en> / <original>", as two facets of "the original name" rather than alternates of it. */
+  original?: string;
+};
+
+type AltNameJson = {
+  language: string;
+  name: string;
 };
 
 type TagJson = {
@@ -72,6 +81,7 @@ type RelationJson = {
 type MangaJson = {
   id: string;
   name: NameJson;
+  altNames?: AltNameJson[];
   slug: string;
   averageRating?: number;
   contentStatus?: string;
@@ -82,7 +92,12 @@ type MangaJson = {
   description?: string;
   country?: string;
   year?: number;
+  formats?: string[];
   chaptersCount?: number;
+  viewsCount?: number;
+  likesCount?: number;
+  ratingVotesCount?: number;
+  createdAt?: string;
 };
 
 type ChapterJson = {
@@ -269,9 +284,29 @@ const toMangaType = (country: string | undefined): RawMangaType | null => {
   }
 };
 
-const isNsfw = (contentStatus: string | undefined): boolean => {
-  const upper = contentStatus?.toUpperCase();
-  return upper === 'EROTIC' || upper === 'PORNOGRAPHIC';
+/** contentStatus is a 4-value scale (see CONTENT_STATUS_KEYS), not a boolean — UNSAFE ("16+"-ish
+ *  suggestive content) was previously falling through to null/SAFE alongside EROTIC and
+ *  PORNOGRAPHIC being merged into one ADULT bucket, which is still correct: the site's own UI
+ *  doesn't distinguish between the two beyond the shared 18+ marker. */
+const toContentRating = (contentStatus: string | undefined): RawContentRating | null => {
+  switch (contentStatus?.toUpperCase()) {
+    case 'SAFE':
+      return CONTENT_RATING.SAFE;
+    case 'UNSAFE':
+      return CONTENT_RATING.SUGGESTIVE;
+    case 'EROTIC':
+    case 'PORNOGRAPHIC':
+      return CONTENT_RATING.ADULT;
+    default:
+      return null;
+  }
+};
+
+/** The site's header shows both the English name and the native-script one side by side — two
+ *  equally "original" facets, distinct from the RU title and from altNames, neither one more
+ *  canonical than the other, so both go in as separate entries rather than one glued string. */
+const toOriginalTitle = (name: NameJson): string[] => {
+  return [name.en, name.original].filter((v): v is string => !!v);
 };
 
 /**
@@ -364,15 +399,20 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     return { title: toTitleCase(jo.name), key: jo.slug, source: SOURCE_ID };
   };
 
-  const toManga = (jo: MangaJson): RawManga => {
+  /** Every field here is present on both `/v2/books` list items and the `/v2/books/{id}` detail
+   *  payload — getDetails only has to add the fields that need `relations` or the chapters list,
+   *  which list items don't carry. */
+  const mapMangaCommon = (jo: MangaJson): RawManga => {
     return {
       id: generateUid(SOURCE_ID, jo.id),
       title: jo.name.ru,
-      altTitles: jo.name.en ? [jo.name.en] : [],
+      originalTitle: toOriginalTitle(jo.name),
+      altTitles: (jo.altNames ?? []).map((a) => a.name),
       url: jo.id,
-      publicUrl: `https://${domain}/manga/${jo.slug}`,
+      // The site's own routing serves a title's page at /content/<slug> — /manga/<slug> 404s.
+      publicUrl: `https://${domain}/content/${jo.slug}`,
       rating: jo.averageRating != null ? jo.averageRating / 10 : RATING_UNKNOWN,
-      contentRating: isNsfw(jo.contentStatus) ? CONTENT_RATING.ADULT : null,
+      contentRating: toContentRating(jo.contentStatus),
       coverUrl: jo.poster,
       tags: [],
       releaseState: toMangaState(jo.status),
@@ -382,10 +422,18 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       chapters: null,
       source: SOURCE_ID,
       type: toMangaType(jo.country),
+      country: jo.country ? getCountryTitle(jo.country) : null,
       year: jo.year ?? null,
+      releaseFormats: (jo.formats ?? []).map(getFormatTitle),
       chaptersCount: jo.chaptersCount ?? null,
+      votesCount: jo.ratingVotesCount ?? null,
+      likes: jo.likesCount ?? null,
+      views: jo.viewsCount ?? null,
+      addedAt: jo.createdAt ? parseIsoDate(jo.createdAt) : undefined,
     };
   };
+
+  const toManga = (jo: MangaJson): RawManga => mapMangaCommon(jo);
 
   /** `/v2/books?sort=updatedAt,desc` sorts by book metadata edits, not chapter releases — the
    *  site's own "recently updated" listing instead reads this feed of latest chapter drops. */
@@ -619,39 +667,43 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     return notices.length > 0;
   };
 
+  const namesByRelationType = (relations: RelationJson[] | undefined, type: string): string[] => {
+    return (relations ?? [])
+      .filter((r) => r.type === type)
+      .map((r) => r.publisher?.name)
+      .filter((n): n is string => !!n);
+  };
+
   const getDetails = async (mangaId: string): Promise<RawManga> => {
     const [chapters, jo] = await Promise.all([
       getChapters(mangaId),
       ctx.http.getJson<MangaJson>(`https://${apiHost}/v2/books/${mangaId}`),
     ]);
-    const authors = (jo.relations ?? [])
-      .filter((r) => r.type === 'AUTHOR')
-      .map((r) => r.publisher?.name)
-      .filter((n): n is string => !!n);
+    const authors = namesByRelationType(jo.relations, 'AUTHOR');
+    const artists = namesByRelationType(jo.relations, 'ARTIST');
+    const publishers = namesByRelationType(jo.relations, 'PUBLISHER');
+    const magazines = namesByRelationType(jo.relations, 'MAGAZINE');
+    // Each chapter's `branch` is already the scanlation team's own name, resolved via
+    // getBranchName while building `chapters` — reusing it here is free, no extra request.
+    const translators = Array.from(
+      new Set(chapters.map((c) => c.branch).filter((b): b is string => !!b)),
+    );
     const restriction =
       chapters.length === 0 && (jo.chaptersCount ?? 0) > 0 && (await hasContentNotice(mangaId))
         ? MANGA_RESTRICTION.LEGAL
         : null;
 
     return {
-      id: generateUid(SOURCE_ID, jo.id),
-      title: jo.name.ru,
-      altTitles: jo.name.en ? [jo.name.en] : [],
-      url: jo.id,
-      publicUrl: `https://${domain}/manga/${jo.slug}`,
-      rating: jo.averageRating != null ? jo.averageRating / 10 : RATING_UNKNOWN,
-      contentRating: isNsfw(jo.contentStatus) ? CONTENT_RATING.ADULT : null,
-      coverUrl: jo.poster,
-      largeCoverUrl: null,
+      ...mapMangaCommon(jo),
       tags: (jo.labels ?? []).map(toTag),
-      releaseState: toMangaState(jo.status),
       restriction,
       authors,
+      artists,
+      publishers,
+      magazines,
+      translators,
       description: jo.description ?? null,
       chapters,
-      source: SOURCE_ID,
-      type: toMangaType(jo.country),
-      year: jo.year ?? null,
     };
   };
 

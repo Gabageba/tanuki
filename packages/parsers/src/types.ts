@@ -81,9 +81,12 @@ export type RawManga = {
    *  desu's "с 14 июн 2012 г."). Epoch millis, 0 = unknown. Omitted where the source has no such
    *  date. */
   releaseDate?: number;
-  /** Original-language title, where the source keeps it distinct from the localized `title`
-   *  (e.g. desu's `h1 .name` vs `.rus-name`). Omitted where the source has no such concept. */
-  originalTitle?: string | null;
+  /** Original-language title(s), where the source keeps them distinct from the localized `title`
+   *  (e.g. desu's `h1 .name` vs `.rus-name`). Sometimes more than one equally "original" facet
+   *  exists at once (a romanization plus the native script) — an array, not a single string, so
+   *  none of them has to be picked over the others or glued together. Omitted where the source
+   *  has no such concept. */
+  originalTitle?: string[];
   /** Scanlation team names, where the source lists them separately from `authors` (e.g. desu's
    *  "Переводчики:"). Omitted where the source has no such list. */
   translators?: string[];
@@ -93,6 +96,25 @@ export type RawManga = {
   /** View/read counter, where the source tracks it (e.g. desu's "Просмотров:"). Omitted where
    *  the source has no such counter. */
   views?: number | null;
+  /** Country of origin, where the source exposes it distinctly from `type` (e.g. inkstory's
+   *  "country" field also drives `type`, but the raw country name is worth surfacing on its own).
+   *  Omitted where the source has no such concept. */
+  country?: string | null;
+  /** Illustrator credits, where the source lists them separately from `authors` (e.g. inkstory's
+   *  ARTIST relation vs its AUTHOR one). Omitted where the source has no such distinction. */
+  artists?: string[];
+  /** Publishing house/studio credits behind the original release. Omitted where the source has
+   *  no such concept. */
+  publishers?: string[];
+  /** Magazine/platform the original was serialized in. Omitted where the source has no such
+   *  concept. */
+  magazines?: string[];
+  /** Publication format of the original (web, colored, doujinshi...), where the source exposes
+   *  it as more than just `type`. Omitted where the source has no such concept. */
+  releaseFormats?: string[];
+  /** When the title was added to the source's own catalog, distinct from the original's
+   *  `releaseDate`. Epoch millis, 0 = unknown. Omitted where the source has no such date. */
+  addedAt?: number;
 };
 
 export type RawChapter = {

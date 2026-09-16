@@ -82,11 +82,15 @@ describe('normalizeManga', () => {
     );
   });
 
-  it('passes originalTitle through, defaulting to null when the parser omits it', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).originalTitle).toBeNull();
+  it('defaults originalTitle to an empty array when the parser omits it', () => {
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).originalTitle).toEqual([]);
     expect(
-      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ originalTitle: 'Solo Leveling' })).originalTitle,
-    ).toBe('Solo Leveling');
+      normalizeManga(
+        ENV,
+        SOURCE_ID.DESUME,
+        raw({ originalTitle: ['Solo Leveling', '나 혼자만 레벨업'] }),
+      ).originalTitle,
+    ).toEqual(['Solo Leveling', '나 혼자만 레벨업']);
   });
 
   it('defaults translators to an empty array when the parser omits them', () => {
@@ -135,6 +139,56 @@ describe('normalizeManga', () => {
       normalizeManga(ENV, SOURCE_ID.DESUME, raw({ chapters: [chapter(), chapter()] }))
         .chaptersCount,
     ).toBe(2);
+  });
+
+  it('chaptersCount is the largest branch, not the sum across every branch', () => {
+    // Two scanlation teams translating the same title report as two branches, one with 3
+    // chapters and one with 5 — the title itself has 5 chapters, not 8.
+    const chapters = [
+      chapter({ id: 1, branch: 'A' }),
+      chapter({ id: 2, branch: 'A' }),
+      chapter({ id: 3, branch: 'A' }),
+      chapter({ id: 4, branch: 'B' }),
+      chapter({ id: 5, branch: 'B' }),
+      chapter({ id: 6, branch: 'B' }),
+      chapter({ id: 7, branch: 'B' }),
+      chapter({ id: 8, branch: 'B' }),
+    ];
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ chapters })).chaptersCount).toBe(5);
+  });
+
+  it('passes country/artists/publishers/magazines/releaseFormats through, defaulting when omitted', () => {
+    const empty = normalizeManga(ENV, SOURCE_ID.DESUME, raw({}));
+    expect(empty.country).toBeNull();
+    expect(empty.artists).toEqual([]);
+    expect(empty.publishers).toEqual([]);
+    expect(empty.magazines).toEqual([]);
+    expect(empty.releaseFormats).toEqual([]);
+
+    const filled = normalizeManga(
+      ENV,
+      SOURCE_ID.DESUME,
+      raw({
+        country: 'Корея',
+        artists: ['Jang Sung-lak'],
+        publishers: ['Kakao'],
+        magazines: ['KakaoPage'],
+        releaseFormats: ['Веб'],
+      }),
+    );
+    expect(filled.country).toBe('Корея');
+    expect(filled.artists).toEqual(['Jang Sung-lak']);
+    expect(filled.publishers).toEqual(['Kakao']);
+    expect(filled.magazines).toEqual(['KakaoPage']);
+    expect(filled.releaseFormats).toEqual(['Веб']);
+  });
+
+  it('passes addedAt through as a formatted datetime, null when the parser omits it', () => {
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).addedAt).toBeNull();
+    const ms = Date.UTC(2022, 0, 1, 0, 0, 0);
+    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ addedAt: ms })).addedAt).toBe(
+      '2022-01-01T00:00:00Z',
+    );
   });
 });
 

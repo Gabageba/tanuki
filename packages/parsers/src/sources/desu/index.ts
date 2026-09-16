@@ -635,7 +635,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       type,
       year,
       releaseDate,
-      originalTitle,
+      originalTitle: originalTitle ? [originalTitle] : [],
       translators,
       votesCount,
       views,

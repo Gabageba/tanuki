@@ -54,6 +54,15 @@ const latestChapterUploadDate = (chapters: RawChapter[] | null): number | null =
   return dates.length > 0 ? Math.max(...dates) : null;
 };
 
+/** A title translated by several teams reports one branch per team, each with its own copy of
+ *  the same chapters — summing every branch's length (the naive `chapters.length`) overcounts by
+ *  as many multiples as there are branches. The number that actually matches the source's own
+ *  "N chapters" figure is the largest branch, the same one pickDefaultBranch treats as "the"
+ *  translation. */
+const maxBranchChaptersCount = (chapters: RawChapter[]): number => {
+  return Math.max(0, ...groupByBranch(chapters).map((group) => group.items.length));
+};
+
 export const normalizeManga = (
   env: Pick<Env, 'IMG_SIGN_SECRET'>,
   sourceId: string,
@@ -78,12 +87,15 @@ export const normalizeManga = (
     sourceId,
     slug: String(raw.id),
     title: raw.title,
-    originalTitle: raw.originalTitle ?? null,
+    originalTitle: raw.originalTitle ?? [],
     altTitles: raw.altTitles,
     coverUrl,
     largeCoverUrl,
     description: raw.description,
     authors: raw.authors,
+    artists: raw.artists ?? [],
+    publishers: raw.publishers ?? [],
+    magazines: raw.magazines ?? [],
     translators: raw.translators ?? [],
     tags: raw.tags.map(normalizeTag),
     releaseState: raw.releaseState,
@@ -91,8 +103,11 @@ export const normalizeManga = (
     restriction: raw.restriction ?? null,
     contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
     type: raw.type ?? null,
+    country: raw.country ?? null,
     year: raw.year ?? null,
     releaseDate: raw.releaseDate ? toServerDate(raw.releaseDate) : null,
+    releaseFormats: raw.releaseFormats ?? [],
+    addedAt: raw.addedAt ? toServerDateTime(raw.addedAt) : null,
     lastUpdatedAt: lastChapterDate !== null ? toServerDateTime(lastChapterDate) : null,
     // raw.rating is normalized to 0..1 by every parser (see RawManga in @tanuki/parsers) —
     // scale it up to the 0..10 the API exposes, rounded to 1 decimal so it's ready to display
@@ -101,7 +116,9 @@ export const normalizeManga = (
     votesCount: raw.votesCount ?? null,
     likes: raw.likes ?? null,
     views: raw.views ?? null,
-    chaptersCount: raw.chapters?.length ?? raw.chaptersCount ?? null,
+    chaptersCount: raw.chapters
+      ? maxBranchChaptersCount(raw.chapters)
+      : (raw.chaptersCount ?? null),
     pages: raw.pages ?? null,
     publicUrl: raw.publicUrl,
   };

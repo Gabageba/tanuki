@@ -200,7 +200,7 @@ describe('Desu parser conformance', () => {
     expect(manga.rating).toBeCloseTo(0.87, 5);
     expect(manga.title).toBe('Поднятие уровня в одиночку');
     expect(manga.description).toBe('Первый абзац.\n\nВторой абзац.');
-    expect(manga.originalTitle).toBe('Solo Leveling');
+    expect(manga.originalTitle).toEqual(['Solo Leveling']);
     // The original title has its own dedicated field now — altTitles only carries the site's
     // own "Другие названия:" list, not a duplicate of it.
     expect(manga.altTitles).toEqual(['Only I Level Up', '나 혼자만 레벨업']);

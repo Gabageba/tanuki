@@ -57,14 +57,18 @@ export const MangaSchema = z.object({
   slug: z.string(),
 
   title: z.string(), // локализованное название источника
-  originalTitle: z.string().nullable(), // название на языке оригинала, если source отдаёт его отдельно
-  altTitles: z.array(z.string()), // оригинал, англ., синонимы
+  originalTitle: z.array(z.string()), // название(я) на языке оригинала — иногда это несколько
+  // равноправных вариантов разом (романизация + нативное письмо), а не один текст
+  altTitles: z.array(z.string()), // синонимы, отдельные от оригинала и локализованного названия
 
   coverUrl: z.string(), // уже проксированный /api/v1/img?...
   largeCoverUrl: z.string().nullable(),
 
   description: z.string().nullable(),
   authors: z.array(z.string()),
+  artists: z.array(z.string()),
+  publishers: z.array(z.string()),
+  magazines: z.array(z.string()),
   translators: z.array(z.string()),
   tags: z.array(TagSchema),
 
@@ -73,8 +77,11 @@ export const MangaSchema = z.object({
   restriction: MangaRestrictionSchema.nullable(),
   contentRating: ContentRatingSchema,
   type: MangaTypeSchema.nullable(),
+  country: z.string().nullable(), // страна происхождения оригинала, если source отдаёт её отдельно от type
   year: z.number().nullable(), // для карточек — см. releaseDate для полной даты
   releaseDate: z.string().nullable(), // YYYY-MM-DD, если source отдаёт больше, чем один год
+  releaseFormats: z.array(z.string()), // формат выпуска оригинала (веб, цветной, ёнкома...)
+  addedAt: z.string().nullable(), // YYYY-MM-DDTHH:MM:SSZ — когда тайтл добавили в каталог source
   lastUpdatedAt: z.string().nullable(), // YYYY-MM-DDTHH:MM:SSZ — дата выхода последней главы
 
   rating: z.number().min(0).max(10).nullable(), // приведено к единой шкале 0..10, округлено до 1 знака после запятой
