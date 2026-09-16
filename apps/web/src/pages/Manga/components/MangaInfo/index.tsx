@@ -36,7 +36,7 @@ function MangaInfo({ manga }: Props) {
         },
         {
           label: t('country'),
-          value: undefined,
+          value: manga.country,
         },
       ],
     },
@@ -49,29 +49,44 @@ function MangaInfo({ manga }: Props) {
         },
         {
           label: t('originalNeuter'),
-          value: manga.originalTitle,
+          value: isEmpty(manga.originalTitle) ? undefined : (
+            <MidDotGroup items={manga.originalTitle} text={{ lh: 1 }} />
+          ),
         },
         {
           label: t('alternative'),
-          value: <MidDotGroup items={manga.altTitles} text={{ lh: 1 }} />,
+          value: isEmpty(manga.altTitles) ? undefined : (
+            <MidDotGroup items={manga.altTitles} text={{ lh: 1 }} />
+          ),
         },
       ],
     },
     {
       label: t('authorsAndPublishers'),
       items: [
-        { label: t('authors'), value: <MidDotGroup items={manga.authors} text={{ lh: 1 }} /> },
+        {
+          label: t('authors'),
+          value: isEmpty(manga.authors) ? undefined : (
+            <MidDotGroup items={manga.authors} text={{ lh: 1 }} />
+          ),
+        },
         {
           label: t('artist'),
-          value: undefined,
+          value: isEmpty(manga.artists) ? undefined : (
+            <MidDotGroup items={manga.artists} text={{ lh: 1 }} />
+          ),
         },
         {
           label: t('publisher'),
-          value: undefined,
+          value: isEmpty(manga.publishers) ? undefined : (
+            <MidDotGroup items={manga.publishers} text={{ lh: 1 }} />
+          ),
         },
         {
           label: t('magazine'),
-          value: undefined,
+          value: isEmpty(manga.magazines) ? undefined : (
+            <MidDotGroup items={manga.magazines} text={{ lh: 1 }} />
+          ),
         },
       ],
     },
@@ -101,7 +116,9 @@ function MangaInfo({ manga }: Props) {
       items: [
         {
           label: t('status'),
-          value: <MangaState state={manga.translationState} />,
+          value: isEmpty(manga.translationState) ? undefined : (
+            <MangaState state={manga.translationState} />
+          ),
         },
         {
           label: t('chaptersCount'),
@@ -113,7 +130,9 @@ function MangaInfo({ manga }: Props) {
         },
         {
           label: t('translators'),
-          value: <MidDotGroup items={manga.translators} text={{ lh: 1 }} />,
+          value: isEmpty(manga.translators) ? undefined : (
+            <MidDotGroup items={manga.translators} text={{ lh: 1 }} />
+          ),
         },
       ],
     },
@@ -130,11 +149,13 @@ function MangaInfo({ manga }: Props) {
         },
         {
           label: t('releaseFormat'),
-          value: undefined,
+          value: isEmpty(manga.releaseFormats) ? undefined : (
+            <MidDotGroup items={manga.releaseFormats} text={{ lh: 1 }} />
+          ),
         },
         {
           label: t('addedDate'),
-          value: undefined,
+          value: formatDate(manga.addedAt),
         },
       ],
     },

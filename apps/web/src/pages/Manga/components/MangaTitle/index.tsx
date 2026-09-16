@@ -22,12 +22,13 @@ function MangaTitle({ manga }: Props) {
 
         <MidDotGroup
           gap={8}
+          maxRows={1}
           separatorProps={{ c: 'dimmed', lh: 1 }}
           text={{
             lh: 1,
             c: 'dimmed',
           }}
-          items={[manga.originalTitle, ...(manga.altTitles || [])].filter(Boolean)}
+          items={[...manga.originalTitle, ...manga.altTitles]}
         />
       </Stack>
     </Stack>
