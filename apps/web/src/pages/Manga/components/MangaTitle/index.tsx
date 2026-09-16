@@ -13,8 +13,8 @@ function MangaTitle({ manga }: Props) {
     <Stack gap="sm">
       <MangaBreadcrumbs manga={manga} />
       <Stack gap={8}>
-        <Group justify="space-between" gap={8}>
-          <Title lh={1} size={30}>
+        <Group justify="space-between" gap={8} wrap="nowrap" align="flex-start">
+          <Title lh={1} size={30} style={{ flex: 1, minWidth: 0 }}>
             {manga.title}
           </Title>
           <MangaContentRating contentRating={manga.contentRating} />
