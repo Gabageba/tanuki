@@ -915,10 +915,26 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       else heroAuthors.push(name); // «Автор», «Сценарист» и любые другие текстовые роли
     });
 
+    // Новая вёрстка (`.cr-info-details-item`) — тот же виджет, что отдаёт «Выпуск»/«Перевод» ниже,
+    // но для «Журнал»/«Издательство» несёт не статус, а список ссылок/текстовых элементов
+    // (`.cr-info-details-item__element`).
+    const infoDetailsElements = (label: string): string[] => {
+      let result: string[] = [];
+      doc.$('.cr-info-details-item').each((_, el) => {
+        const item = doc.$(el);
+        if (textOrNull(item.find('.cr-info-details-item__title').first()) === label) {
+          result = textsOf(item.find('.cr-info-details-item__element'));
+        }
+      });
+      return result;
+    };
+    const heroPublishers = infoDetailsElements('Издательство');
+    const heroMagazines = infoDetailsElements('Журнал');
+
     const authors = [...new Set([...legacyAuthors, ...heroAuthors])];
     const artists = [...new Set([...legacyArtists, ...heroArtists])];
-    const publishers = [...new Set(legacyPublishers)];
-    const magazines = [...new Set(legacyMagazines)];
+    const publishers = [...new Set([...legacyPublishers, ...heroPublishers])];
+    const magazines = [...new Set([...legacyMagazines, ...heroMagazines])];
 
     // `.cr-teams` — вкладка «Переводчики» с полным списком команд тайтла; надёжнее одной карточки
     // «Основной переводчик» и не требует угадывания разметки. На старой вёрстке (где вкладки нет)

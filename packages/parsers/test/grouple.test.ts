@@ -153,6 +153,41 @@ const PAGES_HTML = `<!doctype html><html><body>
   </script>
 </body></html>`;
 
+const HERO_INFO_DETAILS_HTML = `<!doctype html><html><head>
+  <link rel="canonical" href="https://${DOMAIN}/Hero-Layout" />
+  <meta name="name" content="Новая вёрстка" />
+</head><body>
+  <div id="mangaBox">
+    <div class="cr-hero-rating">
+      <div class="cr-hero-rating__item cr-hero-rating__item--main cr-hero-rating__item--full">
+        <strong class="cr-hero-rating__value" data-rating-status="positive">9.5</strong>
+        <div class="cr-hero-rating__text">7152 оценки</div>
+      </div>
+    </div>
+    <div class="cr-info-details">
+      <div class="cr-info-details-item">
+        <div class="cr-info-details-item__title">Журнал</div>
+        <div class="cr-info-details-item__content">
+          <a class="cr-info-details-item__element" href="/list/gournal/kakaopage">Kakao Page</a>
+        </div>
+      </div>
+      <div class="cr-info-details-item">
+        <div class="cr-info-details-item__title">Издательство</div>
+        <div class="cr-info-details-item__content">
+          <span class="cr-info-details-item__element">Кислород</span>
+          <span class="cr-info-details-item__element">Copin</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <table id="chapters-list"><tbody>
+    <tr class="item-row" data-vol="1" data-num="10">
+      <td><a class="chapter-link" href="/Hero-Layout/vol1/1">Глава 1</a></td>
+      <td class="date" data-date="01.01.24">01.01.24</td>
+    </tr>
+  </tbody></table>
+</body></html>`;
+
 const ADVANCED_SEARCH_HTML = `<!doctype html><html><body>
   <script>
     window.__FILTERS = {};
@@ -192,6 +227,10 @@ const setUpFixtures = (): FakeHttpClient => {
   http.register((url) => url.endsWith('/Zero-Rated') || url.endsWith('/Zero-Rated?'), {
     status: 200,
     body: ZERO_VOTES_DETAILS_HTML,
+  });
+  http.register((url) => url.endsWith('/Hero-Layout') || url.endsWith('/Hero-Layout?'), {
+    status: 200,
+    body: HERO_INFO_DETAILS_HTML,
   });
   http.register((url) => url.includes('/vol1/1'), { status: 200, body: PAGES_HTML });
   http.register((url) => url.endsWith('/search/advanced'), {
@@ -396,6 +435,12 @@ describe('Grouple parser conformance', () => {
     expect(manga.magazines).toEqual(['Shonen Jump']);
     expect(manga.year).toBe(1997);
     expect(manga.votesCount).toBe(36);
+  });
+
+  it('getDetails: publisher/journal are parsed from the new .cr-info-details-item hero layout', async () => {
+    const manga = await parser.getDetails('/Hero-Layout');
+    expect(manga.publishers).toEqual(['Кислород', 'Copin']);
+    expect(manga.magazines).toEqual(['Kakao Page']);
   });
 
   it('getDetails: cr-main-persons roles split into authors/artists and exclude translators', async () => {
