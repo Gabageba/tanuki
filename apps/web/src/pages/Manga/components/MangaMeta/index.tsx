@@ -7,6 +7,7 @@ import { getLabelByMangaType } from '@/entities/source/lib';
 import OtherItemsTag from '@/shared/ui/OtherItemsTag';
 import MangaState from '@/entities/manga/MangaState';
 import useDateFormat from '@/shared/hooks/useDateFormat';
+import { isEmpty } from '@/shared/lib/isEmpty';
 
 type Props = {
   manga: Manga;
@@ -32,7 +33,11 @@ function MangaMeta({ manga, branchesCount }: Props) {
           label={t('typeAndYear')}
         />
         <MangaMetaItem
-          value={<MangaState state={manga.releaseState} fz={14} />}
+          value={
+            isEmpty(manga.releaseState) ? undefined : (
+              <MangaState state={manga.releaseState} fz={14} />
+            )
+          }
           label={t('original')}
         />
 
@@ -49,7 +54,7 @@ function MangaMeta({ manga, branchesCount }: Props) {
         />
         <MangaMetaItem
           value={[
-            manga.translationState && (
+            isEmpty(manga.translationState) ? undefined : (
               <MangaState key="manga-state" state={manga.translationState} fz={14} />
             ),
             t('countBranches', { count: branchesCount }),

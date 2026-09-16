@@ -18,10 +18,14 @@ function MangaMetaItem<T extends MetaItemValue = MetaItemValue>({
 }: Props<T>) {
   const value = useMemo(() => {
     if (Array.isArray(rawValue)) {
+      if (rawValue.length === 0) {
+        return <Mdash />;
+      }
+
       return <MidDotGroup items={rawValue.filter(Boolean)} text={{ lh: 1 }} />;
     }
 
-    return rawValue;
+    return isEmpty(rawValue) ? <Mdash /> : rawValue;
   }, [rawValue]);
 
   return (

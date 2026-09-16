@@ -144,7 +144,9 @@ function MangaInfo({ manga }: Props) {
       items: [
         {
           label: t('status'),
-          value: <MangaState state={manga.releaseState} fz={14} />,
+          value: isEmpty(manga.releaseState) ? undefined : (
+            <MangaState state={manga.releaseState} fz={14} />
+          ),
         },
         {
           label: t('publicationDate'),
