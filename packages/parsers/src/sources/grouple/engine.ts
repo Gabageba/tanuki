@@ -28,7 +28,7 @@ import type {
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
-import { concatUrl } from '../../core/html/urls';
+import { concatUrl, toAbsoluteUrl } from '../../core/html/urls';
 import { attrOrNull, textOrNull, ownText, selectFirstOrThrow } from '../../core/html/selectors';
 import { parseGroupleDate } from '../../core/text/dates';
 import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
@@ -40,7 +40,6 @@ import { authenticateGrouple, authenticateAllHentai } from './auth';
 import type { GroupleConfig } from './config';
 import { GROUPLE_ELEMENT_TYPE, GROUPLE_FILTER_GROUP, GROUPLE_TRANSLATION_STATUS } from './models';
 import type {
-  CatalogCategoryJson,
   CatalogItemJson,
   CatalogSearchResponseJson,
   GroupleFilterGroup,
@@ -431,11 +430,34 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     }
   };
 
-  /** Catalog "category" — mirrors the site's own .catalog-kinds filter vocabulary. */
-  const mangaTypeByCategory = (
-    category: CatalogCategoryJson | null | undefined,
-  ): RawMangaType | null => {
-    switch (category?.name) {
+  /** The details page's `.cr-info-details-item__status` widget (`data-production-status` for
+   *  "Выпуск"/original release, `data-translation-status` for "Перевод"/this source's own
+   *  translation) — a different code vocabulary than the catalog JSON's `translationStatus`
+   *  above (PLANNED/PROGRESS/FINISHED/ABANDONED, confirmed live for PROGRESS on both attributes).
+   *  Unrecognized codes fall back to null rather than a guess, since this is the site's own
+   *  external vocabulary, not one this codebase owns. */
+  const mapInfoStatus = (code: string | null): MangaState | null => {
+    switch (code) {
+      case 'PROGRESS':
+        return MANGA_STATE.ONGOING;
+      case 'FINISHED':
+        return MANGA_STATE.FINISHED;
+      case 'PLANNED':
+        return MANGA_STATE.UPCOMING;
+      case 'ABANDONED':
+        return MANGA_STATE.ABANDONED;
+      case 'POSTPONED':
+        return MANGA_STATE.PAUSED;
+      default:
+        return null;
+    }
+  };
+
+  /** Catalog "category" — mirrors the site's own .catalog-kinds filter vocabulary. Takes the
+   *  category name directly so it works both off the JSON catalog item and off the details page's
+   *  own category badge (`.cr-hero-short-details__item a[href*='/list/category/']`). */
+  const mangaTypeByCategory = (name: string | null | undefined): RawMangaType | null => {
+    switch (name) {
       case 'Манга':
         return MANGA_TYPE.MANGA;
       case 'Манхва':
@@ -500,7 +522,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       description: null,
       chapters: null,
       source: cfg.id,
-      type: mangaTypeByCategory(item.category),
+      type: mangaTypeByCategory(item.category?.name),
       chaptersCount: item.chaptersCount ?? null,
       year: year ? (parseIntOrNull(year) ?? null) : null,
     };
@@ -735,7 +757,11 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         ? root.find('div.cr-hero-poster img.cr-hero-poster__img').first()
         : root.find('div.subject-cover img').first();
 
-    const finalUrl = doc.$('link[rel=canonical]').attr('href') ?? absoluteUrl;
+    // The canonical tag is sometimes emitted host-relative (`href="/slug"`) rather than absolute,
+    // which would otherwise leak straight into publicUrl and get resolved against the *app's own*
+    // origin by the browser instead of the source's.
+    const canonicalHref = doc.$('link[rel=canonical]').attr('href');
+    const finalUrl = canonicalHref ? toAbsoluteUrl(canonicalHref, domain) : absoluteUrl;
     const chaptersList = doc.$('#chapters-list');
     let isRestricted = false;
     if (chaptersList.length === 0 && !root.text().includes(NO_CHAPTERS)) {
@@ -824,7 +850,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         url: finalHref,
         scanlator,
         uploadDate,
-        branch: null,
+        branch: scanlator,
         source: cfg.id,
       });
     });
@@ -857,6 +883,105 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       ),
     ].filter((value) => value !== title.trim());
 
+    const textsOf = (el: Cheerio<AnyNode>): string[] => [
+      ...new Set(
+        el
+          .toArray()
+          .map((node) => nullIfEmpty(textOrNull(doc.$(node))))
+          .filter((t): t is string => t !== null),
+      ),
+    ];
+
+    // Старая вёрстка: три отдельные строки в subject-meta, каждая — своя роль.
+    const legacyAuthors = textsOf(
+      root.find('.elem_author,.elem_screenwriter').find('a.person-link'),
+    );
+    const legacyArtists = textsOf(root.find('.elem_illustrator').find('a.person-link'));
+    const legacyPublishers = textsOf(root.find('.elem_publisher').find('a.element-link'));
+    const legacyMagazines = textsOf(root.find('.elem_gournal').find('a.element-link'));
+
+    // Новая вёрстка (`.cr-main-persons`): каждая карточка несёт свою роль текстом
+    // (`.cr-main-person-item__role` — «Автор», «Сценарист», «Художник», «Переводчик»/«Основной
+    // переводчик») — так что роли не нужно ни угадывать, ни вычитать переводчиков постфактум.
+    const heroAuthors: string[] = [];
+    const heroArtists: string[] = [];
+    doc.$('.cr-main-persons .cr-main-person-item').each((_, el) => {
+      const item = doc.$(el);
+      const role = textOrNull(item.find('.cr-main-person-item__role').first())?.toLowerCase();
+      const name = nullIfEmpty(textOrNull(item.find('.cr-main-person-item__name').first()));
+      if (!role || !name) return;
+      if (role.includes('переводчик')) return; // покрыто отдельно через .cr-teams ниже
+      if (role.includes('художник')) heroArtists.push(name);
+      else heroAuthors.push(name); // «Автор», «Сценарист» и любые другие текстовые роли
+    });
+
+    const authors = [...new Set([...legacyAuthors, ...heroAuthors])];
+    const artists = [...new Set([...legacyArtists, ...heroArtists])];
+    const publishers = [...new Set(legacyPublishers)];
+    const magazines = [...new Set(legacyMagazines)];
+
+    // `.cr-teams` — вкладка «Переводчики» с полным списком команд тайтла; надёжнее одной карточки
+    // «Основной переводчик» и не требует угадывания разметки. На старой вёрстке (где вкладки нет)
+    // остаётся резервный вариант — переводчики по главам (title-атрибут ссылки на главу).
+    const teamTranslators = textsOf(doc.$('.cr-teams .cr-team-item__name'));
+    const chapterTranslators = [
+      ...new Set(chapters.map((c) => c.scanlator).filter((s): s is string => s !== null)),
+    ];
+    const translators = teamTranslators.length > 0 ? teamTranslators : chapterTranslators;
+
+    const categoryText = nullIfEmpty(
+      textOrNull(
+        doc.$(".cr-hero-short-details__item a.element-link[href*='/list/category/']").first(),
+      ),
+    );
+    const type = mangaTypeByCategory(categoryText);
+
+    const yearText = nullIfEmpty(
+      textOrNull(doc.$(".cr-hero-short-details__item[href*='/list/year/']").first()) ??
+        textOrNull(root.find('.elem_year').find('a.element-link').first()) ??
+        textOrNull(root.find('.elem_year').first()),
+    );
+    const year = yearText ? parseIntOrNull(yearText.replace(/\D+/g, '')) : null;
+
+    const votesText = textOrNull(
+      mangaBox.find('.cr-hero-rating__item--main .cr-hero-rating__text').first(),
+    );
+    const votesCount = votesText ? parseIntOrNull(votesText.replace(/\D+/g, '')) : null;
+
+    // Формат выпуска («В цвете», «Веб») — те же catalog-элементы, что и жанры/теги, но с типом
+    // `another` (см. GROUPLE_ELEMENT_TYPE.ANOTHER) и своим href-префиксом `/list/another/`.
+    const releaseFormats = [...new Set(textsOf(doc.$('.creation-element-tags__item--misc')))];
+
+    // `.cr-info-details-item` — общий виджет статусов на новой вёрстке: «Выпуск»
+    // (data-production-status, статус оригинала) и «Перевод» (data-translation-status, статус
+    // перевода этим источником) рендерятся одним и тем же компонентом, различаясь только
+    // заголовком строки.
+    const infoStatusCode = (label: string, attr: string): string | null => {
+      let result: string | null = null;
+      doc.$('.cr-info-details-item').each((_, el) => {
+        const item = doc.$(el);
+        if (textOrNull(item.find('.cr-info-details-item__title').first()) === label) {
+          result = attrOrNull(item.find(`[${attr}]`).first(), attr);
+        }
+      });
+      return result;
+    };
+    const releaseState = mapInfoStatus(infoStatusCode('Выпуск', 'data-production-status'));
+    const translationState = mapInfoStatus(infoStatusCode('Перевод', 'data-translation-status'));
+
+    // «Количество читателей» — единственный имеющийся на источнике аналог счётчика просмотров.
+    let viewsText: string | null = null;
+    doc.$('.cr-info-panel').each((_, el) => {
+      const panel = doc.$(el);
+      if (
+        textOrNull(panel.find('.cr-info-panel__title span').first())?.trim() ===
+        'Количество читателей'
+      ) {
+        viewsText = textOrNull(panel.find('.cr-info-panel__title a').first());
+      }
+    });
+    const views = viewsText ? parseIntOrNull((viewsText as string).replace(/\D+/g, '')) : null;
+
     return {
       id: generateUid(cfg.id, mangaUrl),
       title: title.trim(),
@@ -882,23 +1007,19 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         attrOrNull(coverImg, 'data-full') ??
         null,
       tags: [...tags.values()],
-      releaseState: null,
+      releaseState,
       restriction: isRestricted ? MANGA_RESTRICTION.LEGAL : null,
-      authors: [
-        ...new Set(
-          [
-            ...root
-              .find('.elem_author,.elem_illustrator,.elem_screenwriter')
-              .find('a.person-link')
-              .toArray(),
-            // В новой вёрстке авторы вынесены в карточки с портретами: часть ссылок обёрнута
-            // вокруг картинки и текста не содержит — такие отсеиваются как пустые.
-            ...doc.$(".cr-main-persons a[href*='/list/person/']").toArray(),
-          ]
-            .map((el) => nullIfEmpty(textOrNull(doc.$(el))))
-            .filter((t): t is string => t !== null),
-        ),
-      ],
+      authors,
+      artists,
+      translators,
+      publishers,
+      magazines,
+      year,
+      votesCount,
+      type,
+      translationState,
+      releaseFormats,
+      views,
       description:
         doc.$('.cr-description__content').first().html() ??
         root.find('div.manga-description').first().html() ??

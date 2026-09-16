@@ -39,7 +39,7 @@ const CATALOG_JSON = JSON.stringify({
 });
 
 const DETAILS_HTML = `<!doctype html><html><head>
-  <link rel="canonical" href="https://${DOMAIN}/One-Piece" />
+  <link rel="canonical" href="/One-Piece" />
   <meta name="name" content="Ван-Пис" />
 </head><body>
   <div id="mangaBox">
@@ -59,16 +59,64 @@ const DETAILS_HTML = `<!doctype html><html><head>
         <a class="element-link" href="/list/genre/comedy">комедия</a>
       </div>
       <div class="elem_author"><a class="person-link" href="/authors/oda">Oda Eiichiro</a></div>
+      <div class="elem_illustrator"><a class="person-link" href="/authors/oda">Oda Eiichiro</a></div>
+      <div class="elem_publisher"><a class="element-link" href="/list/publisher/shueisha">Shueisha</a></div>
+      <div class="elem_gournal"><a class="element-link" href="/list/gournal/shonen-jump">Shonen Jump</a></div>
+      <div class="elem_year"><a class="element-link" href="/list/year/1997">1997</a></div>
       <div class="manga-description">Описание тайтла.</div>
+    </div>
+    <div class="cr-hero-short-details">
+      <div class="cr-hero-short-details__item"><a href="/list/category/manhwa" class="element-link">Манхва</a></div>
+      <a class="cr-hero-short-details__item" href="/list/year/1997">1997 г.</a>
+    </div>
+    <div class="cr-info-details">
+      <div class="cr-info-details-item">
+        <div class="cr-info-details-item__title">Выпуск</div>
+        <div class="cr-info-details-item__content">
+          <span class="cr-info-details-item__status" data-production-status="FINISHED">Завершён</span>
+        </div>
+      </div>
+      <div class="cr-info-details-item">
+        <div class="cr-info-details-item__title">Перевод</div>
+        <div class="cr-info-details-item__content">
+          <span class="cr-info-details-item__status" data-translation-status="PROGRESS">Продолжается</span>
+        </div>
+      </div>
+    </div>
+    <div class="creation-element-tags">
+      <a class="creation-element-tags__item creation-element-tags__item--misc" href="/list/another/color"><span>В цвете</span></a>
+      <a class="creation-element-tags__item creation-element-tags__item--misc" href="/list/another/web"><span>Веб</span></a>
+    </div>
+    <div class="cr-main-persons">
+      <div class="cr-main-person-item">
+        <div class="cr-main-person-item__role">Сценарист</div>
+        <span class="cr-main-person-item__name"><a href="/list/person/kishimoto">Kishimoto</a></span>
+      </div>
+      <div class="cr-main-person-item">
+        <div class="cr-main-person-item__role">Художник</div>
+        <span class="cr-main-person-item__name"><a href="/list/person/toriyama">Toriyama</a></span>
+      </div>
+      <div class="cr-main-person-item">
+        <div class="cr-main-person-item__role">Основной переводчик</div>
+        <span class="cr-main-person-item__name"><a href="/list/person/mainteam">MainTeam</a></span>
+      </div>
+    </div>
+    <div class="cr-info-panel">
+      <h4 class="cr-info-panel__title"><span>Количество читателей</span><span><a href="#">12345</a></span></h4>
+    </div>
+    <div class="cr-teams">
+      <a class="cr-team-item"><span class="cr-team-item__name">Team Alpha</span></a>
+      <a class="cr-team-item"><span class="cr-team-item__name">Team Beta</span></a>
+      <a class="cr-team-item"><span class="cr-team-item__name">Team Gamma</span></a>
     </div>
   </div>
   <table id="chapters-list"><tbody>
     <tr class="item-row" data-vol="1" data-num="20">
-      <td><a class="chapter-link" href="/One-Piece/vol1/2">Глава 2</a></td>
+      <td><a class="chapter-link" href="/One-Piece/vol1/2" title="Team Alpha (Переводчик)">Глава 2</a></td>
       <td class="date" data-date="02.01.24">02.01.24</td>
     </tr>
     <tr class="item-row" data-vol="1" data-num="10">
-      <td><a class="chapter-link" href="/One-Piece/vol1/1">Глава 1</a></td>
+      <td><a class="chapter-link" href="/One-Piece/vol1/1" title="Team Beta (Переводчик)">Глава 1</a></td>
       <td class="date" data-date="01.01.24">01.01.24</td>
     </tr>
   </tbody></table>
@@ -335,6 +383,47 @@ describe('Grouple parser conformance', () => {
     expect(manga.title).toBe('Ван-Пис');
     expect(manga.tags.map((t) => t.title).sort()).toEqual(['Комедия', 'Приключения']);
     expect(manga.rating).toBeCloseTo(0.86, 5);
+  });
+
+  it('getDetails: publicUrl is always absolute, even when the canonical tag is host-relative', async () => {
+    const manga = await parser.getDetails('/One-Piece');
+    expect(manga.publicUrl).toBe(`https://${DOMAIN}/One-Piece`);
+  });
+
+  it('getDetails: illustrator/publisher/journal/year/votes are parsed separately from author', async () => {
+    const manga = await parser.getDetails('/One-Piece');
+    expect(manga.publishers).toEqual(['Shueisha']);
+    expect(manga.magazines).toEqual(['Shonen Jump']);
+    expect(manga.year).toBe(1997);
+    expect(manga.votesCount).toBe(36);
+  });
+
+  it('getDetails: cr-main-persons roles split into authors/artists and exclude translators', async () => {
+    const manga = await parser.getDetails('/One-Piece');
+    expect(manga.authors).toEqual(['Oda Eiichiro', 'Kishimoto']);
+    expect(manga.artists).toEqual(['Oda Eiichiro', 'Toriyama']);
+    expect(manga.authors).not.toContain('MainTeam');
+    expect(manga.artists).not.toContain('MainTeam');
+  });
+
+  it('getDetails: cr-teams supplies the full translator roster, taking precedence over per-chapter scanlators', async () => {
+    const manga = await parser.getDetails('/One-Piece');
+    expect(manga.translators).toEqual(['Team Alpha', 'Team Beta', 'Team Gamma']);
+  });
+
+  it('getDetails: type, release/translation status and release formats come off the new hero layout', async () => {
+    const manga = await parser.getDetails('/One-Piece');
+    expect(manga.type).toBe(MANGA_TYPE.MANHWA);
+    expect(manga.releaseState).toBe(MANGA_STATE.FINISHED);
+    expect(manga.translationState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.releaseFormats).toEqual(['В цвете', 'Веб']);
+    expect(manga.views).toBe(12345);
+  });
+
+  it('getDetails: distinct scanlators produce distinct branches', async () => {
+    const manga = await parser.getDetails('/One-Piece');
+    const branches = new Set(manga.chapters!.map((c) => c.branch));
+    expect(branches).toEqual(new Set(['Team Alpha', 'Team Beta']));
   });
 
   it('getDetails: data-rating-status="none" (0 votes) reports rating as unknown, not 0', async () => {
