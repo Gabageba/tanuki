@@ -19,8 +19,12 @@ const LIST_JSON = JSON.stringify({
       cover: { mid: '/covers/op-mid.jpg', high: '/covers/op-high.jpg' },
       type: { id: 1, name: 'Манга' },
       status: { id: 2 },
+      translate_status: { id: 2 },
       issue_year: 1997,
       genres: [{ id: 1, name: 'приключения' }],
+      categories: [{ id: 5, name: 'веб' }],
+      total_votes: 1432,
+      total_views: 4234,
     },
   ],
 });
@@ -34,11 +38,20 @@ const DETAILS_JSON = JSON.stringify({
   cover: { mid: '/covers/op-mid.jpg', high: '/covers/op-high.jpg' },
   type: { id: 1, name: 'Манга' },
   status: { id: 2 },
+  translate_status: { id: 2 },
   age_limit: { id: 0 },
   issue_year: 1997,
   genres: [{ id: 1, name: 'приключения' }],
+  categories: [{ id: 5, name: 'веб' }],
   description: 'Описание тайтла.',
-  branches: [{ id: 555, publishers: { name: 'TeamA' } }],
+  creators: [
+    { id: 1, name: 'Oda Eiichiro', type: 4 },
+    { id: 2, name: 'Shueisha', type: 3 },
+  ],
+  total_votes: 1432,
+  total_views: 4234,
+  count_rating: 57,
+  branches: [{ id: 555, publishers: [{ name: 'TeamA' }, { name: 'TeamB' }] }],
 });
 
 const CHAPTERS_PAGE1_JSON = JSON.stringify({
@@ -157,6 +170,10 @@ describe('Remanga parser conformance', () => {
     expect(item!.title).toBe('Ван-Пис');
     expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(1997);
+    expect(item!.tags.map((t) => t.title)).toEqual(['Приключения', 'Веб']);
+    expect(item!.translationState).toBe('ongoing');
+    expect(item!.likes).toBe(1432);
+    expect(item!.views).toBe(4234);
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
@@ -165,12 +182,20 @@ describe('Remanga parser conformance', () => {
     expect(manga.chapters).toHaveLength(2);
     for (const chapter of manga.chapters!) {
       expect(chapter.uploadDate === 0 || chapter.uploadDate > 1e12).toBe(true);
+      expect(chapter.branch).toBe('TeamA, TeamB');
     }
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.description).toBe('Описание тайтла.');
-    expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
+    expect(manga.tags.map((t) => t.title)).toEqual(['Приключения', 'Веб']);
     expect(manga.type).toBe(MANGA_TYPE.MANGA);
     expect(manga.year).toBe(1997);
+    expect(manga.artists).toEqual(['Oda Eiichiro']);
+    expect(manga.publishers).toEqual(['Shueisha']);
+    expect(manga.translators).toEqual(['TeamA', 'TeamB']);
+    expect(manga.translationState).toBe('ongoing');
+    expect(manga.votesCount).toBe(57);
+    expect(manga.likes).toBe(1432);
+    expect(manga.views).toBe(4234);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

@@ -65,6 +65,34 @@ const STATES: Record<number, MangaState> = {
  *  title — not a publication state, so it maps to `restriction` instead of `releaseState`. */
 const LICENSED_STATUS_ID = 6;
 
+/** translate_status ids 1..4 share STATES' 1/2/3 numbering by coincidence (Закончен/Продолжается/
+ *  Заморожен) but diverge at 4 ("Нет переводчика" vs STATES' "Заброшен"), so this needs its own
+ *  map rather than reusing STATES. */
+const TRANSLATE_STATES: Record<number, MangaState> = {
+  1: MANGA_STATE.FINISHED,
+  2: MANGA_STATE.ONGOING,
+  3: MANGA_STATE.PAUSED,
+  4: MANGA_STATE.ABANDONED,
+};
+
+/** translate_status.id === 5 ("Не переводится (лицензировано)") is translate_status's own
+ *  LICENSED_STATUS_ID — same rationale: not in TRANSLATE_STATES above, maps to `restriction`
+ *  instead so translationState doesn't have to explain the legal reason. */
+const TRANSLATE_LICENSED_STATUS_ID = 5;
+
+/** creators[].type — verified live against api.remanga.org across ~140 titles: 1 is always a
+ *  real person credited as the original writer (e.g. Yun In Wan on «Дьявол-адвокат Кукабара»,
+ *  paired with artist Yang Kyung-Il as type 4); 3 is always a publishing company (Kodansha,
+ *  Shueisha, AC.QQ/Tencent...); 4 is the illustrator — the only type present on solo-mangaka
+ *  titles. 2 is rare and always a studio-with-logo entry (e.g. "Yuanqi dan manhua"), grouped with
+ *  3 under `publishers` since that field already covers "Publishing house/studio credits". */
+const CREATOR_TYPE = {
+  AUTHOR: 1,
+  STUDIO: 2,
+  PUBLISHER: 3,
+  ARTIST: 4,
+} as const;
+
 type CoverJson = {
   mid?: string;
   high?: string;
@@ -87,6 +115,21 @@ type TypeJson = {
   id?: number;
 };
 
+/** `creators[].type` — see CREATOR_TYPE below for what each id means. */
+type CreatorJson = {
+  name: string;
+  type?: number;
+};
+
+type PublisherJson = {
+  name?: string;
+};
+
+type BranchJson = {
+  id: number;
+  publishers?: PublisherJson[];
+};
+
 type MangaJson = {
   dir: string;
   main_name: string;
@@ -96,16 +139,27 @@ type MangaJson = {
   cover: CoverJson;
   type?: TypeJson;
   status?: StatusJson;
+  /** Status of remanga's own translation, distinct from `status` (the original's release). */
+  translate_status?: StatusJson;
   age_limit?: AgeLimitJson;
   issue_year?: number;
   genres?: TagJson[];
+  /** Narrower trope/setting tags shown alongside `genres` on the source itself (e.g.
+   *  «Средневековье», «Исекай», «ГГ мужчина») — a second, more specific vocabulary, not a subset
+   *  of genres. */
+  categories?: TagJson[];
   description?: string;
-  branches?: { id: number; publishers?: { name?: string } }[];
+  /** Original work's writer/artist/publisher credits — absent on list items, only `getDetails`
+   *  requests carry it. */
+  creators?: CreatorJson[];
+  /** Vote count backing `avg_rating` — only present on `getDetails`, unlike `total_votes`/
+   *  `total_views` below which the list endpoint already carries. */
+  count_rating?: number;
+  /** Unbounded "likes" counter, distinct from the 0..10 `avg_rating`. */
+  total_votes?: number;
+  total_views?: number;
+  branches?: BranchJson[];
   detail?: { message?: string };
-};
-
-type PublisherJson = {
-  name?: string;
 };
 
 type ChapterJson = {
@@ -236,12 +290,62 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     return res;
   });
 
-  const parseTags = (genres: TagJson[] | undefined): RawTag[] => {
-    return (genres ?? []).map((g) => ({
-      title: toTitleCase(g.name),
-      key: String(g.id),
-      source: SOURCE_ID,
-    }));
+  /** genre/category keys carry a 'g'/'c' prefix so the two vocabularies can't collide once
+   *  merged into one display list — each is its own id sequence on the source. */
+  const parseTag = (prefix: string, jo: TagJson): RawTag => {
+    return { title: toTitleCase(jo.name), key: `${prefix}${jo.id}`, source: SOURCE_ID };
+  };
+
+  const parseTags = (
+    genres: TagJson[] | undefined,
+    categories: TagJson[] | undefined,
+  ): RawTag[] => {
+    const seenTitles = new Set<string>();
+    const result: RawTag[] = [];
+    for (const tag of [
+      ...(genres ?? []).map((g) => parseTag('g', g)),
+      ...(categories ?? []).map((c) => parseTag('c', c)),
+    ]) {
+      if (seenTitles.has(tag.title)) continue;
+      seenTitles.add(tag.title);
+      result.push(tag);
+    }
+    return result;
+  };
+
+  const parseCreators = (
+    creators: CreatorJson[] | undefined,
+  ): { authors: string[]; artists: string[]; publishers: string[] } => {
+    const authors: string[] = [];
+    const artists: string[] = [];
+    const publishers: string[] = [];
+    for (const creator of creators ?? []) {
+      switch (creator.type) {
+        case CREATOR_TYPE.AUTHOR:
+          authors.push(creator.name);
+          break;
+        case CREATOR_TYPE.ARTIST:
+          artists.push(creator.name);
+          break;
+        case CREATOR_TYPE.STUDIO:
+        case CREATOR_TYPE.PUBLISHER:
+          publishers.push(creator.name);
+          break;
+      }
+    }
+    return { authors, artists, publishers };
+  };
+
+  /** Each branch is a distinct translation stream — its `publishers` are the team(s) credited
+   *  for it, so the same names back both `translators` and each chapter's `branch`. */
+  const parseTranslators = (branches: BranchJson[] | undefined): string[] => {
+    const names = new Set<string>();
+    for (const branch of branches ?? []) {
+      for (const publisher of branch.publishers ?? []) {
+        if (publisher.name) names.add(publisher.name);
+      }
+    }
+    return [...names];
   };
 
   const parseManga = (jo: MangaJson): RawManga => {
@@ -257,12 +361,20 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       contentRating: null,
       coverUrl: cover.mid ? toAbsoluteUrl(cover.mid, apiHost) : null,
       largeCoverUrl: cover.high ? toAbsoluteUrl(cover.high, apiHost) : null,
-      tags: parseTags(jo.genres),
+      tags: parseTags(jo.genres, jo.categories),
       releaseState: jo.status?.id != null ? (STATES[jo.status.id] ?? null) : null,
-      restriction: jo.status?.id === LICENSED_STATUS_ID ? MANGA_RESTRICTION.LEGAL : null,
+      translationState:
+        jo.translate_status?.id != null ? (TRANSLATE_STATES[jo.translate_status.id] ?? null) : null,
+      restriction:
+        jo.status?.id === LICENSED_STATUS_ID ||
+        jo.translate_status?.id === TRANSLATE_LICENSED_STATUS_ID
+          ? MANGA_RESTRICTION.LEGAL
+          : null,
       type: mangaTypeById(jo.type?.id),
       year: jo.issue_year ?? null,
       authors: [],
+      likes: jo.total_votes ?? null,
+      views: jo.total_views ?? null,
       description: null,
       chapters: null,
       source: SOURCE_ID,
@@ -455,7 +567,11 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     const chapters: RawChapter[] = [];
     let hadPaidChapters = false;
     for (const branch of json.branches ?? []) {
-      const branchName = branch.publishers?.name ?? null;
+      const branchName =
+        branch.publishers
+          ?.map((p) => p.name)
+          .filter((n): n is string => !!n)
+          .join(', ') || null;
       const branchChapters = (await fetchAllChapters(branch.id)).slice().reverse();
       for (const cjo of branchChapters) {
         if (cjo.is_paid && !cjo.is_bought) {
@@ -468,7 +584,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
           number: cjo.chapter ?? 0,
           volume: cjo.tome ?? 0,
           url: `/api/v2/titles/chapters/${cjo.id}/`,
-          scanlator: cjo.publishers?.[0]?.name ?? null,
+          scanlator: cjo.publishers?.[0]?.name ?? branchName,
           uploadDate: parseIsoDate(cjo.upload_date),
           branch: branchName,
           source: SOURCE_ID,
@@ -476,6 +592,16 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       }
     }
 
+    const { authors, artists, publishers } = parseCreators(json.creators);
+    const translators = parseTranslators(json.branches);
+
+    // country, magazines and a release date more granular than `year` have no equivalent on
+    // api.remanga.org — confirmed live across ~140 titles' full details payloads: no `country`
+    // field exists (type.id is the only origin signal, and it drives `type` itself rather than a
+    // separate raw string), no serialization-magazine field exists, and issue_year is the only
+    // date the API exposes for the original release (new_season_date exists but is null on every
+    // title sampled, announced or not). releaseFormats and an "added to catalog" date are the
+    // same story — no such field anywhere in the payload.
     return {
       id: generateUid(SOURCE_ID, url),
       title: json.main_name,
@@ -491,17 +617,28 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
             : null,
       coverUrl: cover.mid ? toAbsoluteUrl(cover.mid, apiHost) : null,
       largeCoverUrl: cover.high ? toAbsoluteUrl(cover.high, apiHost) : null,
-      tags: parseTags(json.genres),
+      tags: parseTags(json.genres, json.categories),
       releaseState: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,
+      translationState:
+        json.translate_status?.id != null
+          ? (TRANSLATE_STATES[json.translate_status.id] ?? null)
+          : null,
       restriction:
-        json.status?.id === LICENSED_STATUS_ID
+        json.status?.id === LICENSED_STATUS_ID ||
+        json.translate_status?.id === TRANSLATE_LICENSED_STATUS_ID
           ? MANGA_RESTRICTION.LEGAL
           : chapters.length === 0 && hadPaidChapters
             ? MANGA_RESTRICTION.PAYWALL
             : null,
       type: mangaTypeById(json.type?.id),
       year: json.issue_year ?? null,
-      authors: [],
+      authors,
+      artists,
+      publishers,
+      translators,
+      votesCount: json.count_rating ?? null,
+      likes: json.total_votes ?? null,
+      views: json.total_views ?? null,
       description: json.description ?? null,
       chapters,
       source: SOURCE_ID,
