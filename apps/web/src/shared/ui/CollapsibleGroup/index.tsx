@@ -1,6 +1,6 @@
 import type { GroupProps } from '@mantine/core';
 import { Anchor, Group } from '@mantine/core';
-import { Children } from 'react';
+import { Children, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useRowClamp from './hooks/useRowClamp';
 
@@ -12,9 +12,21 @@ type Props = {
 
 function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restProps }: Props) {
   const { t } = useTranslation();
-  const { ref, expanded, expand, isClamped, visibleCount } = useRowClamp<HTMLDivElement>(
+  const moreLabel = t('more');
+
+  // Measured off-screen so the row-fitting math in useRowClamp knows the toggle's real
+  // width up front, instead of only finding out once it's already rendered and wrapped.
+  const toggleMeasureRef = useRef<HTMLButtonElement>(null);
+  const [toggleWidth, setToggleWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    setToggleWidth(toggleMeasureRef.current?.getBoundingClientRect().width ?? 0);
+  }, [moreLabel]);
+
+  const { measureRef, expanded, expand, isClamped, visibleCount } = useRowClamp<HTMLDivElement>(
     children,
     maxRows,
+    toggleWidth,
   );
 
   const visibleChildren =
@@ -23,14 +35,40 @@ function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restPr
       : Children.toArray(children).slice(0, visibleCount);
 
   return (
-    <Group ref={ref} {...restProps} gap={gap}>
-      {visibleChildren}
-      {isClamped && !expanded && (
-        <Anchor component="button" type="button" onClick={expand} fw={500} lh={1} w="fit-content">
-          {t('more')}
-        </Anchor>
-      )}
-    </Group>
+    <>
+      {/* Always renders the full, untrimmed content so useRowClamp measures real rows
+          instead of the already-trimmed output below — invisible and out of the flow. */}
+      <Group
+        ref={measureRef}
+        {...restProps}
+        gap={gap}
+        aria-hidden
+        style={{ visibility: 'hidden', height: 0, overflow: 'hidden' }}
+      >
+        {children}
+      </Group>
+      <Anchor
+        ref={toggleMeasureRef}
+        component="button"
+        type="button"
+        fw={500}
+        lh={1}
+        w="fit-content"
+        aria-hidden
+        tabIndex={-1}
+        style={{ position: 'fixed', top: -9999, left: -9999, visibility: 'hidden' }}
+      >
+        {moreLabel}
+      </Anchor>
+      <Group {...restProps} gap={gap}>
+        {visibleChildren}
+        {isClamped && !expanded && (
+          <Anchor component="button" type="button" onClick={expand} fw={500} lh={1} w="fit-content">
+            {moreLabel}
+          </Anchor>
+        )}
+      </Group>
+    </>
   );
 }
 
