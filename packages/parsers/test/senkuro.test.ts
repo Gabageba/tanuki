@@ -60,19 +60,27 @@ const SEARCH_RESPONSE = JSON.stringify({
 
 const DETAILS_RESPONSE = JSON.stringify({
   data: {
-    mangaTachiyomiInfo: {
+    manga: {
       id: '123',
       slug: 'one-piece',
       titles: [{ lang: 'RU', content: 'Ван-Пис' }],
       alternativeNames: [{ lang: 'EN', content: 'One Piece' }],
-      localizations: [{ lang: 'RU', description: 'Описание тайтла.' }],
+      localizations: [{ lang: 'RU', description: [{ content: [{ text: 'Описание тайтла.' }] }] }],
       type: 'MANGA',
       rating: 'GENERAL',
       score: 9.16,
       status: 'ONGOING',
+      formats: ['WEB', 'IN_COLOR'],
       labels: [{ slug: 'adventure', titles: [{ lang: 'RU', content: 'приключения' }] }],
       cover: { original: { url: 'https://cdn.senkuro.com/one-piece.jpg' } },
-      mainStaff: [{ person: { name: 'Oda Eiichiro' } }],
+      mainStaff: [{ roles: ['STORY_AND_ART'], person: { name: 'Oda Eiichiro' } }],
+      releasedOn: '1997-07-22',
+      views: 123456,
+      originCountry: 'JP',
+      translitionStatus: 'IN_PROGRESS',
+      createdAt: '2020-01-01T00:00:00.000Z',
+      publishers: [{ name: 'Shueisha' }],
+      scoreDistributions: [{ count: 700 }, { count: 259 }],
     },
   },
 });
@@ -182,7 +190,7 @@ const setUpFixtures = (
     body: CHAPTERS_RESPONSE,
     contentType: 'application/json',
   });
-  http.register((url, body) => url === endpoint && !!body?.includes('mangaTachiyomiInfo'), {
+  http.register((url, body) => url === endpoint && !!body?.includes('fetchManga('), {
     status: 200,
     body: DETAILS_RESPONSE,
     contentType: 'application/json',
@@ -237,11 +245,23 @@ describe('Senkuro parser conformance', () => {
     // oldest-first ordering
     expect(manga.chapters![0]!.number).toBe(1);
     expect(manga.chapters![1]!.number).toBe(2);
-    expect(manga.description).toContain('Описание тайтла.');
+    expect(manga.description).toBe('Описание тайтла.');
+    expect(manga.description).not.toContain('Альтернативные названия');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.authors).toEqual(['Oda Eiichiro']);
+    expect(manga.artists).toEqual(['Oda Eiichiro']);
+    expect(manga.translators).toEqual(['TeamA']);
+    expect(manga.publishers).toEqual(['Shueisha']);
+    expect(manga.releaseFormats).toEqual(['Веб', 'В цвете']);
     expect(manga.type).toBe(MANGA_TYPE.MANGA);
     expect(manga.rating).toBeCloseTo(0.916);
+    expect(manga.year).toBe(1997);
+    expect(manga.views).toBe(123456);
+    expect(manga.votesCount).toBe(959);
+    expect(manga.country).toBe('Япония');
+    expect(manga.translationState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.releaseDate).toBeGreaterThan(0);
+    expect(manga.addedAt).toBeGreaterThan(0);
   });
 
   it('getList: score of exactly 0 (no votes yet) falls back to RATING_UNKNOWN', async () => {

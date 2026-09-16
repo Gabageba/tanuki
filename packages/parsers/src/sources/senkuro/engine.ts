@@ -56,11 +56,6 @@ type LocalizedText = {
   content?: string;
 };
 
-type LocalizedDescription = {
-  lang?: string;
-  description?: string;
-};
-
 /** A leaf/void node inside a `TiptapNodeNestedBlock.content` array — the description's rich-text
  *  schema exposes only `text` on text leaves and `type` on void nodes (`hardBreak`) through this
  *  API; every other node kind in the union (headings, lists, code blocks, mentions...) carries no
@@ -119,13 +114,41 @@ type AllLabelJson = {
   titles?: LocalizedText[];
 };
 
-type MangaInfoJson = Omit<MangaCardJson, 'localizations'> & {
+type StaffJson = {
+  roles?: string[];
+  person?: { name?: string };
+};
+
+type StudioJson = {
+  name?: string;
+};
+
+/** `manga(slug)` — a superset of `mangaTachiyomiInfo`'s stripped-down `MangaTachiyomi` type, the
+ *  only place the extra fields below (views, originCountry, translitionStatus, publishers,
+ *  releasedOn, createdAt) are exposed — confirmed live against api.senkuro.com since introspection
+ *  is disabled. Its `localizations[].description` is rich text (`TiptapNodeUnion`), same shape as
+ *  the list query's, unlike `MangaTachiyomi`'s plain-string one. */
+type MangaInfoJson = {
+  id?: string;
+  slug?: string;
+  titles?: LocalizedText[];
   alternativeNames?: LocalizedText[];
-  localizations?: LocalizedDescription[];
+  localizations?: LocalizedRichDescription[];
+  cover?: CoverJson;
+  type?: string;
+  score?: number;
   status?: string;
   rating?: string;
+  formats?: string[];
   labels?: LabelJson[];
-  mainStaff?: { person?: { name?: string } }[];
+  mainStaff?: StaffJson[];
+  releasedOn?: string;
+  views?: number;
+  originCountry?: string;
+  translitionStatus?: string;
+  createdAt?: string;
+  publishers?: StudioJson[];
+  scoreDistributions?: { count?: number }[];
 };
 
 type ChapterJson = {
@@ -157,6 +180,46 @@ const parseState = (raw: string | undefined): MangaState | null => {
       return MANGA_STATE.ABANDONED;
     default:
       return null;
+  }
+};
+
+/** `translitionStatus` on `manga(slug)` — the source's own typo, kept verbatim (see
+ *  SENKURO_FILTER_GROUP.TRANSLITION_STATUS) — tracks Senkuro's own scanlation progress,
+ *  distinct from `status`'s original-release state. */
+const parseTranslationState = (raw: string | undefined): MangaState | null => {
+  switch (raw?.toUpperCase()) {
+    case 'FINISHED':
+      return MANGA_STATE.FINISHED;
+    case 'IN_PROGRESS':
+      return MANGA_STATE.ONGOING;
+    case 'FROZEN':
+      return MANGA_STATE.PAUSED;
+    case 'ABANDONED':
+      return MANGA_STATE.ABANDONED;
+    default:
+      return null;
+  }
+};
+
+/** `originCountry` is a free-form ISO-3166-1 alpha-2 code, not a closed enum the source declares
+ *  (confirmed live: JP/KR/CN/RU/US/FR all appear across the catalog) — an unrecognized code falls
+ *  back to itself rather than being dropped. */
+const getOriginCountryTitle = (code: string): string => {
+  switch (code) {
+    case 'JP':
+      return 'Япония';
+    case 'KR':
+      return 'Корея';
+    case 'CN':
+      return 'Китай';
+    case 'RU':
+      return 'Россия';
+    case 'US':
+      return 'США';
+    case 'FR':
+      return 'Франция';
+    default:
+      return code;
   }
 };
 
@@ -224,18 +287,6 @@ const pickLocalizedTitle = (items: LocalizedText[] | undefined): string | null =
   return en ?? first;
 };
 
-const parseLocalizationDescription = (items: LocalizedDescription[] | undefined): string | null => {
-  if (!items || items.length === 0) return null;
-  let first: string | null = null;
-  for (const item of items) {
-    const text = item.description?.trim();
-    if (!text) continue;
-    first ??= text;
-    if (item.lang?.toUpperCase() === 'RU') return text;
-  }
-  return first;
-};
-
 // Senkuro pads blank lines in its rich-text editor with a Hangul filler character rather than an
 // empty paragraph — confirmed live — so it's stripped before a paragraph is judged empty.
 const TIPTAP_FILLER_CHAR = 'ᅠ';
@@ -278,6 +329,20 @@ const mapLabelsToTags = (labels: LabelJson[] | undefined, sourceId: string): Raw
       return { key: slug, title: toTitleCase(labelTitle), source: sourceId };
     })
     .filter((t): t is RawTag => t !== null);
+
+/** `mainStaff[].roles` — confirmed live across ~1000 titles: only STORY, ART and STORY_AND_ART
+ *  appear, so authors/artists split on membership rather than an exhaustive switch. */
+const extractStaffNames = (
+  mainStaff: StaffJson[] | undefined,
+  matchesRole: (role: string) => boolean,
+): string[] => [
+  ...new Set(
+    (mainStaff ?? [])
+      .filter((staff) => (staff.roles ?? []).some(matchesRole))
+      .map((staff) => staff.person?.name?.trim())
+      .filter((n): n is string => !!n && n.length > 0),
+  ),
+];
 
 const parseTitleList = (items: LocalizedText[] | undefined): string[] => {
   const result: string[] = [];
@@ -820,29 +885,39 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
     return { mangaId, mangaSlug };
   };
 
-  const parseMangaInfo = (info: MangaInfoJson): RawManga | null => {
+  const parseMangaInfo = (info: MangaInfoJson, translators: string[]): RawManga | null => {
     const title = pickLocalizedTitle(info.titles);
     if (!title || !info.id || !info.slug) return null;
     const url = [info.id, info.slug].join(URL_DELIMITER);
     const altTitles = parseTitleList(info.alternativeNames);
     const cover = info.cover?.original?.url ?? null;
 
-    const descriptionParts: string[] = [];
-    if (altTitles.length > 0) {
-      descriptionParts.push(`Альтернативные названия:\n${altTitles.join(' / ')}`);
-    }
-    const ruDescription = parseLocalizationDescription(info.localizations);
-    if (ruDescription) descriptionParts.push(ruDescription);
-
-    const authors = [
+    const authors = extractStaffNames(
+      info.mainStaff,
+      (role) => role === 'STORY' || role === 'STORY_AND_ART',
+    );
+    const artists = extractStaffNames(
+      info.mainStaff,
+      (role) => role === 'ART' || role === 'STORY_AND_ART',
+    );
+    const publishers = [
       ...new Set(
-        (info.mainStaff ?? [])
-          .map((s) => s.person?.name?.trim())
+        (info.publishers ?? [])
+          .map((p) => p.name?.trim())
           .filter((n): n is string => !!n && n.length > 0),
       ),
     ];
 
     const tags = mapLabelsToTags(info.labels, SOURCE_ID);
+
+    // No direct votes-count field exists (confirmed live) — `score` is a bare average with no
+    // count alongside it. The count only shows up as the per-bucket histogram the site sums into
+    // its own JSON-LD `aggregateRating.ratingCount` (verified against senkuro.com's own markup),
+    // so summing it here is the only way to reach the same number.
+    const votesCount = (info.scoreDistributions ?? []).reduce(
+      (sum, bucket) => sum + (bucket.count ?? 0),
+      0,
+    );
 
     return {
       id: generateUid(SOURCE_ID, info.id),
@@ -857,14 +932,28 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       tags,
       releaseState: parseState(info.status),
       authors,
-      description: descriptionParts.length > 0 ? descriptionParts.join('\n\n') : null,
+      artists,
+      publishers,
+      translators,
+      releaseFormats: (info.formats ?? []).map((f) => getMangaFormatTitle(f)),
+      description: parseRichLocalizationDescription(info.localizations),
       chapters: null,
       source: SOURCE_ID,
       type: parseMangaType(info.type),
+      year: parseYear(info.releasedOn),
+      releaseDate: parseIsoDate(info.releasedOn),
+      addedAt: parseIsoDate(info.createdAt),
+      views: info.views ?? null,
+      votesCount: votesCount > 0 ? votesCount : null,
+      country: info.originCountry ? getOriginCountryTitle(info.originCountry) : null,
+      translationState: parseTranslationState(info.translitionStatus),
     };
   };
 
-  const fetchChapters = async (mangaId: string, mangaSlug: string): Promise<RawChapter[]> => {
+  const fetchChapters = async (
+    mangaId: string,
+    mangaSlug: string,
+  ): Promise<{ chapters: RawChapter[]; translators: string[] }> => {
     const data = await postGraphQl(CHAPTERS_QUERY, { mangaId });
     const payload = data['mangaTachiyomiChapters'] as
       { chapters?: ChapterJson[]; teams?: TeamJson[] } | undefined;
@@ -899,18 +988,18 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
         };
       })
       .filter((c): c is RawChapter => c !== null);
-    return chapters.reverse();
+    return { chapters: chapters.reverse(), translators: [...teamsById.values()] };
   };
 
   const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const { mangaId, mangaSlug } = parseMangaUrl(mangaUrl);
-    const [data, chapters] = await Promise.all([
-      postGraphQl(DETAILS_QUERY, { mangaId }),
+    const [data, { chapters, translators }] = await Promise.all([
+      postGraphQl(DETAILS_QUERY, { slug: mangaSlug }),
       fetchChapters(mangaId, mangaSlug),
     ]);
-    const info = data['mangaTachiyomiInfo'] as MangaInfoJson | undefined;
+    const info = data['manga'] as MangaInfoJson | undefined;
     if (!info) throw new ParseError(`Cannot parse manga details: ${mangaUrl}`, SOURCE_ID);
-    const manga = parseMangaInfo(info);
+    const manga = parseMangaInfo(info, translators);
     if (!manga) throw new ParseError(`Cannot parse manga details: ${mangaUrl}`, SOURCE_ID);
     return { ...manga, chapters };
   };
@@ -1054,9 +1143,12 @@ query fetchMangas(
 }
 `;
 
+// manga(slug) is the only query exposing views/originCountry/translitionStatus/publishers/
+// releasedOn/createdAt (see MangaInfoJson) — mangaTachiyomiInfo's MangaTachiyomi type doesn't
+// carry them, confirmed live against api.senkuro.com since introspection is disabled.
 const DETAILS_QUERY = `
-query fetchTachiyomiManga($mangaId: ID!) {
-  mangaTachiyomiInfo(mangaId: $mangaId) {
+query fetchManga($slug: String!) {
+  manga(slug: $slug) {
     id
     slug
     titles {
@@ -1069,7 +1161,18 @@ query fetchTachiyomiManga($mangaId: ID!) {
     }
     localizations {
       lang
-      description
+      description {
+        ... on TiptapNodeNestedBlock {
+          content {
+            ... on TiptapNodeText {
+              text
+            }
+            ... on TiptapNodeOnlyBlock {
+              type
+            }
+          }
+        }
+      }
     }
     type
     rating
@@ -1077,15 +1180,12 @@ query fetchTachiyomiManga($mangaId: ID!) {
     status
     formats
     labels {
-      id
-      rootId
       slug
       titles {
         lang
         content
       }
     }
-    translationStatus
     cover {
       original {
         url
@@ -1096,6 +1196,17 @@ query fetchTachiyomiManga($mangaId: ID!) {
       person {
         name
       }
+    }
+    releasedOn
+    views
+    originCountry
+    translitionStatus
+    createdAt
+    publishers {
+      name
+    }
+    scoreDistributions {
+      count
     }
   }
 }
