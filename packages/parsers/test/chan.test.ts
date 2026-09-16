@@ -1,6 +1,12 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { FILTER_TYPE, SORT_DIRECTION, SORT_ORDER } from '@tanuki/contracts';
+import {
+  FILTER_TYPE,
+  MANGA_STATE,
+  MANGA_TYPE,
+  SORT_DIRECTION,
+  SORT_ORDER,
+} from '@tanuki/contracts';
 import { CHAN_FILTER_GROUP, createChanParser } from '../src/sources/chan/engine';
 import type { ChanConfig } from '../src/sources/chan/config';
 import { SOURCE_ID } from '../src/sources/catalog';
@@ -52,7 +58,14 @@ const DETAILS_HTML = `<!doctype html><html><body>
     <h1>Ван-Пис (One Piece)</h1>
     <span id="ratig-layer-1">plus widget</span> Плюсиков: <font style="color:green;"><b>12</b></font>
     <img id="cover" src="/uploads/one-piece-full.jpg" />
-    <a href="/mangaka/oda">Oda Eiichiro</a>
+    <table class="mangatitle">
+      <tr><td class="item">Другие названия</td><td class="item2"><h2>Большой куш; Один Кусок</h2></td></tr>
+      <tr><td class="item">Тип</td><td class="item2"><h2><span class="translation"><a href="/type/Манга">Манга</a></span></h2></td></tr>
+      <tr><td class="item">Автор</td><td class="item2"><span class="translation"><a href='/mangaka/1527/' title='Oda Eiichiro манга'>Oda Eiichiro</a>, <a href='/mangaka/114482/' title='Eiichiro Oda манга'>Eiichiro Oda</a><a href='/mangaka/' title=' манга'></a></span></td></tr>
+      <tr><td class="item">Статус (Томов)</td><td class="item2"><h2>100 томов, выпуск продолжается</h2></td></tr>
+      <tr><td class="item">Загружено</td><td class="item2"><h2><b>1200 глав</b>, перевод продолжается</h2></td></tr>
+      <tr><td class="item">Переводчики</td><td class="item2"><span class="translation"><a href='/translation/3146/' title='Zelmira Black Pearl '>Zelmira Black Pearl</a><a href='/translation/' title=' '></a></span></td></tr>
+    </table>
     <div class="sidetags"><ul>
       <li class="sidetag"><a href="/tags/priklyucheniya">приключения</a></li>
       <li class="sidetag"><a href="/tags/komediya">комедия</a></li>
@@ -175,6 +188,28 @@ describe('Chan parser conformance', () => {
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title).sort()).toEqual(['Комедия', 'Приключения']);
     expect(manga.likes).toBe(12);
+  });
+
+  it('getDetails: type/status/credits/alt-titles parsed from the mangatitle info table', async () => {
+    const manga = await parser.getDetails('/One-Piece.html');
+    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.releaseState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.translationState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.authors).toEqual(['Oda Eiichiro', 'Eiichiro Oda']);
+    expect(manga.translators).toEqual(['Zelmira Black Pearl']);
+    // altTitle parsed from the h1 parenthetical comes first, then the "Другие названия" row.
+    expect(manga.altTitles).toEqual(['Ван-Пис', 'Большой куш', 'Один Кусок']);
+  });
+
+  it('getDetails: a oneshot\'s "Сингл" release status maps to finished even with no "завершен" wording', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.endsWith('/One-Piece.html'), {
+      status: 200,
+      body: DETAILS_HTML.replace('<h2>100 томов, выпуск продолжается</h2>', '<h2>Сингл</h2>'),
+    });
+    const oneshotParser = createChanParser(CFG, makeContext(http));
+    const manga = await oneshotParser.getDetails('/One-Piece.html');
+    expect(manga.releaseState).toBe(MANGA_STATE.FINISHED);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

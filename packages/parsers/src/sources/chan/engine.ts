@@ -3,10 +3,13 @@ import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_STATE,
+  MANGA_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
+  type MangaState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -18,6 +21,7 @@ import type {
   RawTag,
   RawFilterGroup,
   RawFilterOption,
+  RawMangaType,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -120,6 +124,87 @@ const parseCountFromTitle = (title: string | null): number | null => {
 const parseLikesFromText = (text: string): number | null => {
   const match = /Плюсиков:\s*(\d+)/i.exec(text) ?? /(\d+)\s*плюсик/i.exec(text);
   return match ? Number.parseInt(match[1]!, 10) : null;
+};
+
+/** `table.mangatitle` on the details page is a flat `td.item`/`td.item2` label-value list ("Тип",
+ *  "Автор", "Другие названия", ...) — this finds the value cell for one label, or null when the
+ *  row isn't rendered for this title (e.g. "Переводчики" is absent on untranslated releases). */
+const findInfoCell = ($root: Cheerio<AnyNode>, $: CheerioAPI, label: string): Cheerio<AnyNode> => {
+  const row = $root
+    .find('table.mangatitle tr')
+    .toArray()
+    .find((el) => (textOrNull($(el).find('td.item').first()) ?? '').trim() === label);
+  return row ? $(row).find('td.item2').first() : $();
+};
+
+/** "Тип" cell links to `/type/<name>` — same vocabulary as `fetchTypeGroup`'s `/type/` listing
+ *  (verified live: Манга, Манхва, Маньхуа, Комикс, OEL Manga, OEL-манга, Другое, Новелла, Ранобэ,
+ *  Руманга, Стрип). Only the four RawMangaType-bearing ones get their own case. */
+const parseChanType = (text: string | null): RawMangaType | null => {
+  switch (text?.trim()) {
+    case 'Манга':
+      return MANGA_TYPE.MANGA;
+    case 'Манхва':
+      return MANGA_TYPE.MANHWA;
+    case 'Маньхуа':
+      return MANGA_TYPE.MANHUA;
+    case 'Комикс':
+      return MANGA_TYPE.COMICS;
+    case undefined:
+    case '':
+      return null;
+    default:
+      return MANGA_TYPE.OTHER;
+  }
+};
+
+/** Shared by "Статус (Томов)" (original release) and "Загружено" (translation) cells — both
+ *  phrase their state as "... завершен" / "... продолжается" (verified live across regular
+ *  series, a completed oneshot and an ongoing one); this DLE engine has no third state (no
+ *  paused/abandoned wording observed anywhere, including the site's own `/catalog` status
+ *  filters — see fetchStatusGroup, which only ever routes `all_done`/`end`/`ongoing`). */
+const parseChanState = (text: string | null): MangaState | null => {
+  if (!text) return null;
+  if (/заверш/i.test(text)) return MANGA_STATE.FINISHED;
+  if (/продолжа/i.test(text)) return MANGA_STATE.ONGOING;
+  return null;
+};
+
+/** "Статус (Томов)" reads "Сингл" instead of a "выпуск ..." phrase for a one-shot — a single
+ *  release has nothing left to publish, so it's complete by definition even though the cell
+ *  never spells out "завершен" for it. */
+const parseChanReleaseState = (text: string | null): MangaState | null => {
+  if (text && /^\s*сингл/i.test(text)) return MANGA_STATE.FINISHED;
+  return parseChanState(text);
+};
+
+/** "Другие названия" packs every alt title into one cell, separated by whichever punctuation the
+ *  title's editor happened to use — verified live as both "; " (One Piece's ~25-entry list) and
+ *  " / " (a Korean manhwa's list) on different titles, never mixed on the same one. Splitting on
+ *  either covers both without a per-title lookup table. */
+const parseChanAltTitles = (text: string | null): string[] => {
+  if (!text) return [];
+  return text
+    .split(/[;/]/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+};
+
+/** "Автор" / "Переводчики" cells link every credited person as `<a href="/mangaka/<id>/">` /
+ *  `<a href="/translation/<id>/">`, plus one trailing empty `<a href="/mangaka/">` placeholder
+ *  the source's own template always appends (verified live on every sampled title) — filtered out
+ *  here by its empty text rather than by href, since a real credit could theoretically share the
+ *  same bare prefix. */
+const parseChanCredits = ($cell: Cheerio<AnyNode>, $: CheerioAPI): string[] => {
+  const names = new Set<string>();
+  $cell
+    .find('a')
+    .toArray()
+    .forEach((el) => {
+      const name = nullIfEmpty(textOrNull($(el)));
+      if (name) names.add(name);
+    });
+  return [...names];
 };
 
 /**
@@ -589,7 +674,17 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
     const $cover = root.find('#cover').first();
     let coverUrl = attrOrNull($cover, 'src') ? absUrl($cover, 'src', doc.baseUrl) : null;
     const { title, altTitle } = parseTitle(textOrNull(root.find('h1').first()) ?? '');
-    const author = textOrNull(root.find('a[href^="/mangaka"]').first());
+    const type = parseChanType(textOrNull(findInfoCell(root, doc.$, 'Тип')));
+    const authors = parseChanCredits(findInfoCell(root, doc.$, 'Автор'), doc.$);
+    const translators = parseChanCredits(findInfoCell(root, doc.$, 'Переводчики'), doc.$);
+    const releaseState = parseChanReleaseState(
+      textOrNull(findInfoCell(root, doc.$, 'Статус (Томов)')),
+    );
+    const translationState = parseChanState(textOrNull(findInfoCell(root, doc.$, 'Загружено')));
+    const otherTitles = parseChanAltTitles(
+      textOrNull(findInfoCell(root, doc.$, 'Другие названия')),
+    );
+    const altTitles = [...new Set([...(altTitle ? [altTitle] : []), ...otherTitles])];
     const tags: RawTag[] = root
       .find('div.sidetags li.sidetag')
       .toArray()
@@ -624,7 +719,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
     return {
       id: generateUid(cfg.id, mangaUrl),
       title,
-      altTitles: altTitle ? [altTitle] : [],
+      altTitles,
       url: mangaUrl,
       publicUrl: absoluteUrl,
       rating: RATING_UNKNOWN,
@@ -632,8 +727,11 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
       coverUrl,
       tags,
-      releaseState: null,
-      authors: author ? [author] : [],
+      type,
+      releaseState,
+      translationState,
+      authors,
+      translators,
       largeCoverUrl: coverUrl,
       description,
       chapters,
