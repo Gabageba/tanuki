@@ -46,6 +46,7 @@ const DETAILS_HTML = `<!doctype html><html><body>
   <h1>Ван-Пис</h1>
   <div class="manga" data-id="42" data-fav-count="1234"></div>
   <div class="manga__img"><img src="/img/manga/posters/one-piece-full.jpg" /></div>
+  <meta itemprop="ratingCount" content="5678" />
   <div class="manga__rating">8,7</div>
   <div class="manga__views">50 000</div>
   <div class="manga__description">Описание тайтла.</div>
@@ -229,8 +230,12 @@ describe('MangaBuff parser conformance', () => {
     expect(manga.year).toBe(1997);
     expect(manga.contentRating).toBe(CONTENT_RATING.SUGGESTIVE);
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
-    expect(manga.description).toContain('Описание тайтла.');
-    expect(manga.description).toContain('Рейтинг: 87%');
+    // Description is the synopsis alone — rating/views/favorites/alt titles all have their own
+    // dedicated fields and must not be duplicated into the text.
+    expect(manga.description).toBe('Описание тайтла.');
+    expect(manga.votesCount).toBe(5678);
+    expect(manga.views).toBe(50000);
+    expect(manga.likes).toBe(1234);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

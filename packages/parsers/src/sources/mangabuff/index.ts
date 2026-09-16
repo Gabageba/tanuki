@@ -536,34 +536,6 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     return tags;
   };
 
-  const buildDetailsDescription = ($: CheerioAPI): string => {
-    const lines: string[] = [];
-    const desc = nullIfEmpty(textOrNull($('.manga__description').first()));
-    if (desc) lines.push(desc);
-
-    const ratingRaw = textOrNull($('.manga__rating').first());
-    const ratingPct = ratingRaw ? parseFloatOrNull(ratingRaw.replace(',', '.')) : null;
-    if (ratingPct !== null) lines.push(`Рейтинг: ${Math.round(ratingPct * 10)}%`);
-
-    const viewsRaw = textOrNull($('.manga__views').first())?.replace(/\s/g, '');
-    const views = viewsRaw ? Number.parseInt(viewsRaw, 10) : NaN;
-    if (!Number.isNaN(views)) lines.push(`Просмотров: ${views.toLocaleString('ru-RU')}`);
-
-    const favRaw = attrOrNull($('.manga').first(), 'data-fav-count');
-    const fav = favRaw ? Number.parseInt(favRaw, 10) : NaN;
-    if (!Number.isNaN(fav)) lines.push(`Избранное: ${fav.toLocaleString('ru-RU')}`);
-
-    const altTitles = $('.manga__name-alt > span, .manga-mobile__name-alt > span')
-      .toArray()
-      .map((el) => textOrNull($(el)))
-      .filter((t): t is string => !!t && t.trim().length > 0);
-    if (altTitles.length > 0) {
-      lines.push('Альтернативные названия:');
-      lines.push(...altTitles.map((t) => `• ${t}`));
-    }
-    return lines.join('\n\n');
-  };
-
   const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
@@ -591,6 +563,16 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     const ratingPct = ratingRaw ? parseFloatOrNull(ratingRaw.replace(',', '.')) : null;
     const contentRating = contentRatingByLabel(textOrNull($('.tags__item--warning').first()));
 
+    // itemprop=ratingCount is the vote count behind `rating`, distinct from `.manga__views`
+    // (read counter) and `data-fav-count` (bookmarks) below.
+    const votesCount = parseIntOrNull(
+      attrOrNull($('meta[itemprop=ratingCount]').first(), 'content'),
+    );
+    const views = parseIntOrNull(
+      textOrNull($('.manga__views').first())?.replace(/\s/g, '') ?? null,
+    );
+    const likes = parseIntOrNull(attrOrNull($('.manga').first(), 'data-fav-count'));
+
     const title =
       nullIfEmpty(textOrNull($('h1, .manga__name, .manga-mobile__name').first())) ??
       mangaUrl.replace(/\/$/, '').split('/').pop() ??
@@ -611,11 +593,14 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       tags: collectTags($),
       releaseState: stateText ? parseStatus(stateText) : null,
       authors: [],
-      description: nullIfEmpty(buildDetailsDescription($)),
+      description: nullIfEmpty(textOrNull($('.manga__description').first())),
       chapters,
       source: SOURCE_ID,
       type,
       year,
+      votesCount,
+      views,
+      likes,
     };
   };
 
