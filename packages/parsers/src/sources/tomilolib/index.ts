@@ -96,6 +96,9 @@ type MangaJson = {
   type?: string;
   releaseYear?: number;
   totalChapters?: number;
+  totalRatings?: number;
+  views?: number;
+  createdAt?: string | null;
   description?: string;
   chapters?: ChapterJson[];
 };
@@ -269,7 +272,8 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     const title = info.name ?? slug;
     const url = `/titles/${slug}`;
     const cover = info.coverImage ? toCdnUrl(info.coverImage) : null;
-    const authors = [...splitList(info.author), ...splitList(info.artist)];
+    const authors = splitList(info.author);
+    const artists = splitList(info.artist);
     const rating =
       info.averageRating != null && info.averageRating > 0
         ? info.averageRating / 10
@@ -288,12 +292,16 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       tags: parseTags(info),
       releaseState: parseState(info.status),
       authors: [...new Set(authors)],
+      artists: [...new Set(artists)],
       description: info.description ?? null,
       chapters: null,
       source: SOURCE_ID,
       type: parseMangaType(info.type),
       year: info.releaseYear ?? null,
       chaptersCount: info.totalChapters ?? null,
+      votesCount: info.totalRatings ?? null,
+      views: info.views ?? null,
+      addedAt: parseDate(info.createdAt),
     };
   };
 

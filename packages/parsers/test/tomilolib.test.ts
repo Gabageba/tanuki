@@ -18,11 +18,16 @@ const LIST_JSON = JSON.stringify({
         name: 'Ван-Пис',
         coverImage: '/uploads/titles/1/cover.jpg',
         genres: ['Приключения'],
+        author: 'Эйитиро Ода',
+        artist: 'Эйитиро Ода',
         averageRating: 8.5,
         status: 'ongoing',
         type: 'manga',
         releaseYear: 1997,
         totalChapters: 1100,
+        totalRatings: 4200,
+        views: 999000,
+        createdAt: '2020-05-01T00:00:00.000Z',
         description: 'Описание из списка.',
       },
     ],
@@ -122,6 +127,11 @@ describe('TomiloLib parser conformance', () => {
     expect(item!.description).toBe('Описание из списка.');
     expect(item!.releaseState).toBe('ongoing');
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
+    expect(item!.authors).toEqual(['Эйитиро Ода']);
+    expect(item!.artists).toEqual(['Эйитиро Ода']);
+    expect(item!.votesCount).toBe(4200);
+    expect(item!.views).toBe(999000);
+    expect(item!.addedAt).toBe(Date.parse('2020-05-01T00:00:00.000Z'));
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
