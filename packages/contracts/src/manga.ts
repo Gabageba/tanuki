@@ -78,6 +78,7 @@ export const MangaSchema = z.object({
   contentRating: ContentRatingSchema,
   type: MangaTypeSchema.nullable(),
   country: z.string().nullable(), // страна происхождения оригинала, если source отдаёт её отдельно от type
+  series: z.array(z.string()), // франшиза/первоисточник, по которому нарисован тайтл (Naruto для додзинси)
   year: z.number().nullable(), // для карточек — см. releaseDate для полной даты
   releaseDate: z.string().nullable(), // YYYY-MM-DD, если source отдаёт больше, чем один год
   releaseFormats: z.array(z.string()), // формат выпуска оригинала (веб, цветной, ёнкома...)

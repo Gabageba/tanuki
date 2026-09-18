@@ -157,9 +157,10 @@ describe('normalizeManga', () => {
     expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ chapters })).chaptersCount).toBe(5);
   });
 
-  it('passes country/artists/publishers/magazines/releaseFormats through, defaulting when omitted', () => {
+  it('passes country/series/artists/publishers/magazines/releaseFormats through, defaulting when omitted', () => {
     const empty = normalizeManga(ENV, SOURCE_ID.DESUME, raw({}));
     expect(empty.country).toBeNull();
+    expect(empty.series).toEqual([]);
     expect(empty.artists).toEqual([]);
     expect(empty.publishers).toEqual([]);
     expect(empty.magazines).toEqual([]);
@@ -170,6 +171,7 @@ describe('normalizeManga', () => {
       SOURCE_ID.DESUME,
       raw({
         country: 'Корея',
+        series: ['Naruto'],
         artists: ['Jang Sung-lak'],
         publishers: ['Kakao'],
         magazines: ['KakaoPage'],
@@ -177,6 +179,7 @@ describe('normalizeManga', () => {
       }),
     );
     expect(filled.country).toBe('Корея');
+    expect(filled.series).toEqual(['Naruto']);
     expect(filled.artists).toEqual(['Jang Sung-lak']);
     expect(filled.publishers).toEqual(['Kakao']);
     expect(filled.magazines).toEqual(['KakaoPage']);

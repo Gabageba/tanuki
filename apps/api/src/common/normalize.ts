@@ -104,6 +104,7 @@ export const normalizeManga = (
     contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
     type: raw.type ?? null,
     country: raw.country ?? null,
+    series: raw.series ?? [],
     year: raw.year ?? null,
     releaseDate: raw.releaseDate ? toServerDate(raw.releaseDate) : null,
     releaseFormats: raw.releaseFormats ?? [],

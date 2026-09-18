@@ -41,6 +41,12 @@ function MangaInfo({ manga }: Props) {
           label: t('country'),
           value: manga.country,
         },
+        {
+          label: t('series'),
+          value: isEmpty(manga.series) ? undefined : (
+            <MidDotGroup items={manga.series} text={{ lh: 1.2 }} />
+          ),
+        },
       ],
     },
     {

@@ -100,6 +100,9 @@ export type RawManga = {
    *  "country" field also drives `type`, but the raw country name is worth surfacing on its own).
    *  Omitted where the source has no such concept. */
   country?: string | null;
+  /** Franchise/original work the title belongs to or is derived from (e.g. nudemoon's
+   *  "Серия: Naruto" on a doujinshi). Omitted where the source has no such concept. */
+  series?: string[];
   /** Illustrator credits, where the source lists them separately from `authors` (e.g. inkstory's
    *  ARTIST relation vs its AUTHOR one). Omitted where the source has no such distinction. */
   artists?: string[];
