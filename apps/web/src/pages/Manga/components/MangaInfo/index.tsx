@@ -47,7 +47,7 @@ function MangaInfo({ manga }: Props) {
       label: t('titles'),
       items: [
         {
-          label: t('russian'),
+          label: t('title'),
           value: manga.title,
         },
         {
