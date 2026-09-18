@@ -1,4 +1,4 @@
-import type { MangaType } from '@tanuki/contracts';
+import type { TitleType } from '@tanuki/contracts';
 import type { EnumLiteralsOf } from '@tanuki/contracts';
 
 /**
@@ -9,15 +9,15 @@ import type { EnumLiteralsOf } from '@tanuki/contracts';
 export const MATCH_ALGO_VERSION = 'v1';
 
 /**
- * Минимум полей тайтла, нужный для сравнения. Отдельно от RawManga, чтобы скоринг оставался
- * чистой функцией, а тесты не собирали полноценный RawManga ради двух названий.
+ * Минимум полей тайтла, нужный для сравнения. Отдельно от RawTitle, чтобы скоринг оставался
+ * чистой функцией, а тесты не собирали полноценный RawTitle ради двух названий.
  */
 export type MatchSubject = {
-  title: string;
-  altTitles: string[];
+  name: string;
+  altNames: string[];
   authors: string[];
   year: number | null;
-  type: MangaType | null;
+  type: TitleType | null;
   chaptersCount: number | null;
   tags: string[];
 };
@@ -27,15 +27,15 @@ export type MatchSubject = {
  * источники переписывают из одного места), кириллица — любительский перевод, у каждого сайта
  * свой. Отсюда два независимых канала сравнения с разными порогами и потолками.
  */
-export const TITLE_SCRIPT = {
+export const NAME_SCRIPT = {
   LATIN: 'latin',
   CYRILLIC: 'cyrillic',
 } as const;
-export type TitleScript = EnumLiteralsOf<typeof TITLE_SCRIPT>;
+export type NameScript = EnumLiteralsOf<typeof NAME_SCRIPT>;
 
-export type TitleVariant = {
+export type NameVariant = {
   value: string;
-  script: TitleScript;
+  script: NameScript;
   /**
    * Вариант получен не от источника, а выведен нами (транслитерацией). Доверие к нему
    * ограничено DERIVED_VARIANT_CEILING: точное совпадение придуманной нами формы — не то же

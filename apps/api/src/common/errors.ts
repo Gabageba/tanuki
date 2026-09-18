@@ -57,7 +57,7 @@ export class SourceAuthRequiredException extends ApiException {
 // LibSocial (MANGALIB/HENTAILIB/YAOILIB): a previously-stored OAuth token (see
 // @tanuki/parsers SourceTokenExpiredError, sources/libsocial/auth.ts) is missing or was
 // rejected on refresh. Distinct from SOURCE_AUTH_REQUIRED — that means "this particular
-// chapter/manga needs a session we never had"; this means "our saved session went stale and a
+// chapter/title needs a session we never had"; this means "our saved session went stale and a
 // human has to redo the reCAPTCHA-gated login" (`pnpm --filter @tanuki/parsers login:libsocial`).
 export class SourceTokenExpiredException extends ApiException {
   constructor(sourceId?: string) {

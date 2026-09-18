@@ -12,7 +12,7 @@ apps/web/src/
 │   ├── Home/                   # продолжить чтение + обновления библиотеки
 │   ├── Catalog/                # список тайтлов источника, фильтры
 │   ├── Search/                 # мультипоиск
-│   ├── Manga/                  # карточка тайтла, ветки, список глав
+│   ├── Title/                  # карточка тайтла, ветки, список глав
 │   ├── Reader/                 # читалка
 │   ├── Library/                # сохранённое, история, загрузки
 │   └── Settings/
@@ -22,7 +22,7 @@ apps/web/src/
 │   ├── downloads/
 │   └── sources/
 ├── entities/
-│   └── manga/                  # карточки, бейджи, форматтеры
+│   └── title/                  # карточки, бейджи, форматтеры
 ├── shared/
 │   ├── api/                    # клиент + хуки TanStack Query
 │   ├── db/                     # схема Dexie
@@ -45,7 +45,7 @@ apps/web/src/
 1. **Не знает о домене вообще?** Обёртка над библиотекой, API-клиент, generic-хук,
    форматтер, чистый UI без бизнес-данных — вынеси в npm-пакет, ничего не сломается →
    `shared`.
-2. **Описывает бизнес-сущность саму по себе**, вне сценария? Как выглядит «манга»,
+2. **Описывает бизнес-сущность саму по себе**, вне сценария? Как выглядит «тайтл»,
    «источник» — карточка, бейджи, форматирование полей, но не то, что с этим делает
    конкретный экран → `entities`.
 3. **Законченное действие пользователя**, возможно поверх нескольких entities? «Добавить
@@ -86,10 +86,10 @@ apps/web/src/
 ```ts
 db.version(1).stores({
   library: '&id, sourceId, addedAt, lastReadAt',
-  progress: '&[mangaId+branch], mangaId, updatedAt, syncedAt',
-  history: '++id, mangaId, readAt',
-  downloads: '&[mangaId+chapterId], mangaId, status, downloadedAt',
-  mangaCache: '&id, cachedAt', // метаданные для офлайн-просмотра
+  progress: '&[titleId+branch], titleId, updatedAt, syncedAt',
+  history: '++id, titleId, readAt',
+  downloads: '&[titleId+chapterId], titleId, status, downloadedAt',
+  titleCache: '&id, cachedAt', // метаданные для офлайн-просмотра
 });
 ```
 

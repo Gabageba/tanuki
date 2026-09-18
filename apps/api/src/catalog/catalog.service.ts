@@ -3,18 +3,18 @@ import type {
   CatalogResponse,
   ChaptersResponse,
   FiltersResponse,
-  MangaDetailsResponse,
+  TitleDetailsResponse,
   PagesResponse,
 } from '@tanuki/contracts';
 import type { FilterSelection } from '@tanuki/parsers';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
-import { decodeChapterId, decodeMangaId } from '../common/opaque-id';
+import { decodeChapterId, decodeTitleId } from '../common/opaque-id';
 import {
   computeBranches,
   normalizeChapter,
   normalizeFilterGroup,
-  normalizeManga,
+  normalizeTitle,
   normalizePage,
   pickDefaultBranch,
 } from '../common/normalize';
@@ -41,9 +41,9 @@ export class CatalogService {
       filters?: FilterSelection[];
     },
   ): Promise<CatalogResponse> {
-    const { data, stale } = await this.parsersClient.listManga(sourceId, params);
+    const { data, stale } = await this.parsersClient.listTitles(sourceId, params);
     return {
-      items: data.items.map((raw) => normalizeManga(this.env, sourceId, raw)),
+      items: data.items.map((raw) => normalizeTitle(this.env, sourceId, raw)),
       page: params.page,
       hasNext: data.items.length >= PAGE_SIZE,
       stale: stale || undefined,
@@ -55,11 +55,11 @@ export class CatalogService {
     return { groups: data.groups.map(normalizeFilterGroup) };
   }
 
-  async getMangaDetails(sourceId: string, mangaId: string): Promise<MangaDetailsResponse> {
-    const ref = decodeMangaId(mangaId);
+  async getTitleDetails(sourceId: string, titleId: string): Promise<TitleDetailsResponse> {
+    const ref = decodeTitleId(titleId);
     const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
     return {
-      manga: normalizeManga(this.env, sourceId, raw),
+      title: normalizeTitle(this.env, sourceId, raw),
       branches: computeBranches(raw.chapters ?? []),
       stale: stale || undefined,
     };
@@ -67,10 +67,10 @@ export class CatalogService {
 
   async listChapters(
     sourceId: string,
-    mangaId: string,
+    titleId: string,
     branch: string | undefined,
   ): Promise<ChaptersResponse> {
-    const ref = decodeMangaId(mangaId);
+    const ref = decodeTitleId(titleId);
     const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
     const chapters = raw.chapters ?? [];
     const targetBranch = branch ?? pickDefaultBranch(chapters);
@@ -79,18 +79,18 @@ export class CatalogService {
       .sort((a, b) => a.number - b.number);
 
     return {
-      items: filtered.map((chapter) => normalizeChapter(sourceId, mangaId, chapter)),
+      items: filtered.map((chapter) => normalizeChapter(sourceId, titleId, chapter)),
       stale: stale || undefined,
     };
   }
 
-  async getPages(sourceId: string, mangaId: string, chapterId: string): Promise<PagesResponse> {
+  async getPages(sourceId: string, titleId: string, chapterId: string): Promise<PagesResponse> {
     const chapterRef = decodeChapterId(chapterId);
-    const mangaRef = decodeMangaId(mangaId);
+    const titleRef = decodeTitleId(titleId);
 
     const [pagesResult, detailsResult] = await Promise.all([
       this.parsersClient.getPages(sourceId, chapterRef.url),
-      this.parsersClient.getDetails(sourceId, mangaRef.url),
+      this.parsersClient.getDetails(sourceId, titleRef.url),
     ]);
     const details = detailsResult.data;
 
@@ -100,7 +100,7 @@ export class CatalogService {
     const currentIndex = siblings.findIndex((chapter) => chapter.id === chapterRef.id);
 
     const toChapterId = (chapter: RawChapter | undefined): string | null =>
-      chapter ? normalizeChapter(sourceId, mangaId, chapter).id : null;
+      chapter ? normalizeChapter(sourceId, titleId, chapter).id : null;
 
     return {
       items: pagesResult.data.items.map((page, index) =>

@@ -12,7 +12,7 @@ import {
 } from '@mantine/core';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import MangaCard from '@/entities/manga/card/MangaCard';
+import TitleCard from '@/entities/title/card/TitleCard';
 import useSearch from './hooks/useSearch';
 import { flattenSources } from '@/entities/source/lib';
 import useSources from '@/entities/source/hooks/useSources';
@@ -76,8 +76,8 @@ function SearchPage() {
               </Text>
             )}
             <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="md">
-              {group.items.map((manga) => (
-                <MangaCard key={manga.id} manga={manga} />
+              {group.items.map((title) => (
+                <TitleCard key={title.id} title={title} />
               ))}
             </SimpleGrid>
           </div>

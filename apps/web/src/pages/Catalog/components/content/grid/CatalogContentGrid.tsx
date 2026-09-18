@@ -2,7 +2,7 @@ import PageLayout from '@/shared/ui/PageLayout';
 import type { CatalogParams, CatalogQuery } from '../../../models';
 import { VIEW_MODE } from '@/shared/lib/viewMode';
 import CatalogContentGridSkeleton from './CatalogContentGridSkeleton';
-import MangaCard from '@/entities/manga/card/MangaCard';
+import TitleCard from '@/entities/title/card/TitleCard';
 import CatalogContentGridWrapper from './CatalogContentGridWrapper';
 
 function CatalogContentGrid() {
@@ -19,8 +19,8 @@ function CatalogContentGrid() {
   return (
     <>
       <CatalogContentGridWrapper viewMode={viewMode}>
-        {items.map((manga) => (
-          <MangaCard key={manga.id} manga={manga} viewMode={viewMode} />
+        {items.map((title) => (
+          <TitleCard key={title.id} title={title} viewMode={viewMode} />
         ))}
       </CatalogContentGridWrapper>
       <PageLayout.InfiniteScrollTrigger />

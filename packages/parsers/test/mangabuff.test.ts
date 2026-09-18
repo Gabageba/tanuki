@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   SORT_ORDER,
 } from '@tanuki/contracts';
 import { createMangaBuffParser, MANGABUFF_FILTER_GROUP } from '../src/sources/mangabuff';
@@ -194,7 +194,7 @@ describe('MangaBuff parser conformance', () => {
     expect(item!.chapters).toBeNull();
     expect(item!.source).toBe(SOURCE_ID.MANGABUFF);
     expect(item!.rating).toBeCloseTo(0.94, 5);
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
@@ -225,8 +225,8 @@ describe('MangaBuff parser conformance', () => {
     expect(manga.chapters![0]!.number).toBe(1);
     expect(manga.chapters![1]!.number).toBe(2);
     expect(manga.rating).toBeCloseTo(0.87, 5);
-    expect(manga.releaseState).toBe(MANGA_STATE.ONGOING);
-    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.releaseState).toBe(TITLE_STATE.ONGOING);
+    expect(manga.type).toBe(TITLE_TYPE.MANGA);
     expect(manga.year).toBe(1997);
     expect(manga.contentRating).toBe(CONTENT_RATING.SUGGESTIVE);
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);

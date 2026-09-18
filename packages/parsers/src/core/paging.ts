@@ -1,5 +1,5 @@
 import type { FilterSelection } from '@tanuki/contracts';
-import type { RawManga } from '../types';
+import type { RawTitle } from '../types';
 
 export type { FilterSelection };
 
@@ -49,10 +49,10 @@ export const planWindow = (
 export const fetchPaged = async (
   params: ListParams,
   cfg: { size: number; firstPage: number },
-  fetchPage: (page: number) => Promise<RawManga[]>,
-): Promise<RawManga[]> => {
+  fetchPage: (page: number) => Promise<RawTitle[]>,
+): Promise<RawTitle[]> => {
   const { pages, skip } = planWindow(params.offset, params.limit, cfg.size, cfg.firstPage);
-  const acc: RawManga[] = [];
+  const acc: RawTitle[] = [];
   for (const page of pages) {
     const items = await fetchPage(page);
     acc.push(...items);
@@ -65,10 +65,10 @@ export const fetchPaged = async (
 export const fetchOffsetNative = async (
   params: ListParams,
   cfg: { size: number },
-  fetchOffset: (nativeOffset: number) => Promise<RawManga[]>,
-): Promise<RawManga[]> => {
+  fetchOffset: (nativeOffset: number) => Promise<RawTitle[]>,
+): Promise<RawTitle[]> => {
   const base = Math.floor(params.offset / cfg.size) * cfg.size;
-  const acc: RawManga[] = [];
+  const acc: RawTitle[] = [];
   for (
     let nativeOffset = base;
     nativeOffset < params.offset + params.limit;
@@ -94,10 +94,10 @@ export const fetchCursorPaged = async (
   fetchPage: (
     cursor: string | null,
     first: number,
-  ) => Promise<{ items: RawManga[]; nextCursor: string | null }>,
-): Promise<RawManga[]> => {
+  ) => Promise<{ items: RawTitle[]; nextCursor: string | null }>,
+): Promise<RawTitle[]> => {
   const target = params.offset + params.limit;
-  const acc: RawManga[] = [];
+  const acc: RawTitle[] = [];
   let cursor: string | null = null;
   while (acc.length < target) {
     const first = Math.min(cfg.maxPageSize, target - acc.length);

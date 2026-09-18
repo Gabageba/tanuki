@@ -2,16 +2,16 @@ import { join } from 'node:path';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_RESTRICTION,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_RESTRICTION,
+  TITLE_STATE,
+  TITLE_TYPE,
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   formatCompactNumber,
   type FilterRangePreset,
-  type MangaState,
+  type TitleState,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -24,13 +24,13 @@ import {
 } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawPage,
   RawTag,
   RawFilterGroup,
   RawFilterOption,
-  RawMangaType,
+  RawTitleType,
   RawContentRating,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
@@ -59,35 +59,35 @@ export const LIBSOCIAL_FILTER_GROUP = {
   OTHER: FILTER_GROUP.OTHER,
 } as const;
 
-const STATES: Record<number, RawManga['releaseState']> = {
-  1: MANGA_STATE.ONGOING,
-  2: MANGA_STATE.FINISHED,
-  3: MANGA_STATE.UPCOMING,
-  4: MANGA_STATE.PAUSED,
-  5: MANGA_STATE.ABANDONED,
+const STATES: Record<number, RawTitle['releaseState']> = {
+  1: TITLE_STATE.ONGOING,
+  2: TITLE_STATE.FINISHED,
+  3: TITLE_STATE.UPCOMING,
+  4: TITLE_STATE.PAUSED,
+  5: TITLE_STATE.ABANDONED,
 };
 
 /** `status[]` filter values — same ids as STATES above, kept as a separate ordered list since
  *  the API exposes no endpoint to fetch these labels (unlike genres/tags). */
-const STATUS_IDS: readonly (readonly [string, MangaState])[] = [
-  ['1', MANGA_STATE.ONGOING],
-  ['2', MANGA_STATE.FINISHED],
-  ['3', MANGA_STATE.UPCOMING],
-  ['4', MANGA_STATE.PAUSED],
-  ['5', MANGA_STATE.ABANDONED],
+const STATUS_IDS: readonly (readonly [string, TitleState])[] = [
+  ['1', TITLE_STATE.ONGOING],
+  ['2', TITLE_STATE.FINISHED],
+  ['3', TITLE_STATE.UPCOMING],
+  ['4', TITLE_STATE.PAUSED],
+  ['5', TITLE_STATE.ABANDONED],
 ];
 
-const getStatusTitle = (state: MangaState): string => {
+const getStatusTitle = (state: TitleState): string => {
   switch (state) {
-    case MANGA_STATE.ONGOING:
+    case TITLE_STATE.ONGOING:
       return 'Онгоинг';
-    case MANGA_STATE.FINISHED:
+    case TITLE_STATE.FINISHED:
       return 'Завершён';
-    case MANGA_STATE.UPCOMING:
+    case TITLE_STATE.UPCOMING:
       return 'Анонс';
-    case MANGA_STATE.PAUSED:
+    case TITLE_STATE.PAUSED:
       return 'Приостановлен';
-    case MANGA_STATE.ABANDONED:
+    case TITLE_STATE.ABANDONED:
       return 'Заброшен';
   }
 };
@@ -96,21 +96,21 @@ const getStatusTitle = (state: MangaState): string => {
  *  4, 5, 6, 8, 9 are the ones scoped to site_ids 1/2/4, i.e. MANGALIB/YAOILIB/HENTAILIB; the rest
  *  belong to unrelated LibSocial network members). Only the unambiguous ones get their own case —
  *  OEL-манга and Руманга fall to OTHER, same as remanga's mangaTypeById. */
-const mangaTypeById = (id: number | undefined): RawMangaType | null => {
+const mangaTypeById = (id: number | undefined): RawTitleType | null => {
   switch (id) {
     case 1:
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 5:
-      return MANGA_TYPE.MANHWA;
+      return TITLE_TYPE.MANHWA;
     case 6:
-      return MANGA_TYPE.MANHUA;
+      return TITLE_TYPE.MANHUA;
     case 9:
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
     case undefined:
     case 0:
       return null;
     default:
-      return MANGA_TYPE.OTHER;
+      return TITLE_TYPE.OTHER;
   }
 };
 
@@ -210,7 +210,7 @@ type FormatJson = {
 };
 
 /** `views` on manga details — `total` is the raw counter, `short`/`formated` are the site's own
- *  pre-formatted display strings (unused here, RawManga.views wants the raw number). */
+ *  pre-formatted display strings (unused here, RawTitle.views wants the raw number). */
 type ViewsJson = {
   total?: number;
 };
@@ -240,7 +240,7 @@ type MangaDetailsJson = {
   /** Requires `fields[]=format`. Can be `[]` — plenty of titles carry no format tag at all. */
   format?: FormatJson[];
   /** Requires `fields[]=releaseDate`. A bare year string (e.g. "1997"), confirmed live — despite
-   *  the name there is no day/month granularity, so it maps to RawManga.year, not releaseDate. */
+   *  the name there is no day/month granularity, so it maps to RawTitle.year, not releaseDate. */
   releaseDate?: string;
   /** Requires `fields[]=views`. */
   views?: ViewsJson;
@@ -394,7 +394,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     });
   }
 
-  const parseManga = (jo: MangaListItemJson): RawManga => {
+  const parseManga = (jo: MangaListItemJson): RawTitle => {
     const title = jo.rus_name && jo.rus_name.length > 0 ? jo.rus_name : jo.name;
     return {
       id: generateUid(cfg.id, jo.id),
@@ -507,7 +507,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     direction: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const url = new URL(`https://${LIBSOCIAL_API_HOST}/api/manga`);
     url.searchParams.set('site_id[]', String(cfg.siteId));
     url.searchParams.append('fields[]', 'rate');
@@ -527,7 +527,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     return json.data.map(parseManga);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     // The API's own default (no sort_by at all) ranks by popularity, not by what's fresh —
     // callers that don't care about order should still see recently-updated titles first.
     const order = params.order ?? SORT_ORDER.UPDATED;
@@ -569,7 +569,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     return { title: jo.name, key: `${prefix}${jo.id}`, source: cfg.id };
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const detailsUrl = new URL(`https://${LIBSOCIAL_API_HOST}/api/manga/${mangaUrl}`);
     // 'status' used to be a valid explicit field but api.cdnlibs.org now rejects it with a 422
     // ("Выбранное значение для fields.N ошибочно") — it's already present in the base response
@@ -654,9 +654,9 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       releaseState: json.status?.id != null ? (STATES[json.status.id] ?? null) : null,
       type: mangaTypeById(json.type?.id),
       restriction: isLicensedTakedown
-        ? MANGA_RESTRICTION.LEGAL
+        ? TITLE_RESTRICTION.LEGAL
         : isPaywalled
-          ? MANGA_RESTRICTION.PAYWALL
+          ? TITLE_RESTRICTION.PAYWALL
           : null,
       authors,
       artists,

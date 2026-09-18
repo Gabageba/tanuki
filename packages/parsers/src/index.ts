@@ -1,5 +1,5 @@
 export type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawPage,
   RawTag,

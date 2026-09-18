@@ -3,22 +3,22 @@ import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type MangaState,
+  type TitleState,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawPage,
   RawTag,
-  RawMangaType,
+  RawTitleType,
   RawFilterGroup,
   RawFilterOption,
 } from '../../types';
@@ -82,29 +82,29 @@ const toLargeCoverUrl = (coverUrl: string): string => {
  * and "Перевод:" (translation: continued/completed) lines — the same four-value vocabulary the
  * catalog's own .catalog-status filter uses (see fetchFilters' data-status options).
  */
-const mangaStateByClass = (cls: string | null): MangaState | null => {
-  if (cls === 'ongoing' || cls === 'continued') return MANGA_STATE.ONGOING;
-  if (cls === 'released' || cls === 'completed') return MANGA_STATE.FINISHED;
+const mangaStateByClass = (cls: string | null): TitleState | null => {
+  if (cls === 'ongoing' || cls === 'continued') return TITLE_STATE.ONGOING;
+  if (cls === 'released' || cls === 'completed') return TITLE_STATE.FINISHED;
   return null;
 };
 
 /** "Тип:" label — mirrors the .catalog-kinds filter's own vocabulary (data-kind values). Shared
  *  by catalog cards and the details page, which render the same label/value pair. */
-const mangaTypeByLabel = (label: string | null): RawMangaType | null => {
+const mangaTypeByLabel = (label: string | null): RawTitleType | null => {
   switch (label) {
     case 'Манга':
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 'Манхва':
-      return MANGA_TYPE.MANHWA;
+      return TITLE_TYPE.MANHWA;
     case 'Манхуа':
     case 'Маньхуа':
-      return MANGA_TYPE.MANHUA;
+      return TITLE_TYPE.MANHUA;
     case 'Комикс':
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
     case null:
       return null;
     default:
-      return MANGA_TYPE.OTHER;
+      return TITLE_TYPE.OTHER;
   }
 };
 
@@ -390,7 +390,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     $li: Cheerio<AnyNode>,
     baseUrl: string,
     tagsMap: Map<string, RawTag>,
-  ): RawManga | null => {
+  ): RawTitle | null => {
     const titleLink = $li.find('h3 a.animeTitle').first();
     const href = attrOrNull(titleLink, 'href');
     if (!href) return null;
@@ -435,7 +435,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
   };
 
   /** Quick-search results carry only cover + two title variants — getDetails fills the rest. */
-  const parseSearchItem = ($li: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
+  const parseSearchItem = ($li: Cheerio<AnyNode>, baseUrl: string): RawTitle | null => {
     const $a = $li.find('a.AniMangaSearchCard__link').first();
     const href = attrOrNull($a, 'href');
     if (!href) return null;
@@ -495,7 +495,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const search = async (query: string): Promise<RawManga[]> => {
+  const search = async (query: string): Promise<RawTitle[]> => {
     const res = await ctx.http.postForm(
       `https://${domain}/manga/search/`,
       { q: query, _xfToken: '', _xfNoRedirect: '1', _xfResponseType: 'json' },
@@ -513,14 +513,14 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .$('li.AniMangaSearchCard')
       .toArray()
       .map((el) => parseSearchItem(doc.$(el), doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
   const fetchCatalogPage = async (
     page: number,
     order: string | undefined,
     filters: FilterSelection[] | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const url = new URL(`https://${domain}/manga/`);
     const orderBy = getSortKey(order);
     if (orderBy !== 'updated') url.searchParams.set('order_by', orderBy);
@@ -531,10 +531,10 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       .$('li.memberListItem')
       .toArray()
       .map((el) => parseMangaItem(doc.$(el), doc.baseUrl, tagsMap))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, async (page) => {
       if (params.query) {
         return page === 1 ? search(params.query!) : [];
@@ -543,7 +543,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     });
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = new URL(mangaUrl, `https://${domain}/`).toString();
     const doc = await ctx.http.getHtml(absoluteUrl);
     const root = doc.$.root();

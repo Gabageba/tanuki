@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
 } from '@tanuki/contracts';
@@ -120,13 +120,13 @@ describe('WaManga parser conformance', () => {
     expect(item!.title).toBe('Ван-Пис');
     expect(item!.altTitles).toEqual(['One Piece']);
     expect(item!.contentRating).toBe(CONTENT_RATING.SUGGESTIVE);
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.likes).toBe(26);
     expect(item!.views).toBe(9276);
     expect(item!.artists).toEqual(['Oda Eiichiro']);
     expect(item!.publishers).toEqual(['Shueisha']);
-    expect(item!.translationState).toBe(MANGA_STATE.FINISHED);
+    expect(item!.translationState).toBe(TITLE_STATE.FINISHED);
     expect(item!.addedAt).toBeGreaterThan(0);
   });
 
@@ -144,7 +144,7 @@ describe('WaManga parser conformance', () => {
     expect(manga.translators).toEqual(['TeamA']);
     expect(manga.views).toBe(9276);
     expect(manga.likes).toBe(26);
-    expect(manga.translationState).toBe(MANGA_STATE.FINISHED);
+    expect(manga.translationState).toBe(TITLE_STATE.FINISHED);
   });
 
   it('getList: pegiRating maps to contentRating tiers, isAdult overrides to adult', async () => {

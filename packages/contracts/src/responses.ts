@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { BranchSchema } from './branch';
 import { ChapterSchema } from './chapter';
 import { FilterGroupSchema } from './filter';
-import { MangaSchema } from './manga';
+import { TitleSchema } from './title';
 import { PageSchema } from './page';
 import { SourceContentTypeSchema, SourceSchema } from './source';
 
@@ -16,7 +16,7 @@ export const SourcesResponseSchema = z.record(SourceContentTypeSchema, z.array(S
 export type SourcesResponse = z.infer<typeof SourcesResponseSchema>;
 
 export const CatalogResponseSchema = z.object({
-  items: z.array(MangaSchema),
+  items: z.array(TitleSchema),
   page: z.number(),
   hasNext: z.boolean(),
   stale: z.boolean().optional(),
@@ -24,13 +24,13 @@ export const CatalogResponseSchema = z.object({
 
 export type CatalogResponse = z.infer<typeof CatalogResponseSchema>;
 
-export const MangaDetailsResponseSchema = z.object({
-  manga: MangaSchema,
+export const TitleDetailsResponseSchema = z.object({
+  title: TitleSchema,
   branches: z.array(BranchSchema),
   stale: z.boolean().optional(),
 });
 
-export type MangaDetailsResponse = z.infer<typeof MangaDetailsResponseSchema>;
+export type TitleDetailsResponse = z.infer<typeof TitleDetailsResponseSchema>;
 
 export const ChaptersResponseSchema = z.object({
   items: z.array(ChapterSchema),

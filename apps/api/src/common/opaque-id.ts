@@ -1,6 +1,6 @@
 import { NotFoundApiException } from './errors';
 
-export type MangaRef = {
+export type TitleRef = {
   id: number;
   url: string;
 };
@@ -19,13 +19,13 @@ const decode = <T>(value: string): T => {
   return JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as T;
 };
 
-export const encodeMangaId = (ref: MangaRef): string => {
+export const encodeTitleId = (ref: TitleRef): string => {
   return encode(ref);
 };
 
-export const decodeMangaId = (id: string): MangaRef => {
+export const decodeTitleId = (id: string): TitleRef => {
   try {
-    return decode<MangaRef>(id);
+    return decode<TitleRef>(id);
   } catch {
     throw new NotFoundApiException('Некорректный id тайтла');
   }
@@ -43,7 +43,7 @@ export const decodeChapterId = (id: string): ChapterRef => {
   }
 };
 
-/** Разбирает составной id вида «sourceId:opaqueId» (см. Manga.id/Chapter.id в контрактах) —
+/** Разбирает составной id вида «sourceId:opaqueId» (см. Title.id/Chapter.id в контрактах) —
  *  формат, в котором клиент теперь передаёт id тайтла и главы целиком, без разбора на части. */
 export const splitCompositeId = (id: string): { sourceId: string; opaqueId: string } => {
   const separator = id.indexOf(':');

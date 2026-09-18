@@ -9,13 +9,13 @@ import type { SourcesResponse } from '@tanuki/contracts';
 import AllElementsIcon from '../components/AllElementsIcon';
 
 function useGetActiveSelection(sources?: SourcesResponse): ActiveSelection {
-  // На /catalog/:sourceId источник приходит напрямую, а на /manga/:mangaId — только внутри
+  // На /catalog/:sourceId источник приходит напрямую, а на /title/:titleId — только внутри
   // составного id тайтла («sourceId:opaqueId»), так что при его отсутствии достаём префикс сами.
   const { t } = useTranslation();
-  const { sourceId, mangaId } = useParams<{ sourceId?: string; mangaId?: string }>();
+  const { sourceId, titleId } = useParams<{ sourceId?: string; titleId?: string }>();
   const { pathname } = useLocation();
 
-  const activeSourceId = sourceId ?? mangaId?.slice(0, mangaId.indexOf(':'));
+  const activeSourceId = sourceId ?? titleId?.slice(0, titleId.indexOf(':'));
   const source = activeSourceId
     ? flattenSources(sources).find((item) => item.id === activeSourceId)
     : undefined;

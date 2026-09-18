@@ -8,8 +8,8 @@ import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 import {
   FILTER_TYPE,
-  MANGA_RESTRICTION,
-  MANGA_TYPE,
+  TITLE_RESTRICTION,
+  TITLE_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
 } from '@tanuki/contracts';
@@ -220,7 +220,7 @@ describe('LibSocial parser conformance', () => {
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
-    expect(item!.type).toBe(MANGA_TYPE.MANHWA);
+    expect(item!.type).toBe(TITLE_TYPE.MANHWA);
   });
 
   it('getList: direction flips sort_type, defaulting to desc when unset', async () => {
@@ -273,7 +273,7 @@ describe('LibSocial parser conformance', () => {
     expect(manga.description).toBe('Первый абзац.\n\nВторой абзац.');
     expect(manga.tags.map((t) => t.title).sort()).toEqual(['Пираты', 'Приключения']);
     expect(manga.restriction).toBeNull();
-    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.type).toBe(TITLE_TYPE.MANGA);
     // name === rus_name's romanized counterpart here differs from title ('Ван-Пис'), so it
     // surfaces as originalTitle rather than getting folded into altTitles.
     expect(manga.originalTitle).toEqual(['One Piece']);
@@ -323,7 +323,7 @@ describe('LibSocial parser conformance', () => {
 
     const manga = await licensedParser.getDetails(licensedSlug);
     expect(manga.chapters).toHaveLength(0);
-    expect(manga.restriction).toBe(MANGA_RESTRICTION.LEGAL);
+    expect(manga.restriction).toBe(TITLE_RESTRICTION.LEGAL);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

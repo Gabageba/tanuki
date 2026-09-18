@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const ChapterSchema = z.object({
-  id: z.string(), // sourceId + opaqueId, see Manga.id — use as-is for routes/API calls
-  mangaId: z.string(),
+  id: z.string(), // sourceId + opaqueId, see Title.id — use as-is for routes/API calls
+  titleId: z.string(),
 
   number: z.number().nullable(), // 145.5 — дробные бывают
   volume: z.number().nullable(),

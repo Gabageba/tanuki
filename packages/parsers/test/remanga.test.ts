@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { FILTER_TYPE, MANGA_TYPE } from '@tanuki/contracts';
+import { FILTER_TYPE, TITLE_TYPE } from '@tanuki/contracts';
 import { createRemangaParser, REMANGA_FILTER_GROUP } from '../src/sources/remanga';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -168,7 +168,7 @@ describe('Remanga parser conformance', () => {
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения', 'Веб']);
     expect(item!.translationState).toBe('ongoing');
@@ -187,7 +187,7 @@ describe('Remanga parser conformance', () => {
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения', 'Веб']);
-    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.type).toBe(TITLE_TYPE.MANGA);
     expect(manga.year).toBe(1997);
     expect(manga.artists).toEqual(['Oda Eiichiro']);
     expect(manga.publishers).toEqual(['Shueisha']);

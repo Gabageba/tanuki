@@ -25,7 +25,7 @@ export class CatalogController {
       '`groupId:min..max` для RANGE-групп (любая граница может быть пустой)',
   })
   @ApiOkResponse({ type: CatalogResponseDto })
-  @Get('manga')
+  @Get('titles')
   async list(
     @Param('sourceId') sourceId: string,
     @Query('page') page: string | undefined,

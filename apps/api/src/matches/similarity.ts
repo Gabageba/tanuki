@@ -1,5 +1,5 @@
 import { FUZZY_CEILING, NOISE_TOKENS, SEQUEL_MARKERS, STOP_TOKENS, VARIANT_TOKENS } from './models';
-import { foldHomoglyphs, stemRu, tokenize } from './normalize-title';
+import { foldHomoglyphs, stemRu, tokenize } from './normalize-name';
 
 /** Результат сравнения пары названий. `demote` просит понизить итоговую уверенность на ступень. */
 export type TitleSimilarity = {

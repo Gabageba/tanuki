@@ -11,21 +11,21 @@
 всегда составной:
 
 ```ts
-type MangaRef = `${SourceId}:${string}`; // "READMANGA:solo-leveling"
+type TitleRef = `${SourceId}:${string}`; // "READMANGA:solo-leveling"
 ```
 
 Все ID стабильны в рамках источника. Клиент никогда не парсит их содержимое.
 
-### Manga
+### Title
 
 ```ts
-const MangaSchema = z.object({
+const TitleSchema = z.object({
   id: z.string(), // "READMANGA:solo-leveling"
   sourceId: z.string(),
   slug: z.string(),
 
-  title: z.string(), // локализованное название источника
-  altTitles: z.array(z.string()), // оригинал, англ., синонимы
+  name: z.string(), // локализованное название источника
+  altNames: z.array(z.string()), // оригинал, англ., синонимы
 
   coverUrl: z.string(), // уже проксированный /api/v1/img?...
   largeCoverUrl: z.string().nullable(),
@@ -55,7 +55,7 @@ const MangaSchema = z.object({
 ```ts
 const ChapterSchema = z.object({
   id: z.string(),
-  mangaId: z.string(),
+  titleId: z.string(),
 
   number: z.number().nullable(), // 145.5 — дробные бывают
   volume: z.number().nullable(),
@@ -81,7 +81,7 @@ const ChapterSchema = z.object({
 1. Главы группируются по `branch`, ветки сортируются по полноте (число глав) и свежести.
 2. Ветка по умолчанию — самая полная и свежая, но выбор пользователя запоминается
    **для конкретного тайтла** и живёт в IndexedDB.
-3. Прогресс чтения хранится на пару `(mangaId, branch)`. Переключение ветки не должно
+3. Прогресс чтения хранится на пару `(titleId, branch)`. Переключение ветки не должно
    обнулять прогресс.
 4. UI показывает селектор веток только когда их больше одной.
 
@@ -140,10 +140,10 @@ POST /sources/:sourceId/probe   → Source          # прогнать пров�
 ### Каталог
 
 ```
-GET /sources/:sourceId/manga
+GET /sources/:sourceId/titles
     ?page=0&order=UPDATED|POPULARITY|RATING|NEWEST|ALPHABETICAL
     &query=&tags=&excludeTags=&state=&contentRating=
-    → { items: Manga[], page, hasNext, stale?: true }
+    → { items: Title[], page, hasNext, stale?: true }
 ```
 
 `stale: true` — ответ отдан из протухшего кеша, потому что источник лежит. Фронт рисует
@@ -153,7 +153,7 @@ GET /sources/:sourceId/manga
 
 ```
 GET /search?query=...&sources=READMANGA,DESU,REMANGA&limit=10
-    → { groups: Array<{ sourceId, status, items: Manga[] }> }
+    → { groups: Array<{ sourceId, status, items: Title[] }> }
 ```
 
 Веерный запрос с общим дедлайном 5 секунд. Источники, не уложившиеся в дедлайн,
@@ -163,14 +163,14 @@ GET /search?query=...&sources=READMANGA,DESU,REMANGA&limit=10
 ### Тайтл и главы
 
 ```
-GET /manga/:sourceId/:mangaId
-    → { manga: Manga, branches: Branch[] }
+GET /titles/:titleId
+    → { title: Title, branches: Branch[] }
     Branch: { id, name, scanlator, chaptersCount, lastUpdatedAt }
 
-GET /manga/:sourceId/:mangaId/chapters?branch=<id>
+GET /titles/:titleId/chapters?branch=<id>
     → { items: Chapter[] }
 
-GET /manga/:sourceId/:mangaId/chapters/:chapterId/pages
+GET /titles/:titleId/chapters/:chapterId/pages
     → { items: Page[], prevChapterId, nextChapterId }
 ```
 
@@ -180,9 +180,9 @@ GET /manga/:sourceId/:mangaId/chapters/:chapterId/pages
 ### Тот же тайтл на других источниках
 
 ```
-GET /manga/:sourceId/:mangaId/matches
-    → { items: MangaMatch[], failures: { sourceId, status }[] }
-    MangaMatch: { manga: Manga, score: 0..1, confidence, matchedTitle, tied }
+GET /titles/:titleId/matches
+    → { items: TitleMatch[], failures: { sourceId, status }[] }
+    TitleMatch: { title: Title, score: 0..1, confidence, matchedName, tied }
     confidence: confirmed | exact | high | low
 ```
 
@@ -207,8 +207,8 @@ GET /manga/:sourceId/:mangaId/matches
   между ними оставлен человеку — так выглядят, например, обычное и цветное издания.
 
 ```
-PUT /manga/:sourceId/:mangaId/links     → 204
-    { targetId: "sourceId:mangaId", verdict: confirmed | rejected | none }
+PUT /titles/:titleId/links     → 204
+    { targetId: "sourceId:opaqueId", verdict: confirmed | rejected | none }
 ```
 
 Ручная правка выдачи: `confirmed` поднимает пару наверх с уровнем `confirmed` (и дотягивает
@@ -217,7 +217,7 @@ PUT /manga/:sourceId/:mangaId/links     → 204
 
 Связь хранится в Postgres одной строкой на пару, ключ пары отсортирован — поэтому пометка,
 поставленная на странице A, видна и со страницы B. Ключ стороны — `sourceId:адрес тайтла`, а
-не `Manga.id`: часть парсеров выдаёт для одного тайтла разные внутренние id в списке и в
+не `Title.id`: часть парсеров выдаёт для одного тайтла разные внутренние id в списке и в
 деталях.
 
 **Эндпоинт не защищён, а правки глобальны и видны всем** — системы ролей в проекте пока нет.
@@ -250,11 +250,11 @@ GET /img?u=<base64url>&s=<sourceId>&sig=<hmac>&w=<width>&f=webp|avif|orig
 
 ```
 GET    /library                         → сохранённые тайтлы
-POST   /library                         → { mangaId, sourceId }
-DELETE /library/:mangaId
+POST   /library                         → { titleId, sourceId }
+DELETE /library/:titleId
 
-GET    /progress?mangaIds=a,b,c
-PUT    /progress                        → { mangaId, branch, chapterId, page, percent }
+GET    /progress?titleIds=a,b,c
+PUT    /progress                        → { titleId, branch, chapterId, page, percent }
 
 POST   /sync                            → батч-синхронизация из IndexedDB
 ```

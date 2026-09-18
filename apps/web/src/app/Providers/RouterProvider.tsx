@@ -12,7 +12,7 @@ import SourcesHealth from '@/pages/SourcesHealth';
 import Notifications from '@/pages/Notifications';
 import Bookmarks from '@/pages/Bookmarks';
 import Catalog from '@/pages/Catalog';
-import Manga from '@/pages/Manga';
+import Title from '@/pages/Title';
 
 const router = createBrowserRouter([
   {
@@ -39,8 +39,8 @@ const router = createBrowserRouter([
         element: <Catalog />,
       },
       {
-        path: ROUTE_PATHS.MANGA,
-        element: <Manga />,
+        path: ROUTE_PATHS.TITLE,
+        element: <Title />,
       },
       {
         path: ROUTE_PATHS.NOTIFICATIONS,

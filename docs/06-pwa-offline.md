@@ -30,8 +30,8 @@ VitePWA({
 | --------------------------------------- | --------------------------------- | ----------------------------------- |
 | App shell (JS, CSS, шрифты)             | Precache                          | Ревизии из манифеста сборки         |
 | `/api/v1/sources`                       | StaleWhileRevalidate              | TTL 24 ч                            |
-| `/api/v1/sources/*/manga` (каталог)     | NetworkFirst                      | Таймаут 3 с, TTL 15 мин, 50 записей |
-| `/api/v1/manga/*` (детали, главы)       | StaleWhileRevalidate              | TTL 1 ч, 200 записей                |
+| `/api/v1/sources/*/titles` (каталог)    | NetworkFirst                      | Таймаут 3 с, TTL 15 мин, 50 записей |
+| `/api/v1/titles/*` (детали, главы)      | StaleWhileRevalidate              | TTL 1 ч, 200 записей                |
 | `/api/v1/img` — обложки                 | CacheFirst                        | TTL 30 дней, 500 записей, LRU       |
 | `/api/v1/img` — страницы глав (онлайн)  | CacheFirst                        | TTL 7 дней, лимит по объёму         |
 | `/api/v1/img` — страницы скачанных глав | **Отдельный кеш, без вытеснения** | `tanuki-offline-v1`                 |
@@ -48,7 +48,7 @@ VitePWA({
 
 ```
 Пользователь → «Скачать главу»
-  1. UI пишет в Dexie downloads: { mangaId, chapterId, status: 'queued' }
+  1. UI пишет в Dexie downloads: { titleId, chapterId, status: 'queued' }
   2. Сообщение в SW через postMessage
   3. SW последовательно (не параллельно!) фетчит страницы с X-Tanuki-Offline: 1
   4. Прогресс шлётся обратно в UI через postMessage

@@ -1,21 +1,21 @@
 export { type EnumLiteralsOf, formatCompactNumber } from './utils';
 export { TagSchema, type Tag } from './tag';
 export {
-  MangaSchema,
-  MangaStateSchema,
-  MangaRestrictionSchema,
+  TitleSchema,
+  TitleStateSchema,
+  TitleRestrictionSchema,
   ContentRatingSchema,
-  MangaTypeSchema,
-  MANGA_STATE,
-  MANGA_RESTRICTION,
+  TitleTypeSchema,
+  TITLE_STATE,
+  TITLE_RESTRICTION,
   CONTENT_RATING,
-  MANGA_TYPE,
-  type Manga,
-  type MangaState,
-  type MangaRestriction,
+  TITLE_TYPE,
+  type Title,
+  type TitleState,
+  type TitleRestriction,
   type ContentRating,
-  type MangaType,
-} from './manga';
+  type TitleType,
+} from './title';
 export { ChapterSchema, type Chapter } from './chapter';
 export { PageSchema, type Page } from './page';
 export {
@@ -80,8 +80,8 @@ export {
   type SourcesResponse,
   CatalogResponseSchema,
   type CatalogResponse,
-  MangaDetailsResponseSchema,
-  type MangaDetailsResponse,
+  TitleDetailsResponseSchema,
+  type TitleDetailsResponse,
   ChaptersResponseSchema,
   type ChaptersResponse,
   PagesResponseSchema,
@@ -100,15 +100,15 @@ export {
 } from './search';
 export {
   MatchConfidenceSchema,
-  MangaLinkVerdictSchema,
-  MangaMatchSchema,
-  MangaMatchesResponseSchema,
-  MangaLinkRequestSchema,
+  TitleLinkVerdictSchema,
+  TitleMatchSchema,
+  TitleMatchesResponseSchema,
+  TitleLinkRequestSchema,
   MATCH_CONFIDENCE,
-  MANGA_LINK_VERDICT,
+  TITLE_LINK_VERDICT,
   type MatchConfidence,
-  type MangaLinkVerdict,
-  type MangaMatch,
-  type MangaMatchesResponse,
-  type MangaLinkRequest,
+  type TitleLinkVerdict,
+  type TitleMatch,
+  type TitleMatchesResponse,
+  type TitleLinkRequest,
 } from './match';

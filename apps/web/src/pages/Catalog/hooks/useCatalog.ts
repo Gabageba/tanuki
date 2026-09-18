@@ -61,7 +61,7 @@ function useCatalog({
       if (force) {
         params.set('refresh', 'true');
       }
-      return apiFetch<CatalogResponse>(`/sources/${sourceId}/manga?${params.toString()}`);
+      return apiFetch<CatalogResponse>(`/sources/${sourceId}/titles?${params.toString()}`);
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.page + 1 : undefined),

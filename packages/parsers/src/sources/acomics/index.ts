@@ -2,7 +2,7 @@ import { SORT_ORDER, SOURCE_CONTENT_TYPE, SOURCE_LOCALE } from '@tanuki/contract
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawManga, RawPage, RawTag } from '../../types';
+import type { RawTitle, RawPage, RawTag } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
@@ -59,7 +59,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
     page: number,
     order: string | undefined,
     query: string | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     let url: string;
     if (query) {
       if (page > 0) return [];
@@ -73,7 +73,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
     return doc
       .$('table.list-loadable')
       .toArray()
-      .map((el): RawManga | null => {
+      .map((el): RawTitle | null => {
         const $row = doc.$(el);
         const $a = $row.find('a').first();
         const hrefRaw = attrOrNull($a, 'href');
@@ -102,16 +102,16 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
           source: SOURCE_ID,
         };
       })
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: FIRST_PAGE }, (page) =>
       fetchListPage(page, params.order, params.query),
     );
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const tagMap = await getTagMap();

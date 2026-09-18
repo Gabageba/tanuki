@@ -35,7 +35,7 @@ packages/parsers/
   LICENSE                 # GPLv3
   src/
     index.ts              # единственная точка экспорта
-    types.ts              # RawManga/RawChapter/RawPage/RawTag/RawSourceInfo
+    types.ts              # RawTitle/RawChapter/RawPage/RawTag/RawSourceInfo
     errors.ts              # иерархия ParserError (framework-free)
     registry.ts            # SOURCE_IDS, SOURCES, createRegistry()
     core/
@@ -59,8 +59,8 @@ packages/parsers/
 export interface Parser {
   readonly id: string;
   readonly info: RawSourceInfo; // статика, без сети
-  getList(params: ListParams): Promise<RawManga[]>; // chapters ОБЯЗАН быть null
-  getDetails(url: string): Promise<RawManga>; // chapters заполнены
+  getList(params: ListParams): Promise<RawTitle[]>; // chapters ОБЯЗАН быть null
+  getDetails(url: string): Promise<RawTitle>; // chapters заполнены
   getPages(chapterUrl: string): Promise<RawPage[]>; // url абсолютный, преразрешённый
   imageHeaders(imageUrl: string): Record<string, string>;
   init?(): Promise<void>; // разовый прогрев (SSO Grouple)
@@ -195,7 +195,7 @@ VIP-промо-карусель, реальный постраничный ка�
 `MULTPORN`/`MULTPORN_HENTAI` (`multporn.net`, общий движок `sources/multporn`) — тоже не порт:
 не Drupal-сайт из форка, а обычная (немодифицированная) Drupal 7 Views-вёрстка, описанная
 вручную. Сайт держит ~12 типов контента (Comics, Hentai manga, Cartoon/Hentai pictures, GIF,
-видео, игры, ...) за одним экраном фильтров; из них модели `RawManga → chapters → pages`
+видео, игры, ...) за одним экраном фильтров; из них модели `RawTitle → chapters → pages`
 соответствуют только Comics и Hentai manga (один узел = одна законченная работа с постраничной
 галереей), поэтому это два раздельных `SourceId` на одном движке и домене — остальные типы не
 реализованы. `getList` без поискового запроса бьёт в `/new?type=1|3&sort_by=created` (15 строк

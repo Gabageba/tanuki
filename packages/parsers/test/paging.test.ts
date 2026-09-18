@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { planWindow, fetchPaged, fetchOffsetNative } from '../src/core/paging';
-import type { RawManga } from '../src/types';
+import type { RawTitle } from '../src/types';
 
-const manga = (id: number): RawManga => {
+const manga = (id: number): RawTitle => {
   return {
     id,
     title: `Manga ${id}`,

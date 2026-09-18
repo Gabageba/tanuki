@@ -1,7 +1,7 @@
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_TYPE,
+  TITLE_TYPE,
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
@@ -15,11 +15,11 @@ import type { FilterSelection, ListParams } from '../../core/paging';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { getYearRangePresets } from '../../core/filters/range-presets';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawFilterGroup,
   RawFilterOption,
-  RawMangaType,
+  RawTitleType,
   RawPage,
   RawTag,
 } from '../../types';
@@ -208,21 +208,21 @@ const assetUrl = (file: FileRef | null): string | null => {
   return file?.filename_disk ? `${CDN_BASE}/${file.filename_disk}` : null;
 };
 
-/** No dedicated MANGA_TYPE bucket for dōjinshi — it's still hand-drawn manga-style art, so it
+/** No dedicated TITLE_TYPE bucket for dōjinshi — it's still hand-drawn manga-style art, so it
  *  folds into MANGA the same way the site's own "Манга"/"Додзинси" split doesn't map onto the
  *  frontend's format enum. `comix` is the one value with an exact match. */
-const mangaTypeFor = (type: HentaichanMangaType): RawMangaType => {
+const mangaTypeFor = (type: HentaichanMangaType): RawTitleType => {
   switch (type) {
     case 'manga':
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 'doujinshi':
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 'comix':
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
   }
 };
 
-/** `mangaTypeFor` folds doujinshi into MANGA_TYPE.MANGA — this recovers that distinction as the
+/** `mangaTypeFor` folds doujinshi into TITLE_TYPE.MANGA — this recovers that distinction as the
  *  release format, the same three labels TYPE_OPTIONS already surfaces as a filter. */
 const releaseFormatTitleFor = (type: HentaichanMangaType): string => {
   switch (type) {
@@ -326,7 +326,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
     return ctx.http.getJson<T>(url);
   };
 
-  const parseListItem = (item: MangaListItem): RawManga => {
+  const parseListItem = (item: MangaListItem): RawTitle => {
     const cover = assetUrl(item.cover);
     const tags: RawTag[] = item.tags
       .map((t) => t.tags_id)
@@ -358,7 +358,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     const query: Record<string, string> = {
       limit: String(params.limit),
       offset: String(params.offset),
@@ -401,7 +401,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
     return res.data.map((ch) => ch.id);
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const { mangaId, slug } = parseMangaUrl(mangaUrl);
     const [detailRes, chapterIds] = await Promise.all([
       directusGet<DirectusListResponse<MangaDetail>>('/items/manga', {

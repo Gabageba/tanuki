@@ -1,14 +1,14 @@
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_RESTRICTION,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_RESTRICTION,
+  TITLE_STATE,
+  TITLE_TYPE,
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type MangaState,
+  type TitleState,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -21,11 +21,11 @@ import {
 } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawPage,
   RawTag,
-  RawMangaType,
+  RawTitleType,
   RawFilterGroup,
   RawFilterOption,
 } from '../../types';
@@ -53,12 +53,12 @@ export const REMANGA_FILTER_GROUP = {
   CHAPTERS_COUNT: FILTER_GROUP.CHAPTERS_COUNT,
 } as const;
 
-const STATES: Record<number, MangaState> = {
-  1: MANGA_STATE.FINISHED,
-  2: MANGA_STATE.ONGOING,
-  3: MANGA_STATE.PAUSED,
-  4: MANGA_STATE.ABANDONED,
-  5: MANGA_STATE.UPCOMING,
+const STATES: Record<number, TitleState> = {
+  1: TITLE_STATE.FINISHED,
+  2: TITLE_STATE.ONGOING,
+  3: TITLE_STATE.PAUSED,
+  4: TITLE_STATE.ABANDONED,
+  5: TITLE_STATE.UPCOMING,
 };
 
 /** status.id === 6 ("Лицензировано") means the publisher pulled scanlations after licensing the
@@ -68,11 +68,11 @@ const LICENSED_STATUS_ID = 6;
 /** translate_status ids 1..4 share STATES' 1/2/3 numbering by coincidence (Закончен/Продолжается/
  *  Заморожен) but diverge at 4 ("Нет переводчика" vs STATES' "Заброшен"), so this needs its own
  *  map rather than reusing STATES. */
-const TRANSLATE_STATES: Record<number, MangaState> = {
-  1: MANGA_STATE.FINISHED,
-  2: MANGA_STATE.ONGOING,
-  3: MANGA_STATE.PAUSED,
-  4: MANGA_STATE.ABANDONED,
+const TRANSLATE_STATES: Record<number, TitleState> = {
+  1: TITLE_STATE.FINISHED,
+  2: TITLE_STATE.ONGOING,
+  3: TITLE_STATE.PAUSED,
+  4: TITLE_STATE.ABANDONED,
 };
 
 /** translate_status.id === 5 ("Не переводится (лицензировано)") is translate_status's own
@@ -199,20 +199,20 @@ const TYPE_OPTIONS: RawFilterOption[] = [
 
 /** `type.id` on the manga/list JSON — same ids as TYPE_OPTIONS above. Only the unambiguous ones
  *  get their own case; the rest (Рукомикс, Индонезийский комикс, Другое, Оригиналы) fall to OTHER. */
-const mangaTypeById = (id: number | undefined): RawMangaType | null => {
+const mangaTypeById = (id: number | undefined): RawTitleType | null => {
   switch (id) {
     case 1:
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 2:
-      return MANGA_TYPE.MANHWA;
+      return TITLE_TYPE.MANHWA;
     case 3:
-      return MANGA_TYPE.MANHUA;
+      return TITLE_TYPE.MANHUA;
     case 4:
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
     case undefined:
       return null;
     default:
-      return MANGA_TYPE.OTHER;
+      return TITLE_TYPE.OTHER;
   }
 };
 
@@ -348,7 +348,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     return [...names];
   };
 
-  const parseManga = (jo: MangaJson): RawManga => {
+  const parseManga = (jo: MangaJson): RawTitle => {
     const url = `/manga/${jo.dir}`;
     const cover = jo.cover;
     return {
@@ -368,7 +368,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       restriction:
         jo.status?.id === LICENSED_STATUS_ID ||
         jo.translate_status?.id === TRANSLATE_LICENSED_STATUS_ID
-          ? MANGA_RESTRICTION.LEGAL
+          ? TITLE_RESTRICTION.LEGAL
           : null,
       type: mangaTypeById(jo.type?.id),
       year: jo.issue_year ?? null,
@@ -433,7 +433,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     direction: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const path = query ? '/api/v2/search' : '/api/v2/search/catalog';
     const url = new URL(`https://${apiHost}${path}`);
     url.searchParams.set('page', String(page));
@@ -446,7 +446,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     return json.results.map(parseManga);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.order, params.direction, params.query, params.filters),
     );
@@ -553,7 +553,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     return result;
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const slug = slugFromUrl(mangaUrl);
     const json = await ctx.http.getJson<MangaJson>(`https://${apiHost}/api/v2/titles/${slug}/`);
 
@@ -626,9 +626,9 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       restriction:
         json.status?.id === LICENSED_STATUS_ID ||
         json.translate_status?.id === TRANSLATE_LICENSED_STATUS_ID
-          ? MANGA_RESTRICTION.LEGAL
+          ? TITLE_RESTRICTION.LEGAL
           : chapters.length === 0 && hadPaidChapters
-            ? MANGA_RESTRICTION.PAYWALL
+            ? TITLE_RESTRICTION.PAYWALL
             : null,
       type: mangaTypeById(json.type?.id),
       year: json.issue_year ?? null,

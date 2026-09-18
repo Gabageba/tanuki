@@ -43,7 +43,7 @@ export type MultpornConfig = {
    *  field name calls it a "group", the label reads "Section:") — verified live for both types,
    *  same split as authorSelector: comics uses `field-com-group`, hentai_manga uses
    *  `field-hentai-com-group`. Its link target is this type's own `seriesPathPrefix` route, but
-   *  it's parsed for its link text (into RawManga.series), not its href. */
+   *  it's parsed for its link text (into RawTitle.series), not its href. */
   seriesSelector: string;
   /** Omitted where this type's taxonomy routes aren't verified live — see MultpornFilterConfig. */
   filters?: MultpornFilterConfig;

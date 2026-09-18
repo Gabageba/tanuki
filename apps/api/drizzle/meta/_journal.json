@@ -15,6 +15,13 @@
       "when": 1788930037930,
       "tag": "0001_complete_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789200000000,
+      "tag": "0002_wonderful_shen",
+      "breakpoints": true
     }
   ]
 }

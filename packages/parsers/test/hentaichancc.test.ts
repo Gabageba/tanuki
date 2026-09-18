@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_TYPE,
+  TITLE_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
 } from '@tanuki/contracts';
@@ -180,15 +180,15 @@ describe('HentaiChan.cc parser conformance', () => {
   it('getList: derives type/year/likes/pages from the raw fields', async () => {
     const items = await parser.getList({ offset: 0, limit: 20 });
     const [item] = items;
-    // 'doujinshi' has no dedicated MANGA_TYPE bucket — folds into MANGA.
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    // 'doujinshi' has no dedicated TITLE_TYPE bucket — folds into MANGA.
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
     expect(item!.year).toBe(2025);
     expect(item!.likes).toBe(128);
     expect(item!.views).toBe(3400);
     expect(item!.pages).toBe(24);
     expect(item!.description).toBe('Краткое описание.');
     expect(item!.tags.map((t) => t.title)).toEqual(['Ahegao']);
-    // 'doujinshi' folds into MANGA_TYPE.MANGA, but the original format survives here.
+    // 'doujinshi' folds into TITLE_TYPE.MANGA, but the original format survives here.
     expect(item!.releaseFormats).toEqual(['Додзинси']);
     expect(item!.addedAt).toBe(new Date('2025-06-14T10:00:00.000Z').getTime());
   });
@@ -235,7 +235,7 @@ describe('HentaiChan.cc parser conformance', () => {
     expect(manga.authors).toEqual(['Satomi']);
     expect(manga.translators).toEqual(['Degrad']);
     expect(manga.series).toEqual(['Sword Art Online']);
-    expect(manga.type).toBe(MANGA_TYPE.COMICS);
+    expect(manga.type).toBe(TITLE_TYPE.COMICS);
     expect(manga.year).toBe(2025);
     expect(manga.likes).toBe(128);
     expect(manga.views).toBe(3400);

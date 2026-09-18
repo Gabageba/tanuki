@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_RESTRICTION,
-  MANGA_TYPE,
+  TITLE_RESTRICTION,
+  TITLE_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
 } from '@tanuki/contracts';
@@ -172,7 +172,7 @@ describe('Inkstory parser conformance', () => {
     expect(item!.title).toBe('Ван-Пис');
     expect(item!.originalTitle).toEqual(['One Piece', 'ワンピース']);
     expect(item!.altTitles).toEqual(['OP']);
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
     expect(item!.country).toBe('Япония');
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(219);
@@ -420,7 +420,7 @@ describe('Inkstory parser conformance', () => {
     expect(manga.originalTitle).toEqual(['One Piece', 'ワンピース']);
     expect(manga.altTitles).toEqual(['OP']);
     expect(manga.contentRating).toBe(CONTENT_RATING.SUGGESTIVE);
-    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.type).toBe(TITLE_TYPE.MANGA);
     expect(manga.country).toBe('Япония');
     expect(manga.year).toBe(1997);
     expect(manga.publicUrl).toBe('https://inkstory.net/content/one-piece');
@@ -455,11 +455,11 @@ describe('Inkstory parser conformance', () => {
   });
 
   it.each([
-    ['JAPAN', MANGA_TYPE.MANGA],
-    ['KOREA', MANGA_TYPE.MANHWA],
-    ['CHINA', MANGA_TYPE.MANHUA],
-    ['RUSSIA', MANGA_TYPE.COMICS],
-    ['OTHER', MANGA_TYPE.OTHER],
+    ['JAPAN', TITLE_TYPE.MANGA],
+    ['KOREA', TITLE_TYPE.MANHWA],
+    ['CHINA', TITLE_TYPE.MANHUA],
+    ['RUSSIA', TITLE_TYPE.COMICS],
+    ['OTHER', TITLE_TYPE.OTHER],
     [undefined, null],
   ])('getList: country %s maps to type %s', async (country, type) => {
     const freshHttp = new FakeHttpClient();
@@ -493,7 +493,7 @@ describe('Inkstory parser conformance', () => {
     });
     const parser = createInkStoryParser(makeContext(freshHttp));
     const manga = await parser.getDetails(takenDownId);
-    expect(manga.restriction).toBe(MANGA_RESTRICTION.LEGAL);
+    expect(manga.restriction).toBe(TITLE_RESTRICTION.LEGAL);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

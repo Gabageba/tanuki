@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MANGA_TYPE, MATCH_CONFIDENCE } from '@tanuki/contracts';
+import { TITLE_TYPE, MATCH_CONFIDENCE } from '@tanuki/contracts';
 import type { MatchSubject } from './models';
 import { metadataBonus, scoreMatch } from './score-match';
 
 const subject = (overrides: Partial<MatchSubject> = {}): MatchSubject => ({
-  title: 'Jujutsu Kaisen',
-  altTitles: [],
+  name: 'Jujutsu Kaisen',
+  altNames: [],
   authors: [],
   year: null,
   type: null,
@@ -23,8 +23,8 @@ describe('scoreMatch — каналы', () => {
 
   it('совпадение по обоим скриптам весит больше, чем по одному', () => {
     const ref = subject({
-      title: 'Клинок рассекающий демонов',
-      altTitles: ['Demon Slayer'],
+      name: 'Клинок рассекающий демонов',
+      altNames: ['Demon Slayer'],
     });
 
     // У обоих кандидатов латинский канал совпадает одинаково — различает их только то, что у
@@ -32,13 +32,13 @@ describe('scoreMatch — каналы', () => {
     const both = scoreMatch(
       ref,
       subject({
-        title: 'Клинок рассекающий демонов навсегда',
-        altTitles: ['Demon Slayer Chronicles'],
+        name: 'Клинок рассекающий демонов навсегда',
+        altNames: ['Demon Slayer Chronicles'],
       }),
     );
     const latinOnly = scoreMatch(
       ref,
-      subject({ title: 'Наруто', altTitles: ['Demon Slayer Chronicles'] }),
+      subject({ name: 'Наруто', altNames: ['Demon Slayer Chronicles'] }),
     );
 
     expect(both!.score).toBeGreaterThan(latinOnly!.score);
@@ -46,8 +46,8 @@ describe('scoreMatch — каналы', () => {
 
   it('одинокая нечёткая кириллица не поднимается выше «возможно»', () => {
     const result = scoreMatch(
-      subject({ title: 'Истребитель демонов', altTitles: [] }),
-      subject({ title: 'Истребители демонов', altTitles: [] }),
+      subject({ name: 'Истребитель демонов', altNames: [] }),
+      subject({ name: 'Истребители демонов', altNames: [] }),
     );
 
     expect(result).not.toBeNull();
@@ -58,8 +58,8 @@ describe('scoreMatch — каналы', () => {
     // Оба канала нечёткие, но каждый выше своего пола — согласие двух скриптов поднимает пару
     // до «вероятно», хотя одной кириллицы для этого не хватило бы.
     const result = scoreMatch(
-      subject({ title: 'Истребитель демонов', altTitles: ['Demon Slayer'] }),
-      subject({ title: 'Истребители демонов', altTitles: ['Demon Slayer Chronicles'] }),
+      subject({ name: 'Истребитель демонов', altNames: ['Demon Slayer'] }),
+      subject({ name: 'Истребители демонов', altNames: ['Demon Slayer Chronicles'] }),
     );
 
     expect(result?.confidence).toBe(MATCH_CONFIDENCE.HIGH);
@@ -67,27 +67,25 @@ describe('scoreMatch — каналы', () => {
 
   it('точное совпадение латиницы даёт «точное» даже при нечёткой кириллице', () => {
     const result = scoreMatch(
-      subject({ title: 'Истребитель демонов', altTitles: ['Kimetsu no Yaiba'] }),
-      subject({ title: 'Убийца демонов', altTitles: ['Kimetsu no Yaiba'] }),
+      subject({ name: 'Истребитель демонов', altNames: ['Kimetsu no Yaiba'] }),
+      subject({ name: 'Убийца демонов', altNames: ['Kimetsu no Yaiba'] }),
     );
 
     expect(result?.confidence).toBe(MATCH_CONFIDENCE.EXACT);
   });
 
   it('не матчит разные тайтлы', () => {
-    expect(scoreMatch(subject({ title: 'Naruto' }), subject({ title: 'Bleach' }))).toBeNull();
+    expect(scoreMatch(subject({ name: 'Naruto' }), subject({ name: 'Bleach' }))).toBeNull();
   });
 
   it('не матчит разные части франшизы', () => {
-    expect(
-      scoreMatch(subject({ title: 'Overlord' }), subject({ title: 'Overlord II' })),
-    ).toBeNull();
+    expect(scoreMatch(subject({ name: 'Overlord' }), subject({ name: 'Overlord II' }))).toBeNull();
   });
 });
 
 describe('scoreMatch — сценарии из плана', () => {
   const kaguyaRef = subject({
-    title: 'Kaguya-sama wa Kokurasetai',
+    name: 'Kaguya-sama wa Kokurasetai',
     year: 2015,
     authors: ['Aka Akasaka'],
   });
@@ -96,7 +94,7 @@ describe('scoreMatch — сценарии из плана', () => {
     const result = scoreMatch(
       kaguyaRef,
       subject({
-        title: 'Kaguya-sama wa Kokurasetai: Tensai-tachi no Renai Zunousen',
+        name: 'Kaguya-sama wa Kokurasetai: Tensai-tachi no Renai Zunousen',
         year: 2015,
         authors: ['Aka Akasaka'],
       }),
@@ -107,8 +105,8 @@ describe('scoreMatch — сценарии из плана', () => {
 
   it('продолжение с расходящимися метаданными отбрасывается', () => {
     const result = scoreMatch(
-      subject({ title: 'Solo Leveling', year: 2018, authors: ['Chugong'] }),
-      subject({ title: 'Solo Leveling: Ragnarok', year: 2023, authors: ['Daul'] }),
+      subject({ name: 'Solo Leveling', year: 2018, authors: ['Chugong'] }),
+      subject({ name: 'Solo Leveling: Ragnarok', year: 2023, authors: ['Daul'] }),
     );
 
     expect(result).toBeNull();
@@ -116,8 +114,8 @@ describe('scoreMatch — сценарии из плана', () => {
 
   it('тот же спорный случай без метаданных остаётся в «возможных», а не отбрасывается', () => {
     const result = scoreMatch(
-      subject({ title: 'Solo Leveling' }),
-      subject({ title: 'Solo Leveling: Ragnarok' }),
+      subject({ name: 'Solo Leveling' }),
+      subject({ name: 'Solo Leveling: Ragnarok' }),
     );
 
     expect(result?.confidence).toBe(MATCH_CONFIDENCE.LOW);
@@ -170,8 +168,8 @@ describe('metadataBonus', () => {
 
   it('совпавший тип даёт согласие', () => {
     const result = metadataBonus(
-      subject({ type: MANGA_TYPE.MANHWA }),
-      subject({ type: MANGA_TYPE.MANHWA }),
+      subject({ type: TITLE_TYPE.MANHWA }),
+      subject({ type: TITLE_TYPE.MANHWA }),
     );
     expect(result.agreements).toBe(1);
   });
@@ -180,8 +178,8 @@ describe('metadataBonus', () => {
 describe('scoreMatch — устойчивость', () => {
   it('пустые метаданные кандидата не ломают скоринг', () => {
     const result = scoreMatch(
-      subject({ title: 'Jujutsu Kaisen', year: 2018, authors: ['Gege Akutami'] }),
-      subject({ title: 'Jujutsu Kaisen' }),
+      subject({ name: 'Jujutsu Kaisen', year: 2018, authors: ['Gege Akutami'] }),
+      subject({ name: 'Jujutsu Kaisen' }),
     );
 
     expect(result?.confidence).toBe(MATCH_CONFIDENCE.EXACT);
@@ -203,8 +201,8 @@ describe('scoreMatch — противоречие каналов', () => {
     // Спин-офф несёт альтернативное название всей франшизы, поэтому латиница совпадает точно,
     // а русские названия расходятся подзаголовком.
     const result = scoreMatch(
-      subject({ title: 'Магическая битва', altTitles: ['Jujutsu Kaisen'] }),
-      subject({ title: 'Магическая битва: Модуль', altTitles: ['Jujutsu Kaisen'] }),
+      subject({ name: 'Магическая битва', altNames: ['Jujutsu Kaisen'] }),
+      subject({ name: 'Магическая битва: Модуль', altNames: ['Jujutsu Kaisen'] }),
     );
 
     expect(result?.confidence).toBe(MATCH_CONFIDENCE.HIGH);
@@ -213,8 +211,8 @@ describe('scoreMatch — противоречие каналов', () => {
   it('не считает противоречием несовпавшую кириллицу', () => {
     // Разные переводы одного названия — норма, латиница тут единственный надёжный сигнал.
     const result = scoreMatch(
-      subject({ title: 'Клинок рассекающий демонов', altTitles: ['Kimetsu no Yaiba'] }),
-      subject({ title: 'Убийца демонов', altTitles: ['Kimetsu no Yaiba'] }),
+      subject({ name: 'Клинок рассекающий демонов', altNames: ['Kimetsu no Yaiba'] }),
+      subject({ name: 'Убийца демонов', altNames: ['Kimetsu no Yaiba'] }),
     );
 
     expect(result?.confidence).toBe(MATCH_CONFIDENCE.EXACT);

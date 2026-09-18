@@ -221,7 +221,14 @@
       "Bash(curl -sS -m 8 -o /dev/null -w \"mintmanga: %{http_code}\\\\n\" https://2.mintmanga.one/)",
       "Bash(curl -s \"https://jitpack.io/api/builds/com.github.Gabageba/tanuki-parsers-redo/398641d1b636cf2023f1b8175c23885177c5db3b\")",
       "Bash(curl -s -m 180 \"https://jitpack.io/com/github/Gabageba/tanuki-parsers-redo/6b94747c495c5eb30a720f5a4cb35a3d95a2e1e2/build.log\")",
-      "Bash(curl -s -m 30 \"https://jitpack.io/api/builds/com.github.Gabageba/tanuki-parsers-redo/6b94747c495c5eb30a720f5a4cb35a3d95a2e1e2\")"
+      "Bash(curl -s -m 30 \"https://jitpack.io/api/builds/com.github.Gabageba/tanuki-parsers-redo/6b94747c495c5eb30a720f5a4cb35a3d95a2e1e2\")",
+      "Bash(pnpm --filter @tanuki/api db:generate)",
+      "Bash(pnpm --filter @tanuki/api typecheck)",
+      "Bash(grep -rn \"apiFetch\\(\\\\`/manga\\\\|apiFetch\\(\\\\`/sources\" src)",
+      "Bash(pnpm --filter @tanuki/web test)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm run *)"
     ],
     "additionalDirectories": [
       "/Users/gabageba/Develop/web/tanuki-parsers-redo/src/main/kotlin/org/koitharu/kotatsu/parsers/site/ru/rulib",

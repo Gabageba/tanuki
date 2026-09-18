@@ -3,7 +3,7 @@ import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_TYPE,
+  TITLE_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
@@ -11,7 +11,7 @@ import {
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
-import type { RawFilterGroup, RawFilterOption, RawManga, RawPage, RawTag } from '../../types';
+import type { RawFilterGroup, RawFilterOption, RawTitle, RawPage, RawTag } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
@@ -55,7 +55,7 @@ export const SEXKOMIX2_FILTER_GROUP = {
   CATEGORY: FILTER_GROUP.CATEGORY,
   TAG: FILTER_GROUP.TAG,
   TRANSLATOR: FILTER_GROUP.TRANSLATOR,
-  /** "Студии" — same concept getDetails already reads off `Студия:` into RawManga.authors. */
+  /** "Студии" — same concept getDetails already reads off `Студия:` into RawTitle.authors. */
   AUTHOR: FILTER_GROUP.AUTHOR,
 } as const;
 
@@ -209,7 +209,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
     $item: Cheerio<AnyNode>,
     $: CheerioAPI,
     baseUrl: string,
-  ): RawManga | null => {
+  ): RawTitle | null => {
     const $a = $item.find('a').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -237,7 +237,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       largeCoverUrl: null,
       description: null,
       chapters: null,
-      type: MANGA_TYPE.COMICS,
+      type: TITLE_TYPE.COMICS,
       year: yearOfEpoch(uploadDate),
       addedAt: uploadDate,
       likes: parseAbbreviatedNumber(findInfoSetValue($item, $, 'like.svg')),
@@ -246,13 +246,13 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const fetchListPage = async (path: string): Promise<RawManga[]> => {
+  const fetchListPage = async (path: string): Promise<RawTitle[]> => {
     const doc = await ctx.http.getHtml(toAbsoluteUrl(path, domain));
     return findCatalogList(doc.$)
       .find('li.comix')
       .toArray()
       .map((el) => parseMangaTile(doc.$(el), doc.$, doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
   /** One of the four FILTER_ROUTES if a selection picked one, else /search, else plain /home. */
@@ -286,7 +286,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     const route = resolveListRoute(params.order, params.query, params.filters);
     return fetchPaged(params, { size: route.pageSize, firstPage: 1 }, (page) =>
       fetchListPage(route.pathForPage(page)),
@@ -316,7 +316,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
     return $box ? $box.find('p').first().html() : null;
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
 
@@ -369,7 +369,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
           source: SOURCE_ID,
         },
       ],
-      type: MANGA_TYPE.COMICS,
+      type: TITLE_TYPE.COMICS,
       year: yearOfEpoch(uploadDate),
       addedAt: uploadDate,
       likes,

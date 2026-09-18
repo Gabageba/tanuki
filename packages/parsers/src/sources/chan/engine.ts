@@ -3,25 +3,25 @@ import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
-  type MangaState,
+  type TitleState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawPage,
   RawTag,
   RawFilterGroup,
   RawFilterOption,
-  RawMangaType,
+  RawTitleType,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -118,8 +118,8 @@ const parseCountFromTitle = (title: string | null): number | null => {
  * This DLE engine has no bounded rating (no 0..10 or 0..5 scale, no downvotes) — the only
  * per-title score is an unbounded "likes" tally, rendered as "Плюсиков: N" on manga-chan.me (list
  * row and details alike) or "N плюсиков" inline on hentaichan.live's list row. Both phrasings are
- * checked since the wording differs by skin; RawManga.likes carries this separately from `rating`
- * (which stays RATING_UNKNOWN — see RawManga.likes doc on why the two can't be merged).
+ * checked since the wording differs by skin; RawTitle.likes carries this separately from `rating`
+ * (which stays RATING_UNKNOWN — see RawTitle.likes doc on why the two can't be merged).
  */
 const parseLikesFromText = (text: string): number | null => {
   const match = /Плюсиков:\s*(\d+)/i.exec(text) ?? /(\d+)\s*плюсик/i.exec(text);
@@ -139,22 +139,22 @@ const findInfoCell = ($root: Cheerio<AnyNode>, $: CheerioAPI, label: string): Ch
 
 /** "Тип" cell links to `/type/<name>` — same vocabulary as `fetchTypeGroup`'s `/type/` listing
  *  (verified live: Манга, Манхва, Маньхуа, Комикс, OEL Manga, OEL-манга, Другое, Новелла, Ранобэ,
- *  Руманга, Стрип). Only the four RawMangaType-bearing ones get their own case. */
-const parseChanType = (text: string | null): RawMangaType | null => {
+ *  Руманга, Стрип). Only the four RawTitleType-bearing ones get their own case. */
+const parseChanType = (text: string | null): RawTitleType | null => {
   switch (text?.trim()) {
     case 'Манга':
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 'Манхва':
-      return MANGA_TYPE.MANHWA;
+      return TITLE_TYPE.MANHWA;
     case 'Маньхуа':
-      return MANGA_TYPE.MANHUA;
+      return TITLE_TYPE.MANHUA;
     case 'Комикс':
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
     case undefined:
     case '':
       return null;
     default:
-      return MANGA_TYPE.OTHER;
+      return TITLE_TYPE.OTHER;
   }
 };
 
@@ -163,18 +163,18 @@ const parseChanType = (text: string | null): RawMangaType | null => {
  *  series, a completed oneshot and an ongoing one); this DLE engine has no third state (no
  *  paused/abandoned wording observed anywhere, including the site's own `/catalog` status
  *  filters — see fetchStatusGroup, which only ever routes `all_done`/`end`/`ongoing`). */
-const parseChanState = (text: string | null): MangaState | null => {
+const parseChanState = (text: string | null): TitleState | null => {
   if (!text) return null;
-  if (/заверш/i.test(text)) return MANGA_STATE.FINISHED;
-  if (/продолжа/i.test(text)) return MANGA_STATE.ONGOING;
+  if (/заверш/i.test(text)) return TITLE_STATE.FINISHED;
+  if (/продолжа/i.test(text)) return TITLE_STATE.ONGOING;
   return null;
 };
 
 /** "Статус (Томов)" reads "Сингл" instead of a "выпуск ..." phrase for a one-shot — a single
  *  release has nothing left to publish, so it's complete by definition even though the cell
  *  never spells out "завершен" for it. */
-const parseChanReleaseState = (text: string | null): MangaState | null => {
-  if (text && /^\s*сингл/i.test(text)) return MANGA_STATE.FINISHED;
+const parseChanReleaseState = (text: string | null): TitleState | null => {
+  if (text && /^\s*сингл/i.test(text)) return TITLE_STATE.FINISHED;
   return parseChanState(text);
 };
 
@@ -379,7 +379,7 @@ const buildListUrl = (
   // pre-sorted pages (/mostfavorites, /catalog, /sortch) — but verified live, item-for-item
   // across multiple offsets, that `/manga/new?n=<field><asc|desc>` returns exactly the same
   // listing for every one of them on MANGACHAN (RATING aliases POPULARITY's `fav` field — this
-  // DLE engine has no separate rating axis, see RawManga.likes doc). HENCHAN's own dedicated
+  // DLE engine has no separate rating axis, see RawTitle.likes doc). HENCHAN's own dedicated
   // pages (/mostviews, /mostfavorites, /manga/newest — different paths, different `sort=manga`
   // param) weren't reachable to verify the same way, but that source is already non-functional,
   // so it shares this route unverified for now rather than keeping a second code path alive.
@@ -398,7 +398,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
     $row: Cheerio<AnyNode>,
     $: CheerioAPI,
     baseUrl: string,
-  ): RawManga | null => {
+  ): RawTitle | null => {
     const $a = $row.find('div.manga_row1 h2 a').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -456,7 +456,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
     direction: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const url = buildListUrl(cfg, domain, offset, order, direction, query, filters);
     const doc = await ctx.http.getHtml(url);
     const root = doc.$('div.main_fon').find('#content').first();
@@ -467,10 +467,10 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       .find('div.content_row')
       .toArray()
       .map((el) => parseMangaRow(doc.$(el), doc.$, doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     const size = params.query ? SEARCH_NATIVE_SIZE : BROWSE_NATIVE_SIZE;
     return fetchOffsetNative(params, { size }, (offset) =>
       fetchListPage(offset, params.order, params.direction, params.query, params.filters),
@@ -661,7 +661,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
     ];
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = new URL(mangaUrl, `https://${domain}/`).toString();
     const doc = await ctx.http.getHtml(absoluteUrl);
     const root = doc.$('#dle-content').first();

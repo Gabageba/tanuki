@@ -2,8 +2,8 @@ import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
 import {
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
 } from '@tanuki/contracts';
@@ -192,9 +192,9 @@ describe('Chan parser conformance', () => {
 
   it('getDetails: type/status/credits/alt-titles parsed from the mangatitle info table', async () => {
     const manga = await parser.getDetails('/One-Piece.html');
-    expect(manga.type).toBe(MANGA_TYPE.MANGA);
-    expect(manga.releaseState).toBe(MANGA_STATE.ONGOING);
-    expect(manga.translationState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.type).toBe(TITLE_TYPE.MANGA);
+    expect(manga.releaseState).toBe(TITLE_STATE.ONGOING);
+    expect(manga.translationState).toBe(TITLE_STATE.ONGOING);
     expect(manga.authors).toEqual(['Oda Eiichiro', 'Eiichiro Oda']);
     expect(manga.translators).toEqual(['Zelmira Black Pearl']);
     // altTitle parsed from the h1 parenthetical comes first, then the "Другие названия" row.
@@ -209,7 +209,7 @@ describe('Chan parser conformance', () => {
     });
     const oneshotParser = createChanParser(CFG, makeContext(http));
     const manga = await oneshotParser.getDetails('/One-Piece.html');
-    expect(manga.releaseState).toBe(MANGA_STATE.FINISHED);
+    expect(manga.releaseState).toBe(TITLE_STATE.FINISHED);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

@@ -125,7 +125,7 @@
   "countPages_other": "{{count}} pages",
   "failedToSave": "Failed to save",
   "tryAgainLater": "Try again later",
-  "failedToLoadManga": "Failed to load the manga",
+  "failedToLoadTitle": "Failed to load the title",
   "confirmed": "Confirmed",
   "exactMatch": "Exact match",
   "likely": "Likely",

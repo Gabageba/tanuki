@@ -13,7 +13,7 @@ export abstract class ParserError extends Error {
   }
 }
 
-/** The requested manga/chapter page could not be found upstream (HTTP 404 equivalent). */
+/** The requested title/chapter page could not be found upstream (HTTP 404 equivalent). */
 export class NotFoundError extends ParserError {}
 
 /** The upstream source demands an authenticated session for this resource. */

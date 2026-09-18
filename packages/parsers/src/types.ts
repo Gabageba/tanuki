@@ -6,18 +6,18 @@
  * - rating: -1 = unknown, else a float already scaled to 0..1 (not 0..10).
  * - number / volume: 0 = unknown.
  * - uploadDate: epoch MILLISECONDS, 0 = unknown.
- * - branch: null allowed on both Manga-less list items and chapters.
+ * - branch: null allowed on both title-less list items and chapters.
  * - coverUrl: null allowed (normalize.ts turns it into '').
- * - id (RawManga, RawChapter): stable across process restarts — see core/uid.ts.
+ * - id (RawTitle, RawChapter): stable across process restarts — see core/uid.ts.
  */
 
 import type {
   ContentRating,
   FilterGroupSettings,
   FilterType,
-  MangaRestriction,
-  MangaState,
-  MangaType,
+  TitleRestriction,
+  TitleState,
+  TitleType,
   SortOrder,
   SourceContentType,
   SourceLocale,
@@ -26,7 +26,7 @@ import type {
 export const RATING_UNKNOWN = -1;
 
 export type RawContentRating = ContentRating;
-export type RawMangaType = MangaType;
+export type RawTitleType = TitleType;
 
 export type RawTag = {
   title: string;
@@ -34,7 +34,7 @@ export type RawTag = {
   source: string;
 };
 
-export type RawManga = {
+export type RawTitle = {
   id: number;
   title: string;
   altTitles: string[];
@@ -45,7 +45,7 @@ export type RawManga = {
   coverUrl: string | null;
   tags: RawTag[];
   /** Статус выхода оригинала. */
-  releaseState: MangaState | null;
+  releaseState: TitleState | null;
   authors: string[];
   largeCoverUrl: string | null;
   description: string | null;
@@ -53,7 +53,7 @@ export type RawManga = {
   chapters: RawChapter[] | null;
   source: string;
   /** Publication format. Omitted where the source page being parsed doesn't expose it. */
-  type?: RawMangaType | null;
+  type?: RawTitleType | null;
   /** Publication year. Omitted where the source page being parsed doesn't expose it. */
   year?: number | null;
   /** Chapter total as reported by the source itself, for list items whose page doesn't carry
@@ -72,11 +72,11 @@ export type RawManga = {
   /** Why the source won't hand over the chapters (geo-block, takedown, paywall) — independent of
    *  `releaseState`, which is about publication, not access. Omitted where the source doesn't
    *  restrict this title. */
-  restriction?: MangaRestriction | null;
+  restriction?: TitleRestriction | null;
   /** Status of the source's own translation, where the source tracks that separately from the
    *  original's release (e.g. desu's "Перевод:" vs "Статус:"). Omitted where the source has no
    *  such distinct concept. */
-  translationState?: MangaState | null;
+  translationState?: TitleState | null;
   /** Full release date of the original, where the source exposes more than just `year` (e.g.
    *  desu's "с 14 июн 2012 г."). Epoch millis, 0 = unknown. Omitted where the source has no such
    *  date. */

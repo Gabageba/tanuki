@@ -29,7 +29,7 @@
 - [ ] Prettier, husky (`pre-commit`, `commit-msg`, `pre-push`), lint-staged, commitlint
 - [ ] `apps/web` — скелет Vite 8 + React 19 + Mantine 9, тёмная тема, роутер
 - [ ] `apps/api` — скелет NestJS 11 на Fastify, `/health`, pino-логи
-- [ ] `packages/contracts` — первые zod-схемы (`Manga`, `Chapter`, `Page`)
+- [ ] `packages/contracts` — первые zod-схемы (`Title`, `Chapter`, `Page`)
 - [ ] `docker-compose.yml` — valkey, postgres
 - [ ] CI: lint, typecheck, build
 

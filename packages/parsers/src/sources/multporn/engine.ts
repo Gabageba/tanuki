@@ -14,7 +14,7 @@ import type {
   RawChapter,
   RawFilterGroup,
   RawFilterOption,
-  RawManga,
+  RawTitle,
   RawPage,
   RawTag,
 } from '../../types';
@@ -94,7 +94,7 @@ const parseCategoryLinks = (
 };
 
 /** Shared by the "Section:" field (`cfg.seriesSelector`) — same link-collecting shape as
- *  `parseCategoryLinks`, just the link text alone (RawManga.series is `string[]`, not `RawTag[]`). */
+ *  `parseCategoryLinks`, just the link text alone (RawTitle.series is `string[]`, not `RawTag[]`). */
 const parseLinkTexts = ($links: Cheerio<AnyNode>, $: CheerioAPI): string[] => {
   const seen = new Set<string>();
   const texts: string[] = [];
@@ -290,7 +290,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
   /** Shared row shape between `/new` (single content type per request) and `/search` (mixed
    *  types in one feed) — `pathPrefix` is what lets a single parser pick its own rows out of
    *  the latter. */
-  const parseRow = ($row: Cheerio<AnyNode>, $: CheerioAPI, baseUrl: string): RawManga | null => {
+  const parseRow = ($row: Cheerio<AnyNode>, $: CheerioAPI, baseUrl: string): RawTitle | null => {
     const $a = $row.find('.views-field-title a').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -343,13 +343,13 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     order: string | undefined,
     direction: string | undefined,
     language: string | null,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const doc = await ctx.http.getHtml(buildBrowseUrl(page, order, direction, language));
     return doc
       .$('.view-content .masonry-item')
       .toArray()
       .map((el) => parseRow(doc.$(el), doc.$, doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
   /**
@@ -366,7 +366,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     page: number,
     order: string | undefined,
     direction: string | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const url = new URL(`${pathPrefix}${key}`, `https://${domain}/`);
     if (page > 0) url.searchParams.set('page', `0,${page}`);
     url.searchParams.set('sort_by', resolveTaxonomySortBy(order));
@@ -376,7 +376,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       .$('.view-content td')
       .toArray()
       .map((el) => parseRow(doc.$(el), doc.$, doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
   /**
@@ -386,8 +386,8 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
    * stop after page 1 any time most of a page's rows belong to some other type, so this walks
    * raw pages instead and only stops when a raw page itself comes back short.
    */
-  const fetchSearchList = async (params: ListParams): Promise<RawManga[]> => {
-    const acc: RawManga[] = [];
+  const fetchSearchList = async (params: ListParams): Promise<RawTitle[]> => {
+    const acc: RawTitle[] = [];
     let rawPage = 0;
     for (;;) {
       const url = new URL('/search', `https://${domain}/`);
@@ -397,7 +397,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       const rows = doc.$('.view-content .masonry-item').toArray();
       rows
         .map((el) => parseRow(doc.$(el), doc.$, doc.baseUrl))
-        .filter((m): m is RawManga => m !== null)
+        .filter((m): m is RawTitle => m !== null)
         .forEach((m) => acc.push(m));
       rawPage += 1;
       if (acc.length >= params.offset + params.limit || rows.length < SEARCH_RAW_PAGE_SIZE) break;
@@ -405,7 +405,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     return acc.slice(params.offset, params.offset + params.limit);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     if (params.query) return fetchSearchList(params);
 
     if (cfg.filters) {
@@ -555,7 +555,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     return groups;
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const $ = doc.$;

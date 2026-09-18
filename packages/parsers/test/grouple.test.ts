@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { FILTER_TYPE, MANGA_STATE, MANGA_TYPE } from '@tanuki/contracts';
+import { FILTER_TYPE, TITLE_STATE, TITLE_TYPE } from '@tanuki/contracts';
 import { createGroupleParser } from '../src/sources/grouple/engine';
 import { GROUPLE_FILTER_GROUP } from '../src/sources/grouple/models';
 import type { GroupleConfig } from '../src/sources/grouple/config';
@@ -403,9 +403,9 @@ describe('Grouple parser conformance', () => {
     expect(item!.url.startsWith('http')).toBe(false);
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
-    expect(item!.releaseState).toBe(MANGA_STATE.FINISHED);
+    expect(item!.releaseState).toBe(TITLE_STATE.FINISHED);
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
     expect(item!.chaptersCount).toBe(1057);
     expect(item!.year).toBe(1997);
   });
@@ -458,9 +458,9 @@ describe('Grouple parser conformance', () => {
 
   it('getDetails: type, release/translation status and release formats come off the new hero layout', async () => {
     const manga = await parser.getDetails('/One-Piece');
-    expect(manga.type).toBe(MANGA_TYPE.MANHWA);
-    expect(manga.releaseState).toBe(MANGA_STATE.FINISHED);
-    expect(manga.translationState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.type).toBe(TITLE_TYPE.MANHWA);
+    expect(manga.releaseState).toBe(TITLE_STATE.FINISHED);
+    expect(manga.translationState).toBe(TITLE_STATE.ONGOING);
     expect(manga.releaseFormats).toEqual(['В цвете', 'Веб']);
     expect(manga.views).toBe(12345);
   });

@@ -1,14 +1,14 @@
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_RESTRICTION,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_RESTRICTION,
+  TITLE_STATE,
+  TITLE_TYPE,
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type MangaState,
+  type TitleState,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -21,11 +21,11 @@ import {
 } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawPage,
   RawTag,
-  RawMangaType,
+  RawTitleType,
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
@@ -250,16 +250,16 @@ const getSortKey = (order: string | undefined, direction: string | undefined): s
   }
 };
 
-const toMangaState = (status: string | undefined): MangaState | null => {
+const toMangaState = (status: string | undefined): TitleState | null => {
   switch (status?.toUpperCase()) {
     case 'DONE':
-      return MANGA_STATE.FINISHED;
+      return TITLE_STATE.FINISHED;
     case 'ONGOING':
-      return MANGA_STATE.ONGOING;
+      return TITLE_STATE.ONGOING;
     case 'FROZEN':
-      return MANGA_STATE.PAUSED;
+      return TITLE_STATE.PAUSED;
     case 'ANNOUNCE':
-      return MANGA_STATE.UPCOMING;
+      return TITLE_STATE.UPCOMING;
     default:
       return null;
   }
@@ -267,18 +267,18 @@ const toMangaState = (status: string | undefined): MangaState | null => {
 
 /** The API has no direct manga-type field — `country` (same vocabulary as the "Страна" filter)
  *  is what the site's own catalog derives its type badge from. */
-const toMangaType = (country: string | undefined): RawMangaType | null => {
+const toMangaType = (country: string | undefined): RawTitleType | null => {
   switch (country) {
     case 'JAPAN':
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 'KOREA':
-      return MANGA_TYPE.MANHWA;
+      return TITLE_TYPE.MANHWA;
     case 'CHINA':
-      return MANGA_TYPE.MANHUA;
+      return TITLE_TYPE.MANHUA;
     case 'RUSSIA':
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
     case 'OTHER':
-      return MANGA_TYPE.OTHER;
+      return TITLE_TYPE.OTHER;
     default:
       return null;
   }
@@ -402,7 +402,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
   /** Every field here is present on both `/v2/books` list items and the `/v2/books/{id}` detail
    *  payload — getDetails only has to add the fields that need `relations` or the chapters list,
    *  which list items don't carry. */
-  const mapMangaCommon = (jo: MangaJson): RawManga => {
+  const mapMangaCommon = (jo: MangaJson): RawTitle => {
     return {
       id: generateUid(SOURCE_ID, jo.id),
       title: jo.name.ru,
@@ -433,11 +433,11 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const toManga = (jo: MangaJson): RawManga => mapMangaCommon(jo);
+  const toManga = (jo: MangaJson): RawTitle => mapMangaCommon(jo);
 
   /** `/v2/books?sort=updatedAt,desc` sorts by book metadata edits, not chapter releases — the
    *  site's own "recently updated" listing instead reads this feed of latest chapter drops. */
-  const fetchUpdatedPage = async (page: number): Promise<RawManga[]> => {
+  const fetchUpdatedPage = async (page: number): Promise<RawTitle[]> => {
     const url = new URL(`https://${apiHost}/v2/chapter-update-feed`);
     url.searchParams.set('page', String(page));
     url.searchParams.set('size', String(PAGE_SIZE));
@@ -587,7 +587,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     query: string | undefined,
     filters: FilterSelection[] | undefined,
     direction: string | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     // fetchUpdatedPage reads a dedicated "latest chapter drops" feed that has no direction
     // control of its own, so an explicit ascending request must fall through to the generic
     // /v2/books?sort=updatedAt,asc path instead.
@@ -613,7 +613,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     return items.map(toManga);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: FIRST_PAGE }, (page) =>
       fetchListPage(page, params.order, params.query, params.filters, params.direction),
     );
@@ -674,7 +674,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       .filter((n): n is string => !!n);
   };
 
-  const getDetails = async (mangaId: string): Promise<RawManga> => {
+  const getDetails = async (mangaId: string): Promise<RawTitle> => {
     const [chapters, jo] = await Promise.all([
       getChapters(mangaId),
       ctx.http.getJson<MangaJson>(`https://${apiHost}/v2/books/${mangaId}`),
@@ -690,7 +690,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     );
     const restriction =
       chapters.length === 0 && (jo.chaptersCount ?? 0) > 0 && (await hasContentNotice(mangaId))
-        ? MANGA_RESTRICTION.LEGAL
+        ? TITLE_RESTRICTION.LEGAL
         : null;
 
     return {

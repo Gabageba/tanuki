@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MangaSchema } from './manga';
+import { TitleSchema } from './title';
 import type { EnumLiteralsOf } from './utils';
 
 /** Исход опроса одного источника в веере мультипоиска. */
@@ -15,7 +15,7 @@ export const SearchGroupStatusSchema = z.enum(SEARCH_GROUP_STATUS);
 export const SearchGroupSchema = z.object({
   sourceId: z.string(),
   status: SearchGroupStatusSchema,
-  items: z.array(MangaSchema),
+  items: z.array(TitleSchema),
 });
 
 export type SearchGroup = z.infer<typeof SearchGroupSchema>;

@@ -5,8 +5,8 @@ export const ROUTE_PATHS = {
   SOURCES_HEALTH: '/sources/health',
   SEARCH: '/search',
   CATALOG: '/catalog/:sourceId',
-  MANGA: '/manga/:mangaId',
-  READER: '/manga/:mangaId/read/:chapterId',
+  TITLE: '/title/:titleId',
+  READER: '/title/:titleId/read/:chapterId',
   NOTIFICATIONS: '/notifications',
   BOOKMARKS: '/bookmarks',
 } as const;

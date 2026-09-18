@@ -1,5 +1,5 @@
 import type { Parser } from './parser';
-import type { RawManga } from '../types';
+import type { RawTitle } from '../types';
 
 const LIST_LIMIT = 20;
 
@@ -16,7 +16,7 @@ export class SourceContractError extends Error {}
  * них разное.
  */
 export const runSourceContract = async (parser: Parser): Promise<void> => {
-  let list: RawManga[];
+  let list: RawTitle[];
   try {
     list = await parser.getList({ offset: 0, limit: LIST_LIMIT });
   } catch (error) {
@@ -40,7 +40,7 @@ export const runSourceContract = async (parser: Parser): Promise<void> => {
   // иначе итоговая ошибка ничего не говорит о том, что реально сломалось.
   let lastFailure: string | null = null;
   for (const candidate of list) {
-    let details: RawManga;
+    let details: RawTitle;
     try {
       details = await parser.getDetails(candidate.url);
     } catch (error) {

@@ -131,7 +131,7 @@
   "countPages_other": "{{count}} страниц",
   "failedToSave": "Не удалось сохранить",
   "tryAgainLater": "Попробуйте позже",
-  "failedToLoadManga": "Не удалось загрузить мангу",
+  "failedToLoadTitle": "Не удалось загрузить тайтл",
   "confirmed": "Подтверждено",
   "exactMatch": "Точное совпадение",
   "likely": "Скорее всего",

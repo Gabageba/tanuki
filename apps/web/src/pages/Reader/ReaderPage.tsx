@@ -7,9 +7,9 @@ import styles from './ReaderPage.module.scss';
 
 function ReaderPage() {
   const { t } = useTranslation();
-  const { mangaId = '', chapterId = '' } = useParams<{ mangaId: string; chapterId: string }>();
+  const { titleId = '', chapterId = '' } = useParams<{ titleId: string; chapterId: string }>();
   const navigate = useNavigate();
-  const { data, error, isPending, isError } = useChapterPages({ mangaId, chapterId });
+  const { data, error, isPending, isError } = useChapterPages({ titleId, chapterId });
 
   if (isPending) {
     return (
@@ -44,7 +44,7 @@ function ReaderPage() {
 
       <Center py="xl">
         {nextChapterId ? (
-          <Button onClick={() => void navigate(`/manga/${mangaId}/read/${nextChapterId}`)}>
+          <Button onClick={() => void navigate(`/title/${titleId}/read/${nextChapterId}`)}>
             {t('nextChapter')}
           </Button>
         ) : (

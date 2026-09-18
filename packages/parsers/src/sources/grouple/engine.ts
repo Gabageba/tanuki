@@ -3,13 +3,13 @@ import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_RESTRICTION,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_RESTRICTION,
+  TITLE_STATE,
+  TITLE_TYPE,
   RANGE_FORMAT,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type MangaState,
+  type TitleState,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -17,12 +17,12 @@ import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchOffsetNative } from '../../core/paging';
 import { getYearRangePresets } from '../../core/filters/range-presets';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
-  RawMangaType,
+  RawTitleType,
   RawPage,
   RawTag,
 } from '../../types';
@@ -417,14 +417,14 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     };
   };
 
-  const mapCatalogState = (status: GroupleTranslationStatus): MangaState | null => {
+  const mapCatalogState = (status: GroupleTranslationStatus): TitleState | null => {
     switch (status) {
       case GROUPLE_TRANSLATION_STATUS.FINISHED:
-        return MANGA_STATE.FINISHED;
+        return TITLE_STATE.FINISHED;
       case GROUPLE_TRANSLATION_STATUS.PROGRESS:
-        return MANGA_STATE.ONGOING;
+        return TITLE_STATE.ONGOING;
       case GROUPLE_TRANSLATION_STATUS.POSTPONED:
-        return MANGA_STATE.PAUSED;
+        return TITLE_STATE.PAUSED;
       case GROUPLE_TRANSLATION_STATUS.NONE:
         return null;
     }
@@ -436,18 +436,18 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
    *  above (PLANNED/PROGRESS/FINISHED/ABANDONED, confirmed live for PROGRESS on both attributes).
    *  Unrecognized codes fall back to null rather than a guess, since this is the site's own
    *  external vocabulary, not one this codebase owns. */
-  const mapInfoStatus = (code: string | null): MangaState | null => {
+  const mapInfoStatus = (code: string | null): TitleState | null => {
     switch (code) {
       case 'PROGRESS':
-        return MANGA_STATE.ONGOING;
+        return TITLE_STATE.ONGOING;
       case 'FINISHED':
-        return MANGA_STATE.FINISHED;
+        return TITLE_STATE.FINISHED;
       case 'PLANNED':
-        return MANGA_STATE.UPCOMING;
+        return TITLE_STATE.UPCOMING;
       case 'ABANDONED':
-        return MANGA_STATE.ABANDONED;
+        return TITLE_STATE.ABANDONED;
       case 'POSTPONED':
-        return MANGA_STATE.PAUSED;
+        return TITLE_STATE.PAUSED;
       default:
         return null;
     }
@@ -456,22 +456,22 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
   /** Catalog "category" — mirrors the site's own .catalog-kinds filter vocabulary. Takes the
    *  category name directly so it works both off the JSON catalog item and off the details page's
    *  own category badge (`.cr-hero-short-details__item a[href*='/list/category/']`). */
-  const mangaTypeByCategory = (name: string | null | undefined): RawMangaType | null => {
+  const mangaTypeByCategory = (name: string | null | undefined): RawTitleType | null => {
     switch (name) {
       case 'Манга':
-        return MANGA_TYPE.MANGA;
+        return TITLE_TYPE.MANGA;
       case 'Манхва':
-        return MANGA_TYPE.MANHWA;
+        return TITLE_TYPE.MANHWA;
       case 'Манхуа':
       case 'Маньхуа':
-        return MANGA_TYPE.MANHUA;
+        return TITLE_TYPE.MANHUA;
       case 'Комикс':
-        return MANGA_TYPE.COMICS;
+        return TITLE_TYPE.COMICS;
       case undefined:
       case null:
         return null;
       default:
-        return MANGA_TYPE.OTHER;
+        return TITLE_TYPE.OTHER;
     }
   };
 
@@ -492,7 +492,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     }
   };
 
-  const mapCatalogItem = (item: CatalogItemJson): RawManga => {
+  const mapCatalogItem = (item: CatalogItemJson): RawTitle => {
     const relUrl = `/${item.elementId.linkName}`;
     const tags: RawTag[] = (item.elements ?? [])
       .filter(
@@ -588,7 +588,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     nativeOffset: number,
     order: string | undefined,
     filters: FilterSelection[] | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const url = new URL(`https://${domain}/api/catalog/search`);
     url.searchParams.set('q', query);
     url.searchParams.set('offset', String(nativeOffset));
@@ -638,7 +638,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     return parseGroupleDate(attrOrNull($td, 'data-date-raw'));
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchOffsetNative(params, { size: PAGE_SIZE }, (offset) =>
       searchPage(params.query ?? '', offset, params.order, params.filters),
     );
@@ -742,7 +742,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     return groups;
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = new URL(mangaUrl, `https://${domain}/`).toString();
     const doc = await ctx.http.getHtml(absoluteUrl);
     const mangaBox = selectFirstOrThrow(doc.$.root(), '#mangaBox', cfg.id, 'getDetails root');
@@ -1030,7 +1030,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         null,
       tags: [...tags.values()],
       releaseState,
-      restriction: isRestricted ? MANGA_RESTRICTION.LEGAL : null,
+      restriction: isRestricted ? TITLE_RESTRICTION.LEGAL : null,
       authors,
       artists,
       translators,

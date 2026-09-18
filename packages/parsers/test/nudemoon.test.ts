@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { CONTENT_RATING, MANGA_TYPE, SORT_ORDER } from '@tanuki/contracts';
+import { CONTENT_RATING, TITLE_TYPE, SORT_ORDER } from '@tanuki/contracts';
 import { createNudeMoonParser } from '../src/sources/nudemoon';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -148,7 +148,7 @@ describe('Nude-Moon parser conformance', () => {
     expect(item!.year).toBe(2024);
     expect(item!.addedAt).toBe(new Date(2024, 0, 9).getTime());
     expect(item!.views).toBe(5_000);
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
   });
 
   it('getDetails: single synthetic chapter with valid sentinels', async () => {
@@ -166,7 +166,7 @@ describe('Nude-Moon parser conformance', () => {
     expect(manga.translators).toEqual(['TeamA', 'TeamB']);
     expect(manga.views).toBe(1_700_000);
     expect(manga.addedAt).toBe(new Date(2024, 0, 9).getTime());
-    expect(manga.type).toBe(MANGA_TYPE.COMICS);
+    expect(manga.type).toBe(TITLE_TYPE.COMICS);
     expect(manga.description).toBe('Полное описание.');
     expect(manga.largeCoverUrl).toBe(`https://${DOMAIN}/covers/12345-full.jpg`);
     expect(manga.pages).toBe(3);

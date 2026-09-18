@@ -3,14 +3,14 @@ import type { PagesResponse } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 
 type Params = {
-  mangaId: string;
+  titleId: string;
   chapterId: string;
 };
 
-function useChapterPages({ mangaId, chapterId }: Params) {
+function useChapterPages({ titleId, chapterId }: Params) {
   return useQuery({
-    queryKey: ['pages', mangaId, chapterId],
-    queryFn: () => apiFetch<PagesResponse>(`/manga/${mangaId}/chapters/${chapterId}/pages`),
+    queryKey: ['pages', titleId, chapterId],
+    queryFn: () => apiFetch<PagesResponse>(`/titles/${titleId}/chapters/${chapterId}/pages`),
   });
 }
 

@@ -22,7 +22,7 @@ import {
 } from '../common/errors';
 import { toApiException } from './parser-error.mapper';
 import { PARSERS } from './parsers.provider';
-import type { RawFilterGroup, RawManga, RawPage, RawSourceInfo } from './parsers-client.types';
+import type { RawFilterGroup, RawTitle, RawPage, RawSourceInfo } from './parsers-client.types';
 
 const PAGE_SIZE = 30;
 
@@ -74,7 +74,7 @@ export class ParsersClientService {
     }
   }
 
-  async listManga(
+  async listTitles(
     sourceId: string,
     params: {
       page: number;
@@ -84,7 +84,7 @@ export class ParsersClientService {
       force?: boolean;
       filters?: FilterSelection[];
     },
-  ): Promise<CachedResult<{ items: RawManga[] }>> {
+  ): Promise<CachedResult<{ items: RawTitle[] }>> {
     // Mirrors parse-filter-query's own wire format (including its `min..max` range syntax) —
     // not parsed back, just kept consistent so a cache key is recognizable next to the request
     // that produced it.
@@ -130,7 +130,7 @@ export class ParsersClientService {
     }));
   }
 
-  async getDetails(sourceId: string, url: string): Promise<CachedResult<RawManga>> {
+  async getDetails(sourceId: string, url: string): Promise<CachedResult<RawTitle>> {
     const key = cacheKey('details', sourceId, url);
     return this.fetchCached(key, CACHE_TTL.details, sourceId, (parser) => parser.getDetails(url));
   }

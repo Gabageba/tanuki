@@ -1,6 +1,6 @@
 import { type ViewMode } from '@/shared/lib/viewMode';
 import CatalogContentGridWrapper from './CatalogContentGridWrapper';
-import MangaCardSkeleton from '@/entities/manga/card/MangaCardSkeleton';
+import TitleCardSkeleton from '@/entities/title/card/TitleCardSkeleton';
 
 type Props = {
   viewMode: ViewMode;
@@ -10,7 +10,7 @@ function CatalogContentGridSkeleton({ viewMode }: Props) {
   return (
     <CatalogContentGridWrapper viewMode={viewMode}>
       {Array.from({ length: 21 }).map((_, index) => (
-        <MangaCardSkeleton key={index} viewMode={viewMode} />
+        <TitleCardSkeleton key={index} viewMode={viewMode} />
       ))}
     </CatalogContentGridWrapper>
   );

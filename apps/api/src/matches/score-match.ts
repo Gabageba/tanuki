@@ -12,16 +12,16 @@ import {
   LOW_WITH_AUTHORS_TITLE_SCORE,
   SCORE_FLOOR,
   TAGS_BONUS_WEIGHT,
-  TITLE_SCRIPT,
+  NAME_SCRIPT,
   TYPE_MATCH_BONUS,
   YEAR_MATCH_BONUS,
   YEAR_MISMATCH_PENALTY,
   YEAR_TOLERANCE,
   type MatchSubject,
-  type TitleScript,
-  type TitleVariant,
+  type NameScript,
+  type NameVariant,
 } from './models';
-import { normalizeTitle, romanize, titleVariants, tokenize } from './normalize-title';
+import { normalizeTitle, romanize, titleVariants, tokenize } from './normalize-name';
 import { titleSimilarity } from './similarity';
 
 export type MatchChannels = {
@@ -33,13 +33,13 @@ export type MatchResult = {
   score: number;
   confidence: MatchConfidence;
   /** Название кандидата, по варианту которого сложился максимум. */
-  matchedTitle: string;
+  matchedName: string;
   channels: MatchChannels;
 };
 
 type ChannelResult = {
   value: number;
-  matchedTitle: string;
+  matchedName: string;
   demote: boolean;
   subtitled: boolean;
 };
@@ -56,7 +56,7 @@ const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
 const EMPTY_CHANNEL: ChannelResult = {
   value: 0,
-  matchedTitle: '',
+  matchedName: '',
   demote: false,
   subtitled: false,
 };
@@ -145,9 +145,9 @@ export const metadataBonus = (ref: MatchSubject, candidate: MatchSubject): Metad
 };
 
 const compareChannel = (
-  script: TitleScript,
-  refVariants: TitleVariant[],
-  candidateVariants: TitleVariant[],
+  script: NameScript,
+  refVariants: NameVariant[],
+  candidateVariants: NameVariant[],
 ): ChannelResult => {
   let best = EMPTY_CHANNEL;
   for (const left of refVariants.filter((variant) => variant.script === script)) {
@@ -169,7 +169,7 @@ const compareChannel = (
       if (capped > best.value) {
         best = {
           value: capped,
-          matchedTitle: right.value,
+          matchedName: right.value,
           demote: similarity.demote,
           subtitled: similarity.subtitled,
         };
@@ -252,8 +252,8 @@ export const scoreMatch = (ref: MatchSubject, candidate: MatchSubject): MatchRes
   const refVariants = titleVariants(ref);
   const candidateVariants = titleVariants(candidate);
 
-  const latin = compareChannel(TITLE_SCRIPT.LATIN, refVariants, candidateVariants);
-  const cyrillic = compareChannel(TITLE_SCRIPT.CYRILLIC, refVariants, candidateVariants);
+  const latin = compareChannel(NAME_SCRIPT.LATIN, refVariants, candidateVariants);
+  const cyrillic = compareChannel(NAME_SCRIPT.CYRILLIC, refVariants, candidateVariants);
   const channels: MatchChannels = { latin: latin.value, cyrillic: cyrillic.value };
 
   const meta = metadataBonus(ref, candidate);
@@ -266,7 +266,7 @@ export const scoreMatch = (ref: MatchSubject, candidate: MatchSubject): MatchRes
     (latin.value === 1 && cyrillic.subtitled && channels.cyrillic >= CYRILLIC_FLOOR) ||
     (cyrillic.value === 1 && latin.subtitled && channels.latin >= LATIN_FLOOR);
 
-  const confidence = confidenceOf(channels, meta, cyrillic.matchedTitle, conflicted);
+  const confidence = confidenceOf(channels, meta, cyrillic.matchedName, conflicted);
   if (!confidence || score < SCORE_FLOOR) return null;
 
   const winner = channels.latin >= channels.cyrillic ? latin : cyrillic;
@@ -274,7 +274,7 @@ export const scoreMatch = (ref: MatchSubject, candidate: MatchSubject): MatchRes
   return {
     score,
     confidence: winner.demote ? demoteOnce(confidence) : confidence,
-    matchedTitle: winner.matchedTitle,
+    matchedName: winner.matchedName,
     channels,
   };
 };

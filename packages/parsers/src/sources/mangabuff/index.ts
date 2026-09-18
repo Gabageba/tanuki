@@ -3,22 +3,22 @@ import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type MangaState,
+  type TitleState,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawPage,
   RawTag,
-  RawMangaType,
+  RawTitleType,
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
@@ -64,16 +64,16 @@ const getSortKey = (order: string | undefined): string => {
   }
 };
 
-const parseStatus = (value: string): MangaState | null => {
+const parseStatus = (value: string): TitleState | null => {
   switch (value.toLowerCase().trim()) {
     case 'завершен':
-      return MANGA_STATE.FINISHED;
+      return TITLE_STATE.FINISHED;
     case 'продолжается':
-      return MANGA_STATE.ONGOING;
+      return TITLE_STATE.ONGOING;
     case 'заморожен':
-      return MANGA_STATE.PAUSED;
+      return TITLE_STATE.PAUSED;
     case 'заброшен':
-      return MANGA_STATE.ABANDONED;
+      return TITLE_STATE.ABANDONED;
     default:
       return null;
   }
@@ -82,20 +82,20 @@ const parseStatus = (value: string): MangaState | null => {
 /** Catalog "Тип:" badge (`.cards__info` on list cards, the `/types/<slug>` link on the details
  *  page) — mirrors the type_id[] filter's own vocabulary (Манга, OEL-манга, Манхва, Маньхуа,
  *  Сингл, Руманга, Комикс западный). Only the unambiguous ones get their own case. */
-const mangaTypeByLabel = (label: string | null): RawMangaType | null => {
+const mangaTypeByLabel = (label: string | null): RawTitleType | null => {
   switch (label) {
     case 'Манга':
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 'Манхва':
-      return MANGA_TYPE.MANHWA;
+      return TITLE_TYPE.MANHWA;
     case 'Маньхуа':
-      return MANGA_TYPE.MANHUA;
+      return TITLE_TYPE.MANHUA;
     case 'Комикс западный':
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
     case null:
       return null;
     default:
-      return MANGA_TYPE.OTHER;
+      return TITLE_TYPE.OTHER;
   }
 };
 
@@ -120,7 +120,7 @@ const slugifyTitle = (title: string): string =>
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
 
-type MiddleLinks = { type: RawMangaType | null; year: number | null; stateText: string | null };
+type MiddleLinks = { type: RawTitleType | null; year: number | null; stateText: string | null };
 
 /**
  * `.manga__middle-links`/`.manga-mobile__info` packs the type/year/status links together, but
@@ -177,7 +177,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   let csrfToken: string | null = null;
 
-  const parseMangaCard = ($item: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
+  const parseMangaCard = ($item: Cheerio<AnyNode>, baseUrl: string): RawTitle | null => {
     // cards__item is the anchor itself; the site no longer nests a separate <a>.
     const hrefRaw = attrOrNull($item, 'href');
     if (!hrefRaw) return null;
@@ -220,18 +220,18 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const parseMangaList = (doc: { $: CheerioAPI; baseUrl: string }): RawManga[] => {
+  const parseMangaList = (doc: { $: CheerioAPI; baseUrl: string }): RawTitle[] => {
     return doc
       .$('.cards .cards__item')
       .toArray()
       .map((el) => parseMangaCard(doc.$(el), doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
   /** `?view=card-detailed` swaps `.cards__item` for `.cards-detailed__item`, trading the single
    *  `.cards__info` genre for the title's full genre list — still no description, the site never
    *  puts that in a list card. `/search` doesn't support the param, so it stays on `parseMangaCard`. */
-  const parseMangaCardDetailed = ($item: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
+  const parseMangaCardDetailed = ($item: Cheerio<AnyNode>, baseUrl: string): RawTitle | null => {
     const hrefRaw = attrOrNull($item, 'href');
     if (!hrefRaw) return null;
     const publicUrl = toAbsoluteUrl(hrefRaw, domain);
@@ -284,12 +284,12 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const parseMangaListDetailed = (doc: { $: CheerioAPI; baseUrl: string }): RawManga[] => {
+  const parseMangaListDetailed = (doc: { $: CheerioAPI; baseUrl: string }): RawTitle[] => {
     return doc
       .$('.cards-detailed .cards-detailed__item')
       .toArray()
       .map((el) => parseMangaCardDetailed(doc.$(el), doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
   const fetchListPage = async (
@@ -297,7 +297,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     order: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const url = new URL(query ? `https://${domain}/search` : `https://${domain}/manga`);
     if (query) {
       url.searchParams.set('q', query);
@@ -312,7 +312,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     return query ? parseMangaList(doc) : parseMangaListDetailed(doc);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.order, params.query, params.filters),
     );
@@ -536,7 +536,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     return tags;
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const $ = doc.$;

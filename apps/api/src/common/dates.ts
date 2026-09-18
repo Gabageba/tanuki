@@ -9,7 +9,7 @@ export const toServerDateTime = (epochMs: number): string => {
 
 /**
  * Date-only server format: `YYYY-MM-DD`. Used where the source carries a date but no time (e.g.
- * Manga.releaseDate).
+ * Title.releaseDate).
  */
 export const toServerDate = (epochMs: number): string => {
   return new Date(epochMs).toISOString().slice(0, 10);

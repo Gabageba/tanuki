@@ -1,26 +1,26 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Put } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import type { MangaMatchesResponse } from '@tanuki/contracts';
+import type { TitleMatchesResponse } from '@tanuki/contracts';
 import { splitCompositeId } from '../common/opaque-id';
-import { MangaLinkRequestDto, MangaMatchesResponseDto } from './matches.dto';
+import { TitleLinkRequestDto, TitleMatchesResponseDto } from './matches.dto';
 import { MatchesService } from './matches.service';
 
 /**
- * Живёт отдельно от MangaController намеренно: тот объявлен в CatalogModule, а матчингу нужен
+ * Живёт отдельно от TitleController намеренно: тот объявлен в CatalogModule, а матчингу нужен
  * доступ к источникам и парсерам — сложив всё в один модуль, мы получили бы цикл. Nest
  * спокойно держит два контроллера на пересекающихся префиксах.
  */
-@ApiTags('manga')
-@ApiParam({ name: 'mangaId', description: 'Составной id тайтла — "sourceId:opaqueId"' })
-@Controller('manga/:mangaId')
+@ApiTags('titles')
+@ApiParam({ name: 'titleId', description: 'Составной id тайтла — "sourceId:opaqueId"' })
+@Controller('titles/:titleId')
 export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
 
   @ApiOperation({ summary: 'Ищет тот же тайтл на других источниках' })
-  @ApiOkResponse({ type: MangaMatchesResponseDto })
+  @ApiOkResponse({ type: TitleMatchesResponseDto })
   @Get('matches')
-  async matches(@Param('mangaId') mangaId: string): Promise<MangaMatchesResponse> {
-    const { sourceId, opaqueId } = splitCompositeId(mangaId);
+  async matches(@Param('titleId') titleId: string): Promise<TitleMatchesResponse> {
+    const { sourceId, opaqueId } = splitCompositeId(titleId);
     return this.matchesService.findMatches(sourceId, opaqueId);
   }
 
@@ -36,14 +36,14 @@ export class MatchesController {
    * роутинга.
    */
   @ApiOperation({ summary: 'Подтверждает или скрывает связь между тайтлами' })
-  @ApiBody({ type: MangaLinkRequestDto })
+  @ApiBody({ type: TitleLinkRequestDto })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Put('links')
   async setLink(
-    @Param('mangaId') mangaId: string,
-    @Body() body: MangaLinkRequestDto,
+    @Param('titleId') titleId: string,
+    @Body() body: TitleLinkRequestDto,
   ): Promise<void> {
-    const { sourceId, opaqueId } = splitCompositeId(mangaId);
+    const { sourceId, opaqueId } = splitCompositeId(titleId);
     await this.matchesService.setLink(sourceId, opaqueId, body.targetId, body.verdict);
   }
 }

@@ -1,13 +1,13 @@
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type MangaState,
+  type TitleState,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -16,14 +16,14 @@ import { fetchPaged } from '../../core/paging';
 import { CHAPTERS_COUNT_PRESETS, getYearRangePresets } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawPage,
   RawTag,
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
-  RawMangaType,
+  RawTitleType,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -145,35 +145,35 @@ const parseContentRating = (info: MangaJson): RawContentRating => {
 
 /** Same free-text field the `type` filter matches on (see TYPE_OPTIONS above) — the site writes
  *  the Russian label on some titles instead of the code, so both are mapped here. */
-const parseMangaType = (raw: string | undefined): RawMangaType | null => {
+const parseMangaType = (raw: string | undefined): RawTitleType | null => {
   switch (raw?.trim().toLowerCase()) {
     case 'manga':
     case 'манга':
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 'manhwa':
     case 'манхва':
-      return MANGA_TYPE.MANHWA;
+      return TITLE_TYPE.MANHWA;
     case 'manhua':
     case 'маньхуа':
-      return MANGA_TYPE.MANHUA;
+      return TITLE_TYPE.MANHUA;
     case 'comic':
     case 'комикс':
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
     default:
       return null;
   }
 };
 
-const parseState = (raw: string | undefined): MangaState | null => {
+const parseState = (raw: string | undefined): TitleState | null => {
   switch (raw?.toLowerCase()) {
     case 'ongoing':
-      return MANGA_STATE.ONGOING;
+      return TITLE_STATE.ONGOING;
     case 'completed':
-      return MANGA_STATE.FINISHED;
+      return TITLE_STATE.FINISHED;
     case 'pause':
-      return MANGA_STATE.PAUSED;
+      return TITLE_STATE.PAUSED;
     case 'cancelled':
-      return MANGA_STATE.ABANDONED;
+      return TITLE_STATE.ABANDONED;
     default:
       return null;
   }
@@ -266,7 +266,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       });
   };
 
-  const parseManga = (info: MangaJson | null): RawManga | null => {
+  const parseManga = (info: MangaJson | null): RawTitle | null => {
     if (!info || !info._id || !info.slug) return null;
     const slug = info.slug;
     const title = info.name ?? slug;
@@ -344,7 +344,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     direction: string | undefined,
     query: string | undefined,
     filters: FilterSelection[] | undefined,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     const url = apiUrl('titles');
     url.searchParams.set('page', String(page));
     url.searchParams.set('limit', String(PAGE_SIZE));
@@ -357,10 +357,10 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
 
     const json = await ctx.http.getJson<{ data?: { titles?: MangaJson[] } }>(url.toString());
     const titles = json.data?.titles ?? [];
-    return titles.map((t) => parseManga(t)).filter((m): m is RawManga => m !== null);
+    return titles.map((t) => parseManga(t)).filter((m): m is RawTitle => m !== null);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.order, params.direction, params.query, params.filters),
     );
@@ -439,7 +439,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     return parseChapterList(json.data?.chapters ?? [], slug, titleId);
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const slug = mangaUrl.replace(/\/$/, '').split('/').pop();
     if (!slug) throw new ParseError(`Cannot parse title slug: ${mangaUrl}`, SOURCE_ID);
     const url = apiUrl(`titles/slug/${slug}`);

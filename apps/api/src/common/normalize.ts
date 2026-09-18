@@ -4,7 +4,7 @@ import {
   type Chapter,
   type FilterGroup,
   type FilterOption,
-  type Manga,
+  type Title,
   type Page,
   type Tag,
 } from '@tanuki/contracts';
@@ -12,12 +12,12 @@ import type { Env } from '../config/env';
 import { buildSignedImageUrl } from '../img-proxy/sign.util';
 import { IMAGE_FORMAT } from '../img-proxy/models';
 import { toServerDate, toServerDateTime } from './dates';
-import { encodeChapterId, encodeMangaId } from './opaque-id';
+import { encodeChapterId, encodeTitleId } from './opaque-id';
 import type {
   RawChapter,
   RawFilterGroup,
   RawFilterOption,
-  RawManga,
+  RawTitle,
   RawPage,
   RawTag,
 } from '../parsers-client/parsers-client.types';
@@ -43,8 +43,8 @@ export const normalizeFilterGroup = (raw: RawFilterGroup): FilterGroup => {
   };
 };
 
-export const mangaIdOf = (sourceId: string, raw: Pick<RawManga, 'id' | 'url'>): string => {
-  return `${sourceId}:${encodeMangaId({ id: raw.id, url: raw.url })}`;
+export const titleIdOf = (sourceId: string, raw: Pick<RawTitle, 'id' | 'url'>): string => {
+  return `${sourceId}:${encodeTitleId({ id: raw.id, url: raw.url })}`;
 };
 
 /** Latest chapter's own upload date — `chapters` is only populated by getDetails (null on list
@@ -63,11 +63,11 @@ const maxBranchChaptersCount = (chapters: RawChapter[]): number => {
   return Math.max(0, ...groupByBranch(chapters).map((group) => group.items.length));
 };
 
-export const normalizeManga = (
+export const normalizeTitle = (
   env: Pick<Env, 'IMG_SIGN_SECRET'>,
   sourceId: string,
-  raw: RawManga,
-): Manga => {
+  raw: RawTitle,
+): Title => {
   const coverUrl = raw.coverUrl
     ? buildSignedImageUrl(env.IMG_SIGN_SECRET, sourceId, raw.coverUrl, {
         width: 360,
@@ -83,12 +83,12 @@ export const normalizeManga = (
   const lastChapterDate = latestChapterUploadDate(raw.chapters);
 
   return {
-    id: mangaIdOf(sourceId, raw),
+    id: titleIdOf(sourceId, raw),
     sourceId,
     slug: String(raw.id),
-    title: raw.title,
-    originalTitle: raw.originalTitle ?? [],
-    altTitles: raw.altTitles,
+    name: raw.title,
+    originalNames: raw.originalTitle ?? [],
+    altNames: raw.altTitles,
     coverUrl,
     largeCoverUrl,
     description: raw.description,
@@ -110,7 +110,7 @@ export const normalizeManga = (
     releaseFormats: raw.releaseFormats ?? [],
     addedAt: raw.addedAt ? toServerDateTime(raw.addedAt) : null,
     lastUpdatedAt: lastChapterDate !== null ? toServerDateTime(lastChapterDate) : null,
-    // raw.rating is normalized to 0..1 by every parser (see RawManga in @tanuki/parsers) —
+    // raw.rating is normalized to 0..1 by every parser (see RawTitle in @tanuki/parsers) —
     // scale it up to the 0..10 the API exposes, rounded to 1 decimal so it's ready to display
     // as-is, with no further formatting on the client.
     rating: raw.rating >= 0 ? Math.round(raw.rating * 100) / 10 : null,
@@ -125,11 +125,11 @@ export const normalizeManga = (
   };
 };
 
-export const normalizeChapter = (sourceId: string, mangaId: string, raw: RawChapter): Chapter => {
+export const normalizeChapter = (sourceId: string, titleId: string, raw: RawChapter): Chapter => {
   const id = `${sourceId}:${encodeChapterId({ id: raw.id, url: raw.url, branch: raw.branch })}`;
   return {
     id,
-    mangaId,
+    titleId,
     number: raw.number > 0 ? raw.number : null,
     volume: raw.volume > 0 ? raw.volume : null,
     title: raw.title,

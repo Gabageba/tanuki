@@ -1,13 +1,13 @@
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
-  type MangaState,
+  type TitleState,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -16,12 +16,12 @@ import { fetchPaged } from '../../core/paging';
 import { getYearRangePresets } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
 import type {
-  RawManga,
+  RawTitle,
   RawChapter,
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
-  RawMangaType,
+  RawTitleType,
   RawPage,
   RawTag,
 } from '../../types';
@@ -112,7 +112,7 @@ type MangaJson = {
 /** `/manga/get/{type}/{slug}?chapters=true` is the site's own manga-page endpoint (it doubles as
  *  view-count tracking) and, verified live, is the only one that carries likes/views/teams and the
  *  full chapter list together — `/manga/{id}` and `/manga/{id}/additional` each expose only part of
- *  that set. Using it for getDetails means one request instead of two, and it's why RawManga.url
+ *  that set. Using it for getDetails means one request instead of two, and it's why RawTitle.url
  *  is built from `type,,slug` rather than the bare id the list endpoint also returns. */
 type MangaDetailsJson = MangaJson & {
   chapters?: ChapterJson[];
@@ -122,18 +122,18 @@ type PageFileJson = {
   diskFile: string;
 };
 
-const parseState = (status: string | undefined): MangaState | null => {
+const parseState = (status: string | undefined): TitleState | null => {
   switch (status?.toLowerCase()) {
     case 'ongoing':
-      return MANGA_STATE.ONGOING;
+      return TITLE_STATE.ONGOING;
     case 'finished':
     case 'completed':
-      return MANGA_STATE.FINISHED;
+      return TITLE_STATE.FINISHED;
     case 'abandoned':
-      return MANGA_STATE.ABANDONED;
+      return TITLE_STATE.ABANDONED;
     case 'paused':
     case 'frozen':
-      return MANGA_STATE.PAUSED;
+      return TITLE_STATE.PAUSED;
     default:
       return null;
   }
@@ -159,18 +159,18 @@ const parseContentRating = (jo: { isAdult?: boolean; pegiRating?: string }): Raw
 };
 
 /** `type` per the site's own OpenAPI spec: manga | manhwa | manhua | comic | manuscript. */
-const parseMangaType = (raw: string | undefined): RawMangaType | null => {
+const parseMangaType = (raw: string | undefined): RawTitleType | null => {
   switch (raw) {
     case 'manga':
-      return MANGA_TYPE.MANGA;
+      return TITLE_TYPE.MANGA;
     case 'manhwa':
-      return MANGA_TYPE.MANHWA;
+      return TITLE_TYPE.MANHWA;
     case 'manhua':
-      return MANGA_TYPE.MANHUA;
+      return TITLE_TYPE.MANHUA;
     case 'comic':
-      return MANGA_TYPE.COMICS;
+      return TITLE_TYPE.COMICS;
     case 'manuscript':
-      return MANGA_TYPE.OTHER;
+      return TITLE_TYPE.OTHER;
     default:
       return null;
   }
@@ -290,7 +290,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   const apiUrl = `https://${domain}/api/v1`;
 
-  const parseManga = (jo: MangaJson): RawManga => {
+  const parseManga = (jo: MangaJson): RawTitle => {
     return {
       id: generateUid(SOURCE_ID, jo.id),
       title: jo.title,
@@ -300,7 +300,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       url: `${jo.type}${URL_DELIMITER}${jo.slug}`,
       publicUrl: `https://${domain}/manga/${jo.slug}`,
       // The site has no bounded 0..10 rating axis, only an unbounded "likes" tally — see
-      // RawManga.likes doc on why the two can't be merged.
+      // RawTitle.likes doc on why the two can't be merged.
       rating: RATING_UNKNOWN,
       contentRating: parseContentRating(jo),
       coverUrl: jo.coverUrl ? toAbsoluteUrl(jo.coverUrl, domain) : null,
@@ -325,7 +325,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, async (page) => {
       const offset = (page - 1) * PAGE_SIZE;
       const url = new URL(`${apiUrl}/manga`);
@@ -381,7 +381,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
     ]);
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const [type, slug] = mangaUrl.split(URL_DELIMITER);
     const jo = await ctx.http.getJson<MangaDetailsJson>(
       `${apiUrl}/manga/get/${type}/${slug}?chapters=true`,

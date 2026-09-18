@@ -1,5 +1,5 @@
 import type { CookieJar } from 'tough-cookie';
-import type { RawManga, RawChapter, RawPage, RawSourceInfo, RawFilterGroup } from '../types';
+import type { RawTitle, RawChapter, RawPage, RawSourceInfo, RawFilterGroup } from '../types';
 import type { ListParams, FilterSelection } from './paging';
 import type { HttpClient } from './http/client';
 
@@ -55,9 +55,9 @@ export type Parser = {
   /** Static metadata — no network, no lazy init. Mirrors the registry descriptor's `info`. */
   readonly info: RawSourceInfo;
   /** chapters MUST be null on every returned item. */
-  getList(params: ListParams): Promise<RawManga[]>;
+  getList(params: ListParams): Promise<RawTitle[]>;
   /** chapters MUST be populated (possibly []). */
-  getDetails(url: string): Promise<RawManga>;
+  getDetails(url: string): Promise<RawTitle>;
   /** RawPage.url MUST be absolute and pre-resolved. */
   getPages(chapterUrl: string): Promise<RawPage[]>;
   /** All filter groups and their options as currently listed on the source. Omit entirely on
@@ -77,4 +77,4 @@ export type Parser = {
   close?(): Promise<void>;
 };
 
-export type { RawManga, RawChapter, RawPage, RawSourceInfo, RawFilterGroup };
+export type { RawTitle, RawChapter, RawPage, RawSourceInfo, RawFilterGroup };

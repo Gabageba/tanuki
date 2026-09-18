@@ -1,17 +1,17 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import {
-  MANGA_STATE,
+  TITLE_STATE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
-  type MangaState,
+  type TitleState,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
 import type { Doc } from '../../core/html/dom';
-import type { RawManga, RawChapter, RawPage, RawTag } from '../../types';
+import type { RawTitle, RawChapter, RawPage, RawTag } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
@@ -104,7 +104,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
     }));
   };
 
-  const parseMangaTile = ($item: Cheerio<AnyNode>, baseUrl: string): RawManga | null => {
+  const parseMangaTile = ($item: Cheerio<AnyNode>, baseUrl: string): RawTitle | null => {
     const $a = $item.find('a.readed__img').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -135,7 +135,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const fetchListPage = async (page: number, query: string | undefined): Promise<RawManga[]> => {
+  const fetchListPage = async (page: number, query: string | undefined): Promise<RawTitle[]> => {
     let path: string;
     if (query) {
       const encoded = query
@@ -154,10 +154,10 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       .$('div.readed.d-flex.short')
       .toArray()
       .map((el) => parseMangaTile(doc.$(el), doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
       fetchListPage(page, params.query),
     );
@@ -172,7 +172,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
     return (textOrNull($li) ?? '').split(label)[1]?.trim() ?? null;
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
     const scriptText = extractScript(doc, '__DATA__');
@@ -202,8 +202,8 @@ export const createComxParser = (ctx: ParserContext): Parser => {
 
     const author = nullIfEmpty(findLiValueAfter(doc.$, 'Publisher:'));
     const releaseType = findLiValueAfter(doc.$, 'Release type:');
-    const releaseState: MangaState =
-      releaseType === 'Ongoing' ? MANGA_STATE.ONGOING : MANGA_STATE.FINISHED;
+    const releaseState: TitleState =
+      releaseType === 'Ongoing' ? TITLE_STATE.ONGOING : TITLE_STATE.FINISHED;
 
     const tagLinks = doc
       .$('a[href*="/genres/"]')

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { decodeChapterId, decodeMangaId, encodeChapterId, encodeMangaId } from './opaque-id';
+import { decodeChapterId, decodeTitleId, encodeChapterId, encodeTitleId } from './opaque-id';
 import { NotFoundApiException } from './errors';
 
 describe('opaque-id', () => {
-  it('round-trips a manga ref', () => {
+  it('round-trips a title ref', () => {
     const ref = { id: 42, url: '/manga/solo-leveling.42' };
-    expect(decodeMangaId(encodeMangaId(ref))).toEqual(ref);
+    expect(decodeTitleId(encodeTitleId(ref))).toEqual(ref);
   });
 
   it('round-trips a chapter ref, including a null branch', () => {
@@ -17,7 +17,7 @@ describe('opaque-id', () => {
   });
 
   it('throws NotFoundApiException on malformed input instead of a raw parse error', () => {
-    expect(() => decodeMangaId('not-valid-base64url-json')).toThrow(NotFoundApiException);
+    expect(() => decodeTitleId('not-valid-base64url-json')).toThrow(NotFoundApiException);
     expect(() => decodeChapterId('%%%')).toThrow(NotFoundApiException);
   });
 });

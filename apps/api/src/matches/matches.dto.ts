@@ -1,6 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
-import { MangaLinkRequestSchema, MangaMatchesResponseSchema } from '@tanuki/contracts';
+import { TitleLinkRequestSchema, TitleMatchesResponseSchema } from '@tanuki/contracts';
 
-export class MangaMatchesResponseDto extends createZodDto(MangaMatchesResponseSchema) {}
+export class TitleMatchesResponseDto extends createZodDto(TitleMatchesResponseSchema) {}
 
-export class MangaLinkRequestDto extends createZodDto(MangaLinkRequestSchema) {}
+export class TitleLinkRequestDto extends createZodDto(TitleLinkRequestSchema) {}

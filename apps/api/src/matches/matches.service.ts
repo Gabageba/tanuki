@@ -1,11 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
-  MANGA_LINK_VERDICT,
+  TITLE_LINK_VERDICT,
   MATCH_CONFIDENCE,
   SEARCH_GROUP_STATUS,
   SOURCE_LOCALE,
-  type MangaLinkVerdict,
-  type MangaMatchesResponse,
+  type TitleLinkVerdict,
+  type TitleMatchesResponse,
   type MatchConfidence,
   type SearchGroupStatus,
   type Source,
@@ -13,14 +13,14 @@ import {
 import { CacheService } from '../cache/cache.service';
 import { CACHE_TTL } from '../cache/cache.constants';
 import { cacheKey } from '../cache/cache-keys';
-import { decodeMangaId, splitCompositeId } from '../common/opaque-id';
-import { normalizeManga } from '../common/normalize';
+import { decodeTitleId, splitCompositeId } from '../common/opaque-id';
+import { normalizeTitle } from '../common/normalize';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
-import type { RawManga } from '../parsers-client/parsers-client.types';
+import type { RawTitle } from '../parsers-client/parsers-client.types';
 import { SourcesService } from '../sources/sources.service';
-import { linkKeyOf, MangaLinksService, parseLinkKey } from './manga-links.service';
+import { linkKeyOf, TitleLinksService, parseLinkKey } from './title-links.service';
 import {
   FALLBACK_WAVE_TIME_SHARE,
   MATCH_ALGO_VERSION,
@@ -55,16 +55,16 @@ const createDeadline = (ms: number): Deadline => {
 };
 
 /**
- * Что кладём в кеш. Именно RawManga, а не готовая Manga: normalizeManga подписывает URL
+ * Что кладём в кеш. Именно RawTitle, а не готовый Title: normalizeTitle подписывает URL
  * обложки на час (см. img-proxy/sign.util.ts), а кеш живёт сутками — сохранив готовый ответ,
  * мы бы отдавали ссылки с протухшей подписью.
  */
 type MatchCacheEntry = {
   sourceId: string;
-  raw: RawManga;
+  raw: RawTitle;
   score: number;
   confidence: MatchConfidence;
-  matchedTitle: string;
+  matchedName: string;
   tied: boolean;
 };
 
@@ -74,13 +74,13 @@ type MatchCachePayload = {
 };
 
 type Candidate = ScoredEntry & {
-  raw: RawManga;
-  matchedTitle: string;
+  raw: RawTitle;
+  matchedName: string;
 };
 
-export const toMatchSubject = (raw: RawManga): MatchSubject => ({
-  title: raw.title,
-  altTitles: raw.altTitles,
+export const toMatchSubject = (raw: RawTitle): MatchSubject => ({
+  name: raw.title,
+  altNames: raw.altTitles,
   authors: raw.authors,
   year: raw.year ?? null,
   type: raw.type ?? null,
@@ -97,14 +97,14 @@ export class MatchesService {
     private readonly sourcesService: SourcesService,
     private readonly parsersClient: ParsersClientService,
     private readonly cache: CacheService,
-    private readonly links: MangaLinksService,
+    private readonly links: TitleLinksService,
   ) {}
 
-  async findMatches(sourceId: string, mangaId: string): Promise<MangaMatchesResponse> {
-    const ref = decodeMangaId(mangaId);
+  async findMatches(sourceId: string, titleId: string): Promise<TitleMatchesResponse> {
+    const ref = decodeTitleId(titleId);
     const { data: refRaw } = await this.parsersClient.getDetails(sourceId, ref.url);
 
-    const key = cacheKey('matches', sourceId, MATCH_ALGO_VERSION, mangaId);
+    const key = cacheKey('matches', sourceId, MATCH_ALGO_VERSION, titleId);
     const { value, stale } = await this.cache.getOrSet(key, CACHE_TTL.matches, () =>
       this.fanOut(sourceId, refRaw),
     );
@@ -128,7 +128,7 @@ export class MatchesService {
   private async applyLinks(
     refKey: string,
     entries: MatchCacheEntry[],
-  ): Promise<MangaMatchesResponse['items']> {
+  ): Promise<TitleMatchesResponse['items']> {
     const links = await this.links.listFor(refKey);
     if (links.length === 0) return entries.map((entry) => this.toMatch(entry));
 
@@ -137,19 +137,19 @@ export class MatchesService {
     const kept = entries.filter(
       (entry) =>
         verdicts.get(linkKeyOf(entry.sourceId, entry.raw.url))?.verdict !==
-        MANGA_LINK_VERDICT.REJECTED,
+        TITLE_LINK_VERDICT.REJECTED,
     );
 
     const confirmed = kept.map((entry) => {
       const link = verdicts.get(linkKeyOf(entry.sourceId, entry.raw.url));
-      return link?.verdict === MANGA_LINK_VERDICT.CONFIRMED
+      return link?.verdict === TITLE_LINK_VERDICT.CONFIRMED
         ? { ...entry, confidence: MATCH_CONFIDENCE.CONFIRMED }
         : entry;
     });
 
     const missing = links.filter(
       (link) =>
-        link.verdict === MANGA_LINK_VERDICT.CONFIRMED &&
+        link.verdict === TITLE_LINK_VERDICT.CONFIRMED &&
         !confirmed.some((entry) => linkKeyOf(entry.sourceId, entry.raw.url) === link.targetId),
     );
     const fetched = await this.fetchConfirmed(missing.map((link) => link.targetId));
@@ -175,7 +175,7 @@ export class MatchesService {
           raw: data,
           score: 1,
           confidence: MATCH_CONFIDENCE.CONFIRMED,
-          matchedTitle: data.title,
+          matchedName: data.title,
           tied: false,
         } satisfies MatchCacheEntry;
       }),
@@ -184,12 +184,12 @@ export class MatchesService {
     return settled.filter((result) => result.status === 'fulfilled').map((result) => result.value);
   }
 
-  private toMatch(entry: MatchCacheEntry): MangaMatchesResponse['items'][number] {
+  private toMatch(entry: MatchCacheEntry): TitleMatchesResponse['items'][number] {
     return {
-      manga: normalizeManga(this.env, entry.sourceId, entry.raw),
+      title: normalizeTitle(this.env, entry.sourceId, entry.raw),
       score: entry.score,
       confidence: entry.confidence,
-      matchedTitle: entry.matchedTitle,
+      matchedName: entry.matchedName,
       tied: entry.tied,
     };
   }
@@ -197,15 +197,15 @@ export class MatchesService {
   /** Ставит или снимает ручную пометку связи между текущим тайтлом и указанным. */
   async setLink(
     sourceId: string,
-    mangaId: string,
+    titleId: string,
     targetId: string,
-    verdict: MangaLinkVerdict,
+    verdict: TitleLinkVerdict,
   ): Promise<void> {
-    const ref = decodeMangaId(mangaId);
+    const ref = decodeTitleId(titleId);
     const { data: refRaw } = await this.parsersClient.getDetails(sourceId, ref.url);
 
     const { sourceId: targetSourceId, opaqueId: targetOpaqueId } = splitCompositeId(targetId);
-    const targetUrl = decodeMangaId(targetOpaqueId).url;
+    const targetUrl = decodeTitleId(targetOpaqueId).url;
     const { data: targetRaw } = await this.parsersClient.getDetails(targetSourceId, targetUrl);
 
     await this.links.set(
@@ -217,7 +217,7 @@ export class MatchesService {
     );
   }
 
-  private async fanOut(sourceId: string, refRaw: RawManga): Promise<MatchCachePayload> {
+  private async fanOut(sourceId: string, refRaw: RawTitle): Promise<MatchCachePayload> {
     const subject = toMatchSubject(refRaw);
     const primaryProbe = pickProbe(subject, MATCH_WAVE.PRIMARY);
     if (!primaryProbe) return { items: [], failures: [] };
@@ -255,7 +255,7 @@ export class MatchesService {
         raw: entry.raw,
         score: entry.score,
         confidence: entry.confidence,
-        matchedTitle: entry.matchedTitle,
+        matchedName: entry.matchedName,
         tied: entry.tied,
       })),
       failures: [...failures].map(([id, status]) => ({ sourceId: id, status })),
@@ -306,7 +306,7 @@ export class MatchesService {
       sources.map((source) =>
         Promise.race([
           this.parsersClient
-            .listManga(source.id, { page: 0, query })
+            .listTitles(source.id, { page: 0, query })
             .then((result) => this.scoreAll(source.id, result.data.items, subject)),
           deadline,
         ]),
@@ -335,7 +335,7 @@ export class MatchesService {
     return candidates;
   }
 
-  private scoreAll(sourceId: string, items: RawManga[], subject: MatchSubject): Candidate[] {
+  private scoreAll(sourceId: string, items: RawTitle[], subject: MatchSubject): Candidate[] {
     const candidates: Candidate[] = [];
     for (const raw of items) {
       const result = scoreMatch(subject, toMatchSubject(raw));
@@ -346,7 +346,7 @@ export class MatchesService {
         key: raw.url,
         score: result.score,
         confidence: result.confidence,
-        matchedTitle: result.matchedTitle,
+        matchedName: result.matchedName,
         raw,
       });
     }
@@ -394,7 +394,7 @@ export class MatchesService {
         raw: data,
         score: rescored.score,
         confidence: rescored.confidence,
-        matchedTitle: rescored.matchedTitle,
+        matchedName: rescored.matchedName,
       });
     }
 

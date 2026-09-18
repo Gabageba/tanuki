@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { FILTER_TYPE, MANGA_STATE, MANGA_TYPE } from '@tanuki/contracts';
+import { FILTER_TYPE, TITLE_STATE, TITLE_TYPE } from '@tanuki/contracts';
 import { createDesuParser, DESU_FILTER_GROUP } from '../src/sources/desu';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -178,7 +178,7 @@ describe('Desu parser conformance', () => {
     expect(item!.publicUrl).toMatch(/^https?:\/\//);
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.tags.map((t) => t.title).sort()).toEqual(['Боевик', 'Фэнтези']);
-    expect(item!.type).toBe(MANGA_TYPE.MANHWA);
+    expect(item!.type).toBe(TITLE_TYPE.MANHWA);
     expect(item!.year).toBe(2018);
   });
 
@@ -191,9 +191,9 @@ describe('Desu parser conformance', () => {
       expect(chapter.uploadDate === 0 || chapter.uploadDate > 1e12).toBe(true);
     }
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
-    expect(manga.releaseState).toBe(MANGA_STATE.ONGOING);
-    expect(manga.translationState).toBe(MANGA_STATE.ONGOING);
-    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.releaseState).toBe(TITLE_STATE.ONGOING);
+    expect(manga.translationState).toBe(TITLE_STATE.ONGOING);
+    expect(manga.type).toBe(TITLE_TYPE.MANGA);
     expect(manga.year).toBe(2012);
     expect(new Date(manga.releaseDate!).toISOString().slice(0, 10)).toBe('2012-06-14');
     expect(manga.authors).toEqual(['Chugong']);

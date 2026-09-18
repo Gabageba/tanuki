@@ -1,8 +1,8 @@
 import type { TFunction } from 'i18next';
-import type { ContentRating, MangaType, SourceLocale } from '@tanuki/contracts';
+import type { ContentRating, TitleType, SourceLocale } from '@tanuki/contracts';
 import {
   CONTENT_RATING,
-  MANGA_TYPE,
+  TITLE_TYPE,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
   SOURCE_STATUS,
@@ -68,21 +68,21 @@ export const getLabelByContentType = (contentType: SourceContentType, t: TFuncti
   }
 };
 
-export const getLabelByMangaType = (mangaType: MangaType | null, t: TFunction) => {
-  if (!mangaType) {
+export const getLabelByTitleType = (titleType: TitleType | null, t: TFunction) => {
+  if (!titleType) {
     return null;
   }
 
-  switch (mangaType) {
-    case MANGA_TYPE.MANGA:
+  switch (titleType) {
+    case TITLE_TYPE.MANGA:
       return t('manga');
-    case MANGA_TYPE.MANHUA:
+    case TITLE_TYPE.MANHUA:
       return t('manhua');
-    case MANGA_TYPE.MANHWA:
+    case TITLE_TYPE.MANHWA:
       return t('manhwa');
-    case MANGA_TYPE.COMICS:
+    case TITLE_TYPE.COMICS:
       return t('comic');
-    case MANGA_TYPE.OTHER:
+    case TITLE_TYPE.OTHER:
       return t('other');
   }
 };

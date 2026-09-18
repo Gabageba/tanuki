@@ -85,7 +85,7 @@ Vite-приложение. Полностью клиентский роутин�
 ### Открытие главы
 
 ```
-1. web → GET /api/v1/manga/:sourceId/:mangaId/chapters/:chapterId/pages
+1. web → GET /api/v1/titles/:titleId/chapters/:chapterId/pages
 2. api: проверяет Valkey (ключ pages:sourceId:chapterId, TTL 6ч)
 3. промах → api вызывает parser.getPages(chapterUrl) из @tanuki/parsers (в процессе)
 4. parser → сайт-источник → HTML/JSON → список Page

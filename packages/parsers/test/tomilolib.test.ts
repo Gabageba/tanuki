@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { FILTER_TYPE, MANGA_TYPE } from '@tanuki/contracts';
+import { FILTER_TYPE, TITLE_TYPE } from '@tanuki/contracts';
 import { createTomiloLibParser, TOMILOLIB_FILTER_GROUP } from '../src/sources/tomilolib';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -121,7 +121,7 @@ describe('TomiloLib parser conformance', () => {
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     expect(item!.title).toBe('Ван-Пис');
     expect(item!.coverUrl).toBe('https://s3.regru.cloud/tomilolib/titles/1/cover.jpg');
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(1100);
     expect(item!.description).toBe('Описание из списка.');

@@ -2,22 +2,22 @@ import { describe, expect, it } from 'vitest';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_RESTRICTION,
-  MANGA_TYPE,
+  TITLE_RESTRICTION,
+  TITLE_TYPE,
   SOURCE_ID,
 } from '@tanuki/contracts';
 import {
   computeBranches,
   normalizeChapter,
   normalizeFilterGroup,
-  normalizeManga,
+  normalizeTitle,
   pickDefaultBranch,
 } from './normalize';
-import type { RawChapter, RawFilterGroup, RawManga } from '../parsers-client/parsers-client.types';
+import type { RawChapter, RawFilterGroup, RawTitle } from '../parsers-client/parsers-client.types';
 
 const ENV = { IMG_SIGN_SECRET: 'a'.repeat(32) };
 
-const raw = (overrides: Partial<RawManga> = {}): RawManga => {
+const raw = (overrides: Partial<RawTitle> = {}): RawTitle => {
   return {
     id: 1,
     title: 'Title',
@@ -53,90 +53,90 @@ const chapter = (overrides: Partial<RawChapter> = {}): RawChapter => {
   };
 };
 
-describe('normalizeManga', () => {
+describe('normalizeTitle', () => {
   it('maps RATING_UNKNOWN (-1) to null, otherwise scales the 0..1 raw rating up to 0..10', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: -1 })).rating).toBeNull();
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: 0.42 })).rating).toBe(4.2);
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: 0.865 })).rating).toBe(8.7);
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ rating: 0 })).rating).toBe(0);
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ rating: -1 })).rating).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ rating: 0.42 })).rating).toBe(4.2);
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ rating: 0.865 })).rating).toBe(8.7);
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ rating: 0 })).rating).toBe(0);
   });
 
   it('passes likes through, defaulting to null when the parser omits them', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).likes).toBeNull();
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ likes: 46 })).likes).toBe(46);
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).likes).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ likes: 46 })).likes).toBe(46);
   });
 
   it('passes pages through, defaulting to null when the parser omits them', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).pages).toBeNull();
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ pages: 24 })).pages).toBe(24);
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).pages).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ pages: 24 })).pages).toBe(24);
   });
 
   it('passes votesCount/views through, defaulting to null when the parser omits them', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).votesCount).toBeNull();
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).views).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).votesCount).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).views).toBeNull();
     expect(
-      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ votesCount: 39, views: 23921 })).votesCount,
+      normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ votesCount: 39, views: 23921 })).votesCount,
     ).toBe(39);
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ votesCount: 39, views: 23921 })).views).toBe(
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ votesCount: 39, views: 23921 })).views).toBe(
       23921,
     );
   });
 
-  it('defaults originalTitle to an empty array when the parser omits it', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).originalTitle).toEqual([]);
+  it('defaults originalNames to an empty array when the parser omits it', () => {
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).originalNames).toEqual([]);
     expect(
-      normalizeManga(
+      normalizeTitle(
         ENV,
         SOURCE_ID.DESUME,
         raw({ originalTitle: ['Solo Leveling', '나 혼자만 레벨업'] }),
-      ).originalTitle,
+      ).originalNames,
     ).toEqual(['Solo Leveling', '나 혼자만 레벨업']);
   });
 
   it('defaults translators to an empty array when the parser omits them', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).translators).toEqual([]);
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).translators).toEqual([]);
     expect(
-      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ translators: ['Dead Inside Team'] })).translators,
+      normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ translators: ['Dead Inside Team'] })).translators,
     ).toEqual(['Dead Inside Team']);
   });
 
   it('passes type/year through, defaulting to null when the parser omits them', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).type).toBeNull();
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).year).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).type).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).year).toBeNull();
     expect(
-      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ type: MANGA_TYPE.MANHWA, year: 2024 })).type,
-    ).toBe(MANGA_TYPE.MANHWA);
+      normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ type: TITLE_TYPE.MANHWA, year: 2024 })).type,
+    ).toBe(TITLE_TYPE.MANHWA);
     expect(
-      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ type: MANGA_TYPE.MANHWA, year: 2024 })).year,
+      normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ type: TITLE_TYPE.MANHWA, year: 2024 })).year,
     ).toBe(2024);
   });
 
   it('defaults a null contentRating to SAFE', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ contentRating: null })).contentRating).toBe(
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ contentRating: null })).contentRating).toBe(
       CONTENT_RATING.SAFE,
     );
     expect(
-      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ contentRating: CONTENT_RATING.ADULT }))
+      normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ contentRating: CONTENT_RATING.ADULT }))
         .contentRating,
     ).toBe(CONTENT_RATING.ADULT);
   });
 
   it('passes restriction through, defaulting to null when the parser omits it', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).restriction).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).restriction).toBeNull();
     expect(
-      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ restriction: MANGA_RESTRICTION.LEGAL }))
+      normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ restriction: TITLE_RESTRICTION.LEGAL }))
         .restriction,
-    ).toBe(MANGA_RESTRICTION.LEGAL);
+    ).toBe(TITLE_RESTRICTION.LEGAL);
   });
 
   it('turns a null coverUrl into an empty string, never null', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ coverUrl: null })).coverUrl).toBe('');
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ coverUrl: null })).coverUrl).toBe('');
   });
 
   it('derives chaptersCount from the chapters array, null when absent (list items)', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ chapters: null })).chaptersCount).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ chapters: null })).chaptersCount).toBeNull();
     expect(
-      normalizeManga(ENV, SOURCE_ID.DESUME, raw({ chapters: [chapter(), chapter()] }))
+      normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ chapters: [chapter(), chapter()] }))
         .chaptersCount,
     ).toBe(2);
   });
@@ -154,11 +154,11 @@ describe('normalizeManga', () => {
       chapter({ id: 7, branch: 'B' }),
       chapter({ id: 8, branch: 'B' }),
     ];
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ chapters })).chaptersCount).toBe(5);
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ chapters })).chaptersCount).toBe(5);
   });
 
   it('passes country/series/artists/publishers/magazines/releaseFormats through, defaulting when omitted', () => {
-    const empty = normalizeManga(ENV, SOURCE_ID.DESUME, raw({}));
+    const empty = normalizeTitle(ENV, SOURCE_ID.DESUME, raw({}));
     expect(empty.country).toBeNull();
     expect(empty.series).toEqual([]);
     expect(empty.artists).toEqual([]);
@@ -166,7 +166,7 @@ describe('normalizeManga', () => {
     expect(empty.magazines).toEqual([]);
     expect(empty.releaseFormats).toEqual([]);
 
-    const filled = normalizeManga(
+    const filled = normalizeTitle(
       ENV,
       SOURCE_ID.DESUME,
       raw({
@@ -187,9 +187,9 @@ describe('normalizeManga', () => {
   });
 
   it('passes addedAt through as a formatted datetime, null when the parser omits it', () => {
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({})).addedAt).toBeNull();
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({})).addedAt).toBeNull();
     const ms = Date.UTC(2022, 0, 1, 0, 0, 0);
-    expect(normalizeManga(ENV, SOURCE_ID.DESUME, raw({ addedAt: ms })).addedAt).toBe(
+    expect(normalizeTitle(ENV, SOURCE_ID.DESUME, raw({ addedAt: ms })).addedAt).toBe(
       '2022-01-01T00:00:00Z',
     );
   });
@@ -197,11 +197,11 @@ describe('normalizeManga', () => {
 
 describe('normalizeChapter', () => {
   it('maps 0 (unknown sentinel) to null for number/volume, keeps positive values', () => {
-    const c = normalizeChapter(SOURCE_ID.DESUME, 'manga-id', chapter({ number: 0, volume: 0 }));
+    const c = normalizeChapter(SOURCE_ID.DESUME, 'title-id', chapter({ number: 0, volume: 0 }));
     expect(c.number).toBeNull();
     expect(c.volume).toBeNull();
 
-    const c2 = normalizeChapter(SOURCE_ID.DESUME, 'manga-id', chapter({ number: 12.5, volume: 3 }));
+    const c2 = normalizeChapter(SOURCE_ID.DESUME, 'title-id', chapter({ number: 12.5, volume: 3 }));
     expect(c2.number).toBe(12.5);
     expect(c2.volume).toBe(3);
   });

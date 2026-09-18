@@ -18,7 +18,7 @@ function Footer() {
     ROUTE_PATHS.SOURCES,
     ROUTE_PATHS.SOURCES_HEALTH,
     ROUTE_PATHS.CATALOG,
-    ROUTE_PATHS.MANGA,
+    ROUTE_PATHS.TITLE,
   ]);
   const isBookmarksActive = useIsActiveUrl(ROUTE_PATHS.BOOKMARKS);
   const isNotificationsActive = useIsActiveUrl(ROUTE_PATHS.NOTIFICATIONS);

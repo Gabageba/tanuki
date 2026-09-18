@@ -4,7 +4,7 @@ import { CookieJar } from 'tough-cookie';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
-  MANGA_TYPE,
+  TITLE_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
@@ -14,8 +14,8 @@ import type { FilterSelection, ListParams } from '../../core/paging';
 import type {
   RawFilterGroup,
   RawFilterOption,
-  RawManga,
-  RawMangaType,
+  RawTitle,
+  RawTitleType,
   RawPage,
   RawTag,
 } from '../../types';
@@ -124,11 +124,11 @@ const parseViews = (text: string | null | undefined): number | null => {
 
 /** The site has no format field of its own — "комикс" and "манхва" are plain tags on it, and
  *  everything else is the Japanese hentai manga the site is named after. */
-const mangaTypeOfTags = (tags: RawTag[]): RawMangaType => {
+const mangaTypeOfTags = (tags: RawTag[]): RawTitleType => {
   const titles = new Set(tags.map((tag) => tag.title.toLowerCase()));
-  if (titles.has('комикс')) return MANGA_TYPE.COMICS;
-  if (titles.has('манхва')) return MANGA_TYPE.MANHWA;
-  return MANGA_TYPE.MANGA;
+  if (titles.has('комикс')) return TITLE_TYPE.COMICS;
+  if (titles.has('манхва')) return TITLE_TYPE.MANHWA;
+  return TITLE_TYPE.MANGA;
 };
 
 /** "AltTitle / MainTitle" split on the site's own `title` attribute, not the link text. */
@@ -232,7 +232,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     $row: Cheerio<AnyNode>,
     $: CheerioAPI,
     baseUrl: string,
-  ): RawManga | null => {
+  ): RawTitle | null => {
     const $a = $row.find('a').first();
     if ($a.length === 0) return null;
     const hrefRaw = attrOrNull($a, 'href');
@@ -369,13 +369,13 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const fetchRowstart = async (url: string): Promise<RawManga[]> => {
+  const fetchRowstart = async (url: string): Promise<RawTitle[]> => {
     const doc = await ctx.http.getHtml(url);
     return doc
       .$('table.news_pic2')
       .toArray()
       .map((el) => parseMangaRow(doc.$(el), doc.$, doc.baseUrl))
-      .filter((m): m is RawManga => m !== null);
+      .filter((m): m is RawTitle => m !== null);
   };
 
   /**
@@ -403,7 +403,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
    * catalog stops drifting from the live site.
    */
   type CatalogCache = {
-    items: RawManga[];
+    items: RawTitle[];
     seen: Set<number>;
     nextRowstart: number;
     exhausted: boolean;
@@ -421,7 +421,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     cacheKey: string,
     minCount: number,
     urlForRowstart: (rowstart: number) => string,
-  ): Promise<RawManga[]> => {
+  ): Promise<RawTitle[]> => {
     let cache = catalogCaches.get(cacheKey);
     if (cache && Date.now() - cache.createdAt >= CATALOG_CACHE_TTL_MS) {
       cache = undefined;
@@ -457,7 +457,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     return cache.items;
   };
 
-  const getList = async (params: ListParams): Promise<RawManga[]> => {
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
     if (params.query) {
       throw new SourceAuthRequiredError(
         `Search requires an authenticated session: query="${params.query}"`,
@@ -469,7 +469,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     return items.slice(params.offset, params.offset + params.limit);
   };
 
-  const getDetails = async (mangaUrl: string): Promise<RawManga> => {
+  const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await mobileHttp.getHtml(absoluteUrl);
     const root = doc.$('table.news_pic2').first();

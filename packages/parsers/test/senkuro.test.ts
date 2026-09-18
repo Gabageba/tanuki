@@ -2,8 +2,8 @@ import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
 import {
   FILTER_TYPE,
-  MANGA_STATE,
-  MANGA_TYPE,
+  TITLE_STATE,
+  TITLE_TYPE,
   RANGE_FORMAT,
   SOURCE_CONTENT_TYPE,
 } from '@tanuki/contracts';
@@ -224,10 +224,10 @@ describe('Senkuro parser conformance', () => {
     expect(Number.isSafeInteger(item!.id)).toBe(true);
     // RU title preferred over EN
     expect(item!.title).toBe('Ван-Пис');
-    expect(item!.type).toBe(MANGA_TYPE.MANGA);
+    expect(item!.type).toBe(TITLE_TYPE.MANGA);
     expect(item!.year).toBe(1997);
     expect(item!.chaptersCount).toBe(1000);
-    expect(item!.releaseState).toBe(MANGA_STATE.ONGOING);
+    expect(item!.releaseState).toBe(TITLE_STATE.ONGOING);
     expect(item!.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(item!.description).toBe('Первый абзац.\nПродолжение.\n\nВторой абзац.');
     expect(http.requests[0]!.headers['app-id']).toBe(SENKURO_CONFIG.appId);
@@ -253,13 +253,13 @@ describe('Senkuro parser conformance', () => {
     expect(manga.translators).toEqual(['TeamA']);
     expect(manga.publishers).toEqual(['Shueisha']);
     expect(manga.releaseFormats).toEqual(['Веб', 'В цвете']);
-    expect(manga.type).toBe(MANGA_TYPE.MANGA);
+    expect(manga.type).toBe(TITLE_TYPE.MANGA);
     expect(manga.rating).toBeCloseTo(0.916);
     expect(manga.year).toBe(1997);
     expect(manga.views).toBe(123456);
     expect(manga.votesCount).toBe(959);
     expect(manga.country).toBe('Япония');
-    expect(manga.translationState).toBe(MANGA_STATE.ONGOING);
+    expect(manga.translationState).toBe(TITLE_STATE.ONGOING);
     expect(manga.releaseDate).toBeGreaterThan(0);
     expect(manga.addedAt).toBeGreaterThan(0);
   });
