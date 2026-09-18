@@ -124,8 +124,8 @@ function MangaInfo({ manga }: Props) {
           ),
         },
         {
-          label: t('chaptersCount'),
-          value: formatNumber(manga.chaptersCount, i18n.language),
+          label: manga.pages ? t('pagesCount') : t('chaptersCount'),
+          value: formatNumber(manga.pages ?? manga.chaptersCount, i18n.language),
         },
         {
           label: t('lastChapter'),

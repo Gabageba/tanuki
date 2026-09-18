@@ -62,7 +62,11 @@ function MangaMeta({ manga, branchesCount }: Props) {
           label={t('translation')}
         />
         <MangaMetaItem
-          value={t('countChapters', { count: manga.chaptersCount })}
+          value={
+            manga.pages
+              ? t('countPages', { count: manga.pages })
+              : t('countChapters', { count: manga.chaptersCount })
+          }
           label={t('volume')}
         />
         <MangaMetaItem value={formatDate(manga.lastUpdatedAt)} label={t('lastChapter')} />

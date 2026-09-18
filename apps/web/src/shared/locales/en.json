@@ -121,6 +121,8 @@
   "countBranches_other": "{{count}} branches",
   "countChapters_one": "{{count}} chapter",
   "countChapters_other": "{{count}} chapters",
+  "countPages_one": "{{count}} page",
+  "countPages_other": "{{count}} pages",
   "failedToSave": "Failed to save",
   "tryAgainLater": "Try again later",
   "failedToLoadManga": "Failed to load the manga",
