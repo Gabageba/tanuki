@@ -28,6 +28,7 @@ const LIST_RESPONSE = JSON.stringify({
       tags: [{ tags_id: { name: 'ahegao', slug: 'ahegao' } }],
       type: 'doujinshi',
       likes: 128,
+      views: 3400,
       pages: 24,
       date_created: '2025-06-14T10:00:00.000Z',
     },
@@ -47,8 +48,10 @@ const DETAILS_RESPONSE = JSON.stringify({
       romaji_name: 'Ato no Futari',
       tags: [{ tags_id: { name: 'ahegao', slug: 'ahegao' } }],
       authors: [{ authors_id: { name: 'Satomi' } }],
+      translators: [{ translators_id: { name: 'Degrad' } }],
       type: 'comix',
       likes: 128,
+      views: 3400,
       pages: 24,
       date_created: '2025-06-14T10:00:00.000Z',
     },
@@ -180,9 +183,13 @@ describe('HentaiChan.cc parser conformance', () => {
     expect(item!.type).toBe(MANGA_TYPE.MANGA);
     expect(item!.year).toBe(2025);
     expect(item!.likes).toBe(128);
+    expect(item!.views).toBe(3400);
     expect(item!.pages).toBe(24);
     expect(item!.description).toBe('Краткое описание.');
     expect(item!.tags.map((t) => t.title)).toEqual(['Ahegao']);
+    // 'doujinshi' folds into MANGA_TYPE.MANGA, but the original format survives here.
+    expect(item!.releaseFormats).toEqual(['Додзинси']);
+    expect(item!.addedAt).toBe(new Date('2025-06-14T10:00:00.000Z').getTime());
   });
 
   it('getList: sort maps order to field, direction to a `-` prefix', async () => {
@@ -210,10 +217,13 @@ describe('HentaiChan.cc parser conformance', () => {
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
     const manga = await parser.getDetails('5243,,1-2-ato-no-futari');
+    const addedAt = new Date('2025-06-14T10:00:00.000Z').getTime();
     expect(manga.chapters).not.toBeNull();
     expect(manga.chapters).toHaveLength(2);
     for (const chapter of manga.chapters!) {
-      expect(chapter.uploadDate).toBe(0);
+      // The `chapters` collection carries no date field of its own — every chapter is stamped
+      // with its manga's own date_created.
+      expect(chapter.uploadDate).toBe(addedAt);
     }
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.chapters![0]!.number).toBe(1);
@@ -222,10 +232,14 @@ describe('HentaiChan.cc parser conformance', () => {
     expect(manga.altTitles).toEqual(['1 + 2', 'Ato no Futari']);
     expect(manga.tags.map((t) => t.title)).toEqual(['Ahegao']);
     expect(manga.authors).toEqual(['Satomi']);
+    expect(manga.translators).toEqual(['Degrad']);
     expect(manga.type).toBe(MANGA_TYPE.COMICS);
     expect(manga.year).toBe(2025);
     expect(manga.likes).toBe(128);
+    expect(manga.views).toBe(3400);
     expect(manga.pages).toBe(24);
+    expect(manga.releaseFormats).toEqual(['Комикс']);
+    expect(manga.addedAt).toBe(addedAt);
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {

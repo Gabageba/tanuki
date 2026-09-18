@@ -152,6 +152,7 @@ type MangaListItem = {
   tags: TagRef[];
   type: HentaichanMangaType;
   likes: number;
+  views: number;
   pages: number;
   date_created: string;
 };
@@ -161,6 +162,9 @@ type TagRef = {
 };
 type AuthorRef = {
   authors_id: { name: string | null } | null;
+};
+type TranslatorRef = {
+  translators_id: { name: string | null } | null;
 };
 
 type MangaDetail = {
@@ -174,8 +178,10 @@ type MangaDetail = {
   romaji_name: string | null;
   tags: TagRef[];
   authors: AuthorRef[];
+  translators: TranslatorRef[];
   type: HentaichanMangaType;
   likes: number;
+  views: number;
   pages: number;
   date_created: string;
 };
@@ -209,6 +215,19 @@ const mangaTypeFor = (type: HentaichanMangaType): RawMangaType => {
       return MANGA_TYPE.MANGA;
     case 'comix':
       return MANGA_TYPE.COMICS;
+  }
+};
+
+/** `mangaTypeFor` folds doujinshi into MANGA_TYPE.MANGA — this recovers that distinction as the
+ *  release format, the same three labels TYPE_OPTIONS already surfaces as a filter. */
+const releaseFormatTitleFor = (type: HentaichanMangaType): string => {
+  switch (type) {
+    case 'manga':
+      return 'Манга';
+    case 'doujinshi':
+      return 'Додзинси';
+    case 'comix':
+      return 'Комикс';
   }
 };
 
@@ -328,7 +347,10 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       type: mangaTypeFor(item.type),
       year: new Date(item.date_created).getFullYear(),
       likes: item.likes,
+      views: item.views,
       pages: item.pages,
+      releaseFormats: [releaseFormatTitleFor(item.type)],
+      addedAt: new Date(item.date_created).getTime(),
     };
   };
 
@@ -338,7 +360,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       offset: String(params.offset),
       sort: sortFor(params.order, params.direction),
       fields:
-        'id,name,slug,cover.filename_disk,description,type,likes,pages,date_created,' +
+        'id,name,slug,cover.filename_disk,description,type,likes,views,pages,date_created,' +
         'tags.tags_id.name,tags.tags_id.slug',
       /** Excludes 4 live test/junk rows ("test", "1233", ...) sitting in `declined`/`moderation`
        *  status — verified live, never approved catalog entries a listing (filtered or not)
@@ -361,42 +383,49 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
    * Each catalog entry here is a standalone release (a oneshot or a single translated chapter,
    * not a whole ongoing series) — live check against backend.hentaichan.cc shows 7035 of 7036
    * manga rows carry `chapters: 1`. `id` ordering (not `chapter_id`, which is near-always `1`
-   * even across a manga's own multiple rows) is the only reliable upload order.
+   * even across a manga's own multiple rows) is the only reliable upload order. The `chapters`
+   * collection itself carries no date field of its own (verified live) — every chapter of a
+   * manga is stamped with that manga's own `date_created` instead, exact for the near-totality
+   * of rows that only ever have the one chapter.
    */
-  const fetchChapters = async (mangaId: string): Promise<RawChapter[]> => {
+  const fetchChapterIds = async (mangaId: string): Promise<number[]> => {
     const res = await directusGet<DirectusListResponse<ChapterListItem>>('/items/chapters', {
       'filter[manga][_eq]': mangaId,
       sort: 'id',
       fields: 'id',
     });
-    return res.data.map((ch, index) => ({
-      id: generateUid(SOURCE_ID, ch.id),
-      title: null,
-      number: index + 1,
-      volume: 0,
-      url: String(ch.id),
-      scanlator: null,
-      uploadDate: 0,
-      branch: null,
-      source: SOURCE_ID,
-    }));
+    return res.data.map((ch) => ch.id);
   };
 
   const getDetails = async (mangaUrl: string): Promise<RawManga> => {
     const { mangaId, slug } = parseMangaUrl(mangaUrl);
-    const [detailRes, chapters] = await Promise.all([
+    const [detailRes, chapterIds] = await Promise.all([
       directusGet<DirectusListResponse<MangaDetail>>('/items/manga', {
         'filter[id][_eq]': mangaId,
         limit: '1',
         fields:
           'id,name,slug,cover.filename_disk,description,russian_name,english_name,romaji_name,' +
-          'type,likes,pages,date_created,' +
-          'tags.tags_id.name,tags.tags_id.slug,authors.authors_id.name',
+          'type,likes,views,pages,date_created,' +
+          'tags.tags_id.name,tags.tags_id.slug,authors.authors_id.name,' +
+          'translators.translators_id.name',
       }),
-      fetchChapters(mangaId),
+      fetchChapterIds(mangaId),
     ]);
     const info = detailRes.data[0];
     if (!info) throw new ParseError(`Manga not found: ${mangaUrl}`, SOURCE_ID);
+
+    const addedAt = new Date(info.date_created).getTime();
+    const chapters: RawChapter[] = chapterIds.map((id, index) => ({
+      id: generateUid(SOURCE_ID, id),
+      title: null,
+      number: index + 1,
+      volume: 0,
+      url: String(id),
+      scanlator: null,
+      uploadDate: addedAt,
+      branch: null,
+      source: SOURCE_ID,
+    }));
 
     const altTitles = [info.russian_name, info.english_name, info.romaji_name]
       .filter((t): t is string => !!t && t !== info.name)
@@ -409,6 +438,11 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
 
     const authors = [
       ...new Set(info.authors.map((a) => a.authors_id?.name).filter((n): n is string => !!n)),
+    ];
+    const translators = [
+      ...new Set(
+        info.translators.map((t) => t.translators_id?.name).filter((n): n is string => !!n),
+      ),
     ];
 
     const cover = assetUrl(info.cover);
@@ -426,13 +460,17 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       tags,
       releaseState: null,
       authors,
+      translators,
       description: info.description,
       chapters,
       source: SOURCE_ID,
       type: mangaTypeFor(info.type),
       year: new Date(info.date_created).getFullYear(),
       likes: info.likes,
+      views: info.views,
       pages: info.pages,
+      releaseFormats: [releaseFormatTitleFor(info.type)],
+      addedAt,
     };
   };
 
