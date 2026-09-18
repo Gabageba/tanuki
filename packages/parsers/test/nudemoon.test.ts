@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { CONTENT_RATING, SORT_ORDER } from '@tanuki/contracts';
+import { CONTENT_RATING, MANGA_TYPE, SORT_ORDER } from '@tanuki/contracts';
 import { createNudeMoonParser } from '../src/sources/nudemoon';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -24,16 +24,20 @@ const LIST_HTML = `<!doctype html><html><body>
   </table>
 </body></html>`;
 
+/** Mirrors the real mobile-skin details page: the title sits in `<h1>`, while every `<a title>`
+ *  in the meta block is an author/series/translator link ("Показать всю мангу от ..."). */
 const DETAILS_HTML = `<!doctype html><html><body>
+  <table><tr><td class='bg_style1'><h1>Альт Тайтл / Основной Тайтл</h1></td></tr></table>
   <table class="news_pic2">
-    <tr><td>
-      <a href="/read/12345" title="Альт Тайтл / Основной Тайтл"></a>
-      <a href="/mangaka/someone">Some Author</a>
-      <a href="/perevod/team-a">TeamA</a>
-      <a href="/tag/action">боевик</a>
-      <img src="ico/time.png" /><span>9 января 2024</span>
-      <div class="description">Полное описание.</div>
-    </td></tr>
+    <tr>
+      <td><font class='small2'>Автор: </font><a title='Показать всю мангу от Some Author' href='/mangaka/someone'>Some Author</a><br>
+        <font class='small2'> Серия: </font><a title='Показать всю мангу по Naruto' href='/seria/naruto'>Naruto</a><br>
+        <font class='small2'> Перевод: </font><a title='Показать все переводы TeamA' href='/perevod/team-a'>TeamA</a>, <a title='Показать все переводы TeamB' href='/perevod/team-b'>TeamB</a></td>
+      <td><img src="/pda/images/ico/time.png"><span class="small2">9 января 2024</span><br>
+        <img src="/pda/images/ico/view.png"><span class="small2">1.7 млн.</span></td>
+    </tr>
+    <tr><td><div class='tag-links'><a href="/tag/комикс">комикс</a> <a href="/tag/action">боевик</a></div></td></tr>
+    <tr><td><div class="description">Полное описание.</div></td></tr>
   </table>
   <img data-src="/covers/12345-full.jpg" />
   <img data-src="/covers/12345-p2.jpg" />
@@ -142,6 +146,9 @@ describe('Nude-Moon parser conformance', () => {
     expect(item!.pages).toBe(16);
     expect(item!.likes).toBe(66);
     expect(item!.year).toBe(2024);
+    expect(item!.addedAt).toBe(new Date(2024, 0, 9).getTime());
+    expect(item!.views).toBe(5_000);
+    expect(item!.type).toBe(MANGA_TYPE.MANGA);
   });
 
   it('getDetails: single synthetic chapter with valid sentinels', async () => {
@@ -150,7 +157,16 @@ describe('Nude-Moon parser conformance', () => {
     expect(manga.chapters).toHaveLength(1);
     const chapter = manga.chapters![0]!;
     expect(chapter.uploadDate === 0 || chapter.uploadDate > 1e12).toBe(true);
-    expect(chapter.scanlator).toBe('TeamA');
+    expect(chapter.scanlator).toBe('TeamA, TeamB');
+    expect(chapter.uploadDate).toBe(new Date(2024, 0, 9).getTime());
+    expect(manga.title).toBe('Основной Тайтл');
+    expect(manga.altTitles).toEqual(['Альт Тайтл']);
+    expect(manga.authors).toEqual(['Some Author']);
+    expect(manga.series).toEqual(['Naruto']);
+    expect(manga.translators).toEqual(['TeamA', 'TeamB']);
+    expect(manga.views).toBe(1_700_000);
+    expect(manga.addedAt).toBe(new Date(2024, 0, 9).getTime());
+    expect(manga.type).toBe(MANGA_TYPE.COMICS);
     expect(manga.description).toBe('Полное описание.');
     expect(manga.largeCoverUrl).toBe(`https://${DOMAIN}/covers/12345-full.jpg`);
     expect(manga.pages).toBe(3);

@@ -4,13 +4,21 @@ import { CookieJar } from 'tough-cookie';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
-import type { RawFilterGroup, RawFilterOption, RawManga, RawPage, RawTag } from '../../types';
+import type {
+  RawFilterGroup,
+  RawFilterOption,
+  RawManga,
+  RawMangaType,
+  RawPage,
+  RawTag,
+} from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
@@ -103,6 +111,26 @@ const parseLikesFromButtonText = (text: string | null): number | null => {
   return match ? Number(match[1]) : null;
 };
 
+/** View counter as the site prints it — "950", "5 тыс.", "1.7 млн." (rounded by the site itself,
+ *  so the thousands/millions forms are only as precise as the source makes them). */
+const parseViews = (text: string | null | undefined): number | null => {
+  const match = /(\d+(?:[.,]\d+)?)\s*(тыс|млн)?/i.exec(text?.trim() ?? '');
+  if (!match) return null;
+  const value = Number(match[1]!.replace(',', '.'));
+  const suffix = match[2]?.toLowerCase();
+  const multiplier = suffix === 'млн' ? 1_000_000 : suffix === 'тыс' ? 1_000 : 1;
+  return Math.round(value * multiplier);
+};
+
+/** The site has no format field of its own — "комикс" and "манхва" are plain tags on it, and
+ *  everything else is the Japanese hentai manga the site is named after. */
+const mangaTypeOfTags = (tags: RawTag[]): RawMangaType => {
+  const titles = new Set(tags.map((tag) => tag.title.toLowerCase()));
+  if (titles.has('комикс')) return MANGA_TYPE.COMICS;
+  if (titles.has('манхва')) return MANGA_TYPE.MANHWA;
+  return MANGA_TYPE.MANGA;
+};
+
 /** "AltTitle / MainTitle" split on the site's own `title` attribute, not the link text. */
 const splitTitle = (raw: string): { title: string; altTitle: string | null } => {
   const idx = raw.indexOf(' / ');
@@ -122,6 +150,22 @@ const textOfLinkContaining = (
     .find((el) => (attrOrNull($(el), 'href') ?? '').includes(hrefSubstr));
   return match ? textOrNull($(match)) : null;
 };
+
+/** Texts of every descendant `<a>` whose `href` contains `hrefSubstr`, deduplicated in order. */
+const textsOfLinksContaining = (
+  $root: Cheerio<AnyNode>,
+  $: CheerioAPI,
+  hrefSubstr: string,
+): string[] => [
+  ...new Set(
+    $root
+      .find('a')
+      .toArray()
+      .filter((el) => (attrOrNull($(el), 'href') ?? '').includes(hrefSubstr))
+      .map((el) => textOrNull($(el)))
+      .filter((text): text is string => !!text),
+  ),
+];
 
 const parseTagLinks = ($links: Cheerio<AnyNode>, $: CheerioAPI): RawTag[] => {
   const seen = new Set<string>();
@@ -206,8 +250,17 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     const coverUrl = absUrl($img, 'data-src', baseUrl) ?? absUrl($img, 'src', baseUrl);
     const description = $row.find('.description').first().html();
     const rowText = $row.text();
-    const dateText = textOrNull($row.find("span.small2[style*='float:right']").first());
+    // The desktop listing prints "Дата: 17 Сентября 2026" / "Просмотров: 5 тыс." as bare text;
+    // the floated span and the view.png icon are the mobile-skin variants of the same values.
+    const dateText =
+      textOrNull($row.find("span.small2[style*='float:right']").first()) ??
+      /Дата:\s*([^\n<]+)/.exec(rowText)?.[1];
     const uploadDate = parseRuFullDate(dateText);
+    const viewsText =
+      /Просмотров:\s*([^\n<]+)/.exec(rowText)?.[1] ??
+      /view\.png[^>]*>(?:\s*<[^>]+>)*\s*([\d.,]+\s*(?:тыс|млн)?)/i.exec($row.html() ?? '')?.[1];
+    const tags = parseTagLinks($row.find('.tag-links a'), $);
+    const series = textsOfLinksContaining($row, $, '/seria/');
 
     return {
       id: generateUid(SOURCE_ID, relUrl),
@@ -218,14 +271,18 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       rating: RATING_UNKNOWN,
       contentRating: CONTENT_RATING.ADULT,
       coverUrl,
-      tags: parseTagLinks($row.find('.tag-links a'), $),
+      tags,
       releaseState: null,
       authors: author ? [author] : [],
+      series,
       largeCoverUrl: null,
       description: description ?? null,
       chapters: null,
+      type: mangaTypeOfTags(tags),
       year: yearOfEpoch(uploadDate),
+      addedAt: uploadDate,
       likes: parseLikesFromRowHtml($row.html() ?? ''),
+      views: parseViews(viewsText),
       pages: parsePagesFromText(rowText),
       source: SOURCE_ID,
     };
@@ -419,8 +476,10 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     if (root.length === 0)
       throw new ParseError(`Cannot find table.news_pic2: ${absoluteUrl}`, SOURCE_ID);
 
-    const $titleLink = root.find('a[title]').first();
-    const { title, altTitle } = splitTitle(attrOrNull($titleLink, 'title') ?? '');
+    // The mobile details page's only titled links are the author/series/translator ones
+    // ("Показать всю мангу от ...") — the title itself lives in the page's `<h1>`, in the same
+    // "AltTitle / MainTitle" form the listing puts in its link `title`.
+    const { title, altTitle } = splitTitle(textOrNull(doc.$('h1').first()) ?? '');
 
     // The mobile skin (forced via the nm_mobile cookie set above) embeds every page image of the
     // gallery as `img[data-src]` right on this same details page — so both the cover placeholder
@@ -430,10 +489,13 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       throw new ParseError(`Cover image not found: ${absoluteUrl}`, SOURCE_ID);
     const largeCoverUrl = absUrl($pageImages.first(), 'data-src', doc.baseUrl);
 
-    const author = textOfLinkContaining(root, doc.$, '/mangaka/');
-    const scanlator = textOfLinkContaining(root, doc.$, '/perevod/');
+    const authors = textsOfLinksContaining(root, doc.$, '/mangaka/');
+    const series = textsOfLinksContaining(root, doc.$, '/seria/');
+    const translators = textsOfLinksContaining(root, doc.$, '/perevod/');
     const timeIcon = doc.$('img[src$="ico/time.png"]').first();
     const uploadDate = parseRuFullDate(textOrNull(timeIcon.next()));
+    const viewIcon = doc.$('img[src$="ico/view.png"]').first();
+    const views = parseViews(textOrNull(viewIcon.next()));
     const likes = parseLikesFromButtonText(textOrNull(doc.$('#ilike').first()));
 
     const description = root.find('.description').first().html();
@@ -451,7 +513,9 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       largeCoverUrl,
       tags,
       releaseState: null,
-      authors: author ? [author] : [],
+      authors,
+      series,
+      translators,
       description: description ?? null,
       chapters: [
         {
@@ -460,14 +524,17 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
           title,
           number: 0,
           volume: 0,
-          scanlator,
+          scanlator: translators.length > 0 ? translators.join(', ') : null,
           uploadDate,
           branch: null,
           source: SOURCE_ID,
         },
       ],
+      type: mangaTypeOfTags(tags),
       year: yearOfEpoch(uploadDate),
+      addedAt: uploadDate,
       likes,
+      views,
       pages: $pageImages.length,
       source: SOURCE_ID,
     };
