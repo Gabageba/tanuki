@@ -93,6 +93,20 @@ const parseCategoryLinks = (
   return tags;
 };
 
+/** Shared by the "Section:" field (`cfg.seriesSelector`) — same link-collecting shape as
+ *  `parseCategoryLinks`, just the link text alone (RawManga.series is `string[]`, not `RawTag[]`). */
+const parseLinkTexts = ($links: Cheerio<AnyNode>, $: CheerioAPI): string[] => {
+  const seen = new Set<string>();
+  const texts: string[] = [];
+  $links.toArray().forEach((el) => {
+    const title = textOrNull($(el));
+    if (!title || seen.has(title)) return;
+    seen.add(title);
+    texts.push(title);
+  });
+  return texts;
+};
+
 /**
  * The Drupal fivestar widget renders `<span class="average-rating">Average: <span>4.6</span>
  * </span>` on a 0..5 star scale, same markup on listing rows and the detail page — verified live
@@ -551,6 +565,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     const title = textOrNull($('h1.title').first()) ?? mangaUrl;
     const author = nullIfEmpty(textOrNull(root.find(cfg.authorSelector).first()));
     const tags = parseCategoryLinks(root.find(cfg.detailTagSelector), $, cfg.id);
+    const series = parseLinkTexts(root.find(cfg.seriesSelector), $);
 
     // og:image/og:description come from Drupal's site-wide metatag module — a reliably present,
     // pre-sized (1500x1500) cover and a real blurb, unlike the reading gallery which has neither.
@@ -595,6 +610,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       tags,
       releaseState: null,
       authors: author ? [author] : [],
+      series,
       description,
       chapters: [chapter],
       source: cfg.id,

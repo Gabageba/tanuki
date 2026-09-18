@@ -39,6 +39,12 @@ export type MultpornConfig = {
   detailTagSelector: string;
   /** Detail-page author selector — Comics and Hentai manga use separate author taxonomies. */
   authorSelector: string;
+  /** Detail-page "Section:" selector — the franchise/original work this node's part of (Drupal's
+   *  field name calls it a "group", the label reads "Section:") — verified live for both types,
+   *  same split as authorSelector: comics uses `field-com-group`, hentai_manga uses
+   *  `field-hentai-com-group`. Its link target is this type's own `seriesPathPrefix` route, but
+   *  it's parsed for its link text (into RawManga.series), not its href. */
+  seriesSelector: string;
   /** Omitted where this type's taxonomy routes aren't verified live — see MultpornFilterConfig. */
   filters?: MultpornFilterConfig;
 };
@@ -53,6 +59,7 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
     listTagSelector: '.views-field-field-category a',
     detailTagSelector: '.field-name-field-category a',
     authorSelector: '.field-name-field-author a',
+    seriesSelector: '.field-name-field-com-group a',
     filters: {
       tagListPath: '/category_comic?rule34=1',
       tagPathPrefix: '/category/',
@@ -69,6 +76,7 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
     listTagSelector: '.views-field-field-h-category a',
     detailTagSelector: '.field-name-field-h-category a',
     authorSelector: '.field-name-field-author-hentai a',
+    seriesSelector: '.field-name-field-hentai-com-group a',
     filters: {
       tagListPath: '/manga_tags?rule34=3',
       tagPathPrefix: '/category_hentai/',

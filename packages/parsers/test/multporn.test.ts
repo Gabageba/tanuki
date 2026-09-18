@@ -16,6 +16,7 @@ const CFG: MultpornConfig = {
   listTagSelector: '.views-field-field-category a',
   detailTagSelector: '.field-name-field-category a',
   authorSelector: '.field-name-field-author a',
+  seriesSelector: '.field-name-field-com-group a',
   filters: {
     tagListPath: '/category_comic?rule34=1',
     tagPathPrefix: '/category/',
@@ -65,6 +66,7 @@ const DETAILS_HTML = `<!doctype html><html><head>
     <div class="content clearfix">
       <div class="field field-name-field-author"><ul class="links"><li><a href="/authors_comics/oda">Oda Eiichiro</a></li></ul></div>
       <div class="field field-name-field-category"><ul class="links"><li><a href="/category/adventure">Adventure</a></li><li><a href="/category/comedy">Comedy</a></li></ul></div>
+      <div class="field field-name-field-com-group"><h3 class="field-label">Section: </h3><ul class="links"><li><a href="/comics/one_piece">One Piece</a></li></ul></div>
       <div class="field field-name-field-vote"><div class="field-items"><div class="field-item even"><div class="fivestar-summary fivestar-summary-average-count"><span class="average-rating">Average: <span>4.6</span></span> <span class="total-votes">(<span>641</span> votes)</span></div></div></div></div>
       <div class="rate-widget-1 rate-widget clear-block rate-average rate-widget-number_up_down" id="rate-node-37487-1-5">
         <div class="rate-number-up-down-rating positive">4.6</div>
@@ -152,6 +154,7 @@ describe('MultPorn parser conformance', () => {
     expect(manga.chapters).toHaveLength(1);
     expect(manga.chapters![0]!.url).toBe('/comics/one-piece');
     expect(manga.authors).toEqual(['Oda Eiichiro']);
+    expect(manga.series).toEqual(['One Piece']);
     expect(manga.tags.map((t) => t.title)).toEqual(['Adventure', 'Comedy']);
     expect(manga.description).toBe('Read One Piece comic for free.');
     expect(manga.coverUrl).toBe(
@@ -192,6 +195,7 @@ const CFG_HENTAI: MultpornConfig = {
   listTagSelector: '.views-field-field-h-category a',
   detailTagSelector: '.field-name-field-h-category a',
   authorSelector: '.field-name-field-author-hentai a',
+  seriesSelector: '.field-name-field-hentai-com-group a',
   filters: {
     tagListPath: '/manga_tags?rule34=3',
     tagPathPrefix: '/category_hentai/',
@@ -277,6 +281,30 @@ const SERIES_LIST_PAGE1_HTML = `<!doctype html><html><body>
   </div>
 </body></html>`;
 
+/** Modeled on `/hentai_manga/aladdin_and_the_magic_lamp` — the "Section:" field uses a
+ *  hentai-specific class (`field-hentai-com-group`) distinct from comics' `field-com-group`. */
+const HENTAI_DETAILS_HTML = `<!doctype html><html><head>
+  <meta property="og:image" content="https://${DOMAIN}/styles/juicebox_1500x1500/public/aladdin-cover.jpg?itok=xyz" />
+  <meta property="og:description" content="Read Aladdin hentai manga for free." />
+  <meta name="dcterms.date" content="2019-06-29T02:17-04:00" />
+</head><body>
+  <article class="node">
+    <h1 class="title" id="page-title">Aladdin and the Magic Lamp</h1>
+    <div class="content clearfix">
+      <div class="field field-name-field-author-hentai"><ul class="links"><li><a href="/authors_hentai_comics/pirontan">Pirontan</a></li></ul></div>
+      <div class="field field-name-field-h-category"><ul class="links"><li><a href="/category_hentai/ahegao">Ahegao</a></li></ul></div>
+      <div class="field field-name-field-hentai-com-group"><h3 class="field-label">Section: </h3><ul class="links"><li><a href="/manga/aladdin">Aladdin</a></li></ul></div>
+      <div class="field field-name-field-com-pages"><div class="field-items"><div class="field-item even"><div class="juicebox-parent">
+        <div class="juicebox-container">
+          <noscript>
+            <p class="jb-image"><img src="/styles/juicebox_medium/public/aladdin/001.png?itok=aaa" alt="" /><br/></p>
+          </noscript>
+        </div>
+      </div></div></div></div>
+    </div>
+  </article>
+</body></html>`;
+
 const HENTAI_NEW_HTML = `<!doctype html><html><body>
   <div class="view-content">
     <div class="masonry-item views-row">
@@ -331,6 +359,10 @@ describe('MultPorn Hentai parser filters', () => {
     http.register((url) => url.includes('/manga/aladdin'), {
       status: 200,
       body: TAXONOMY_BROWSE_HTML,
+    });
+    http.register((url) => url.endsWith('/hentai_manga/aladdin_and_the_magic_lamp'), {
+      status: 200,
+      body: HENTAI_DETAILS_HTML,
     });
     http.register((url) => url.includes('/new'), { status: 200, body: HENTAI_NEW_HTML });
     return http;
@@ -520,6 +552,14 @@ describe('MultPorn Hentai parser filters', () => {
 
     await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.RATING });
     expect(http.requests.findLast((r) => r.url.includes('/new'))!.url).toContain('sort_by=changed');
+  });
+
+  it('getDetails: series parsed from the hentai-specific "Section:" field selector', async () => {
+    const http = setUpHentaiFixtures();
+    const parser = createMultpornParser(CFG_HENTAI, makeHentaiContext(http));
+    const manga = await parser.getDetails('/hentai_manga/aladdin_and_the_magic_lamp');
+    expect(manga.series).toEqual(['Aladdin']);
+    expect(manga.authors).toEqual(['Pirontan']);
   });
 });
 
