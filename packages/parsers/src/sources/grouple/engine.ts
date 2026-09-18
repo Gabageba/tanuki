@@ -901,18 +901,24 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     const legacyMagazines = textsOf(root.find('.elem_gournal').find('a.element-link'));
 
     // Новая вёрстка (`.cr-main-persons`): каждая карточка несёт свою роль текстом
-    // (`.cr-main-person-item__role` — «Автор», «Сценарист», «Художник», «Переводчик»/«Основной
-    // переводчик») — так что роли не нужно ни угадывать, ни вычитать переводчиков постфактум.
+    // (`.cr-main-person-item__role` — «Автор»/«Авторы», «Сценарист», «Художник», «Переводчик»/
+    // «Основной переводчик») — так что роли не нужно ни угадывать, ни вычитать переводчиков
+    // постфактум. Несколько человек с одной ролью («Авторы») сидят в одной карточке как несколько
+    // соседних `.cr-main-person-item__name` — берём их все, а не только первого.
     const heroAuthors: string[] = [];
     const heroArtists: string[] = [];
     doc.$('.cr-main-persons .cr-main-person-item').each((_, el) => {
       const item = doc.$(el);
       const role = textOrNull(item.find('.cr-main-person-item__role').first())?.toLowerCase();
-      const name = nullIfEmpty(textOrNull(item.find('.cr-main-person-item__name').first()));
-      if (!role || !name) return;
+      if (!role) return;
       if (role.includes('переводчик')) return; // покрыто отдельно через .cr-teams ниже
-      if (role.includes('художник')) heroArtists.push(name);
-      else heroAuthors.push(name); // «Автор», «Сценарист» и любые другие текстовые роли
+      const names = item
+        .find('.cr-main-person-item__name')
+        .toArray()
+        .map((nameEl) => nullIfEmpty(textOrNull(doc.$(nameEl))))
+        .filter((n): n is string => n !== null);
+      if (role.includes('художник')) heroArtists.push(...names);
+      else heroAuthors.push(...names); // «Автор»/«Авторы», «Сценарист» и другие текстовые роли
     });
 
     // Новая вёрстка (`.cr-info-details-item`) — тот же виджет, что отдаёт «Выпуск»/«Перевод» ниже,
@@ -945,10 +951,10 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     ];
     const translators = teamTranslators.length > 0 ? teamTranslators : chapterTranslators;
 
+    // Ссылка на категорию в `.cr-hero-short-details__item` больше не несёт класс `element-link`
+    // (снят при редизайне) — матчим по одному только href, чтобы не терять type молча.
     const categoryText = nullIfEmpty(
-      textOrNull(
-        doc.$(".cr-hero-short-details__item a.element-link[href*='/list/category/']").first(),
-      ),
+      textOrNull(doc.$(".cr-hero-short-details__item a[href*='/list/category/']").first()),
     );
     const type = mangaTypeByCategory(categoryText);
 
