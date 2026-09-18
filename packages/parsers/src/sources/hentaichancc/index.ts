@@ -166,6 +166,9 @@ type AuthorRef = {
 type TranslatorRef = {
   translators_id: { name: string | null } | null;
 };
+type SeriesRef = {
+  series_id: { name: string | null } | null;
+};
 
 type MangaDetail = {
   id: number;
@@ -179,6 +182,7 @@ type MangaDetail = {
   tags: TagRef[];
   authors: AuthorRef[];
   translators: TranslatorRef[];
+  series: SeriesRef[];
   type: HentaichanMangaType;
   likes: number;
   views: number;
@@ -407,7 +411,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
           'id,name,slug,cover.filename_disk,description,russian_name,english_name,romaji_name,' +
           'type,likes,views,pages,date_created,' +
           'tags.tags_id.name,tags.tags_id.slug,authors.authors_id.name,' +
-          'translators.translators_id.name',
+          'translators.translators_id.name,series.series_id.name',
       }),
       fetchChapterIds(mangaId),
     ]);
@@ -445,6 +449,12 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       ),
     ];
 
+    // "Оригинальные работы" is the site's own series for works without a source franchise
+    // (~3/4 of the catalog, verified live) — kept as-is, it's what the site itself shows there.
+    const series = [
+      ...new Set(info.series.map((s) => s.series_id?.name).filter((n): n is string => !!n)),
+    ];
+
     const cover = assetUrl(info.cover);
 
     return {
@@ -460,6 +470,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       tags,
       releaseState: null,
       authors,
+      series,
       translators,
       description: info.description,
       chapters,

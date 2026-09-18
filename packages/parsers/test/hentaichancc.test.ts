@@ -49,6 +49,7 @@ const DETAILS_RESPONSE = JSON.stringify({
       tags: [{ tags_id: { name: 'ahegao', slug: 'ahegao' } }],
       authors: [{ authors_id: { name: 'Satomi' } }],
       translators: [{ translators_id: { name: 'Degrad' } }],
+      series: [{ series_id: { name: 'Sword Art Online' } }, { series_id: null }],
       type: 'comix',
       likes: 128,
       views: 3400,
@@ -233,6 +234,7 @@ describe('HentaiChan.cc parser conformance', () => {
     expect(manga.tags.map((t) => t.title)).toEqual(['Ahegao']);
     expect(manga.authors).toEqual(['Satomi']);
     expect(manga.translators).toEqual(['Degrad']);
+    expect(manga.series).toEqual(['Sword Art Online']);
     expect(manga.type).toBe(MANGA_TYPE.COMICS);
     expect(manga.year).toBe(2025);
     expect(manga.likes).toBe(128);
