@@ -114,6 +114,54 @@ const parseListingYear = ($row: Cheerio<AnyNode>): number | null => {
 };
 
 /**
+ * Same fivestar widget as `parseAverageRating` — `<span class="total-votes">(<span>641</span>
+ * votes)</span>` sits right next to the average, same markup on listing rows and the detail page.
+ */
+const parseVotesCount = ($scope: Cheerio<AnyNode>): number | null => {
+  const text = textOrNull($scope.find('.total-votes').first());
+  const match = text?.match(/\d+/);
+  return match ? Number.parseInt(match[0], 10) : null;
+};
+
+/**
+ * Drupal core Statistics module's own per-node pageview counter, rendered on the detail page
+ * footer as `<li class="statistics_counter"><span>21141 views</span></li>` — verified live it's
+ * the same underlying figure as `/new`'s own Views column (`totalcount`), just different markup.
+ */
+const parseViewsCount = ($scope: Cheerio<AnyNode>): number | null => {
+  const text = textOrNull($scope.find('.statistics_counter').first());
+  const match = text?.replace(/,/g, '').match(/\d+/);
+  return match ? Number.parseInt(match[0], 10) : null;
+};
+
+/**
+ * The Rate module's own "+/-" widget (`rate_widget_number_up_down`) reports a distinct score from
+ * the fivestar `average-rating` above it — verified live the two numbers differ on the same page.
+ * `$scope` must be `root` (`article.node`): the identical widget markup repeats once per comment
+ * further down the document, outside that element.
+ */
+const parseLikes = ($scope: Cheerio<AnyNode>): number | null => {
+  const text = textOrNull(
+    $scope.find('.rate-widget-number_up_down .rate-number-up-down-rating').first(),
+  );
+  const match = text?.match(/-?[\d.]+/);
+  return match ? Number.parseFloat(match[0]) : null;
+};
+
+/**
+ * Drupal's site-wide metatag module stamps every node page with its own timestamp here
+ * (`<meta name="dcterms.date" content="2019-06-29T02:17-04:00" />`) — the only date exposed
+ * anywhere on the details page (verified live against several titles, old and new). Doubles as
+ * the title's one and only chapter's upload date, since a hentai_manga/comics node's whole gallery
+ * is uploaded in one shot — there's no separate per-chapter timeline to parse.
+ */
+const parseDetailDate = ($: CheerioAPI): number => {
+  const content = attrOrNull($('meta[name="dcterms.date"]').first(), 'content');
+  const parsed = content ? Date.parse(content) : NaN;
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+/**
  * The gallery's real markup lives inside `<noscript>` ("for non-javascript devices" — the JS
  * juicebox widget it's a fallback for is never executed here anyway). htmlparser2 keeps a
  * `<noscript>`'s contents as a raw text blob rather than parsing it into queryable child
@@ -520,6 +568,8 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       extractGalleryImageSrcs(root).map((src) => originalFileUrl(toAbsoluteUrl(src, domain))),
     );
 
+    const addedAt = parseDetailDate($);
+
     const chapter: RawChapter = {
       id: generateUid(cfg.id, mangaUrl),
       url: mangaUrl,
@@ -527,9 +577,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       number: 0,
       volume: 0,
       scanlator: null,
-      // Not exposed anywhere on the details page itself (only on `/new` listing rows, which
-      // getDetails never sees) — 0 is the documented "unknown" sentinel, not a parsing gap.
-      uploadDate: 0,
+      uploadDate: addedAt,
       branch: null,
       source: cfg.id,
     };
@@ -551,6 +599,11 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       chapters: [chapter],
       source: cfg.id,
       pages: galleryUrls.size > 0 ? galleryUrls.size : null,
+      year: addedAt > 0 ? new Date(addedAt).getUTCFullYear() : null,
+      addedAt: addedAt > 0 ? addedAt : undefined,
+      votesCount: parseVotesCount(root),
+      views: parseViewsCount(root),
+      likes: parseLikes(root),
     };
   };
 

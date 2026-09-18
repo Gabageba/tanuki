@@ -58,6 +58,7 @@ const SEARCH_HTML = `<!doctype html><html><body>
 const DETAILS_HTML = `<!doctype html><html><head>
   <meta property="og:image" content="https://${DOMAIN}/styles/juicebox_1500x1500/public/one-piece-cover.jpg?itok=xyz" />
   <meta property="og:description" content="Read One Piece comic for free." />
+  <meta name="dcterms.date" content="2019-06-29T02:17-04:00" />
 </head><body>
   <article class="node">
     <h1 class="title" id="page-title">One Piece</h1>
@@ -65,6 +66,9 @@ const DETAILS_HTML = `<!doctype html><html><head>
       <div class="field field-name-field-author"><ul class="links"><li><a href="/authors_comics/oda">Oda Eiichiro</a></li></ul></div>
       <div class="field field-name-field-category"><ul class="links"><li><a href="/category/adventure">Adventure</a></li><li><a href="/category/comedy">Comedy</a></li></ul></div>
       <div class="field field-name-field-vote"><div class="field-items"><div class="field-item even"><div class="fivestar-summary fivestar-summary-average-count"><span class="average-rating">Average: <span>4.6</span></span> <span class="total-votes">(<span>641</span> votes)</span></div></div></div></div>
+      <div class="rate-widget-1 rate-widget clear-block rate-average rate-widget-number_up_down" id="rate-node-37487-1-5">
+        <div class="rate-number-up-down-rating positive">4.6</div>
+      </div>
       <div class="field field-name-field-com-pages"><div class="field-items"><div class="field-item even"><div class="juicebox-parent">
         <div class="juicebox-container">
           <noscript>
@@ -73,8 +77,14 @@ const DETAILS_HTML = `<!doctype html><html><head>
           </noscript>
         </div>
       </div></div></div></div>
+      <ul class="links inline links-custom"><li class="statistics_counter first last"><span>123,648 views</span></li></ul>
     </div>
   </article>
+  <div class="comment-wrapper">
+    <div class="rate-widget-1 rate-widget clear-block rate-average rate-widget-number_up_down" id="rate-comment-1-1-5">
+      <div class="rate-number-up-down-rating positive">1.1</div>
+    </div>
+  </div>
 </body></html>`;
 
 const makeContext = (http: FakeHttpClient): ParserContext => {
@@ -149,6 +159,19 @@ describe('MultPorn parser conformance', () => {
     );
     expect(manga.rating).toBeCloseTo(0.92);
     expect(manga.pages).toBe(2);
+  });
+
+  it('getDetails: votes/views/likes and the dcterms.date meta drive year, addedAt and the chapter upload date', async () => {
+    const manga = await parser.getDetails('/comics/one-piece');
+    const expectedDate = Date.parse('2019-06-29T02:17-04:00');
+    expect(manga.votesCount).toBe(641);
+    expect(manga.views).toBe(123648);
+    // The manga's own rate-widget (id="rate-node-...") — not the 1.1 from the comment's widget
+    // further down the document, outside article.node.
+    expect(manga.likes).toBeCloseTo(4.6);
+    expect(manga.year).toBe(2019);
+    expect(manga.addedAt).toBe(expectedDate);
+    expect(manga.chapters![0]!.uploadDate).toBe(expectedDate);
   });
 
   it('getPages: absolute, pre-resolved, de-styled (original-file) urls', async () => {
