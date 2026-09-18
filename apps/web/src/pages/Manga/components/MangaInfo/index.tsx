@@ -1,17 +1,17 @@
-import { DataList, Divider, SimpleGrid, Space, Stack, Text, Title } from '@mantine/core';
+import { Divider, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import type { ReactNode } from 'react';
 import type { Manga } from '@tanuki/contracts';
 import { getLabelByContentRating, getLabelByMangaType } from '@/entities/source/lib';
 import { isEmpty } from '@/shared/lib/isEmpty';
-import Mdash from '@/shared/ui/Mdash';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import MangaState from '@/entities/manga/MangaState';
 import useDateFormat from '@/shared/hooks/useDateFormat';
+import MangaInfoItems from './MangaInfoItems';
+import type { MangaInfoItem } from '../../models';
 
 type InfoData = {
   label: string;
-  items: { label: string; value: ReactNode | undefined }[];
+  items: MangaInfoItem[];
 };
 
 type Props = {
@@ -182,19 +182,7 @@ function MangaInfo({ manga }: Props) {
               {block.label}
             </Text>
             <Divider />
-            <DataList orientation="vertical">
-              {block.items.map((item, index) => (
-                <DataList.Item key={index}>
-                  <DataList.ItemLabel fz={12} lh={1}>
-                    {item.label}
-                  </DataList.ItemLabel>
-                  <Space h={8} />
-                  <DataList.ItemValue lh={1.2}>
-                    {isEmpty(item.value) ? <Mdash /> : item.value}
-                  </DataList.ItemValue>
-                </DataList.Item>
-              ))}
-            </DataList>
+            <MangaInfoItems items={block.items} />
           </Stack>
         ))}
       </SimpleGrid>
