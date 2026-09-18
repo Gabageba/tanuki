@@ -3,6 +3,7 @@ import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  MANGA_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
@@ -15,8 +16,6 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
 import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
-import { parseGroupleDate } from '../../core/text/dates';
-import { nullIfEmpty } from '../../core/text/strings';
 import { ParseError } from '../../errors';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
@@ -131,6 +130,65 @@ const parseTagLinks = ($links: Cheerio<AnyNode>, $: CheerioAPI): RawTag[] => {
 };
 
 /**
+ * Both the list tile and the details page print like/view/date/time as an icon (`<img>` whose
+ * `src`/`data-src` ends in the given file) followed by a sibling `.cifra-info-set` holding the
+ * value — same `ul.comix-info-set` template in both places, just a different subtree to search.
+ */
+const findInfoSetValue = (
+  $root: Cheerio<AnyNode>,
+  $: CheerioAPI,
+  iconFile: string,
+): string | null => {
+  const $li = $root
+    .find('.comix-info-set li')
+    .toArray()
+    .map((el) => $(el))
+    .find((li) => {
+      const $img = li.find('img').first();
+      const src = attrOrNull($img, 'data-src') ?? attrOrNull($img, 'src') ?? '';
+      return src.includes(iconFile);
+    });
+  return $li ? textOrNull($li.find('.cifra-info-set').first()) : null;
+};
+
+/**
+ * Like/view counts render as a plain integer under ~1000, and abbreviate above that with a
+ * decimal + "K" suffix on most rows ("33.1K") — except some very high view counts inexplicably
+ * still render as a raw, unabbreviated integer regardless of size ("3671505"), verified live on
+ * the same listing page as rows that do abbreviate. This parses either form; a bare "M"/million
+ * suffix was never observed live, so it isn't handled.
+ */
+const parseAbbreviatedNumber = (text: string | null | undefined): number | null => {
+  const match = /^(\d+(?:\.\d+)?)\s*(K)?$/i.exec(text?.trim() ?? '');
+  if (!match) return null;
+  const multiplier = match[2] ? 1000 : 1;
+  return Math.round(Number(match[1]) * multiplier);
+};
+
+/** List tile date is bare "YYYY-MM-DD"; the details page additionally has a separate "HH:MM"
+ *  time stat next to it (see findInfoSetValue's `time.svg` icon) — merged in here when given. */
+const parseInfoSetDate = (dateText: string | null, timeText?: string | null): number => {
+  const dateMatch = /(\d{4})-(\d{2})-(\d{2})/.exec(dateText ?? '');
+  if (!dateMatch) return 0;
+  const timeMatch = /(\d{2}):(\d{2})/.exec(timeText ?? '');
+  const date = new Date(
+    Number(dateMatch[1]),
+    Number(dateMatch[2]) - 1,
+    Number(dateMatch[3]),
+    timeMatch ? Number(timeMatch[1]) : 0,
+    timeMatch ? Number(timeMatch[2]) : 0,
+  );
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+};
+
+const yearOfEpoch = (epochMs: number): number | null =>
+  epochMs ? new Date(epochMs).getFullYear() : null;
+
+/** Every title on the site is prefixed "Порно комикс " — both the list tile's `.comix_title` and
+ *  the details page's `<h1>` render it verbatim, so both need it stripped the same way. */
+const stripTitlePrefix = (title: string): string => title.replace('Порно комикс ', '');
+
+/**
  * The page markup has *three* `<ul id="comix_directory">` (duplicate, non-unique ids): a VIP
  * promo carousel, the real paginated catalog, and a "more comics" widget nested inside
  * `#more_comics_directory`. Only the middle one tracks `sort=`/`page=` — the other two are
@@ -158,10 +216,11 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
     if (!hrefRaw) return null;
     const publicUrl = toAbsoluteUrl(hrefRaw, domain);
     const relUrl = toRelativeUrl(publicUrl, domain);
-    const title =
-      textOrNull($item.find('.comix_title').first())?.replace('Порно комикс ', '') ?? '';
+    const titleText = textOrNull($item.find('.comix_title').first());
+    const title = titleText ? stripTitlePrefix(titleText) : '';
     const $img = $item.find('img.comix_img').first();
     const coverUrl = attrOrNull($img, 'data-src') ? absUrl($img, 'data-src', baseUrl) : null;
+    const uploadDate = parseInfoSetDate(findInfoSetValue($item, $, 'date.svg'));
 
     return {
       id: generateUid(SOURCE_ID, relUrl),
@@ -178,6 +237,11 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       largeCoverUrl: null,
       description: null,
       chapters: null,
+      type: MANGA_TYPE.COMICS,
+      year: yearOfEpoch(uploadDate),
+      addedAt: uploadDate,
+      likes: parseAbbreviatedNumber(findInfoSetValue($item, $, 'like.svg')),
+      views: parseAbbreviatedNumber(findInfoSetValue($item, $, 'views.svg')),
       source: SOURCE_ID,
     };
   };
@@ -229,14 +293,19 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
     );
   };
 
-  /** "Студия:" / "Переводчик:" are two `.studio_translator_box` blocks; value is the sibling link's text. */
-  const findStudioTranslatorValue = ($: CheerioAPI, label: string): string | null => {
+  /** "Студия:" / "Переводчик:" are two `.studio_translator_box` blocks; each sibling
+   *  `.link_button` of the label is one linked name — a translator can have more than one. */
+  const findStudioTranslatorValues = ($: CheerioAPI, label: string): string[] => {
     const $label = $('.studio_translator')
       .toArray()
       .map((el) => $(el))
       .find((el) => (textOrNull(el) ?? '').includes(label));
-    if (!$label) return null;
-    return nullIfEmpty(textOrNull($label.siblings('.link_button').find('a').first()));
+    if (!$label) return [];
+    return $label
+      .siblings('.link_button')
+      .toArray()
+      .map((el) => textOrNull($(el).find('a').first()))
+      .filter((text): text is string => !!text);
   };
 
   const findDescriptionHtml = ($: CheerioAPI): string | null => {
@@ -251,16 +320,21 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
     const absoluteUrl = toAbsoluteUrl(mangaUrl, domain);
     const doc = await ctx.http.getHtml(absoluteUrl);
 
-    const title = textOrNull(doc.$('#comix_description h1').first()) ?? mangaUrl;
+    const titleText = textOrNull(doc.$('#comix_description h1').first());
+    const title = titleText ? stripTitlePrefix(titleText) : mangaUrl;
     const $cover = doc.$('#comix_cover_img').first();
     const largeCoverUrl = attrOrNull($cover, 'data-src')
       ? absUrl($cover, 'data-src', doc.baseUrl)
       : null;
-    const author = findStudioTranslatorValue(doc.$, 'Студия');
-    const scanlator = findStudioTranslatorValue(doc.$, 'Переводчик');
-    const uploadDate = parseGroupleDate(
-      textOrNull(doc.$('li[title="Дата публикации комикса"] .cifra-info-set').first()),
+    const authors = findStudioTranslatorValues(doc.$, 'Студия');
+    const translators = findStudioTranslatorValues(doc.$, 'Переводчик');
+    const $description = doc.$('#comix_description');
+    const uploadDate = parseInfoSetDate(
+      findInfoSetValue($description, doc.$, 'date.svg'),
+      findInfoSetValue($description, doc.$, 'time.svg'),
     );
+    const likes = parseAbbreviatedNumber(findInfoSetValue($description, doc.$, 'like.svg'));
+    const views = parseAbbreviatedNumber(findInfoSetValue($description, doc.$, 'views.svg'));
     // Was `tag_pagex` (with an `x`) — that's the other domain listed for this source in
     // SOURCE_CATALOG, not the one `ctx.domain` actually points at, whose own route is
     // `tag_page` (no `x`); the mismatched substring silently matched nothing here, so every
@@ -279,7 +353,8 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       largeCoverUrl,
       tags,
       releaseState: null,
-      authors: author ? [author] : [],
+      authors,
+      translators,
       description: findDescriptionHtml(doc.$),
       chapters: [
         {
@@ -288,12 +363,17 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
           title,
           number: 0,
           volume: 0,
-          scanlator,
+          scanlator: translators.length > 0 ? translators.join(', ') : null,
           uploadDate,
           branch: null,
           source: SOURCE_ID,
         },
       ],
+      type: MANGA_TYPE.COMICS,
+      year: yearOfEpoch(uploadDate),
+      addedAt: uploadDate,
+      likes,
+      views,
       source: SOURCE_ID,
     };
   };
