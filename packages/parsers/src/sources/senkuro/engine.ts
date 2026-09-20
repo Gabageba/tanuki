@@ -28,6 +28,7 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
 import { toTitleCase } from '../../core/text/strings';
+import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { ParseError, SourceUnavailableError } from '../../errors';
 import { catalogEntryFor } from '../catalog';
 import type { SenkuroConfig } from './config';
@@ -966,8 +967,8 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       .map((ch): RawChapter | null => {
         if (!ch.id || !ch.slug) return null;
         const numberRaw = ch.number?.replace(',', '.');
-        const number = numberRaw ? Number.parseFloat(numberRaw) || 0 : 0;
-        const volume = ch.volume ? Number.parseInt(ch.volume, 10) || 0 : 0;
+        const number = numberRaw ? parseFloatOrNull(numberRaw) : null;
+        const volume = ch.volume ? parseIntOrNull(ch.volume) : null;
         const scanlator =
           [
             ...new Set(
@@ -983,7 +984,10 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
           url,
           scanlator,
           uploadDate: parseIsoDate(ch.createdAt),
-          branch: null,
+          // Команда перевода у Senkuro задаётся на главу, а не на тайтл: у одного тайтла
+          // параллельно идут переводы нескольких команд, каждый со своей нумерацией — это и есть
+          // ветки, как у grouple и libsocial, иначе они склеиваются в один список.
+          branch: scanlator,
           source: SOURCE_ID,
         };
       })

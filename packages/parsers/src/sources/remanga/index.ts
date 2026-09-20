@@ -581,8 +581,8 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
         chapters.push({
           id: generateUid(SOURCE_ID, cjo.id),
           title: cjo.name ? toTitleCase(cjo.name) : null,
-          number: cjo.chapter ?? 0,
-          volume: cjo.tome ?? 0,
+          number: cjo.chapter ?? null,
+          volume: cjo.tome ?? null,
           url: `/api/v2/titles/chapters/${cjo.id}/`,
           scanlator: cjo.publishers?.[0]?.name ?? branchName,
           uploadDate: parseIsoDate(cjo.upload_date),

@@ -7,11 +7,13 @@ import {
   SOURCE_ID,
 } from '@tanuki/contracts';
 import {
+  compareChapterNumber,
   computeBranches,
   normalizeChapter,
   normalizeFilterGroup,
   normalizeTitle,
   pickDefaultBranch,
+  toBranchKey,
 } from './normalize';
 import type { RawChapter, RawFilterGroup, RawTitle } from '../parsers-client/parsers-client.types';
 
@@ -42,8 +44,8 @@ const chapter = (overrides: Partial<RawChapter> = {}): RawChapter => {
   return {
     id: 1,
     title: null,
-    number: 0,
-    volume: 0,
+    number: null,
+    volume: null,
     url: '/manga/1/ch1',
     scanlator: null,
     uploadDate: 0,
@@ -196,14 +198,30 @@ describe('normalizeTitle', () => {
 });
 
 describe('normalizeChapter', () => {
-  it('maps 0 (unknown sentinel) to null for number/volume, keeps positive values', () => {
-    const c = normalizeChapter(SOURCE_ID.DESUME, 'title-id', chapter({ number: 0, volume: 0 }));
-    expect(c.number).toBeNull();
-    expect(c.volume).toBeNull();
+  it('passes number/volume through, including a real chapter 0', () => {
+    const c = normalizeChapter(SOURCE_ID.DESUME, 'title-id', chapter({ number: 0, volume: 1 }));
+    expect(c.number).toBe(0);
+    expect(c.volume).toBe(1);
 
     const c2 = normalizeChapter(SOURCE_ID.DESUME, 'title-id', chapter({ number: 12.5, volume: 3 }));
     expect(c2.number).toBe(12.5);
     expect(c2.volume).toBe(3);
+
+    const c3 = normalizeChapter(SOURCE_ID.DESUME, 'title-id', chapter({}));
+    expect(c3.number).toBeNull();
+    expect(c3.volume).toBeNull();
+  });
+
+  it('compareChapterNumber orders by number and pushes numberless chapters to the tail', () => {
+    const chapters = [
+      chapter({ id: 1, number: null }),
+      chapter({ id: 2, number: 2 }),
+      chapter({ id: 3, number: 0 }),
+      chapter({ id: 4, number: null }),
+    ];
+    // Глава 0 — настоящая первая глава, а не «номер неизвестен»: она идёт перед второй,
+    // безномерные же сохраняют исходный порядок источника в хвосте.
+    expect([...chapters].sort(compareChapterNumber).map((c) => c.id)).toEqual([3, 2, 1, 4]);
   });
 
   it('maps 0 uploadDate to null, otherwise formats as YYYY-MM-DDTHH:MM:SSZ from epoch millis', () => {
@@ -272,5 +290,12 @@ describe('branch grouping', () => {
     expect(branches[0]!.id).toBe('default');
     expect(branches[0]!.chaptersCount).toBe(2);
     expect(branches[0]!.lastUpdatedAt).toBe('1970-01-01T00:00:03Z');
+  });
+
+  it('toBranchKey maps the synthetic branch id back to the null branch', () => {
+    const chapters = [chapter({ id: 1, branch: null, uploadDate: 1000 })];
+    const branchId = computeBranches(chapters)[0]!.id;
+    expect(toBranchKey(branchId)).toBeNull();
+    expect(toBranchKey('A')).toBe('A');
   });
 });

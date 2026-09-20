@@ -508,7 +508,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       id: generateUid(SOURCE_ID, relUrl),
       title: nullIfEmpty(title),
       number: chapterNumber ?? index + 1,
-      volume: 0,
+      volume: null,
       url: relUrl,
       scanlator: null,
       uploadDate: parseDdMmYyyy(textOrNull($a.find('.chapters__add-date').first())),

@@ -154,7 +154,7 @@ export const createAComicsParser = (ctx: ParserContext): Parser => {
           id: generateUid(SOURCE_ID, mangaUrl),
           title,
           number: 1,
-          volume: 0,
+          volume: null,
           url: chapterUrl,
           scanlator: null,
           uploadDate: 0,

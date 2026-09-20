@@ -4,7 +4,8 @@
  * depends on these exact sentinel conventions and must not change when this package does:
  *
  * - rating: -1 = unknown, else a float already scaled to 0..1 (not 0..10).
- * - number / volume: 0 = unknown.
+ * - number / volume: null = unknown (0 is a real chapter number — see acomics/chan
+ *   prologues and desu's "Глава 0").
  * - uploadDate: epoch MILLISECONDS, 0 = unknown.
  * - branch: null allowed on both title-less list items and chapters.
  * - coverUrl: null allowed (normalize.ts turns it into '').
@@ -123,8 +124,8 @@ export type RawTitle = {
 export type RawChapter = {
   id: number;
   title: string | null;
-  number: number;
-  volume: number;
+  number: number | null;
+  volume: number | null;
   url: string;
   scanlator: string | null;
   uploadDate: number;

@@ -642,15 +642,18 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         branchPromise = getBranchName(jo.branchId);
         branchNames.set(jo.branchId, branchPromise);
       }
+      // Ветка у Inkstory и есть команда перевода — остальные источники с ветками (grouple,
+      // libsocial, remanga) отдают то же имя и в scanlator, поэтому оно дублируется и здесь.
+      const branch = await branchPromise;
       chapters.push({
         id: generateUid(SOURCE_ID, jo.id),
         title: jo.name ?? null,
-        number: jo.number ?? 0,
-        volume: jo.volume ?? 0,
+        number: jo.number ?? null,
+        volume: jo.volume ?? null,
         url: jo.id,
-        scanlator: null,
+        scanlator: branch,
         uploadDate: parseIsoDate(jo.createdAt),
-        branch: await branchPromise,
+        branch,
         source: SOURCE_ID,
       });
     }

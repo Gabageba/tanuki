@@ -305,13 +305,13 @@ const summaryText = (summary: unknown): string => {
   return paragraphs.filter((p) => p.length > 0).join('\n\n');
 };
 
-const toNumber = (value: number | string | undefined): number => {
+const toNumber = (value: number | string | undefined): number | null => {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
     const parsed = Number.parseFloat(value);
-    return Number.isNaN(parsed) ? 0 : parsed;
+    return Number.isNaN(parsed) ? null : parsed;
   }
-  return 0;
+  return null;
 };
 
 const parseIsoDate = (value: string | undefined): number => {
@@ -547,7 +547,9 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
         if (branch.restricted_view && branch.restricted_view.is_open === false) continue;
         const branchId = branch.branch_id ?? 0;
         const team = branch.teams?.[0]?.name ?? null;
-        let chapterUrl = `${mangaUrl}/chapter?number=${number}&volume=${volume}`;
+        // Ветка главы адресуется парой number/volume — неизвестное значение сайт ждёт нулём,
+        // поэтому в url подставляется 0, хотя наружу такая глава уходит с number: null.
+        let chapterUrl = `${mangaUrl}/chapter?number=${number ?? 0}&volume=${volume ?? 0}`;
         if (branchId !== 0) chapterUrl += `&branch_id=${branchId}`;
         chapters.push({
           id: generateUid(cfg.id, branch.id),

@@ -479,8 +479,8 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       ? generateUid(SOURCE_ID, chapterIdRaw)
       : generateUid(SOURCE_ID, url);
     const match = CHAPTER_PATH_REGEX.exec(url);
-    const volume = match ? (parseIntOrNull(match[1]!) ?? 0) : 0;
-    const number = match ? (parseFloatOrNull(match[2]!) ?? 0) : 0;
+    const volume = match ? parseIntOrNull(match[1]!) : null;
+    const number = match ? parseFloatOrNull(match[2]!) : null;
     const date = textOrNull($li.find('span.date').first());
     return {
       id: chapterId,

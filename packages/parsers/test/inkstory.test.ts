@@ -408,6 +408,7 @@ describe('Inkstory parser conformance', () => {
     }
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.chapters![0]!.branch).toBe('TeamA');
+    expect(manga.chapters![0]!.scanlator).toBe('TeamA');
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения']);
     expect(manga.authors).toEqual(['Oda Eiichiro']);

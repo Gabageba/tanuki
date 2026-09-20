@@ -125,13 +125,21 @@ export const normalizeTitle = (
   };
 };
 
+/** Главу без номера сравнивать не с чем — источник его просто не отдаёт, поэтому такие главы
+ *  уходят в хвост нумерованных, сохраняя порядок источника (Array.prototype.sort стабилен). */
+export const compareChapterNumber = (a: RawChapter, b: RawChapter): number => {
+  if (a.number === null) return b.number === null ? 0 : 1;
+  if (b.number === null) return -1;
+  return a.number - b.number;
+};
+
 export const normalizeChapter = (sourceId: string, titleId: string, raw: RawChapter): Chapter => {
   const id = `${sourceId}:${encodeChapterId({ id: raw.id, url: raw.url, branch: raw.branch })}`;
   return {
     id,
     titleId,
-    number: raw.number > 0 ? raw.number : null,
-    volume: raw.volume > 0 ? raw.volume : null,
+    number: raw.number,
+    volume: raw.volume,
     title: raw.title,
     branch: raw.branch,
     scanlator: raw.scanlator,
@@ -178,11 +186,19 @@ const groupByBranch = (chapters: RawChapter[]): BranchGroup[] => {
     });
 };
 
+/** Источник без веток помечает главы `branch: null` — наружу такая ветка уходит под
+ *  синтетическим id, который listChapters разворачивает обратно через toBranchKey. */
+export const DEFAULT_BRANCH_ID = 'default';
+
+export const toBranchKey = (branchId: string): string | null => {
+  return branchId === DEFAULT_BRANCH_ID ? null : branchId;
+};
+
 export const computeBranches = (chapters: RawChapter[]): Branch[] => {
   return groupByBranch(chapters).map(({ key, items }) => {
     const freshness = Math.max(0, ...items.map((chapter) => chapter.uploadDate));
     return {
-      id: key ?? 'default',
+      id: key ?? DEFAULT_BRANCH_ID,
       name: key,
       scanlator: items[0]?.scanlator ?? null,
       chaptersCount: items.length,

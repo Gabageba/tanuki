@@ -11,12 +11,14 @@ import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { decodeChapterId, decodeTitleId } from '../common/opaque-id';
 import {
+  compareChapterNumber,
   computeBranches,
   normalizeChapter,
   normalizeFilterGroup,
   normalizeTitle,
   normalizePage,
   pickDefaultBranch,
+  toBranchKey,
 } from '../common/normalize';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawChapter } from '../parsers-client/parsers-client.types';
@@ -73,10 +75,10 @@ export class CatalogService {
     const ref = decodeTitleId(titleId);
     const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
     const chapters = raw.chapters ?? [];
-    const targetBranch = branch ?? pickDefaultBranch(chapters);
+    const targetBranch = branch === undefined ? pickDefaultBranch(chapters) : toBranchKey(branch);
     const filtered = chapters
       .filter((chapter) => chapter.branch === targetBranch)
-      .sort((a, b) => a.number - b.number);
+      .sort(compareChapterNumber);
 
     return {
       items: filtered.map((chapter) => normalizeChapter(sourceId, titleId, chapter)),
@@ -96,7 +98,7 @@ export class CatalogService {
 
     const siblings = (details.chapters ?? [])
       .filter((chapter) => chapter.branch === chapterRef.branch)
-      .sort((a, b) => a.number - b.number);
+      .sort(compareChapterNumber);
     const currentIndex = siblings.findIndex((chapter) => chapter.id === chapterRef.id);
 
     const toChapterId = (chapter: RawChapter | undefined): string | null =>

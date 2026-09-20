@@ -190,13 +190,13 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       .map((c): RawChapter => ({
         id: generateUid(SOURCE_ID, `${data.news_id}/${c.id}`),
         url: `/reader/${data.news_id}/${c.id}`,
-        number: c.posi ?? 0,
+        number: c.posi ?? null,
         title: decodeUnicodeEscapes(c.title),
         uploadDate: parseDdMmYyyy(c.date),
         source: SOURCE_ID,
         scanlator: null,
         branch: null,
-        volume: c.volume ?? 0,
+        volume: c.volume ?? null,
       }))
       .reverse();
 

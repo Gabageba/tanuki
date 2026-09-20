@@ -423,7 +423,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       id: generateUid(SOURCE_ID, id),
       title: null,
       number: index + 1,
-      volume: 0,
+      volume: null,
       url: String(id),
       scanlator: null,
       uploadDate: addedAt,

@@ -198,10 +198,13 @@ const toCleanString = (n: number): string => {
   return Number.isInteger(n) ? String(n) : String(n);
 };
 
-const buildChapterTitle = (number: number, name: string | null | undefined): string | null => {
+const buildChapterTitle = (
+  number: number | null,
+  name: string | null | undefined,
+): string | null => {
   const title = name?.trim() ?? '';
   if (title.length > 0) return title;
-  return number > 0 ? `Глава ${toCleanString(number)}` : null;
+  return number !== null ? `Глава ${toCleanString(number)}` : null;
 };
 
 const parseDate = (raw: string | null | undefined): number => {
@@ -250,13 +253,13 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     return chapters
       .filter((ch) => ch._id && ch.isPublished !== false)
       .map((ch): RawChapter => {
-        const number = ch.chapterNumber ?? 0;
+        const number = ch.chapterNumber ?? null;
         const url = `/titles/${slug}/chapter/${ch._id}?titleId=${titleId}`;
         return {
           id: generateUid(SOURCE_ID, url),
           title: buildChapterTitle(number, ch.name),
           number,
-          volume: 0,
+          volume: null,
           url,
           scanlator: null,
           uploadDate: parseDate(ch.releaseDate ?? ch.createdAt),

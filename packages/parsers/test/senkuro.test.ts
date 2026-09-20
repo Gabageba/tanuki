@@ -240,6 +240,9 @@ describe('Senkuro parser conformance', () => {
     for (const chapter of manga.chapters!) {
       expect(chapter.uploadDate === 0 || chapter.uploadDate > 1e12).toBe(true);
       expect(chapter.scanlator).toBe('TeamA');
+      // Команда перевода у Senkuro и есть ветка — у тайтла с двумя командами получится два
+      // независимых списка глав, а не один перемешанный.
+      expect(chapter.branch).toBe('TeamA');
     }
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     // oldest-first ordering

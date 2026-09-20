@@ -85,6 +85,11 @@ const DETAILS_HTML = `<!doctype html><html><body>
       <i class="chDownload" data-chapters_id="9001"></i>
       <span class="date">Вчера в 09:30</span>
     </li>
+    <li>
+      <h4><a href="/manga/solo-leveling.123/vol1/ch0/">Глава 0 - Вступительная глава</a></h4>
+      <i class="chDownload" data-chapters_id="9000"></i>
+      <span class="date">Вчера в 09:00</span>
+    </li>
   </ul>
 </body></html>`;
 
@@ -185,11 +190,14 @@ describe('Desu parser conformance', () => {
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
     const manga = await parser.getDetails('/manga/solo-leveling.123');
     expect(manga.chapters).not.toBeNull();
-    expect(manga.chapters).toHaveLength(2);
+    expect(manga.chapters).toHaveLength(3);
     for (const chapter of manga.chapters!) {
-      expect(chapter.number).toBeGreaterThanOrEqual(0);
+      expect(chapter.number).not.toBeNull();
       expect(chapter.uploadDate === 0 || chapter.uploadDate > 1e12).toBe(true);
     }
+    // "Глава 0" — вступительная глава с настоящим номером 0, а не глава без номера.
+    expect(manga.chapters![0]!.number).toBe(0);
+    expect(manga.chapters![0]!.volume).toBe(1);
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.releaseState).toBe(TITLE_STATE.ONGOING);
     expect(manga.translationState).toBe(TITLE_STATE.ONGOING);

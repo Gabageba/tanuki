@@ -603,7 +603,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     href: string,
     dataNum: string | undefined,
     titleText: string,
-  ): number => {
+  ): number | null => {
     const hrefMatch = HREF_CHAPTER_NUMBER_REGEX.exec(href);
     const hrefValue = hrefMatch ? parseFloatOrNull(hrefMatch[1]!.replace(',', '.')) : null;
     if (hrefValue !== null) return hrefValue;
@@ -620,14 +620,14 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         return dataNum.includes('.') || dataNum.includes(',') ? value : value / 10;
       }
     }
-    return 0;
+    return null;
   };
 
-  const parseChapterVolume = (href: string, dataVol: string | undefined): number => {
+  const parseChapterVolume = (href: string, dataVol: string | undefined): number | null => {
     const fromAttr = parseIntOrNull(dataVol ?? null);
     if (fromAttr !== null) return fromAttr;
     const match = HREF_VOLUME_REGEX.exec(href);
-    return match ? (parseIntOrNull(match[1]!) ?? 0) : 0;
+    return match ? parseIntOrNull(match[1]!) : null;
   };
 
   const parseChapterUploadDate = ($td: Cheerio<AnyNode>): number => {
