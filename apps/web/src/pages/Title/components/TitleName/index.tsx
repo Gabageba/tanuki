@@ -24,7 +24,7 @@ function TitleName({ title }: Props) {
           </Heading>
           <Group gap={8} wrap="nowrap">
             {source && source.locale !== SOURCE_LOCALE.RU ? (
-              <Badge color="gray" variant="light" ff="monospace">
+              <Badge color="gray" variant="light" ff="monospace" mt={8}>
                 {getFlagByLocale(source.locale)} {source.locale.toUpperCase()}
               </Badge>
             ) : null}

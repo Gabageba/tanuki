@@ -6,6 +6,7 @@ import { SORT_DIRECTION, SortDirectionSchema, type Branch } from '@tanuki/contra
 import useChapters from '../../hooks/useChapters';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
 import TitleChapterItem from './TitleChapterItem';
+import TitleChapterListSkeleton from './TitleChapterListSkeleton';
 import styles from './TitleChaptersTabContent.module.scss';
 
 const CHAPTER_ESTIMATED_SIZE = 64;
@@ -39,7 +40,7 @@ function TitleChaptersList({ titleId, branch }: Props) {
   });
 
   if (isChaptersPending) {
-    return 'loading';
+    return <TitleChapterListSkeleton />;
   }
 
   return (

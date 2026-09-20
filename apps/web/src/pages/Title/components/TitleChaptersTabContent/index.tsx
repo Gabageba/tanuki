@@ -17,25 +17,27 @@ function TitleChaptersTabContent({ branches, titleId }: Props) {
   return (
     <Tabs variant="selectable" value={activeTab} onChange={setActiveTab}>
       <Stack gap="sm">
-        <Tabs.List>
-          <Scroller>
-            <Group gap={8} wrap="nowrap">
-              {branches.map((branch) => (
-                <Tabs.Tab
-                  value={branch.id}
-                  key={branch.id}
-                  rightSection={
-                    <Text c={activeTab === branch.id ? 'terracotta' : 'dimmed'} fz={12}>
-                      {t('countChaptersAbbrev', { count: branch.chaptersCount })}
-                    </Text>
-                  }
-                >
-                  {branch.name}
-                </Tabs.Tab>
-              ))}
-            </Group>
-          </Scroller>
-        </Tabs.List>
+        {branches.length > 1 && (
+          <Tabs.List>
+            <Scroller>
+              <Group gap={8} wrap="nowrap">
+                {branches.map((branch) => (
+                  <Tabs.Tab
+                    value={branch.id}
+                    key={branch.id}
+                    rightSection={
+                      <Text c={activeTab === branch.id ? 'terracotta' : 'dimmed'} fz={12}>
+                        {t('countChaptersAbbrev', { count: branch.chaptersCount })}
+                      </Text>
+                    }
+                  >
+                    {branch.name}
+                  </Tabs.Tab>
+                ))}
+              </Group>
+            </Scroller>
+          </Tabs.List>
+        )}
         <Group justify="space-between" gap="sm">
           <TitleChaptersSettings />
           <Button>{t('downloadAll')}</Button>
