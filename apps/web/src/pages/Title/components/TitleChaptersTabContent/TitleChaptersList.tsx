@@ -1,7 +1,9 @@
-import { Card, NavLink, ScrollArea, Tabs } from '@mantine/core';
+import { Card, EmptyState, NavLink, ScrollArea, Tabs } from '@mantine/core';
 import { generatePath, Link, useSearchParams } from 'react-router';
 import { useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { EmptyIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { SORT_DIRECTION, SortDirectionSchema, type Branch } from '@tanuki/contracts';
 import useChapters from '../../hooks/useChapters';
 import { ROUTE_PATHS } from '@/shared/consts/routes';
@@ -17,6 +19,7 @@ type Props = {
 };
 
 function TitleChaptersList({ titleId, branch }: Props) {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const viewportRef = useRef<HTMLDivElement>(null);
   const { data: chaptersData, isPending: isChaptersPending } = useChapters({
@@ -41,6 +44,21 @@ function TitleChaptersList({ titleId, branch }: Props) {
 
   if (isChaptersPending) {
     return <TitleChapterListSkeleton />;
+  }
+
+  if (chapters.length === 0) {
+    return (
+      <Tabs.Panel value={branch.id}>
+        <Card withBorder p={0} bg="transparent">
+          <EmptyState
+            description={t('branchHasNoChaptersYet')}
+            size="sm"
+            icon={<EmptyIcon />}
+            py="xs"
+          />
+        </Card>
+      </Tabs.Panel>
+    );
   }
 
   return (

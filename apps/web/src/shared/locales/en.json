@@ -178,5 +178,6 @@
   "translators": "Translators",
   "publicationDate": "Publication date",
   "releaseFormat": "Release format",
-  "algorithmFoundNoSimilarTitles": "The algorithm found no similar titles"
+  "algorithmFoundNoSimilarTitles": "The algorithm found no similar titles",
+  "branchHasNoChaptersYet": "This branch has no chapters yet"
 }

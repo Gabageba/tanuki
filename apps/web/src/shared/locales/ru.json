@@ -184,5 +184,6 @@
   "translators": "Переводчики",
   "publicationDate": "Дата выхода",
   "releaseFormat": "Формат выпуска",
-  "algorithmFoundNoSimilarTitles": "Алгоритм не нашел похожих тайтлов"
+  "algorithmFoundNoSimilarTitles": "Алгоритм не нашел похожих тайтлов",
+  "branchHasNoChaptersYet": "В этой ветке пока нет глав"
 }
