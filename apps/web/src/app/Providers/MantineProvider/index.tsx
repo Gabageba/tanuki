@@ -225,6 +225,11 @@ const createAppTheme = (t: TFunction) =>
           variant: 'outline',
         },
       },
+      Tabs: {
+        classNames: {
+          tab: styles.selectableTab,
+        },
+      },
     },
   });
 

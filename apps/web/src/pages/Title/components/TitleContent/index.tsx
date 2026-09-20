@@ -1,9 +1,11 @@
 import { Tabs } from '@mantine/core';
 import { InfoIcon, ListDashesIcon } from '@phosphor-icons/react';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import TitleInfoTabContent from './TitleInfoTabContent';
-import type { Branch, Title } from '@tanuki/contracts';
+import { SORT_DIRECTION, SortDirectionSchema, type Branch, type Title } from '@tanuki/contracts';
+import TitleChaptersTabContent from '../TitleChaptersTabContent';
 
 const TITLE_CONTENT_TABS = {
   INFO: 'info',
@@ -15,8 +17,23 @@ type Props = {
   branches: Branch[];
 };
 
-function TitleContent({ title }: Props) {
+function TitleContent({ title, branches }: Props) {
   const { t } = useTranslation();
+  const [, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        if (SortDirectionSchema.safeParse(prev.get('direction')).success) return prev;
+
+        const next = new URLSearchParams(prev);
+        next.set('direction', SORT_DIRECTION.DESC);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
   const TABS = useMemo(
     () => [
       {
@@ -29,10 +46,10 @@ function TitleContent({ title }: Props) {
         id: TITLE_CONTENT_TABS.CHAPTERS,
         title: t('chapters'),
         icon: <ListDashesIcon />,
-        content: <>chapters</>,
+        content: <TitleChaptersTabContent branches={branches} titleId={title.id} />,
       },
     ],
-    [title, t],
+    [title, t, branches],
   );
 
   return (

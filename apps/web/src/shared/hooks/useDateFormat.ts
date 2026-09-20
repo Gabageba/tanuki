@@ -15,6 +15,15 @@ function useDateFormat() {
     return `${part('day')} ${part('month').replace('.', '')} ${part('year')}`;
   };
 
+  /** «10.12.2002» — фиксированный числовой формат для колонок, где даты идут подряд. */
+  const formatDateNumeric = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+
+    return `${day}.${month}.${date.getFullYear()}`;
+  };
+
   /** «9 сент 2026, 14:32» — точный момент, когда важна не только дата, но и время. */
   const formatDateTime = (isoDate: string) => {
     const time = new Intl.DateTimeFormat(i18n.language, {
@@ -61,6 +70,12 @@ function useDateFormat() {
         return null;
       }
       return formatDateTime(isoDate);
+    },
+    formatDateNumeric: (isoDate: string | null) => {
+      if (!isoDate) {
+        return null;
+      }
+      return formatDateNumeric(isoDate);
     },
     formatRelative: (isoDate: string | null) => {
       if (!isoDate) {
