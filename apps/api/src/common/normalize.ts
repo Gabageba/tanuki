@@ -133,6 +133,14 @@ export const compareChapterNumber = (a: RawChapter, b: RawChapter): number => {
   return a.number - b.number;
 };
 
+/** То же самое, но от новой главы к старой — список глав отдаётся клиенту в этом порядке,
+ *  безномерные всё так же остаются в хвосте. */
+export const compareChapterNumberDesc = (a: RawChapter, b: RawChapter): number => {
+  if (a.number === null) return b.number === null ? 0 : 1;
+  if (b.number === null) return -1;
+  return b.number - a.number;
+};
+
 export const normalizeChapter = (sourceId: string, titleId: string, raw: RawChapter): Chapter => {
   const id = `${sourceId}:${encodeChapterId({ id: raw.id, url: raw.url, branch: raw.branch })}`;
   return {

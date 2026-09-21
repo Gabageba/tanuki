@@ -12,6 +12,7 @@ import { ENV } from '../config/env.module';
 import { decodeChapterId, decodeTitleId } from '../common/opaque-id';
 import {
   compareChapterNumber,
+  compareChapterNumberDesc,
   computeBranches,
   normalizeChapter,
   normalizeFilterGroup,
@@ -78,7 +79,7 @@ export class CatalogService {
     const targetBranch = branch === undefined ? pickDefaultBranch(chapters) : toBranchKey(branch);
     const filtered = chapters
       .filter((chapter) => chapter.branch === targetBranch)
-      .sort(compareChapterNumber);
+      .sort(compareChapterNumberDesc);
 
     return {
       items: filtered.map((chapter) => normalizeChapter(sourceId, titleId, chapter)),

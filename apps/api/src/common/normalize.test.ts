@@ -8,6 +8,7 @@ import {
 } from '@tanuki/contracts';
 import {
   compareChapterNumber,
+  compareChapterNumberDesc,
   computeBranches,
   normalizeChapter,
   normalizeFilterGroup,
@@ -222,6 +223,16 @@ describe('normalizeChapter', () => {
     // Глава 0 — настоящая первая глава, а не «номер неизвестен»: она идёт перед второй,
     // безномерные же сохраняют исходный порядок источника в хвосте.
     expect([...chapters].sort(compareChapterNumber).map((c) => c.id)).toEqual([3, 2, 1, 4]);
+  });
+
+  it('compareChapterNumberDesc orders by number descending and keeps numberless chapters at the tail', () => {
+    const chapters = [
+      chapter({ id: 1, number: null }),
+      chapter({ id: 2, number: 2 }),
+      chapter({ id: 3, number: 0 }),
+      chapter({ id: 4, number: null }),
+    ];
+    expect([...chapters].sort(compareChapterNumberDesc).map((c) => c.id)).toEqual([2, 3, 1, 4]);
   });
 
   it('maps 0 uploadDate to null, otherwise formats as YYYY-MM-DDTHH:MM:SSZ from epoch millis', () => {
