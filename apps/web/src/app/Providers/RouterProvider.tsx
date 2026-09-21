@@ -5,7 +5,6 @@ import {
 } from 'react-router';
 import Layout from '@/app/Layout';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
-import ReaderPage from '@/pages/Reader/ReaderPage';
 import SearchPage from '@/pages/Search/SearchPage';
 import Sources from '@/pages/Sources';
 import SourcesHealth from '@/pages/SourcesHealth';
@@ -13,6 +12,7 @@ import Notifications from '@/pages/Notifications';
 import Bookmarks from '@/pages/Bookmarks';
 import Catalog from '@/pages/Catalog';
 import Title from '@/pages/Title';
+import Reader from '@/pages/Reader';
 
 const router = createBrowserRouter([
   {
@@ -55,7 +55,7 @@ const router = createBrowserRouter([
   // Читалка живёт вне общего каркаса: она на весь экран и с чёрным фоном, шапка ей мешает.
   {
     path: ROUTE_PATHS.READER,
-    element: <ReaderPage />,
+    element: <Reader />,
   },
 ]);
 

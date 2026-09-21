@@ -94,6 +94,7 @@
   "main": "Основная",
   "chapters": "Главы",
   "chapterNumber": "Глава {{number}}",
+  "chapterOfTotal": "Глава {{number}} из {{total}}",
   "openOnSite": "Открыть на сайте",
   "description": "Описание",
   "tags": "Теги",
@@ -141,6 +142,7 @@
   "likely": "Скорее всего",
   "uncertain": "Не точно",
   "pageOfTotal": "Страница {{page}} из {{total}}",
+  "pageOfTotalAbbrev": "{{page}} / {{total}}",
   "nextChapter": "Следующая глава",
   "thisIsLastChapter": "Это последняя глава",
   "search": "Поиск",
@@ -185,5 +187,6 @@
   "publicationDate": "Дата выхода",
   "releaseFormat": "Формат выпуска",
   "algorithmFoundNoSimilarTitles": "Алгоритм не нашел похожих тайтлов",
-  "branchHasNoChaptersYet": "В этой ветке пока нет глав"
+  "branchHasNoChaptersYet": "В этой ветке пока нет глав",
+  "readerSettings": "Настройки читалки"
 }

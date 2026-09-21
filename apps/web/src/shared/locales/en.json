@@ -94,6 +94,7 @@
   "main": "Main",
   "chapters": "Chapters",
   "chapterNumber": "Chapter {{number}}",
+  "chapterOfTotal": "Chapter {{number}} of {{total}}",
   "openOnSite": "Open on site",
   "description": "Description",
   "tags": "Tags",
@@ -135,6 +136,7 @@
   "likely": "Likely",
   "uncertain": "Uncertain",
   "pageOfTotal": "Page {{page}} of {{total}}",
+  "pageOfTotalAbbrev": "{{page}} / {{total}}",
   "nextChapter": "Next chapter",
   "thisIsLastChapter": "This is the last chapter",
   "search": "Search",
@@ -179,5 +181,6 @@
   "publicationDate": "Publication date",
   "releaseFormat": "Release format",
   "algorithmFoundNoSimilarTitles": "The algorithm found no similar titles",
-  "branchHasNoChaptersYet": "This branch has no chapters yet"
+  "branchHasNoChaptersYet": "This branch has no chapters yet",
+  "readerSettings": "Reader settings"
 }

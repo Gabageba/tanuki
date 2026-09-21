@@ -1,19 +1,36 @@
 import { Fragment, type ReactNode } from 'react';
-import type { BoxProps, GroupProps, TextProps } from '@mantine/core';
+import type { BoxProps, GroupProps, MantineStyleProps, TextProps } from '@mantine/core';
 import { Box, Group, Space, Text } from '@mantine/core';
 import CollapsibleGroup from './CollapsibleGroup';
 import MidDot from './MidDot';
 
+const TRUNCATE_STYLE = {
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+} as const;
+
 type Props = {
   items: ReactNode[];
   gap?: GroupProps['gap'];
-  mt?: GroupProps['mt'];
+  mt?: MantineStyleProps['mt'];
   maxRows?: number;
   separatorProps?: BoxProps;
   text?: TextProps | boolean;
+  lh?: MantineStyleProps['lh'];
+  truncate?: boolean;
 };
 
-function MidDotGroup({ items, gap = 4, mt, maxRows, separatorProps = {}, text }: Props) {
+function MidDotGroup({
+  items,
+  gap = 4,
+  mt,
+  maxRows,
+  separatorProps = {},
+  text,
+  lh,
+  truncate,
+}: Props) {
   const visibleItems = items.filter(
     (item) => item !== null && item !== undefined && item !== false,
   );
@@ -33,7 +50,7 @@ function MidDotGroup({ items, gap = 4, mt, maxRows, separatorProps = {}, text }:
       );
 
     return text ? (
-      <Text span {...(typeof text === 'object' ? text : {})}>
+      <Text span {...(typeof text === 'object' ? text : {})} lh={lh}>
         {content}
       </Text>
     ) : (
@@ -50,14 +67,14 @@ function MidDotGroup({ items, gap = 4, mt, maxRows, separatorProps = {}, text }:
     ));
 
     return (
-      <CollapsibleGroup gap={gap} mt={mt} maxRows={maxRows}>
+      <CollapsibleGroup gap={gap} mt={mt} maxRows={maxRows} lh={lh}>
         {children}
       </CollapsibleGroup>
     );
   }
 
   return (
-    <Box mt={mt}>
+    <Box mt={mt} lh={lh} style={truncate ? TRUNCATE_STYLE : undefined}>
       {visibleItems.map((item, index) => (
         <Fragment key={index}>
           {renderItem(item)}
@@ -66,7 +83,7 @@ function MidDotGroup({ items, gap = 4, mt, maxRows, separatorProps = {}, text }:
               <Space w={gap} display="inline-block" />
               <MidDot {...separatorProps} />
               <Space w={gap} display="inline-block" />
-              <wbr />
+              {!truncate && <wbr />}
             </>
           )}
         </Fragment>
