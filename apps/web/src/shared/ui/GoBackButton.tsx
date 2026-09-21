@@ -1,10 +1,9 @@
 import { ActionIcon } from '@mantine/core';
 import { CaretLeftIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
-import type { RoutePath } from '../consts/routes';
 
 type Props = {
-  path?: RoutePath;
+  path?: string;
 };
 
 function GoBackButton({ path }: Props) {

@@ -2,7 +2,7 @@ import { Anchor, Breadcrumbs, Group, Text } from '@mantine/core';
 import { generatePath, Link } from 'react-router';
 import { ArrowSquareOutIcon, CaretLeftIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import type { Title } from '@tanuki/contracts';
 import useSource from '@/entities/source/hooks/useSource';
 import TitleBreadcrumbsSkeleton from './TitleBreadcrumbsSkeleton';

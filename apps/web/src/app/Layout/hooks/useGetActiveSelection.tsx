@@ -3,7 +3,7 @@ import { SelectionIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { flattenSources } from '@/entities/source/lib';
 import SourceIcon from '@/entities/source/components/SourceIcon';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import { ACTIVE_SELECTION_KINDS, type ActiveSelection } from '../models';
 import type { SourcesResponse } from '@tanuki/contracts';
 import AllElementsIcon from '../components/AllElementsIcon';

@@ -3,14 +3,13 @@ import { useMemo, type ReactNode } from 'react';
 import ApiErrorText from '../../ApiErrorText';
 import useQuery from '../hooks/useQuery';
 import GoBackButton from '../../GoBackButton';
-import type { RoutePath } from '@/shared/consts/routes';
 
 type Props = {
   children: ReactNode;
   title?: ReactNode;
   actions?: ReactNode;
   showLoading?: boolean;
-  goBack?: boolean | { path: RoutePath };
+  goBack?: boolean | { path: string };
 };
 
 function Content({ children, title, actions, showLoading = true, goBack }: Props) {

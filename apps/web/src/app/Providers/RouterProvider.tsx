@@ -4,7 +4,7 @@ import {
   RouterProvider as InternalRouterProvider,
 } from 'react-router';
 import Layout from '@/app/Layout';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import ReaderPage from '@/pages/Reader/ReaderPage';
 import SearchPage from '@/pages/Search/SearchPage';
 import Sources from '@/pages/Sources';

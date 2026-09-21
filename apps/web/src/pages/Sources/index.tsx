@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import useSources from '@/entities/source/hooks/useSources';
 import PageLayout from '@/shared/ui/PageLayout';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import SourcesList from './SourcesList';
 
 function Sources() {

@@ -2,7 +2,7 @@ import { EmptyState, Stack } from '@mantine/core';
 import { generatePath } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import SourceSelectOption from './SourceSelectOption';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import AllElementsIcon from './AllElementsIcon';
 import type { ActiveSelection } from '../models';
 import { ACTIVE_SELECTION_KINDS } from '../models';

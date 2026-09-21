@@ -1,7 +1,7 @@
 import { Card, Group, Stack, Text } from '@mantine/core';
 import { generatePath, Link } from 'react-router';
 import type { Source } from '@tanuki/contracts';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import SourceTitle from '@/entities/source/components/SourceTitle';
 import SourceStatusBadge from '../SourceStatusBadge';
 import { getFlagByLocale } from '../../lib';

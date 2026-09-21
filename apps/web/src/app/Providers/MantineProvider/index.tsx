@@ -35,6 +35,7 @@ import {
   STATUS_OK_COLOR,
   STATUS_OK_COLOR_SHADES,
 } from '@/shared/lib/palette';
+import { XXS_BREAKPOINT } from '@/shared/lib/breakpoints';
 import { readSettings, SETTINGS_STORAGE_KEY, writeSettings } from '@/shared/lib/settings';
 import SelectOption from '../../../shared/ui/option/SelectOption';
 import styles from './MantineProvider.module.scss';
@@ -47,7 +48,7 @@ const createAppTheme = (t: TFunction) =>
     fontFamilyMonospace: FONT_FAMILY_MONOSPACE,
     // `xxs` — промежуточный брейкпоинт между `base` и стандартным `xs` (36em) Mantine.
     breakpoints: {
-      xxs: '26em',
+      xxs: XXS_BREAKPOINT,
     },
     colors: {
       [PRIMARY_COLOR]: PRIMARY_COLOR_SHADES,

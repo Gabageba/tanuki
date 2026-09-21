@@ -3,7 +3,7 @@ import PageLayout from '@/shared/ui/PageLayout';
 import useSourcesHealth from './hooks/useSourcesHealth';
 import ProbeAllButton from './ProbeAllButton';
 import SourcesHealthTable from './SourcesHealthTable';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 
 function SourcesHealth() {
   const { t } = useTranslation();

@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useState } from 'react';
-import { Button, Collapse, Stack, useMantineColorScheme } from '@mantine/core';
+import { Button, Collapse, Drawer, Stack, useMantineColorScheme } from '@mantine/core';
 import {
   CaretDownIcon,
   CaretUpIcon,
@@ -11,7 +11,6 @@ import {
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import MobileNavigationButton from './MobileNavigationButton';
-import MobileNavigationDrawer from './MobileNavigationDrawer';
 import { getColorSchemeIcon } from '../../utils/getColorSchemeIcon';
 import { COLOR_SCHEME, getColorSchemeLabel } from '@/app/Providers/models';
 import { LANGUAGE, getLanguageLabel } from '@/shared/lib/language';
@@ -37,10 +36,11 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
         leftSection={<ListIcon size={20} />}
         isActive={isActive}
       />
-      <MobileNavigationDrawer
+      <Drawer
         opened={isOpened}
         onClose={() => setIsOpened(false)}
         title={t('menu')}
+        position="right"
       >
         <Stack gap={4}>
           <Button
@@ -111,7 +111,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
             </Stack>
           </Collapse>
         </Stack>
-      </MobileNavigationDrawer>
+      </Drawer>
     </>
   );
 }

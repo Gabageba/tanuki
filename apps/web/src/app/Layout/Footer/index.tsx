@@ -3,7 +3,7 @@ import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import { closeAllDrawers } from '@/shared/lib/drawerRegistry';
 import MobileNavigationButton from './components/MobileNavigationButton';
 import MobileSourceSelect from './components/MobileSourceSelect';

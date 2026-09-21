@@ -2,7 +2,7 @@ import { Anchor, Group, Stack, Table, Text, Tooltip } from '@mantine/core';
 import { generatePath, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { SOURCE_STATUS, type Source } from '@tanuki/contracts';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import PageLayout from '@/shared/ui/PageLayout';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import { flattenSources, getSourceStatusReasonLabel } from '@/entities/source/lib';

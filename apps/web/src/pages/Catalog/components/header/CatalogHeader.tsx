@@ -6,7 +6,7 @@ import SearchInput from '@/shared/ui/SearcInput';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { CatalogParams } from '../../models';
 import type { Source } from '@tanuki/contracts';
-import { ROUTE_PATHS } from '@/shared/consts/routes';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import GoBackButton from '@/shared/ui/GoBackButton';
 
 type Props = {
