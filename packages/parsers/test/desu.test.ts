@@ -198,6 +198,11 @@ describe('Desu parser conformance', () => {
     // "Глава 0" — вступительная глава с настоящим номером 0, а не глава без номера.
     expect(manga.chapters![0]!.number).toBe(0);
     expect(manga.chapters![0]!.volume).toBe(1);
+    // Title strips the "Глава N" prefix that duplicates the `number` field — only the text after
+    // the dash, if any, survives as the chapter title.
+    expect(manga.chapters![0]!.title).toBe('Вступительная глава');
+    expect(manga.chapters![1]!.title).toBeNull();
+    expect(manga.chapters![2]!.title).toBeNull();
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.releaseState).toBe(TITLE_STATE.ONGOING);
     expect(manga.translationState).toBe(TITLE_STATE.ONGOING);

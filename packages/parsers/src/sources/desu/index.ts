@@ -28,7 +28,7 @@ import { parseHtml } from '../../core/html/dom';
 import { attrOrNull, textOrNull, selectFirstOrThrow } from '../../core/html/selectors';
 import { parseRuRelativeDate, parseRuFullDate, parseRuBareYear } from '../../core/text/dates';
 import { parseIntOrNull, parseFloatOrNull } from '../../core/text/numbers';
-import { toTitleCase, nullIfEmpty } from '../../core/text/strings';
+import { toTitleCase, nullIfEmpty, findGroupValue } from '../../core/text/strings';
 import { ParseError } from '../../errors';
 import { UserAgents } from '../../core/http/user-agents';
 import { FILTER_GROUP } from '../../core/filters/group';
@@ -48,6 +48,11 @@ export const DESU_FILTER_GROUP = {
 
 const CHAPTER_ID_REGEX = /\.(\d+)\/?$/;
 const CHAPTER_PATH_REGEX = /\/vol(\d+)\/ch([0-9.]+)\//;
+// The chapter link text is always "[Том N. ]Глава M[ - <actual title>]" — volume/number already
+// surface as their own RawChapter fields, so keeping this raw text as the title would just repeat
+// "Глава 284" next to the "Гл.284" the UI already renders from `number`. Only the part after the
+// dash, if any, is a real title.
+const CHAPTER_TITLE_SUFFIX_REGEX = /^(?:Том\s*[\d.]+\.\s*)?Глава\s*[\d.]+\s*[-–—]\s*(.+)$/iu;
 // The reader page no longer embeds a dir/prefix/image-array script (ClassicReaderApi.init
 // replaced the old Reader.init) — it now only bootstraps a chapter id + api base path, and the
 // page list comes from a follow-up JSON call built from those.
@@ -487,7 +492,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       source: SOURCE_ID,
       url,
       uploadDate: parseRuRelativeDate(date),
-      title: nullIfEmpty(textOrNull($a) ?? ''),
+      title: nullIfEmpty(findGroupValue(textOrNull($a) ?? '', CHAPTER_TITLE_SUFFIX_REGEX)),
       volume,
       number,
       scanlator: null,
