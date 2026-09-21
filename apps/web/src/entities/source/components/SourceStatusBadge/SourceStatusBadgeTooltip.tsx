@@ -17,7 +17,7 @@ function SourceStatusBadgeTooltip({ source }: Props) {
       <Text fz={12}>
         {getSourceStatusLabel(source.status, t)}
         {source.statusChangedAt && (
-          <Text span ff="monospace" fz={12}>
+          <Text span fz={12}>
             {` ${t('sinceDate', { date: formatDate(source.statusChangedAt) })}`}
           </Text>
         )}
@@ -28,7 +28,7 @@ function SourceStatusBadgeTooltip({ source }: Props) {
         </Text>
       )}
       {source.checkedAt && (
-        <Text fz={12} c="dimmed" ff="monospace">
+        <Text fz={12} c="dimmed">
           {t('checkedAgo', {
             relative: formatRelative(source.checkedAt),
           })}

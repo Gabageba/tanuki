@@ -36,7 +36,7 @@ function TitleScoreBadge({ title }: Props) {
       radius="md"
       variant="filled"
     >
-      <Text c="white" fw={600}>
+      <Text c="white" fw={600} ff="monospace">
         {isRatingEmpty ? title.likes : title.rating}
       </Text>
     </Badge>

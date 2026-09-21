@@ -17,7 +17,9 @@ function TitleInfoItems({ items }: Props) {
             {item.label}
           </DataList.ItemLabel>
           <Space h={8} />
-          <DataList.ItemValue lh={1.2}>{item.value}</DataList.ItemValue>
+          <DataList.ItemValue lh={1.2} ff={item.isNumeric ? 'monospace' : undefined}>
+            {item.value}
+          </DataList.ItemValue>
         </DataList.Item>
       ))}
     </DataList>

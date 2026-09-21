@@ -1,4 +1,4 @@
-import { Group } from '@mantine/core';
+import { Group, Text } from '@mantine/core';
 import { HeartIcon, StarFourIcon } from '@phosphor-icons/react';
 import { isEmpty } from '@/shared/lib/isEmpty';
 import type { Title } from '@tanuki/contracts';
@@ -18,7 +18,9 @@ function TitleScoreMeta({ title }: Props) {
   return (
     <Group gap={4}>
       {isRatingEmpty ? <HeartIcon weight="fill" /> : <StarFourIcon weight="fill" />}
-      {isRatingEmpty ? title.likes : title.rating}
+      <Text span ff="monospace">
+        {isRatingEmpty ? title.likes : title.rating}
+      </Text>
     </Group>
   );
 }

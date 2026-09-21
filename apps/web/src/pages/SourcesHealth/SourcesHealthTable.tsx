@@ -64,7 +64,7 @@ function SourcesHealthTable() {
               <Table.Td>
                 <SourceStatusBadge source={source} />
                 {source.statusChangedAt && (
-                  <Text fz={11} c="dimmed" ff="monospace">
+                  <Text fz={11} c="dimmed">
                     {t('sinceDate', { date: formatDate(source.statusChangedAt) })}
                   </Text>
                 )}
@@ -79,7 +79,7 @@ function SourcesHealthTable() {
                 </Text>
               </Table.Td>
               <Table.Td>
-                <Text fz={13} ff="monospace" c="dimmed">
+                <Text fz={13} c="dimmed">
                   {formatRelative(source.checkedAt) ?? <Mdash />}
                 </Text>
               </Table.Td>

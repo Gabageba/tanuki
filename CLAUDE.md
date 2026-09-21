@@ -99,15 +99,24 @@
 ## Typography
 
 - Two font families, one role each — no brand-layer exception. Both are wired up once in
-  `apps/web/src/app/components/Providers/models.ts` and reach components the same way colors do —
-  through the Mantine theme, never re-imported per file.
-- **Golos Text** — the interface default (`theme.fontFamily`, `FONT_FAMILY_SANS`). Everything is
-  set in it unless it's numeric/service data or the logo: titles, headings, navigation, buttons,
-  descriptions, reviews, field labels, and word-based meta strings ("2 дня назад").
-- **JetBrains Mono** — the numeric and service layer (`theme.fontFamilyMonospace`, use via
-  `ff="monospace"`). Chapter numbers, pages, dates, rating digits, counters, percentages, badge
-  tags (NEW), small uppercase labels, breadcrumbs — anything that reads as a digit-first readout
-  scanned down a column, not as speech.
+  `apps/web/src/app/Providers/models.ts` and reach components the same way colors do — through the
+  Mantine theme, never re-imported per file.
+- The question to ask is never "is this a number?" but **"is this speech or a readout?"** — a
+  string that can be read aloud as a phrase is speech, a string the eye scans down a column and
+  compares between rows is a readout. When in doubt: if neighbouring rows have to line up by their
+  digits, it's monospace.
+- **Golos Text** — the interface default (`theme.fontFamily`, `FONT_FAMILY_SANS`), so it needs no
+  `ff` at all. Everything is set in it unless it's a readout or the logo: titles, headings,
+  navigation, buttons, descriptions, reviews, field labels, tag names, breadcrumbs built out of
+  names, worded dates ("12 фев 2026", `formatDate`), relative time ("2 дня назад",
+  `formatRelative`), and any phrase that merely contains a number ("Глава 3 из 120", "Скачано
+  12 гл.") — a number inside a sentence doesn't turn the sentence into data.
+- **JetBrains Mono** — the readout layer (`theme.fontFamilyMonospace`, use via `ff="monospace"`).
+  Numeric dates ("01.02.2026", `formatDateNumeric`), chapter and page numbers in a list, counters
+  and `+N` tags, percentages, rating digits, badge tags (`18+`, `VPN`, `NEW`), locale and status
+  codes, small uppercase service labels, and technical identifiers (domain, id, url, slug).
+- A mixed row is fine: in a card's meta line the type stays Golos Text while the year and the
+  chapter counter go monospace (`NumericMeta`) — the rule applies per value, not per row.
 - **Unbounded** — the logo only, one call site (`var(--tanuki-font-brand)`, set in
   `CSS_VARIABLES_RESOLVER`, used in the header `Anchor`). Nowhere else — block headings, section
   names, and modal titles all use Golos Text now.

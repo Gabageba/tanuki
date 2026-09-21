@@ -34,7 +34,7 @@ function TitleCardTags({ tags }: Props) {
         {tags.map((tag) => (
           <TagBadge key={tag.id}>{tag.title}</TagBadge>
         ))}
-        <TagBadge>{`+${tags.length}`}</TagBadge>
+        <TagBadge ff="monospace">{`+${tags.length}`}</TagBadge>
       </Group>
       <Group ref={containerRef} gap={6} flex={1} wrap="nowrap" style={{ overflow: 'hidden' }}>
         {!isReady && <TitleCardTagsSkeleton />}
@@ -45,7 +45,7 @@ function TitleCardTags({ tags }: Props) {
             </TagBadge>
           ))}
         {isReady && hiddenCount > 0 && (
-          <TagBadge style={{ flexShrink: 0 }}>{`+${hiddenCount}`}</TagBadge>
+          <TagBadge ff="monospace" style={{ flexShrink: 0 }}>{`+${hiddenCount}`}</TagBadge>
         )}
       </Group>
     </>

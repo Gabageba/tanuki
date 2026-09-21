@@ -1,11 +1,12 @@
 import { Stack, Text } from '@mantine/core';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TITLE_TYPE, type Title } from '@tanuki/contracts';
 import NavigateToTitleCard from '../../NavigateToTitleCard';
 import TitleMetaItems from '../../TitleMetaItems';
 import { getLabelByTitleType } from '@/entities/source/lib';
 import TitleCardImage from '../../TitleCardImage';
+import NumericMeta from '../../NumericMeta';
 import styles from '../../Title.module.scss';
 
 type Props = {
@@ -15,12 +16,18 @@ type Props = {
 
 function TitleGridCard({ title, showSource = false }: Props) {
   const { t } = useTranslation();
-  const metaItems = [
+  const metaItems: ReactNode[] = [
     getLabelByTitleType(title.type, t),
-    !!title.year && String(title.year),
-    !!title.chaptersCount && t('countChaptersAbbrev', { count: title.chaptersCount }),
-    !title.chaptersCount && !!title.pages && t('countPagesAbbrev', { count: title.pages }),
-  ].filter((item): item is string => Boolean(item));
+    !!title.year && <NumericMeta key="year">{title.year}</NumericMeta>,
+    !!title.chaptersCount && (
+      <NumericMeta key="volume">
+        {t('countChaptersAbbrev', { count: title.chaptersCount })}
+      </NumericMeta>
+    ),
+    !title.chaptersCount && !!title.pages && (
+      <NumericMeta key="volume">{t('countPagesAbbrev', { count: title.pages })}</NumericMeta>
+    ),
+  ].filter(Boolean);
 
   const metaGap = useMemo(
     () => (title.type === TITLE_TYPE.MANHUA && (title.chaptersCount || 0) >= 1000 ? 2 : 4),

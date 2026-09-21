@@ -26,7 +26,7 @@ function TitleAdultBadge({ contentRating, compact }: Props) {
       variant="filled"
       color="color-mix(in srgb, var(--mantine-color-crimson-7) 90%, transparent)"
     >
-      <Text c="white" fw={600}>
+      <Text c="white" fw={600} ff="monospace">
         18+
       </Text>
     </Badge>

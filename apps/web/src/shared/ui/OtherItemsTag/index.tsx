@@ -11,7 +11,7 @@ function OtherItemsTag({ count }: Props) {
   }
 
   return (
-    <Box bdrs="sm" p={4} ml={6} className={styles.tag} fz={12}>
+    <Box bdrs="sm" p={4} ml={6} className={styles.tag} fz={12} ff="monospace">
       +{count}
     </Box>
   );

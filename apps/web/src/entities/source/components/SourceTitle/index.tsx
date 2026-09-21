@@ -21,8 +21,16 @@ function SourceTitle({ source, showStatus = false, isPending = false }: Props) {
       <Box>
         <Group gap={8}>
           <Title order={5}>{source.title}</Title>
-          {source.isAdult && <Badge color="red">18+</Badge>}
-          {source.requiresVpn && <Badge color="cyan">VPN</Badge>}
+          {source.isAdult && (
+            <Badge color="red" ff="monospace">
+              18+
+            </Badge>
+          )}
+          {source.requiresVpn && (
+            <Badge color="cyan" ff="monospace">
+              VPN
+            </Badge>
+          )}
           {showStatus && <SourceStatusBadge source={source} />}
         </Group>
         <Text size="sm" c="dimmed" ff="monospace" truncate>

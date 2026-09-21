@@ -105,18 +105,22 @@ function TitleInfo({ title }: Props) {
         {
           label: t('score'),
           value: title.rating,
+          isNumeric: true,
         },
         {
           label: t('votesCount'),
           value: formatNumber(title.votesCount, i18n.language),
+          isNumeric: true,
         },
         {
           label: t('likesCount'),
           value: formatNumber(title.likes, i18n.language),
+          isNumeric: true,
         },
         {
           label: t('viewsCount'),
           value: formatNumber(title.views, i18n.language),
+          isNumeric: true,
         },
       ],
     },
@@ -132,6 +136,7 @@ function TitleInfo({ title }: Props) {
         {
           label: title.pages ? t('pagesCount') : t('chaptersCount'),
           value: formatNumber(title.pages ?? title.chaptersCount, i18n.language),
+          isNumeric: true,
         },
         {
           label: t('lastChapter'),
