@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { isEmpty } from '@/shared/lib/isEmpty';
 import type { Chapter } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
-import styles from './TitleChaptersTabContent.module.scss';
+import styles from './ChapterList.module.scss';
 
 type Props = {
   chapter: Chapter;
+  showDate?: boolean;
 };
 
-function TitleChapterItem({ chapter }: Props) {
+function ChapterItem({ chapter, showDate = false }: Props) {
   const { t } = useTranslation();
   const { formatDateNumeric } = useDateFormat();
 
@@ -34,7 +35,9 @@ function TitleChapterItem({ chapter }: Props) {
       >
         <Flex flex={1} miw={0} wrap="nowrap" gap={{ base: 'xs', xs: 'md' }} align="center">
           {!isEmptyNumber && (
-            <Text flex="none">{t('chapterNumberAbbrev', { number: chapter.number })}</Text>
+            <Text flex="none" ff="monospace">
+              {t('chapterNumberAbbrev', { number: chapter.number })}
+            </Text>
           )}
           {!isEmptyTitle && (
             <Text flex={1} miw={0} truncate="end">
@@ -44,9 +47,11 @@ function TitleChapterItem({ chapter }: Props) {
           {isEmptyNumber && isEmptyTitle && <Text truncate="end">{t('untitled')}</Text>}
         </Flex>
         <Flex flex="none" wrap="nowrap" gap={{ base: 'xs', xs: 'md' }} align="center">
-          <Text c="dimmed" fz={12}>
-            {formatDateNumeric(chapter.uploadedAt)}
-          </Text>
+          {showDate && chapter.uploadedAt && (
+            <Text c="dimmed" fz={12} ff="monospace">
+              {formatDateNumeric(chapter.uploadedAt)}
+            </Text>
+          )}
           <ActionIcon variant="subtle">
             <DownloadSimpleIcon />
           </ActionIcon>
@@ -56,4 +61,4 @@ function TitleChapterItem({ chapter }: Props) {
   );
 }
 
-export default TitleChapterItem;
+export default ChapterItem;

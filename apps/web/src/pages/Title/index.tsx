@@ -2,7 +2,7 @@ import { useParams } from 'react-router';
 import { Divider, Grid } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import PageLayout from '@/shared/ui/PageLayout';
-import useTitleDetails from './hooks/useTitleDetails';
+import useTitleDetails from '@/entities/title/hooks/useTitleDetails';
 import TitleImageSection from './components/TitleImageSection';
 import TitleDetailsSection from './components/TitleDetailsSection';
 

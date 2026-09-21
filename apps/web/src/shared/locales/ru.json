@@ -99,7 +99,7 @@
   "tags": "Теги",
   "aboutTitle": "О тайтле",
   "continue": "Продолжить",
-  "chapterNumberAbbrev": "Гл.{{number}}",
+  "chapterNumberAbbrev": "Гл. {{number}}",
   "untitled": "Без названия",
   "reading": "Читаю",
   "update": "Обновить",

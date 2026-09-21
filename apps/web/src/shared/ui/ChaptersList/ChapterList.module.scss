@@ -1,3 +1,15 @@
+.chapterTimeline {
+  svg {
+    transition: fill 100ms ease;
+  }
+
+  &:hover {
+    svg {
+      fill: var(--mantine-primary-color-filled);
+    }
+  }
+}
+
 .chapter {
   border-radius: 0 !important;
   padding-inline: var(--mantine-spacing-md);
@@ -10,17 +22,5 @@
 
   &[data-last] {
     border-bottom: none;
-  }
-}
-
-.chapterTimeline {
-  svg {
-    transition: fill 100ms ease;
-  }
-
-  &:hover {
-    svg {
-      fill: var(--mantine-primary-color-filled);
-    }
   }
 }
