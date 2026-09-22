@@ -5,13 +5,16 @@ import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useChapterPages from '../hooks/useChapterPages';
 import ReaderPageImage from './ReaderPageImage';
 import ReaderPagesSkeleton from './ReaderPagesSkeleton';
+import { HEADER_HEIGHT } from '@/shared/lib/appShell';
+import { READER_CONTENT_MIN_HEIGHT } from '../lib';
 
 type Props = {
   titleId: string;
   chapterId: string;
+  onTap: () => void;
 };
 
-function ReaderPages({ titleId, chapterId }: Props) {
+function ReaderPages({ titleId, chapterId, onTap }: Props) {
   const { t } = useTranslation();
   const { data, isPending } = useChapterPages({ titleId, chapterId });
 
@@ -24,8 +27,8 @@ function ReaderPages({ titleId, chapterId }: Props) {
   }
 
   return (
-    <AppShell.Main>
-      <Stack mih="100vh" align="center">
+    <AppShell.Main onClick={onTap}>
+      <Stack mih={READER_CONTENT_MIN_HEIGHT} align="center" mt={HEADER_HEIGHT}>
         {data.items.map((page) => (
           <ReaderPageImage
             key={page.index}

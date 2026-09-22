@@ -1,3 +1,18 @@
 .divider {
   align-self: center;
 }
+
+.page {
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+.mobileControls {
+  transition: transform 200ms ease;
+}
+
+.mobileControlsHidden {
+  transform: translateY(calc(100% + 32px));
+  pointer-events: none;
+}

@@ -27,6 +27,7 @@ function Avatar() {
     <Menu>
       <Menu.Target>
         <MantineAvatar
+          color="terracotta"
           className={styles.avatar}
           variant="outline"
           visibleFrom="md"

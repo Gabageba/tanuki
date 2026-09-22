@@ -17,7 +17,7 @@ function ReaderPageImage({ page, alt }: Props) {
 
   if (isBroken) {
     return (
-      <Paper style={{ aspectRatio: ratio }} {...READER_IMAGE_WIDTH_PROPS}>
+      <Paper style={{ aspectRatio: ratio }} {...READER_IMAGE_WIDTH_PROPS} radius={0}>
         <Center h="100%" c="dimmed">
           <ImageBrokenIcon size={38} />
         </Center>
@@ -27,12 +27,16 @@ function ReaderPageImage({ page, alt }: Props) {
 
   return (
     <>
-      {isLoading && <Skeleton style={{ aspectRatio: ratio }} {...READER_IMAGE_WIDTH_PROPS} />}
+      {isLoading && (
+        <Skeleton style={{ aspectRatio: ratio }} {...READER_IMAGE_WIDTH_PROPS} radius={0} />
+      )}
       <Image
+        radius={0}
         src={page.url}
         alt={alt}
         loading="lazy"
         decoding="async"
+        draggable={false}
         display="block"
         h="auto"
         pos={isLoading ? 'absolute' : undefined}

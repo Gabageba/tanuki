@@ -1,4 +1,4 @@
-import { AppShell, Group, Paper, Stack, Title } from '@mantine/core';
+import { AppShell, Group, Stack, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { generatePath } from 'react-router';
 
@@ -11,7 +11,6 @@ import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useChapterPages from '../hooks/useChapterPages';
 import ReaderControls from './ReaderControls';
 import ReaderPagesCount from './ReaderPagesCount';
-import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 
 const TITLE_MIN_WIDTH = 180;
 
@@ -76,28 +75,6 @@ function ReaderHeader({ titleId, chapterId, prevChapterId, nextChapterId }: Prop
           visibleFrom="md"
         />
       </Group>
-      <Paper
-        withBorder
-        h={HEADER_HEIGHT}
-        hiddenFrom="md"
-        w="fit-content"
-        px="md"
-        bg="var(--mantine-color-body)"
-        pos="fixed"
-        bottom={16}
-        left={0}
-        right={0}
-        style={{ marginInline: 'auto' }}
-      >
-        <ReaderControls
-          pagesLength={pagesLength}
-          prevChapterId={prevChapterId}
-          nextChapterId={nextChapterId}
-          titleId={titleId}
-          chapters={chapters}
-          currentChapterIndex={currentChapterIndex}
-        />
-      </Paper>
     </AppShell.Header>
   );
 }
