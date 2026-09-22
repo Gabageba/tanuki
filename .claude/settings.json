@@ -228,7 +228,11 @@
       "Bash(pnpm --filter @tanuki/web test)",
       "Bash(pnpm typecheck *)",
       "Bash(pnpm test *)",
-      "Bash(pnpm run *)"
+      "Bash(pnpm run *)",
+      "Bash(pnpm build:contracts)",
+      "Bash(pnpm --filter @tanuki/contracts typecheck)",
+      "Bash(xargs -I{} sh -c 'echo ==={}; cat {}')",
+      "Bash(xargs -I{} sh -c 'echo ==={}; head -20 {}')"
     ],
     "additionalDirectories": [
       "/Users/gabageba/Develop/web/tanuki-parsers-redo/src/main/kotlin/org/koitharu/kotatsu/parsers/site/ru/rulib",

@@ -14,6 +14,15 @@ export const API_ERROR_CODE = {
   // мёртвой базе деградирует до результата без пользовательских правок, а вот молча потерять
   // запись нельзя — клиент должен узнать, что его правка не сохранилась.
   STORAGE_UNAVAILABLE: 'storageUnavailable',
+  UNAUTHORIZED: 'unauthorized',
+  FORBIDDEN: 'forbidden',
+  INVALID_CREDENTIALS: 'invalidCredentials',
+  EMAIL_NOT_VERIFIED: 'emailNotVerified',
+  EMAIL_TAKEN: 'emailTaken',
+  USERNAME_TAKEN: 'usernameTaken',
+  INVITE_INVALID: 'inviteInvalid',
+  TOKEN_INVALID: 'tokenInvalid',
+  TOO_MANY_REQUESTS: 'tooManyRequests',
 } as const;
 export type ApiErrorCode = EnumLiteralsOf<typeof API_ERROR_CODE>;
 
