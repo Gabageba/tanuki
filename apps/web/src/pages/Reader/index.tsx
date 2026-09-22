@@ -1,6 +1,7 @@
 import { AppShell } from '@mantine/core';
 import { useParams } from 'react-router';
 import ReaderHeader from './components/ReaderHeader';
+import ReaderPages from './components/ReaderPages';
 import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 import useChapterPages from './hooks/useChapterPages';
 
@@ -16,6 +17,7 @@ function Reader() {
         prevChapterId={chapterData?.prevChapterId || null}
         nextChapterId={chapterData?.nextChapterId || null}
       />
+      <ReaderPages titleId={titleId} chapterId={chapterId} />
     </AppShell>
   );
 }
