@@ -1,0 +1,60 @@
+/**
+ * Печатает инвайт роли admin — единственный способ попасть за закрытую регистрацию, пока в базе
+ * нет ни одного пользователя (createdBy у него остаётся null, см. database/schema.ts). Админ в
+ * системе может быть только один, поэтому скрипт отказывается работать, если он уже существует.
+ * Инвайты ролей moderator и user выпускает страница /invites от имени залогиненного админа или
+ * модератора.
+ *
+ * Usage: pnpm --filter @tanuki/api invite:create
+ */
+import { randomBytes, createHash } from 'node:crypto';
+import { resolve } from 'node:path';
+import { config as loadDotenv } from 'dotenv';
+import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { USER_ROLE } from '@tanuki/contracts';
+import { invites, users } from '../src/database/schema';
+
+loadDotenv({ path: resolve(__dirname, '../.env'), quiet: true });
+
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+const main = async () => {
+  const databaseUrl =
+    process.env['DATABASE_URL'] ?? 'postgres://tanuki:tanuki@localhost:5432/tanuki';
+  const appUrl = process.env['APP_URL'] ?? 'http://localhost:5173';
+
+  const client = postgres(databaseUrl, { max: 1 });
+  const db = drizzle(client);
+
+  const [existingAdmin] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, USER_ROLE.ADMIN))
+    .limit(1);
+  if (existingAdmin) {
+    await client.end();
+    throw new Error('Админ уже существует — повторно создать его нельзя.');
+  }
+
+  const code = randomBytes(20).toString('base64url');
+  const codeHash = createHash('sha256').update(code).digest('hex');
+
+  await db.insert(invites).values({
+    codeHash,
+    role: USER_ROLE.ADMIN,
+    createdBy: null,
+    expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+  });
+
+  await client.end();
+
+  console.log('Инвайт (admin) создан, действует 7 дней:');
+  console.log(`${appUrl}/register?invite=${code}`);
+};
+
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
+});

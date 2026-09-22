@@ -4,5 +4,5 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": ["src", "vitest.config.mts", "drizzle.config.ts"]
+  "include": ["src", "scripts", "vitest.config.mts", "drizzle.config.ts"]
 }

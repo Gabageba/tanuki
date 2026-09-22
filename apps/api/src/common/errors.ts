@@ -114,3 +114,78 @@ export class RateLimitedException extends ApiException {
     );
   }
 }
+
+/** Нет валидной сессии — брошено глобальным AuthGuard'ом на непубличном эндпоинте. */
+export class UnauthorizedApiException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.UNAUTHORIZED, 'Требуется вход', HttpStatus.UNAUTHORIZED);
+  }
+}
+
+/** Сессия есть, но роль не подходит (например, не admin на /invites). */
+export class ForbiddenApiException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.FORBIDDEN, 'Недостаточно прав', HttpStatus.FORBIDDEN);
+  }
+}
+
+export class InvalidCredentialsException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.INVALID_CREDENTIALS,
+      'Неверная почта, имя пользователя или пароль',
+      HttpStatus.UNAUTHORIZED,
+    );
+  }
+}
+
+export class EmailNotVerifiedException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.EMAIL_NOT_VERIFIED, 'Почта не подтверждена', HttpStatus.FORBIDDEN);
+  }
+}
+
+export class EmailTakenException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.EMAIL_TAKEN, 'Эта почта уже зарегистрирована', HttpStatus.CONFLICT);
+  }
+}
+
+export class UsernameTakenException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.USERNAME_TAKEN, 'Это имя пользователя уже занято', HttpStatus.CONFLICT);
+  }
+}
+
+export class InviteInvalidException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.INVITE_INVALID,
+      'Приглашение недействительно или уже использовано',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+/** Ссылка подтверждения почты или сброса пароля — не найдена, использована или истекла. */
+export class TokenInvalidException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.TOKEN_INVALID,
+      'Ссылка недействительна или устарела',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+export class TooManyRequestsException extends ApiException {
+  constructor(retryAfter: number) {
+    super(
+      API_ERROR_CODE.TOO_MANY_REQUESTS,
+      'Слишком много попыток, попробуйте позже',
+      HttpStatus.TOO_MANY_REQUESTS,
+      undefined,
+      retryAfter,
+    );
+  }
+}

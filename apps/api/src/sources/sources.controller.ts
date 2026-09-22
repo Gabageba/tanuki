@@ -1,6 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOkResponse, ApiParam, ApiTags } from '@nestjs/swagger';
 import type { Source, SourcesResponse } from '@tanuki/contracts';
+import { Public } from '../auth/public.decorator';
 import { SourceDto, SourcesResponseDto } from './sources.dto';
 import { SourcesService } from './sources.service';
 
@@ -13,6 +14,7 @@ export class SourcesController {
     type: SourcesResponseDto,
     description: 'Источники, сгруппированные по contentType',
   })
+  @Public()
   @Get()
   async list(): Promise<SourcesResponse> {
     return this.sourcesService.listGroupedSources();

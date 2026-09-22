@@ -22,6 +22,13 @@
       "when": 1789200000000,
       "tag": "0002_wonderful_shen",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789998997342,
+      "tag": "0003_aberrant_star_brand",
+      "breakpoints": true
     }
   ]
 }

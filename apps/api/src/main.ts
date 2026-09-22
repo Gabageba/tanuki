@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import 'reflect-metadata';
+import fastifyCookie from '@fastify/cookie';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -11,8 +12,17 @@ import { HttpExceptionFilter } from './common/http-exception.filter';
 const bootstrap = async () => {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: true, maxParamLength: 2048 }),
+    new FastifyAdapter({
+      logger: true,
+      maxParamLength: 2048,
+      // За обратным прокси IP клиента приходит в X-Forwarded-For — без этого AuthGuard'у и
+      // RateLimitService всегда виден бы был только адрес прокси. Читаем process.env напрямую:
+      // на этом шаге ENV ещё не собран Nest DI, а dotenv/config уже загрузил .env выше.
+      trustProxy: process.env['TRUST_PROXY'] === 'true',
+    }),
   );
+
+  await app.register(fastifyCookie);
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalFilters(new HttpExceptionFilter());

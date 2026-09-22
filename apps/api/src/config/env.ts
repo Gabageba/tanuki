@@ -71,6 +71,29 @@ const EnvSchema = z.object({
   // тот читает страницу тайтла, пока блок догружается. На живом прогоне полный веер по 22
   // источникам укладывается примерно в 20 секунд.
   MATCH_TIMEOUT_MS: z.coerce.number().default(20_000),
+  // Базовый адрес фронтенда — на него ссылаются письма (подтверждение почты, сброс пароля).
+  APP_URL: z.string().default('http://localhost:5173'),
+  // Пусто = SMTP не настроен: MailService вместо отправки пишет ссылку в лог (удобно для dev).
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  MAIL_FROM: z.string().default('Tanuki <noreply@tanuki.local>'),
+  // Cookie сессии ставится Secure только за HTTPS — в локальной разработке это ломает http.
+  COOKIE_SECURE: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
+  // За обратным прокси (nginx и т.п.) IP клиента приходит в X-Forwarded-For — без этого флага
+  // rate limiter считал бы все запросы приходящими с одного IP прокси.
+  TRUST_PROXY: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

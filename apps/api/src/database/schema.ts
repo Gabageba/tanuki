@@ -1,5 +1,22 @@
-import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
-import type { TitleLinkVerdict, SourceStatus, SourceStatusReason } from '@tanuki/contracts';
+import { sql } from 'drizzle-orm';
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
+import type {
+  TitleLinkVerdict,
+  SourceStatus,
+  SourceStatusReason,
+  UserRole,
+  Language,
+} from '@tanuki/contracts';
+import type { EmailTokenPurpose } from '../auth/models';
 
 /**
  * Ручные правки связей между тайтлами на разных источниках: что человек подтвердил, а что
@@ -76,4 +93,91 @@ export const sourceHealth = pgTable('source_health', {
 
   statusChangedAt: timestamp('status_changed_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Аккаунты. Регистрация закрыта инвайтами (см. `invites`) — email и username уникальны без
+ * учёта регистра, поэтому уникальность обеспечивают индексы по lower(...), а не по самим
+ * колонкам: email хранится уже нормализованным (trim + lowercase), а username — как ввёл
+ * пользователь, регистр в нём значим только для отображения.
+ */
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    username: text('username').notNull(),
+    passwordHash: text('password_hash').notNull(),
+
+    // Тип text, а не pgEnum — см. комментарий у title_links.verdict выше. Литерал объявлен
+    // один раз в контрактах (USER_ROLE) и выводится типом.
+    role: text('role').$type<UserRole>().notNull(),
+
+    /** null, пока почта не подтверждена — до этого момента вход запрещён. */
+    emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
+
+    /** Язык интерфейса на момент регистрации — на нём уходят письма. */
+    language: text('language').$type<Language>().notNull(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('users_email_lower_idx').on(sql`lower(${table.email})`),
+    uniqueIndex('users_username_lower_idx').on(sql`lower(${table.username})`),
+  ],
+);
+
+/**
+ * Серверные сессии — не JWT: вход отзывается мгновенно (logout, сброс пароля), достаточно
+ * удалить строку. В cookie уходит только случайный токен, здесь хранится его SHA-256 — угнанный
+ * дамп таблицы не даёт войти напрямую.
+ */
+export const sessions = pgTable('sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+
+  /** «Запомнить меня»: влияет только на срок cookie и на то, продлевается ли expiresAt. */
+  remember: boolean('remember').notNull(),
+
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  userAgent: text('user_agent'),
+  ip: text('ip'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Одноразовые приглашения. Статус (active/used/expired/revoked) не хранится отдельной колонкой —
+ * он полностью выводится из expiresAt/usedAt/revokedAt, так что вычисляется на чтении
+ * (см. auth/invites.mapper.ts), а не рискует разойтись с этими полями.
+ */
+export const invites = pgTable('invites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** SHA-256 кода — как и у сессий, сам код существует только в ссылке, которую получил человек. */
+  codeHash: text('code_hash').notNull().unique(),
+  role: text('role').$type<UserRole>().notNull(),
+  /** null для самого первого инвайта — его печатает CLI-скрипт до того, как в базе есть хоть
+   *  один пользователь (см. scripts/create-invite.ts). Все следующие инвайты создаёт админ. */
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedBy: uuid('used_by').references(() => users.id, { onDelete: 'set null' }),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Ссылки в письмах: подтверждение почты и сброс пароля — один токен на активную цель за раз. */
+export const emailTokens = pgTable('email_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  purpose: text('purpose').$type<EmailTokenPurpose>().notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
