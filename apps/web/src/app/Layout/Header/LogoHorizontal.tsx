@@ -1,17 +1,23 @@
+import type { MantineBreakpoint } from '@mantine/core';
 import { Group, Text } from '@mantine/core';
 import Logo from './Logo';
 import type { IconProps } from './models';
 
-function LogoHorizontal(props: IconProps) {
+type Props = {
+  textVisibleFrom?: MantineBreakpoint;
+} & IconProps;
+
+function LogoHorizontal({ textVisibleFrom, ...restProps }: Props) {
   return (
     <Group gap="xs">
-      <Logo {...props} size={24} color="var(--mantine-primary-color-filled)" />
+      <Logo {...restProps} size={24} color="var(--mantine-primary-color-filled)" />
       <Text
+        lh={1}
         ff="var(--tanuki-font-brand)"
         fw={600}
         fz={16}
         style={{ letterSpacing: '-0.01em' }}
-        visibleFrom="sm"
+        visibleFrom={textVisibleFrom}
       >
         Tanuki
       </Text>

@@ -1,6 +1,14 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useState } from 'react';
-import { Button, Collapse, Drawer, Stack, useMantineColorScheme } from '@mantine/core';
+import {
+  Button,
+  Collapse,
+  Divider,
+  Drawer,
+  Stack,
+  Text,
+  useMantineColorScheme,
+} from '@mantine/core';
 import {
   CaretDownIcon,
   CaretUpIcon,
@@ -8,12 +16,18 @@ import {
   GlobeIcon,
   ListIcon,
   PaletteIcon,
+  SignOutIcon,
+  TicketIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
+import { isStaffRole } from '@tanuki/contracts';
 import MobileNavigationButton from './MobileNavigationButton';
-import { getColorSchemeIcon } from '../../utils/getColorSchemeIcon';
-import { COLOR_SCHEME, getColorSchemeLabel } from '@/app/Providers/models';
 import { LANGUAGE, getLanguageLabel } from '@/shared/lib/language';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
+import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
+import useLogout from '@/entities/user/hooks/useLogout';
+import { COLOR_SCHEME, getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
 import styles from './../../Layout.module.scss';
 
 type Props = {
@@ -24,7 +38,10 @@ type Props = {
 
 function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const { data: user } = useCurrentUser();
+  const logout = useLogout();
   const [isThemeOpened, setIsThemeOpened] = useState(false);
   const [isLanguageOpened, setIsLanguageOpened] = useState(false);
 
@@ -43,6 +60,11 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
         position="right"
       >
         <Stack gap={4}>
+          {user && (
+            <Text size="sm" c="dimmed" px="sm" py={4}>
+              {user.username}
+            </Text>
+          )}
           <Button
             className={styles.switcherOption}
             onClick={() => setIsThemeOpened((prev) => !prev)}
@@ -110,6 +132,37 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
               ))}
             </Stack>
           </Collapse>
+          {isStaffRole(user?.role) && (
+            <>
+              <Divider />
+              <Button
+                className={styles.switcherOption}
+                onClick={() => {
+                  setIsOpened(false);
+                  navigate(ROUTE_PATHS.INVITES);
+                }}
+                variant="selectable"
+                justify="flex-start"
+                size="md"
+                leftSection={<TicketIcon />}
+              >
+                {t('invites')}
+              </Button>
+            </>
+          )}
+          <Divider />
+          <Button
+            className={styles.switcherOption}
+            c="red"
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+            variant="selectable"
+            justify="flex-start"
+            size="md"
+            leftSection={<SignOutIcon />}
+          >
+            {t('logOut')}
+          </Button>
         </Stack>
       </Drawer>
     </>

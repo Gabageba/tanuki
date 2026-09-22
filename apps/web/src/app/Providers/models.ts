@@ -1,6 +1,4 @@
-import type { CSSVariablesResolver, MantineColorScheme, MantineColorsTuple } from '@mantine/core';
-import type { TFunction } from 'i18next';
-import type { EnumLiteralsOf } from '@tanuki/contracts';
+import type { CSSVariablesResolver, MantineColorsTuple } from '@mantine/core';
 import { PRIMARY_COLOR, PRIMARY_SHADE } from '@/shared/lib/palette';
 
 /**
@@ -11,24 +9,6 @@ import { PRIMARY_COLOR, PRIMARY_SHADE } from '@/shared/lib/palette';
 export const FONT_FAMILY_SANS = 'Golos Text, sans-serif';
 const FONT_FAMILY_BRAND = 'Unbounded, sans-serif';
 export const FONT_FAMILY_MONOSPACE = 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace';
-
-export const COLOR_SCHEME = {
-  LIGHT: 'light',
-  DARK: 'dark',
-  AUTO: 'auto',
-} as const satisfies Record<string, MantineColorScheme>;
-export type ColorScheme = EnumLiteralsOf<typeof COLOR_SCHEME>;
-
-export const getColorSchemeLabel = (colorScheme: ColorScheme, t: TFunction) => {
-  switch (colorScheme) {
-    case COLOR_SCHEME.LIGHT:
-      return t('light');
-    case COLOR_SCHEME.DARK:
-      return t('dark');
-    case COLOR_SCHEME.AUTO:
-      return t('system');
-  }
-};
 
 /**
  * Нейтрали светлой темы. Шаги подобраны так, чтобы стандартные роли Mantine попали в цвета

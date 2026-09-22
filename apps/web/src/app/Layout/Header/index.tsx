@@ -21,7 +21,7 @@ function Header() {
       <Group h="100%" px="md" justify="space-between">
         <Group gap="sm">
           <Anchor component={Link} to="/sources" c="inherit" underline="never">
-            <LogoHorizontal />
+            <LogoHorizontal textVisibleFrom="sm" />
           </Anchor>
           <Typography className={styles.divider} visibleFrom="md" />
           <DesktopSourceSelect />

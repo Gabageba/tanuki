@@ -4,6 +4,10 @@ import {
   RouterProvider as InternalRouterProvider,
 } from 'react-router';
 import Layout from '@/app/Layout';
+import AuthLayout from '@/app/AuthLayout';
+import RequireAuth from '@/app/RequireAuth';
+import RequireStaff from '@/app/RequireStaff';
+import GuestOnly from '@/app/GuestOnly';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import SearchPage from '@/pages/Search/SearchPage';
 import Sources from '@/pages/Sources';
@@ -13,49 +17,116 @@ import Bookmarks from '@/pages/Bookmarks';
 import Catalog from '@/pages/Catalog';
 import Title from '@/pages/Title';
 import Reader from '@/pages/Reader';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import VerifyEmail from '@/pages/VerifyEmail';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
+import Invites from '@/pages/Invites';
+import Terms from '@/pages/Terms';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
 
 const router = createBrowserRouter([
   {
-    element: <Layout />,
+    element: <RequireAuth />,
     children: [
       {
-        path: '/',
-        element: <Navigate to={ROUTE_PATHS.SOURCES} replace />,
+        element: <Layout />,
+        children: [
+          {
+            path: '/',
+            element: <Navigate to={ROUTE_PATHS.SOURCES} replace />,
+          },
+          {
+            path: ROUTE_PATHS.SOURCES,
+            element: <Sources />,
+          },
+          {
+            path: ROUTE_PATHS.SOURCES_HEALTH,
+            element: <SourcesHealth />,
+          },
+          {
+            path: ROUTE_PATHS.SEARCH,
+            element: <SearchPage />,
+          },
+          {
+            path: ROUTE_PATHS.CATALOG,
+            element: <Catalog />,
+          },
+          {
+            path: ROUTE_PATHS.TITLE,
+            element: <Title />,
+          },
+          {
+            path: ROUTE_PATHS.NOTIFICATIONS,
+            element: <Notifications />,
+          },
+          {
+            path: ROUTE_PATHS.BOOKMARKS,
+            element: <Bookmarks />,
+          },
+          {
+            element: <RequireStaff />,
+            children: [
+              {
+                path: ROUTE_PATHS.INVITES,
+                element: <Invites />,
+              },
+            ],
+          },
+        ],
       },
+      // Читалка живёт вне общего каркаса: она на весь экран и с чёрным фоном, шапка ей мешает.
+      // Внутри RequireAuth всё равно остаётся — без сессии её тоже не открыть.
       {
-        path: ROUTE_PATHS.SOURCES,
-        element: <Sources />,
-      },
-      {
-        path: ROUTE_PATHS.SOURCES_HEALTH,
-        element: <SourcesHealth />,
-      },
-      {
-        path: ROUTE_PATHS.SEARCH,
-        element: <SearchPage />,
-      },
-      {
-        path: ROUTE_PATHS.CATALOG,
-        element: <Catalog />,
-      },
-      {
-        path: ROUTE_PATHS.TITLE,
-        element: <Title />,
-      },
-      {
-        path: ROUTE_PATHS.NOTIFICATIONS,
-        element: <Notifications />,
-      },
-      {
-        path: ROUTE_PATHS.BOOKMARKS,
-        element: <Bookmarks />,
+        path: ROUTE_PATHS.READER,
+        element: <Reader />,
       },
     ],
   },
-  // Читалка живёт вне общего каркаса: она на весь экран и с чёрным фоном, шапка ей мешает.
   {
-    path: ROUTE_PATHS.READER,
-    element: <Reader />,
+    element: <GuestOnly />,
+    children: [
+      {
+        element: <AuthLayout />,
+        children: [
+          {
+            path: ROUTE_PATHS.LOGIN,
+            element: <Login />,
+          },
+          {
+            path: ROUTE_PATHS.REGISTER,
+            element: <Register />,
+          },
+          {
+            path: ROUTE_PATHS.VERIFY_EMAIL,
+            element: <VerifyEmail />,
+          },
+          {
+            path: ROUTE_PATHS.FORGOT_PASSWORD,
+            element: <ForgotPassword />,
+          },
+          {
+            path: ROUTE_PATHS.RESET_PASSWORD,
+            element: <ResetPassword />,
+          },
+        ],
+      },
+    ],
+  },
+  // Документы открываются и гостю (ссылка с регистрации), и уже вошедшему — поэтому вне GuestOnly.
+  {
+    element: <AuthLayout />,
+    children: [
+      {
+        path: ROUTE_PATHS.TERMS,
+        element: <Terms />,
+      },
+      {
+        path: ROUTE_PATHS.PRIVACY_POLICY,
+        element: <PrivacyPolicy />,
+      },
+    ],
   },
 ]);
 

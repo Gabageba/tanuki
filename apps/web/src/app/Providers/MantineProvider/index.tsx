@@ -13,15 +13,15 @@ import {
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { EyeIcon, EyeSlashIcon, LockSimpleIcon } from '@phosphor-icons/react';
 import {
-  COLOR_SCHEME,
   CSS_VARIABLES_RESOLVER,
   FONT_FAMILY_MONOSPACE,
   FONT_FAMILY_SANS,
   NEUTRAL_DARK_SHADES,
   NEUTRAL_LIGHT_SHADES,
-  type ColorScheme,
 } from '../models';
+import { COLOR_SCHEME, type ColorScheme } from '@/shared/lib/colorScheme';
 import {
   PRIMARY_COLOR,
   PRIMARY_COLOR_SHADES,
@@ -123,6 +123,13 @@ const createAppTheme = (t: TFunction) =>
         defaultProps: {
           title: t('nothingFound'),
           description: t('tryChangingQuery'),
+        },
+      },
+      Modal: {
+        styles: {
+          header: {
+            backgroundColor: 'var(--tanuki-color-surface)',
+          },
         },
       },
       Button: {
@@ -229,6 +236,19 @@ const createAppTheme = (t: TFunction) =>
       Tabs: {
         classNames: {
           tab: styles.selectableTab,
+        },
+      },
+      PasswordInput: {
+        defaultProps: {
+          leftSection: <LockSimpleIcon />,
+          visibilityToggleIcon: ({ reveal }: { reveal: boolean }) =>
+            reveal ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />,
+        },
+        styles: {
+          visibilityToggle: {
+            borderRadius: 'var(--mantine-radius-md)',
+            color: 'var(--mantine-color-dimmed)',
+          },
         },
       },
     },

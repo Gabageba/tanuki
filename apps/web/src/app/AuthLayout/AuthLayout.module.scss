@@ -1,0 +1,132 @@
+// Фон страницы авторизации: два размытых пятна у углов карточки — тёплое из акцента слева сверху
+// и холодное из нейтралей справа снизу, — сетка точек поверх и виньетка, которая гасит края
+// экрана. Второе пятно нужно именно холодным: тёплое читается только в контрасте с ним, а две
+// терракоты сливаются в одно бурое марево. Оттенки пятен берутся из темы (акцент и нейтрали,
+// hue ≈ 255), светлота и насыщенность — из макета; точки и виньетка — из нейтралей. В тёмной теме
+// фон на шаг темнее обычного `body` (`dark-8`, как `#0c0d0f` в макете) — на нём пятна
+// контрастнее; в светлой остаётся `body`.
+
+.root {
+  --auth-glow-warm: oklch(from var(--mantine-primary-color-filled) 42% 0.1 h / 38%);
+  --auth-glow-cool: oklch(from var(--mantine-color-dark-4) 40% 0.05 h / 34%);
+  --auth-dot: var(--mantine-color-dark-4);
+  --auth-bg: var(--mantine-color-dark-8);
+
+  position: relative;
+  isolation: isolate;
+  background: var(--auth-bg);
+
+  :global([data-mantine-color-scheme='light']) & {
+    --auth-glow-warm: oklch(from var(--mantine-primary-color-filled) 86% 0.08 h / 55%);
+    --auth-glow-cool: oklch(from var(--mantine-color-gray-4) 82% 0.04 h / 45%);
+    --auth-dot: var(--mantine-color-gray-4);
+    --auth-bg: var(--mantine-color-body);
+  }
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  width: var(--auth-glow-size);
+  height: var(--auth-glow-size);
+  filter: blur(28px);
+}
+
+// Пятна привязаны к центру страницы, то есть к карточке, а не к углам окна: так они задевают
+// краем её углы на любом экране, а не теряются по краям большого монитора. Размеры и сдвиги
+// фиксированные — на узком экране пятна просто обрезаются краем окна.
+.glowWarm {
+  --auth-glow-size: 760px;
+
+  left: calc(50% - 300px);
+  top: calc(50% - 250px);
+  translate: -50% -50%;
+  background: radial-gradient(circle, var(--auth-glow-warm) 0%, transparent 60%);
+  animation: drift-warm 18s ease-in-out infinite;
+}
+
+.glowCool {
+  --auth-glow-size: 620px;
+
+  left: calc(50% + 280px);
+  top: calc(50% + 300px);
+  translate: -50% -50%;
+  background: radial-gradient(circle, var(--auth-glow-cool) 0%, transparent 68%);
+  animation: drift-cool 22s ease-in-out infinite;
+}
+
+.halftone {
+  position: absolute;
+  inset: -40px;
+  opacity: 0.45;
+  background-image: radial-gradient(var(--auth-dot) 1.1px, transparent 1.2px);
+  background-size: 12px 12px;
+  animation: halftone 16s linear infinite;
+}
+
+// Монотонное затемнение к краям без промежуточного светлого кольца из макета: кольцо зависело
+// от пропорций окна и при пересечении с пятнами рисовало полосы-разводы.
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    farthest-corner at center,
+    transparent 30%,
+    color-mix(in srgb, var(--auth-bg) 85%, transparent) 100%
+  );
+}
+
+.card {
+  animation: rise 0.55s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glowWarm,
+  .glowCool,
+  .halftone,
+  .card {
+    animation: none;
+  }
+}
+
+@keyframes drift-warm {
+  33% {
+    transform: translate(60px, 40px) scale(1.1);
+  }
+
+  66% {
+    transform: translate(20px, 70px) scale(0.95);
+  }
+}
+
+@keyframes drift-cool {
+  33% {
+    transform: translate(-50px, -60px) scale(1.12);
+  }
+
+  66% {
+    transform: translate(-70px, -10px) scale(0.94);
+  }
+}
+
+// Сдвиг ровно на два шага сетки, поэтому цикл замыкается без рывка.
+@keyframes halftone {
+  to {
+    transform: translate(24px, 24px);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}

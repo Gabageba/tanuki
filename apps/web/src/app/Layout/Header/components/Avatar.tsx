@@ -1,21 +1,48 @@
 import { Avatar as MantineAvatar, Group, Menu, useMantineColorScheme } from '@mantine/core';
-import { GlobeIcon, PaletteIcon } from '@phosphor-icons/react';
+import {
+  GearSixIcon,
+  GlobeIcon,
+  PaletteIcon,
+  SignOutIcon,
+  TicketIcon,
+  UserIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { COLOR_SCHEME, getColorSchemeLabel } from '@/app/Providers/models';
+import { Link } from 'react-router';
+import { isStaffRole } from '@tanuki/contracts';
+import { COLOR_SCHEME, getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
 import { LANGUAGE, getLanguageLabel } from '@/shared/lib/language';
-import { getColorSchemeIcon } from '../../utils/getColorSchemeIcon';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
+import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
+import useLogout from '@/entities/user/hooks/useLogout';
 import styles from './../Header.module.scss';
 
 function Avatar() {
   const { t, i18n } = useTranslation();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const { data: user } = useCurrentUser();
+  const logout = useLogout();
 
   return (
     <Menu>
       <Menu.Target>
-        <MantineAvatar className={styles.avatar} variant="transparent" visibleFrom="md" />
+        <MantineAvatar
+          className={styles.avatar}
+          variant="outline"
+          visibleFrom="md"
+          name={user?.username}
+          size={34}
+        />
       </Menu.Target>
       <Menu.Dropdown>
+        {user && <Menu.Label>{user.username}</Menu.Label>}
+        <Menu.Item leftSection={<UserIcon />}>Профиль</Menu.Item>
+        {isStaffRole(user?.role) && (
+          <Menu.Item component={Link} to={ROUTE_PATHS.INVITES} leftSection={<TicketIcon />}>
+            {t('invites')}
+          </Menu.Item>
+        )}
+        <Menu.Item leftSection={<GearSixIcon />}>Настройки</Menu.Item>
         <Menu.Sub>
           <Menu.Sub.Target>
             <Menu.Sub.Item leftSection={<PaletteIcon />}>{t('theme')}</Menu.Sub.Item>
@@ -53,6 +80,16 @@ function Avatar() {
             </Menu.RadioGroup>
           </Menu.Sub.Dropdown>
         </Menu.Sub>
+
+        <Menu.Divider />
+        <Menu.Item
+          color="red"
+          leftSection={<SignOutIcon />}
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+        >
+          {t('logOut')}
+        </Menu.Item>
       </Menu.Dropdown>
     </Menu>
   );

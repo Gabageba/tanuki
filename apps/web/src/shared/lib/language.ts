@@ -1,11 +1,7 @@
-import { type EnumLiteralsOf } from '@tanuki/contracts';
+import { LANGUAGE, type Language } from '@tanuki/contracts';
 import { readSettings, writeSettings } from './settings';
 
-export const LANGUAGE = {
-  RU: 'ru',
-  EN: 'en',
-} as const;
-export type Language = EnumLiteralsOf<typeof LANGUAGE>;
+export { LANGUAGE, type Language };
 
 export const getStoredLanguage = (): Language | undefined => readSettings().language;
 

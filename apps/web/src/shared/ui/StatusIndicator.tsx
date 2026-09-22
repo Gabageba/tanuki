@@ -1,4 +1,4 @@
-import type { MantineBreakpoint, MantineStyleProps } from '@mantine/core';
+import type { MantineBreakpoint, MantineSpacing, MantineStyleProps } from '@mantine/core';
 import { Box, Group, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
 
@@ -10,6 +10,7 @@ type Props = {
   coloredText?: boolean;
   fw?: MantineStyleProps['fw'];
   visibleFrom?: MantineBreakpoint;
+  gap?: MantineSpacing;
 };
 
 function StatusIndicator({
@@ -20,9 +21,10 @@ function StatusIndicator({
   coloredText = false,
   fw = 400,
   visibleFrom,
+  gap = 6,
 }: Props) {
   return (
-    <Group gap={6} align="center" wrap="nowrap">
+    <Group gap={gap} align="center" wrap="nowrap">
       <Box bg={color} bdrs="50%" w={fz / 2} h={fz / 2} flex="none" mt={dotMt} />
       <Text c={coloredText ? color : undefined} fz={fz} fw={fw} lh={1} visibleFrom={visibleFrom}>
         {label}
