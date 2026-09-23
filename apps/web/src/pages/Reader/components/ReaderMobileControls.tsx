@@ -1,6 +1,5 @@
 import { Paper } from '@mantine/core';
 import useChapters from '@/entities/title/hooks/useChapters';
-import useChapterPages from '../hooks/useChapterPages';
 import ReaderControls from './ReaderControls';
 import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 import styles from '../ReaderPage.module.scss';
@@ -12,6 +11,8 @@ type Props = {
   chapterId: string;
   prevChapterId: string | null;
   nextChapterId: string | null;
+  page: number;
+  pagesLength: number | null;
   visible: boolean;
 };
 
@@ -20,14 +21,14 @@ function ReaderMobileControls({
   chapterId,
   prevChapterId,
   nextChapterId,
+  page,
+  pagesLength,
   visible,
 }: Props) {
   const { data: chaptersData } = useChapters({ titleId });
-  const { data: chapterPages } = useChapterPages({ titleId, chapterId });
 
   const chapters = chaptersData?.items ?? [];
   const currentChapterIndex = chapters.findIndex((chapter) => chapter.id === chapterId);
-  const pagesLength = chapterPages?.items.length ?? null;
 
   return (
     <Paper
@@ -48,6 +49,7 @@ function ReaderMobileControls({
       style={{ marginInline: 'auto' }}
     >
       <ReaderControls
+        page={page}
         pagesLength={pagesLength}
         prevChapterId={prevChapterId}
         nextChapterId={nextChapterId}

@@ -50,12 +50,24 @@ export const READER_PAGE_GAP = {
   WIDE: 32,
 } as const;
 
+/** Отступ между главами в вертикальной ленте, в пикселях. Заметно больше отступа между
+ *  страницами: он и есть единственный признак того, что одна глава кончилась и началась
+ *  следующая — ни подписи, ни разделителя на стыке нет. */
+export const READER_CHAPTER_GAP = {
+  MIN: 0,
+  MAX: 200,
+  NARROW: 32,
+  MEDIUM: 64,
+  WIDE: 120,
+} as const;
+
 export const ReaderSettingsSchema = z.object({
   readingMode: ReaderReadingModeSchema,
   pageFit: ReaderPageFitSchema,
   containerWidth: z.number().int().min(READER_CONTAINER_WIDTH.MIN).max(READER_CONTAINER_WIDTH.MAX),
   tapZoneWidth: z.number().int().min(READER_TAP_ZONE_WIDTH.MIN).max(READER_TAP_ZONE_WIDTH.MAX),
   pageGap: z.number().int().min(READER_PAGE_GAP.MIN).max(READER_PAGE_GAP.MAX),
+  chapterGap: z.number().int().min(READER_CHAPTER_GAP.MIN).max(READER_CHAPTER_GAP.MAX),
 });
 export type ReaderSettings = z.infer<typeof ReaderSettingsSchema>;
 
@@ -67,6 +79,7 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   containerWidth: READER_CONTAINER_WIDTH.MEDIUM,
   tapZoneWidth: READER_TAP_ZONE_WIDTH.MEDIUM,
   pageGap: READER_PAGE_GAP.NARROW,
+  chapterGap: READER_CHAPTER_GAP.MEDIUM,
 };
 
 export const UpdateReaderSettingsRequestSchema = ReaderSettingsSchema;

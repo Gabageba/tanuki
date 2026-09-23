@@ -14,6 +14,7 @@ type Props = {
   titleId: string;
   prevChapterId: string | null;
   nextChapterId: string | null;
+  page: number;
   pagesLength: number | null;
   chapters: Chapter[];
   currentChapterIndex: number;
@@ -22,6 +23,7 @@ type Props = {
 };
 
 function ReaderControls({
+  page,
   pagesLength,
   titleId,
   prevChapterId,
@@ -59,7 +61,7 @@ function ReaderControls({
       )}
       <Divider orientation="vertical" h={26} className={styles.divider} />
       <Group gap={innerGap} wrap="nowrap" style={{ flexShrink: 0 }}>
-        <ReaderPagesCount pagesLength={pagesLength} visibleFrom="md" />
+        <ReaderPagesCount page={page} pagesLength={pagesLength} visibleFrom="md" />
         <ActionIcon variant="subtle" color="gray" size="lg">
           <BookmarkSimpleIcon />
         </ActionIcon>

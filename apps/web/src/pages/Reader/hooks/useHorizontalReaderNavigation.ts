@@ -1,38 +1,36 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { generatePath, useNavigate } from 'react-router';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
+import type { ReaderFeedChapter, ReaderPosition } from '../models';
 
 type Params = {
   /** false в вертикальном режиме: хук висит всегда (список страниц общий на оба режима), но
    *  стрелки там листать не должны — «влево» на первой странице уводило бы в прошлую главу. */
   enabled: boolean;
   titleId: string;
-  chapterId: string;
-  pagesCount: number;
-  prevChapterId: string | null;
-  nextChapterId: string | null;
+  chapters: ReaderFeedChapter[];
+  position: ReaderPosition;
+  setPosition: (position: ReaderPosition) => void;
+  prependChapter: (chapterId: string) => void;
 };
 
-/** Постраничная навигация для горизонтального режима: за пределами текущей главы клик/стрелка
- *  сразу переключают на соседнюю главу, а не просто утыкаются в край. */
+/**
+ * Постраничная навигация горизонтального режима. На краях главы листание не утыкается в край, а
+ * переходит в соседнюю главу — в обе стороны без перезагрузки: вперёд следующая глава к этому
+ * моменту обычно уже подклеена к ленте, назад прошлая подклеивается сверху. Настоящий переход
+ * остаётся только на случай, когда следующей в ленте ещё нет.
+ */
 function useHorizontalReaderNavigation({
   enabled,
   titleId,
-  chapterId,
-  pagesCount,
-  prevChapterId,
-  nextChapterId,
+  chapters,
+  position,
+  setPosition,
+  prependChapter,
 }: Params) {
   const navigate = useNavigate();
-  const [renderedChapterId, setRenderedChapterId] = useState(chapterId);
-  const [pageIndex, setPageIndex] = useState(0);
-
-  // Сбрасывает текущую страницу при смене главы — без эффекта, по правилу "adjusting state when
-  // a prop changes": сравнение и setState идут прямо в теле рендера, а не в useEffect.
-  if (chapterId !== renderedChapterId) {
-    setRenderedChapterId(chapterId);
-    setPageIndex(0);
-  }
+  const chapterIndex = chapters.findIndex((chapter) => chapter.chapterId === position.chapterId);
+  const chapter = chapters[chapterIndex];
 
   const goToChapter = useCallback(
     (targetChapterId: string) => {
@@ -42,20 +40,41 @@ function useHorizontalReaderNavigation({
   );
 
   const goNext = useCallback(() => {
-    if (pageIndex < pagesCount - 1) {
-      setPageIndex((index) => index + 1);
-    } else if (nextChapterId) {
-      goToChapter(nextChapterId);
-    }
-  }, [pageIndex, pagesCount, nextChapterId, goToChapter]);
+    if (!chapter) return;
 
-  const goPrev = useCallback(() => {
-    if (pageIndex > 0) {
-      setPageIndex((index) => index - 1);
-    } else if (prevChapterId) {
-      goToChapter(prevChapterId);
+    if (position.pageIndex < chapter.pages.length - 1) {
+      setPosition({ chapterId: chapter.chapterId, pageIndex: position.pageIndex + 1 });
+      return;
     }
-  }, [pageIndex, prevChapterId, goToChapter]);
+
+    const nextInFeed = chapters[chapterIndex + 1];
+    if (nextInFeed) {
+      setPosition({ chapterId: nextInFeed.chapterId, pageIndex: 0 });
+      return;
+    }
+
+    if (chapter.nextChapterId) goToChapter(chapter.nextChapterId);
+  }, [chapter, chapterIndex, chapters, position.pageIndex, setPosition, goToChapter]);
+
+  // Назад за начало главы — это всегда конец прошлой: на её первую страницу читатель попадал бы
+  // только чтобы тут же пролистать её насквозь. Загруженную главу листаем сразу, остальное берёт
+  // на себя лента — она же знает, что номер последней страницы появится только после загрузки.
+  const goPrev = useCallback(() => {
+    if (!chapter) return;
+
+    if (position.pageIndex > 0) {
+      setPosition({ chapterId: chapter.chapterId, pageIndex: position.pageIndex - 1 });
+      return;
+    }
+
+    const prevInFeed = chapters[chapterIndex - 1];
+    if (prevInFeed && prevInFeed.pages.length > 0) {
+      setPosition({ chapterId: prevInFeed.chapterId, pageIndex: prevInFeed.pages.length - 1 });
+      return;
+    }
+
+    if (chapter.prevChapterId) prependChapter(chapter.prevChapterId);
+  }, [chapter, chapterIndex, chapters, position.pageIndex, setPosition, prependChapter]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -68,7 +87,7 @@ function useHorizontalReaderNavigation({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [enabled, goNext, goPrev]);
 
-  return { pageIndex, goNext, goPrev };
+  return { goNext, goPrev };
 }
 
 export default useHorizontalReaderNavigation;

@@ -25,6 +25,7 @@ export class ReaderSettingsService {
         containerWidth: row.containerWidth,
         tapZoneWidth: row.tapZoneWidth,
         pageGap: row.pageGap,
+        chapterGap: row.chapterGap,
       };
     }, DEFAULT_READER_SETTINGS);
   }

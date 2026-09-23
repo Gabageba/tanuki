@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_READER_SETTINGS,
+  READER_CHAPTER_GAP,
   READER_CONTAINER_WIDTH,
   READER_PAGE_FIT,
   READER_PAGE_GAP,
@@ -113,6 +114,12 @@ function ReaderSettingsButton() {
     { id: 'wide', label: t('wide'), value: READER_PAGE_GAP.WIDE },
   ];
 
+  const chapterGapPresets = [
+    { id: 'narrow', label: t('narrow'), value: READER_CHAPTER_GAP.NARROW },
+    { id: 'medium', label: t('medium'), value: READER_CHAPTER_GAP.MEDIUM },
+    { id: 'wide', label: t('wide'), value: READER_CHAPTER_GAP.WIDE },
+  ];
+
   return (
     <>
       <ActionIcon
@@ -193,18 +200,32 @@ function ReaderSettingsButton() {
             )}
 
             {/* В горизонтальном режиме видна ровно одна страница — отступ между ними никогда не
-              показывается, настраивать нечего. */}
+              показывается, настраивать нечего. Отступ между главами там же не нужен по той же
+              причине: главы сменяют друг друга страницей, а не разрывом в ленте. */}
             {settings.readingMode === READER_READING_MODE.VERTICAL && (
-              <ReaderSliderSetting
-                label={t('gapBetweenPages')}
-                unit="px"
-                value={settings.pageGap}
-                min={READER_PAGE_GAP.MIN}
-                max={READER_PAGE_GAP.MAX}
-                presets={pageGapPresets}
-                onChange={(pageGap) => setDraftSettings({ pageGap })}
-                onChangeEnd={(pageGap) => updateSettings.mutate({ ...settings, pageGap })}
-              />
+              <>
+                <ReaderSliderSetting
+                  label={t('gapBetweenPages')}
+                  unit="px"
+                  value={settings.pageGap}
+                  min={READER_PAGE_GAP.MIN}
+                  max={READER_PAGE_GAP.MAX}
+                  presets={pageGapPresets}
+                  onChange={(pageGap) => setDraftSettings({ pageGap })}
+                  onChangeEnd={(pageGap) => updateSettings.mutate({ ...settings, pageGap })}
+                />
+
+                <ReaderSliderSetting
+                  label={t('gapBetweenChapters')}
+                  unit="px"
+                  value={settings.chapterGap}
+                  min={READER_CHAPTER_GAP.MIN}
+                  max={READER_CHAPTER_GAP.MAX}
+                  presets={chapterGapPresets}
+                  onChange={(chapterGap) => setDraftSettings({ chapterGap })}
+                  onChangeEnd={(chapterGap) => updateSettings.mutate({ ...settings, chapterGap })}
+                />
+              </>
             )}
 
             <Paper withBorder p="sm" radius="md">

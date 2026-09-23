@@ -198,6 +198,7 @@
   "containerWidth": "Container width",
   "clickArea": "Click area",
   "gapBetweenPages": "Gap between pages",
+  "gapBetweenChapters": "Gap between chapters",
   "narrow": "Narrow",
   "medium": "Medium",
   "wide": "Wide",

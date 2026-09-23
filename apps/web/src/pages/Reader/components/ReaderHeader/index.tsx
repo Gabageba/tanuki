@@ -8,7 +8,6 @@ import useSource from '@/entities/source/hooks/useSource';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import GoBackButton from '@/shared/ui/GoBackButton';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
-import useChapterPages from '../../hooks/useChapterPages';
 import ReaderControls from '../ReaderControls';
 import ReaderPagesCount from '../ReaderPagesCount';
 import { TITLE_NAME_MIN_WIDTH } from '../../lib';
@@ -17,9 +16,12 @@ import { isEmpty } from '@/shared/lib/isEmpty';
 
 type Props = {
   titleId: string;
+  /** Глава, которую читают прямо сейчас, — в ленте это не всегда та, с которой чтение начиналось. */
   chapterId: string;
   prevChapterId: string | null;
   nextChapterId: string | null;
+  page: number;
+  pagesLength: number | null;
   isChapterDataPending: boolean;
 };
 
@@ -28,6 +30,8 @@ function ReaderHeader({
   chapterId,
   prevChapterId,
   nextChapterId,
+  page,
+  pagesLength,
   isChapterDataPending,
 }: Props) {
   const { t } = useTranslation();
@@ -36,24 +40,13 @@ function ReaderHeader({
   const { data: source, isPending: isSourcePending } = useSource({
     sourceId: titleData?.title.sourceId,
   });
-  const { data: chapterPages, isPending: isChapterPagesPending } = useChapterPages({
-    titleId,
-    chapterId,
-  });
 
-  if (
-    isTitleDetailsPending ||
-    isChapterPagesPending ||
-    isChaptersDataPending ||
-    isSourcePending ||
-    isChapterDataPending
-  ) {
+  if (isTitleDetailsPending || isChaptersDataPending || isSourcePending || isChapterDataPending) {
     return <ReaderHeaderSkeleton />;
   }
 
   const chapters = chaptersData?.items ?? [];
   const currentChapterIndex = chapters.findIndex((chapter) => chapter.id === chapterId);
-  const pagesLength = chapterPages?.items.length ?? null;
 
   return (
     <AppShell.Header>
@@ -91,8 +84,9 @@ function ReaderHeader({
             />
           </Stack>
         </Group>
-        <ReaderPagesCount pagesLength={pagesLength} hiddenFrom="md" />
+        <ReaderPagesCount page={page} pagesLength={pagesLength} hiddenFrom="md" />
         <ReaderControls
+          page={page}
           pagesLength={pagesLength}
           prevChapterId={prevChapterId}
           nextChapterId={nextChapterId}
