@@ -155,3 +155,19 @@ export {
   type TitleMatchesResponse,
   type TitleLinkRequest,
 } from './match';
+export {
+  READER_READING_MODE,
+  ReaderReadingModeSchema,
+  type ReaderReadingMode,
+  READER_PAGE_FIT,
+  ReaderPageFitSchema,
+  type ReaderPageFit,
+  READER_CONTAINER_WIDTH,
+  READER_TAP_ZONE_WIDTH,
+  READER_PAGE_GAP,
+  ReaderSettingsSchema,
+  type ReaderSettings,
+  DEFAULT_READER_SETTINGS,
+  UpdateReaderSettingsRequestSchema,
+  type UpdateReaderSettingsRequest,
+} from './reader-settings';

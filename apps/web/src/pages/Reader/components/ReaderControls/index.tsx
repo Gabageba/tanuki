@@ -37,7 +37,7 @@ function ReaderControls({
   const innerGap = isXxs ? 'xs' : 4;
 
   return (
-    <Group visibleFrom={visibleFrom} hiddenFrom={hiddenFrom} h="100%" gap={outerGap}>
+    <Group visibleFrom={visibleFrom} hiddenFrom={hiddenFrom} h="100%" gap={outerGap} wrap="nowrap">
       {currentChapter && (
         <Group gap={innerGap} miw={0} wrap="nowrap">
           <ReaderNavigateButton

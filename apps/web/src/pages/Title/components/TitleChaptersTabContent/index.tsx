@@ -15,7 +15,7 @@ function TitleChaptersTabContent({ branches, titleId }: Props) {
   const [activeTab, setActiveTab] = useState<string | null>(branches[0]?.id || null);
 
   return (
-    <Tabs variant="selectable" value={activeTab} onChange={setActiveTab}>
+    <Tabs variant="tile" value={activeTab} onChange={setActiveTab}>
       <Stack gap="sm">
         {branches.length > 1 && (
           <Tabs.List>

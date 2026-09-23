@@ -68,7 +68,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
           <Button
             className={styles.switcherOption}
             onClick={() => setIsThemeOpened((prev) => !prev)}
-            variant="selectable"
+            variant="tile"
             justify="flex-start"
             size="md"
             leftSection={<PaletteIcon />}
@@ -84,7 +84,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
                   data-active={colorScheme === value || undefined}
                   className={styles.switcherOption}
                   onClick={() => setColorScheme(value)}
-                  variant="selectable"
+                  variant="tile"
                   justify="flex-start"
                   size="md"
                   leftSection={getColorSchemeIcon(value)}
@@ -102,7 +102,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
           <Button
             className={styles.switcherOption}
             onClick={() => setIsLanguageOpened((prev) => !prev)}
-            variant="selectable"
+            variant="tile"
             justify="flex-start"
             size="md"
             leftSection={<GlobeIcon />}
@@ -118,7 +118,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
                   data-active={i18n.language === value || undefined}
                   className={styles.switcherOption}
                   onClick={() => i18n.changeLanguage(value)}
-                  variant="selectable"
+                  variant="tile"
                   justify="flex-start"
                   size="md"
                   rightSection={
@@ -141,7 +141,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
                   setIsOpened(false);
                   navigate(ROUTE_PATHS.INVITES);
                 }}
-                variant="selectable"
+                variant="tile"
                 justify="flex-start"
                 size="md"
                 leftSection={<TicketIcon />}
@@ -156,7 +156,7 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
             c="red"
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
-            variant="selectable"
+            variant="tile"
             justify="flex-start"
             size="md"
             leftSection={<SignOutIcon />}

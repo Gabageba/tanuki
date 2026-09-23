@@ -15,6 +15,8 @@ import type {
   SourceStatusReason,
   UserRole,
   Language,
+  ReaderReadingMode,
+  ReaderPageFit,
 } from '@tanuki/contracts';
 import type { EmailTokenPurpose } from '../auth/models';
 
@@ -167,6 +169,28 @@ export const invites = pgTable('invites', {
   usedAt: timestamp('used_at', { withTimezone: true }),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Настройки читалки — одна строка на пользователя, создаётся при первом сохранении из drawer'а.
+ * Пока строки нет, API отдаёт DEFAULT_READER_SETTINGS (@tanuki/contracts), в базу это не пишется.
+ */
+export const readerSettings = pgTable('reader_settings', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  // Тип text, а не pgEnum — см. комментарий у title_links.verdict выше. Литералы объявлены один
+  // раз в контрактах (READER_READING_MODE / READER_PAGE_FIT) и выводятся типом.
+  readingMode: text('reading_mode').$type<ReaderReadingMode>().notNull(),
+  pageFit: text('page_fit').$type<ReaderPageFit>().notNull(),
+  containerWidth: integer('container_width').notNull(),
+  /** Ширина боковой зоны клика в горизонтальном режиме, в процентах экрана на каждую сторону. */
+  tapZoneWidth: integer('tap_zone_width').notNull(),
+  /** Отступ между страницами в вертикальном режиме, в пикселях. */
+  pageGap: integer('page_gap').notNull(),
+
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 /** Ссылки в письмах: подтверждение почты и сброс пароля — один токен на активную цель за раз. */

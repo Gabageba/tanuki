@@ -33,7 +33,9 @@ function TitleMetaItem<T extends MetaItemValue = MetaItemValue>({
       <Text lh={1} c="dimmed" fz={12}>
         {label}
       </Text>
-      <Text lh={1}>{isEmpty(value) ? <Mdash /> : value}</Text>
+      <Text component="div" lh={1}>
+        {isEmpty(value) ? <Mdash /> : value}
+      </Text>
     </Stack>
   );
 }

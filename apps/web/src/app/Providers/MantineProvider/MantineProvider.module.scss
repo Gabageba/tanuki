@@ -20,11 +20,11 @@
   }
 }
 
-// Base colors for the `selectable` variant come from `THEME.variantColorResolver`. Only the
+// Base colors for the `tile` variant come from `THEME.variantColorResolver`. Only the
 // active-state tint lives here — it's driven by the `isActive`/`data-active` prop, which a
 // `variantColorResolver` has no access to.
-.selectableButton {
-  &[data-variant='selectable'][data-active] {
+.button {
+  &[data-variant='tile'][data-active] {
     background: var(--tanuki-color-primary-light-transparent);
     border-color: var(--mantine-primary-color-filled) !important;
 
@@ -34,10 +34,10 @@
   }
 }
 
-// Unlike `selectableButton`, `Tabs` doesn't run its colors through `variantColorResolver`, so
-// the base (non-active) look for this variant lives here too, not just the active-state tint.
-.selectableTab {
-  &[data-variant='selectable'] {
+// Unlike `Button`, `Tabs` doesn't run its colors through `variantColorResolver`, so the base
+// (non-active) look for this variant lives here too, not just the active-state tint.
+.tabsTab {
+  &[data-variant='tile'] {
     border: 1px solid var(--mantine-color-default-border);
     border-radius: var(--tabs-radius);
     background-color: var(--mantine-color-default);
@@ -47,12 +47,26 @@
     }
   }
 
-  &[data-variant='selectable'][data-active] {
+  &[data-variant='tile'][data-active] {
     border-color: var(--mantine-primary-color-filled);
     background: var(--tanuki-color-primary-light-transparent);
 
     &:hover {
       background: var(--tanuki-color-primary-light-transparent);
     }
+  }
+}
+
+// `Radio.Card` skips `variantColorResolver` the same way `Tabs` does — it only forwards `variant`
+// down to `Box` as `data-variant`. Its own base look (border, radius) already matches the variant,
+// so only the checked tint is needed here; the state comes from `data-checked`, not `data-active`.
+.radioCard {
+  &[data-variant='tile'][data-checked] {
+    border-color: var(--mantine-primary-color-filled);
+
+    // Mantine generates no `--mantine-primary-color-text`, so the accent has to be named here —
+    // it's the one place the `terracotta` from `PRIMARY_COLOR` is spelled out in CSS.
+    color: var(--mantine-color-terracotta-text);
+    background-color: var(--tanuki-color-primary-light-transparent);
   }
 }

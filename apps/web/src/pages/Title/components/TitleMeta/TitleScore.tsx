@@ -28,7 +28,7 @@ function TitleScore({ rating, likes }: Props) {
           {isRatingEmpty && (
             <HeartIcon weight="fill" color="var(--mantine-primary-color-filled)" size={26} />
           )}
-          <Text fz={40} lh={1} fw={600} ff="monospace">
+          <Text fz={40} lh={1} fw={600} ff="monospace" lts={-4}>
             {isRatingEmpty ? formatCompactNumber(likes!) : rating}
           </Text>
           {!isRatingEmpty && (

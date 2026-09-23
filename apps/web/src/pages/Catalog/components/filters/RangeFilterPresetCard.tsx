@@ -1,5 +1,4 @@
 import { Flex, Radio, Text } from '@mantine/core';
-import styles from './CatalogFilter.module.scss';
 
 type Props = {
   id: string;
@@ -8,7 +7,7 @@ type Props = {
 
 function RangeFilterPresetCard({ id, label }: Props) {
   return (
-    <Radio.Card value={id} px="xs" py={6} className={styles.radioCard}>
+    <Radio.Card value={id} variant="tile" px="xs" py={6}>
       <Flex gap="xs" align="center">
         <Radio.Indicator variant="outline" size="xs" />
         <Text>{label}</Text>

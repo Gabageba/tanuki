@@ -65,7 +65,7 @@ const createAppTheme = (t: TFunction) =>
     defaultRadius: 'md',
     cursorType: 'pointer',
     variantColorResolver: (input) =>
-      input.variant === 'selectable'
+      input.variant === 'tile'
         ? {
             ...defaultVariantColorsResolver({ ...input, variant: 'subtle', color: 'gray' }),
             border: `${rem(1)} solid var(--mantine-color-default)`,
@@ -139,7 +139,7 @@ const createAppTheme = (t: TFunction) =>
           },
         },
         classNames: {
-          root: styles.selectableButton,
+          root: styles.button,
         },
       },
       Card: {
@@ -233,9 +233,14 @@ const createAppTheme = (t: TFunction) =>
           variant: 'outline',
         },
       },
+      RadioCard: {
+        classNames: {
+          card: styles.radioCard,
+        },
+      },
       Tabs: {
         classNames: {
-          tab: styles.selectableTab,
+          tab: styles.tabsTab,
         },
       },
       PasswordInput: {

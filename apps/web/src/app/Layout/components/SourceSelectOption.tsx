@@ -18,7 +18,7 @@ function SourceSelectOption({ label, isActive, ...restProps }: Props) {
       data-active={isActive || undefined}
       className={styles.switcherOption}
       component={Link}
-      variant="selectable"
+      variant="tile"
       justify="flex-start"
       fz={16}
       size="md"

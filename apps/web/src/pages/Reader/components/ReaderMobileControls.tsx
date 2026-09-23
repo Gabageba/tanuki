@@ -5,6 +5,8 @@ import ReaderControls from './ReaderControls';
 import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 import styles from '../ReaderPage.module.scss';
 
+const CONTROLS_OFFSET = 16;
+
 type Props = {
   titleId: string;
   chapterId: string;
@@ -33,10 +35,11 @@ function ReaderMobileControls({
       h={HEADER_HEIGHT}
       hiddenFrom="md"
       w="fit-content"
+      maw={`calc(100% - ${CONTROLS_OFFSET * 2}px)`}
       px="md"
       bg="var(--mantine-color-body)"
       pos="fixed"
-      bottom={16}
+      bottom={CONTROLS_OFFSET}
       left={0}
       right={0}
       className={
