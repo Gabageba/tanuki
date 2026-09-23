@@ -59,6 +59,15 @@ export type HttpClient = {
 
 const MAX_REDIRECTS = 10;
 
+/**
+ * A connect/TLS-handshake attempt (e.g. "Client network socket disconnected before secure TLS
+ * connection was established") can fail transiently for reasons that have nothing to do with the
+ * target being down — a dropped packet, a stale pooled socket the OS hadn't yet reported closed,
+ * a mid-handshake reset. Nothing has been sent to the server yet at this point, so retrying is
+ * safe; a request that still fails after these retries is treated as a real outage.
+ */
+const CONNECTION_RETRY_DELAYS_MS = [300, 900];
+
 export type HttpClientOptions = {
   sourceId: string;
   jar: CookieJar;
@@ -176,19 +185,25 @@ export class HttpClientImpl implements HttpClient {
     if (cookieHeader) headers['cookie'] = cookieHeader;
 
     let response;
-    try {
-      response = await undiciRequest(req.url, {
-        method: req.method,
-        headers,
-        body: req.body instanceof URLSearchParams ? req.body.toString() : req.body,
-        dispatcher: this.agent,
-        signal: req.signal,
-      });
-    } catch (err) {
-      throw new SourceUnavailableError(
-        `Connection failed: ${err instanceof Error ? err.message : String(err)} (${req.url})`,
-        this.opts.sourceId,
-      );
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        response = await undiciRequest(req.url, {
+          method: req.method,
+          headers,
+          body: req.body instanceof URLSearchParams ? req.body.toString() : req.body,
+          dispatcher: this.agent,
+          signal: req.signal,
+        });
+        break;
+      } catch (err) {
+        if (attempt >= CONNECTION_RETRY_DELAYS_MS.length) {
+          throw new SourceUnavailableError(
+            `Connection failed: ${err instanceof Error ? err.message : String(err)} (${req.url})`,
+            this.opts.sourceId,
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, CONNECTION_RETRY_DELAYS_MS[attempt]));
+      }
     }
 
     const setCookieHeader = response.headers['set-cookie'];

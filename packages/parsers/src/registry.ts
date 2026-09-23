@@ -139,7 +139,10 @@ const buildDescriptor = (id: SourceId): SourceDescriptor => {
       info,
       domains,
       cookieScope: cookieScopeFor(id),
-      defaultHeaders: {},
+      // api.cdnlibs.org's ddos-guard rejects any request with no Referer at all with a bare 403
+      // ("Client does not have access rights") — confirmed live, the value itself isn't checked,
+      // only its presence, but the site's own domain is what a real browser would send.
+      defaultHeaders: { Referer: `https://${domains[0]}/` },
       create: (ctx) => createLibSocialParser(libSocialConfig, ctx),
     };
   }

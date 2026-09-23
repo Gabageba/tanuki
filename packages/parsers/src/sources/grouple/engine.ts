@@ -34,6 +34,7 @@ import { parseGroupleDate } from '../../core/text/dates';
 import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { toTitleCase, nullIfEmpty, findGroupValue } from '../../core/text/strings';
 import { ParseError, SourceAuthRequiredError } from '../../errors';
+import type { HttpRequest, HttpResponse } from '../../core/http/client';
 import { UserAgents } from '../../core/http/user-agents';
 import { catalogEntryFor, SOURCE_ID } from '../catalog';
 import { authenticateGrouple, authenticateAllHentai } from './auth';
@@ -370,7 +371,21 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
   const domain = ctx.domain;
   let cachedPagesServer: string | null = null;
 
-  ctx.http.use(async (req, next) => {
+  const login = (): Promise<void> =>
+    cfg.authGateway === 'z.qawa.org'
+      ? authenticateAllHentai(ctx.http, ctx.jar, cfg, ctx.credentials.allhentai, ctx.logger)
+      : authenticateGrouple(ctx.http, ctx.jar, ctx.credentials.grouple, ctx.logger);
+
+  const hasAuthCookie = async (): Promise<boolean> => {
+    const cookies = await ctx.jar.getCookies(`https://${domain}/`);
+    return cookies.some((c) => c.key === 'gwt' || (cfg.extraAuthCookies ?? []).includes(c.key));
+  };
+
+  const handleRequest = async (
+    req: HttpRequest,
+    next: (r: HttpRequest) => Promise<HttpResponse>,
+    isRetry = false,
+  ): Promise<HttpResponse> => {
     let pathname: string;
     try {
       pathname = new URL(req.url).pathname;
@@ -392,19 +407,30 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       throw new SourceAuthRequiredError(`Login required: ${req.url}`, cfg.id);
     }
     if (res.status === 404) {
-      const cookies = await ctx.jar.getCookies(`https://${domain}/`);
-      const hasAuthCookie = cookies.some(
-        (c) => c.key === 'gwt' || (cfg.extraAuthCookies ?? []).includes(c.key),
-      );
-      if (!hasAuthCookie) {
-        throw new SourceAuthRequiredError(`Login required (soft 404): ${req.url}`, cfg.id);
+      if (await hasAuthCookie()) {
+        // The site 404s some member-only pages for guests instead of a real 404 — with a valid
+        // session this is a false alarm, so let the caller treat it as a normal response.
+        res.status = 200;
+        return res;
       }
-      // The site 404s some member-only pages for guests instead of a real 404 — with a valid
-      // session this is a false alarm, so let the caller treat it as a normal response.
-      res.status = 200;
+      // A soft 404 with no session in the jar doesn't necessarily mean this account can't see
+      // the page — it can just as well mean init()'s login attempt landed while the SSO gateway
+      // itself was down (e.g. during the source's own maintenance window) and never got a
+      // session at all. Retrying the login once (rate-limited in auth.ts, so this doesn't spam
+      // the gateway on every gated request) lets the source self-heal without a process restart
+      // instead of staying logged out — and every gated page failing — for its whole lifetime.
+      const credentials =
+        cfg.authGateway === 'z.qawa.org' ? ctx.credentials.allhentai : ctx.credentials.grouple;
+      if (!isRetry && credentials) {
+        await login();
+        return handleRequest(req, next, true);
+      }
+      throw new SourceAuthRequiredError(`Login required (soft 404): ${req.url}`, cfg.id);
     }
     return res;
-  });
+  };
+
+  ctx.http.use(handleRequest);
 
   const parseTagFromLink = ($el: Cheerio<AnyNode>): RawTag | null => {
     const title = textOrNull($el)?.replace('#', '').trim();
@@ -1156,11 +1182,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     getFilters,
     imageHeaders: () => ({ Referer: `https://${domain}/`, 'User-Agent': UserAgents.GROUPLE_ARORA }),
     async init() {
-      if (cfg.authGateway === 'z.qawa.org') {
-        await authenticateAllHentai(ctx.http, ctx.jar, cfg, ctx.credentials.allhentai, ctx.logger);
-      } else {
-        await authenticateGrouple(ctx.http, ctx.jar, ctx.credentials.grouple, ctx.logger);
-      }
+      await login();
     },
   };
 };

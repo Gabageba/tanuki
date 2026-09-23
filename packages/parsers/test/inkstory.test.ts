@@ -14,7 +14,10 @@ import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
 const DOMAIN = 'inkstory.net';
-const API_HOST = `api.${DOMAIN}`;
+// The site's own api.<domain> host is gone — every sibling site of the "inuko" platform now reads
+// one shared API, scoped per site by `serviceName`. See createInkStoryParser.
+const API_HOST = 'api.inuko.me';
+const SERVICE_NAME = 'inkstory';
 const MANGA_ID = 'aaaa-bbbb-1111';
 
 const LIST_MANGA_JSON = {
@@ -89,8 +92,8 @@ const LABELS_JSON = JSON.stringify([
   { id: 'l-3', slug: 'staff-pick', name: 'выбор редакции', kind: 'COLLECTION' },
 ]);
 
-const SECRET_KEY = 'UySkp0BzPhwlvP2V';
-const SSR_STATE_HTML = `<script id="it-astro-state">["secret-key","${SECRET_KEY}"]</script>`;
+const DECRYPTION_KEY = 'UySkp0BzPhwlvP2V';
+const SSR_STATE_HTML = `<script>{"root":{decryptionKey:"${DECRYPTION_KEY}",currentDomainId:"inkstory"}}</script>`;
 
 const xor = (bytes: Buffer, key: string): Buffer => {
   const keyBytes = Buffer.from(key, 'utf8');
@@ -227,6 +230,22 @@ describe('Inkstory parser conformance', () => {
     expect(booksRequest).toBeDefined();
     const url = new URL(booksRequest!.url);
     expect(url.searchParams.get('sort')).toBe('updatedAt,asc');
+  });
+
+  it('every API request names the service — the shared platform API is not scoped by host', async () => {
+    const freshHttp = setUpFixtures();
+    const freshParser = createInkStoryParser(makeContext(freshHttp));
+    await freshParser.getList({ offset: 0, limit: 20 });
+    await freshParser.getList({ offset: 0, limit: 20, order: SORT_ORDER.POPULARITY });
+    await freshParser.getDetails(MANGA_ID);
+    await freshParser.getPages('ch-1');
+    await freshParser.getFilters!();
+
+    const apiRequests = freshHttp.requests.filter((r) => r.url.startsWith(`https://${API_HOST}/`));
+    expect(apiRequests.length).toBeGreaterThan(0);
+    for (const request of apiRequests) {
+      expect(new URL(request.url).searchParams.get('serviceName')).toBe(SERVICE_NAME);
+    }
   });
 
   it('getFilters: genre from /v2/labels (COLLECTION kind excluded) plus static and range groups', async () => {
@@ -477,7 +496,7 @@ describe('Inkstory parser conformance', () => {
   it('getDetails: chaptersCount>0 with empty chapters and a content notice reports LEGAL restriction', async () => {
     const takenDownId = 'cccc-dddd-2222';
     const freshHttp = new FakeHttpClient();
-    freshHttp.register((url) => url.includes(`/v2/chapters?bookId=${takenDownId}`), {
+    freshHttp.register((url) => url.includes('/v2/chapters?') && url.includes(takenDownId), {
       status: 200,
       body: '[]',
       contentType: 'application/json',
@@ -487,7 +506,7 @@ describe('Inkstory parser conformance', () => {
       body: JSON.stringify({ ...JSON.parse(DETAILS_JSON), id: takenDownId }),
       contentType: 'application/json',
     });
-    freshHttp.register((url) => url.includes(`/v2/content-notices?bookId=${takenDownId}`), {
+    freshHttp.register((url) => url.includes('/v2/content-notices?') && url.includes(takenDownId), {
       status: 200,
       body: JSON.stringify([{ id: 'notice-1', title: 'Про удаление глав' }]),
       contentType: 'application/json',
@@ -510,7 +529,7 @@ describe('Inkstory parser conformance', () => {
     const plaintext = Buffer.from('RIFF....WEBPVP8 fake-but-plausible-payload');
     const obfuscatedUrl =
       'https://static.inuko.me/chapters/f93fcd31/b9b3bb3d-70a3-xc29-b784-205ab9e63611.webp';
-    const encoded = xor(plaintext, SECRET_KEY);
+    const encoded = xor(plaintext, DECRYPTION_KEY);
     const decoded = await parser.decodeImage!(encoded, obfuscatedUrl);
     expect(decoded.equals(plaintext)).toBe(true);
 

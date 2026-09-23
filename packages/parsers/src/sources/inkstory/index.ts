@@ -40,7 +40,14 @@ import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 const SOURCE_ID = CATALOG_SOURCE_ID.INKSTORY;
 const PAGE_SIZE = 20;
 const FIRST_PAGE = 0;
-const SECRET_KEY_TTL_MS = 10 * 60 * 1000;
+const DECRYPTION_KEY_TTL_MS = 10 * 60 * 1000;
+
+/** The per-site `api.<domain>` host is gone (it doesn't even resolve any more): the site now runs
+ *  on the shared "inuko" platform — sso.inuko.me, static.inuko.me — whose single API serves every
+ *  sibling site (puremanga, hexnovels, zenmanga, manga.ovh) out of one catalog. `serviceName` is
+ *  what scopes a listing back down to this one; without it the feeds come back empty. */
+const API_HOST = 'api.inuko.me';
+const SERVICE_NAME = 'inkstory';
 
 export const INKSTORY_FILTER_GROUP = {
   GENRE: FILTER_GROUP.GENRE,
@@ -311,10 +318,10 @@ const toOriginalTitle = (name: NameJson): string[] => {
 
 /**
  * Chapter page images are served pre-XOR'd by the CDN — the site's own reader JS
- * (`useLoadImage.js`) detects this from the filename itself: strip the extension, and if the
- * remaining 36-char id has 'x' at index 14 (normally the UUID version nibble), the bytes are
- * XOR'd against a key delivered in every page's SSR payload (`"secret-key","<value>"` inside
- * the `#it-astro-state` script tag). Covers/posters don't carry this marker and are plain files.
+ * detects this from the filename itself: strip the extension, and if the remaining 36-char id has
+ * 'x' at index 14 (normally the UUID version nibble), the bytes are XOR'd against a key delivered
+ * in every page's SSR payload (`decryptionKey:"<value>"` in the inlined router state).
+ * Covers/posters don't carry this marker and are plain files.
  */
 const isXorObfuscated = (imageUrl: string): boolean => {
   const filename = imageUrl.split('/').pop() ?? '';
@@ -358,41 +365,47 @@ const parseIsoDate = (value: string | undefined): number => {
 
 export const createInkStoryParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
-  const apiHost = `api.${domain}`;
-  let cachedSecretKey: { key: string; fetchedAt: number } | null = null;
+  let cachedDecryptionKey: { key: string; fetchedAt: number } | null = null;
 
-  const fetchSecretKey = async (): Promise<string> => {
-    // The site (behind ddos-guard) 500s any request with no User-Agent at all — unlike the
-    // JSON API host, which doesn't care.
+  const apiUrl = (path: string): URL => {
+    const url = new URL(`https://${API_HOST}${path}`);
+    url.searchParams.set('serviceName', SERVICE_NAME);
+    return url;
+  };
+
+  const fetchDecryptionKey = async (): Promise<string> => {
+    // The site sits behind ddos-guard, which is far friendlier to a request carrying a real
+    // browser User-Agent — unlike the JSON API host, which doesn't care.
     const res = await ctx.http.get(`https://${domain}/`, {
       'User-Agent': UserAgents.CHROME_DESKTOP,
     });
-    const match = /"secret-key","([^"]+)"/.exec(res.text());
+    const match = /decryptionKey:\s*"([^"]+)"/.exec(res.text());
     if (!match)
       throw new ParseError(
-        `inkstory secret-key not found in SSR payload: https://${domain}/`,
+        `inkstory decryptionKey not found in SSR payload: https://${domain}/`,
         SOURCE_ID,
       );
     return match[1]!;
   };
 
-  const getSecretKey = async (forceRefresh = false): Promise<string> => {
-    const isStale = !cachedSecretKey || Date.now() - cachedSecretKey.fetchedAt >= SECRET_KEY_TTL_MS;
+  const getDecryptionKey = async (forceRefresh = false): Promise<string> => {
+    const isStale =
+      !cachedDecryptionKey || Date.now() - cachedDecryptionKey.fetchedAt >= DECRYPTION_KEY_TTL_MS;
     if (!forceRefresh && !isStale) {
-      return cachedSecretKey!.key;
+      return cachedDecryptionKey!.key;
     }
-    const key = await fetchSecretKey();
-    cachedSecretKey = { key, fetchedAt: Date.now() };
+    const key = await fetchDecryptionKey();
+    cachedDecryptionKey = { key, fetchedAt: Date.now() };
     return key;
   };
 
   const decodeImage = async (bytes: Buffer, imageUrl: string): Promise<Buffer> => {
     if (!isXorObfuscated(imageUrl)) return bytes;
-    const decoded = xorWithKey(bytes, await getSecretKey());
+    const decoded = xorWithKey(bytes, await getDecryptionKey());
     if (looksLikeImage(decoded)) return decoded;
     // The site rotates this key without notice — one retry against a freshly fetched key
-    // covers the case where our cached copy (up to SECRET_KEY_TTL_MS old) just went stale.
-    return xorWithKey(bytes, await getSecretKey(true));
+    // covers the case where our cached copy (up to DECRYPTION_KEY_TTL_MS old) just went stale.
+    return xorWithKey(bytes, await getDecryptionKey(true));
   };
 
   const toTag = (jo: TagJson): RawTag => {
@@ -438,7 +451,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
   /** `/v2/books?sort=updatedAt,desc` sorts by book metadata edits, not chapter releases — the
    *  site's own "recently updated" listing instead reads this feed of latest chapter drops. */
   const fetchUpdatedPage = async (page: number): Promise<RawTitle[]> => {
-    const url = new URL(`https://${apiHost}/v2/chapter-update-feed`);
+    const url = apiUrl('/v2/chapter-update-feed');
     url.searchParams.set('page', String(page));
     url.searchParams.set('size', String(PAGE_SIZE));
     url.searchParams.set('onlyBorderChapters', 'true');
@@ -516,7 +529,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
   };
 
   const fetchFilters = async (): Promise<RawFilterGroup[]> => {
-    const labels = await ctx.http.getJson<LabelJson[]>(`https://${apiHost}/v2/labels`);
+    const labels = await ctx.http.getJson<LabelJson[]>(apiUrl('/v2/labels').toString());
     const genres = labels.filter((l) => l.kind === LABEL_KIND_GENRE);
     const yearMin = 1950;
     const yearMax = new Date().getFullYear();
@@ -599,7 +612,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     ) {
       return fetchUpdatedPage(page);
     }
-    const url = new URL(`https://${apiHost}/v2/books`);
+    const url = apiUrl('/v2/books');
     url.searchParams.set('page', String(page));
     url.searchParams.set('size', String(PAGE_SIZE));
     url.searchParams.set('type', 'COMIC');
@@ -622,7 +635,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
   const getBranchName = async (branchId: string): Promise<string | null> => {
     try {
       const json = await ctx.http.getJson<{ publishers?: { name?: string }[] }>(
-        `https://${apiHost}/v2/branches/${branchId}`,
+        apiUrl(`/v2/branches/${branchId}`).toString(),
       );
       return json.publishers?.[0]?.name ?? null;
     } catch {
@@ -631,7 +644,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
   };
 
   const getChapters = async (mangaId: string): Promise<RawChapter[]> => {
-    const url = new URL(`https://${apiHost}/v2/chapters`);
+    const url = apiUrl('/v2/chapters');
     url.searchParams.set('bookId', mangaId);
     const items = await ctx.http.getJson<ChapterJson[]>(url.toString());
     const branchNames = new Map<string, Promise<string | null>>();
@@ -664,7 +677,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
    *  wipes `/v2/chapters` — a dedicated notice at `/v2/content-notices` is what the site's own
    *  chapter-list component reads to render the "removed by request" banner in that case. */
   const hasContentNotice = async (mangaId: string): Promise<boolean> => {
-    const url = new URL(`https://${apiHost}/v2/content-notices`);
+    const url = apiUrl('/v2/content-notices');
     url.searchParams.set('bookId', mangaId);
     const notices = await ctx.http.getJson<ContentNoticeJson[]>(url.toString());
     return notices.length > 0;
@@ -680,7 +693,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
   const getDetails = async (mangaId: string): Promise<RawTitle> => {
     const [chapters, jo] = await Promise.all([
       getChapters(mangaId),
-      ctx.http.getJson<MangaJson>(`https://${apiHost}/v2/books/${mangaId}`),
+      ctx.http.getJson<MangaJson>(apiUrl(`/v2/books/${mangaId}`).toString()),
     ]);
     const authors = namesByRelationType(jo.relations, 'AUTHOR');
     const artists = namesByRelationType(jo.relations, 'ARTIST');
@@ -712,7 +725,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
 
   const getPages = async (chapterId: string): Promise<RawPage[]> => {
     const json = await ctx.http.getJson<{ pages: PageJson[] }>(
-      `https://${apiHost}/v2/chapters/${chapterId}`,
+      apiUrl(`/v2/chapters/${chapterId}`).toString(),
     );
     return json.pages.map((jo) => ({
       id: generateUid(SOURCE_ID, jo.id),

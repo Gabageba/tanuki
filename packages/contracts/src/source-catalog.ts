@@ -73,7 +73,7 @@ export const SOURCE_CATALOG = {
   usagi: {
     title: 'Usagi',
     contentType: SOURCE_CONTENT_TYPE.MANGA,
-    isBroken: false,
+    isBroken: true,
     isAdult: false,
     requiresVpn: false,
     domains: ['web.usagi.one'],

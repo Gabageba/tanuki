@@ -12,15 +12,42 @@ const FAN_OUT_DOMAINS = [
   ),
 ];
 
+/**
+ * Below how long a completed attempt (success or failure) is reused as-is instead of triggering
+ * a fresh login POST. A failure isn't necessarily "credentials rejected" — it can just as well
+ * mean the SSO gateway itself was unreachable for the few seconds init() ran (e.g. the site's
+ * own maintenance window at process startup), and unlike a bad password that won't fix itself,
+ * that kind of failure clears up on its own. Caching it forever would otherwise leave the
+ * source silently logged out — and every gated page throwing SourceAuthRequiredError — for the
+ * rest of the process's life. The cooldown exists only to stop concurrent/rapid callers (every
+ * gated request during an outage) from each firing their own login POST.
+ */
+const LOGIN_RETRY_COOLDOWN_MS = 5 * 60_000;
+
+type LoginAttempt = { promise: Promise<void>; startedAt: number };
+
 // All Grouple sources on the main gateway share one jar (see registry.ts cookieScope='grouple')
-// and each calls init() -> authenticateGrouple independently. Memoized by jar so the actual
-// network login happens exactly once per process, matching Application.kt's single startup
-// login — the other callers just await the same promise.
-const loginPromises = new WeakMap<CookieJar, Promise<void>>();
+// and each calls init() -> authenticateGrouple independently; they converge on one in-flight
+// attempt rather than each firing their own login POST.
+const loginAttempts = new WeakMap<CookieJar, LoginAttempt>();
 
 // AllHentai shares the same jar but logs in through its own qawa.org gateway (see
-// authenticateAllHentai below), so it gets its own memoization keyed off the same jar.
-const qawaLoginPromises = new WeakMap<CookieJar, Promise<void>>();
+// authenticateAllHentai below), so it gets its own attempt tracking keyed off the same jar.
+const qawaLoginAttempts = new WeakMap<CookieJar, LoginAttempt>();
+
+const runWithCooldown = (
+  cache: WeakMap<CookieJar, LoginAttempt>,
+  jar: CookieJar,
+  attempt: () => Promise<void>,
+): Promise<void> => {
+  const cached = cache.get(jar);
+  if (cached && Date.now() - cached.startedAt < LOGIN_RETRY_COOLDOWN_MS) {
+    return cached.promise;
+  }
+  const entry: LoginAttempt = { startedAt: Date.now(), promise: attempt() };
+  cache.set(jar, entry);
+  return entry.promise;
+};
 
 type GatewayLoginParams = {
   gateway: string;
@@ -110,23 +137,21 @@ export const authenticateGrouple = (
   logger: Logger,
 ): Promise<void> => {
   if (!credentials) return Promise.resolve();
-  const cached = loginPromises.get(jar);
-  if (cached) return cached;
-  const promise = performGatewayLogin(
-    http,
-    jar,
-    {
-      gateway: MAIN_AUTH_GATEWAY,
-      siteId: 2,
-      fanOutDomains: FAN_OUT_DOMAINS,
-      authCookieNames: ['gwt'],
-      label: 'Grouple',
-    },
-    credentials,
-    logger,
+  return runWithCooldown(loginAttempts, jar, () =>
+    performGatewayLogin(
+      http,
+      jar,
+      {
+        gateway: MAIN_AUTH_GATEWAY,
+        siteId: 2,
+        fanOutDomains: FAN_OUT_DOMAINS,
+        authCookieNames: ['gwt'],
+        label: 'Grouple',
+      },
+      credentials,
+      logger,
+    ),
   );
-  loginPromises.set(jar, promise);
-  return promise;
 };
 
 /**
@@ -144,21 +169,19 @@ export const authenticateAllHentai = (
   logger: Logger,
 ): Promise<void> => {
   if (!credentials) return Promise.resolve();
-  const cached = qawaLoginPromises.get(jar);
-  if (cached) return cached;
-  const promise = performGatewayLogin(
-    http,
-    jar,
-    {
-      gateway: cfg.authGateway,
-      siteId: cfg.siteId,
-      fanOutDomains: catalogEntryFor(cfg.id).domains,
-      authCookieNames: ['gwt', ...(cfg.extraAuthCookies ?? [])],
-      label: catalogEntryFor(cfg.id).title,
-    },
-    credentials,
-    logger,
+  return runWithCooldown(qawaLoginAttempts, jar, () =>
+    performGatewayLogin(
+      http,
+      jar,
+      {
+        gateway: cfg.authGateway,
+        siteId: cfg.siteId,
+        fanOutDomains: catalogEntryFor(cfg.id).domains,
+        authCookieNames: ['gwt', ...(cfg.extraAuthCookies ?? [])],
+        label: catalogEntryFor(cfg.id).title,
+      },
+      credentials,
+      logger,
+    ),
   );
-  qawaLoginPromises.set(jar, promise);
-  return promise;
 };

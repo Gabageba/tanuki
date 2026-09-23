@@ -24,6 +24,20 @@ describe('looksLikeAntibotChallenge', () => {
     expect(looksLikeAntibotChallenge(403, { server: 'cloudflare' }, 'Forbidden')).toBe(false);
     expect(looksLikeAntibotChallenge(503, {}, 'Service Unavailable')).toBe(false);
   });
+
+  it('fires on a bare ddos-guard block page with no marker text in the body', () => {
+    // Real-world case: ddos-guard's own "Client does not have access rights" 403 page never
+    // mentions ddos-guard by name in the body, only in the Server header.
+    const body =
+      '<html><p><b>403 - Forbidden .</b> Client does not have access rights to the content.</html>';
+    expect(looksLikeAntibotChallenge(403, { server: 'ddos-guard' }, body)).toBe(true);
+  });
+
+  it('does not fire on a dedicated antibot server header outside 403/503', () => {
+    expect(looksLikeAntibotChallenge(500, { server: 'ddos-guard' }, 'Internal Server Error')).toBe(
+      false,
+    );
+  });
 });
 
 describe('classifyResponse', () => {
@@ -52,5 +66,27 @@ describe('classifyResponse', () => {
     expect(classifyResponse(SOURCE_ID.DESUME, 400, URL, {}, 'bad request')).toBeInstanceOf(
       SourceUnavailableError,
     );
+  });
+
+  it("appends the error page's own <title> to a generic 4xx/5xx message, when present", () => {
+    // Real-world case: AllHentai's own maintenance page ("Профилактика на сайте") returns a
+    // bare 503 with no antibot markers — the <title> is the only clue this is a real, self-
+    // resolving outage rather than a parser bug worth investigating.
+    const body =
+      '<html><head><title>Профилактика</title></head><body><h1>Сервер обновляется.</h1></body></html>';
+    const err = classifyResponse(SOURCE_ID.DESUME, 503, URL, {}, body);
+    expect(err).toBeInstanceOf(SourceUnavailableError);
+    expect(err?.message).toBe(`Upstream HTTP 503 at ${URL} (Профилактика)`);
+  });
+
+  it('omits the title suffix when the error page has none', () => {
+    const err = classifyResponse(
+      SOURCE_ID.DESUME,
+      502,
+      URL,
+      {},
+      '<html><body>Bad Gateway</body></html>',
+    );
+    expect(err?.message).toBe(`Upstream HTTP 502 at ${URL}`);
   });
 });
