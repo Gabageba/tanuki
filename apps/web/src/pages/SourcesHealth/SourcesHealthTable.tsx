@@ -1,4 +1,5 @@
-import { Anchor, Group, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { Anchor, CopyButton, Group, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { generatePath, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { SOURCE_STATUS, type Source } from '@tanuki/contracts';
@@ -90,27 +91,42 @@ function SourcesHealthTable() {
               </Table.Td>
               <Table.Td maw={280}>
                 {source.lastError ? (
-                  <Tooltip
-                    label={
-                      <Stack gap={2}>
-                        {source.checkedAt && (
-                          <Text fz={11} c="dimmed" ff="monospace">
-                            {formatDateTime(source.checkedAt)}
+                  <CopyButton value={source.lastError} timeout={1200}>
+                    {({ copied, copy }) => (
+                      <Tooltip
+                        label={
+                          <Stack gap={2}>
+                            {source.checkedAt && (
+                              <Text fz={11} c="dimmed" ff="monospace">
+                                {formatDateTime(source.checkedAt)}
+                              </Text>
+                            )}
+                            <Text fz={12} style={{ whiteSpace: 'pre-wrap' }}>
+                              {source.lastError}
+                            </Text>
+                          </Stack>
+                        }
+                        multiline
+                        maw={400}
+                        events={{ hover: true, focus: true, touch: true }}
+                      >
+                        <Group gap={4} wrap="nowrap" onClick={copy} style={{ cursor: 'pointer' }}>
+                          <Text fz={12} c="dimmed" lineClamp={2} style={{ flex: 1, minWidth: 0 }}>
+                            {source.lastError}
                           </Text>
-                        )}
-                        <Text fz={12} style={{ whiteSpace: 'pre-wrap' }}>
-                          {source.lastError}
-                        </Text>
-                      </Stack>
-                    }
-                    multiline
-                    maw={400}
-                    events={{ hover: true, focus: true, touch: true }}
-                  >
-                    <Text fz={12} c="dimmed" lineClamp={2}>
-                      {source.lastError}
-                    </Text>
-                  </Tooltip>
+                          {copied ? (
+                            <CheckIcon
+                              size={14}
+                              color="var(--mantine-color-green-6)"
+                              style={{ flexShrink: 0 }}
+                            />
+                          ) : (
+                            <CopyIcon size={14} style={{ flexShrink: 0, opacity: 0.5 }} />
+                          )}
+                        </Group>
+                      </Tooltip>
+                    )}
+                  </CopyButton>
                 ) : (
                   <Text fz={12} c="dimmed">
                     <Mdash />

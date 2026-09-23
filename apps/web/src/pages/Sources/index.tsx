@@ -1,6 +1,7 @@
 import { Button } from '@mantine/core';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { AsclepiusIcon } from '@phosphor-icons/react';
 import useSources from '@/entities/source/hooks/useSources';
 import PageLayout from '@/shared/ui/PageLayout';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
@@ -14,7 +15,12 @@ function Sources() {
       <PageLayout.Content
         title={t('sources')}
         actions={
-          <Button component={Link} to={ROUTE_PATHS.SOURCES_HEALTH} variant="default">
+          <Button
+            component={Link}
+            to={ROUTE_PATHS.SOURCES_HEALTH}
+            variant="default"
+            leftSection={<AsclepiusIcon />}
+          >
             {t('sourcesHealth')}
           </Button>
         }

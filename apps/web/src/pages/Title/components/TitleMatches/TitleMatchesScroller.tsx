@@ -12,9 +12,10 @@ type Props = {
   matches: TitleMatch[] | undefined;
   mutateTitleLink: ReturnType<typeof useSetTitleLink>['mutate'];
   isTitleLinkPending: boolean;
+  isStaff: boolean;
 };
 
-function TitleMatchesScroller({ matches, mutateTitleLink, isTitleLinkPending }: Props) {
+function TitleMatchesScroller({ matches, mutateTitleLink, isTitleLinkPending, isStaff }: Props) {
   const { t } = useTranslation();
 
   if (!matches?.length) {
@@ -47,6 +48,7 @@ function TitleMatchesScroller({ matches, mutateTitleLink, isTitleLinkPending }: 
                     match={match}
                     mutateTitleLink={mutateTitleLink}
                     isTitleLinkPending={isTitleLinkPending}
+                    isStaff={isStaff}
                   />
                 ))}
               </Group>

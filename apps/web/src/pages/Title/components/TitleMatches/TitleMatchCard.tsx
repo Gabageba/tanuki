@@ -12,9 +12,10 @@ type Props = {
   match: TitleMatch;
   mutateTitleLink: ReturnType<typeof useSetTitleLink>['mutate'];
   isTitleLinkPending: boolean;
+  isStaff: boolean;
 };
 
-function TitleMatchCard({ match, mutateTitleLink, isTitleLinkPending }: Props) {
+function TitleMatchCard({ match, mutateTitleLink, isTitleLinkPending, isStaff }: Props) {
   const { t } = useTranslation();
   const [opened, setOpened] = useState(false);
   const ref = useClickOutside<HTMLDivElement>(() => setOpened(false));
@@ -24,9 +25,9 @@ function TitleMatchCard({ match, mutateTitleLink, isTitleLinkPending }: Props) {
     mutateTitleLink({ targetId: match.title.id, verdict }, { onSuccess: () => setOpened(false) });
 
   return (
-    <Box ref={ref} w={170} pos="relative" {...longPressHandlers}>
+    <Box ref={ref} w={170} pos="relative" {...(isStaff ? longPressHandlers : {})}>
       <AspectRatio ratio={3 / 4}>
-        {opened && (
+        {isStaff && opened && (
           <Overlay backgroundOpacity={0.85} radius="md" blur={6}>
             <Center h="100%" w="100%">
               <Stack gap={8} p="xs" w="100%">
