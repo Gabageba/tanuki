@@ -1,8 +1,10 @@
 import type { MantineStyleProps } from '@mantine/core';
-import { Box, NavLink, ScrollArea } from '@mantine/core';
+import { Box, EmptyState, NavLink, ScrollArea } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useRef } from 'react';
 import { generatePath, Link } from 'react-router';
+import { EmptyIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import type { Chapter } from '@tanuki/contracts';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import ChapterItem from './ChapterItem';
@@ -27,6 +29,7 @@ function ChaptersList({
   activeChapterId,
   onChapterSelect,
 }: Props) {
+  const { t } = useTranslation();
   const viewportRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -43,6 +46,10 @@ function ChaptersList({
       virtualizer.scrollToIndex(activeIndex, { align: 'center' });
     }
   }, [activeIndex, virtualizer]);
+
+  if (chapters.length === 0) {
+    <EmptyState description={t('branchHasNoChaptersYet')} size="sm" icon={<EmptyIcon />} py="xs" />;
+  }
 
   return (
     <ScrollArea.Autosize mah={mah} type="auto" viewportRef={viewportRef}>

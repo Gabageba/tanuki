@@ -39,6 +39,8 @@ function MidDotGroup({
     return null;
   }
 
+  const fz = typeof text === 'object' ? text.fz : undefined;
+
   const renderItem = (item: ReactNode) => {
     const content =
       typeof item === 'string' || typeof item === 'number' ? (
@@ -50,7 +52,7 @@ function MidDotGroup({
       );
 
     return text ? (
-      <Text span {...(typeof text === 'object' ? text : {})} lh={lh}>
+      <Text span display="inline-block" {...(typeof text === 'object' ? text : {})} lh={lh}>
         {content}
       </Text>
     ) : (
@@ -67,14 +69,14 @@ function MidDotGroup({
     ));
 
     return (
-      <CollapsibleGroup gap={gap} mt={mt} maxRows={maxRows} lh={lh}>
+      <CollapsibleGroup gap={gap} mt={mt} maxRows={maxRows} lh={lh} fz={fz}>
         {children}
       </CollapsibleGroup>
     );
   }
 
   return (
-    <Box mt={mt} lh={lh} style={truncate ? TRUNCATE_STYLE : undefined}>
+    <Box mt={mt} lh={lh} fz={fz} style={truncate ? TRUNCATE_STYLE : undefined}>
       {visibleItems.map((item, index) => (
         <Fragment key={index}>
           {renderItem(item)}

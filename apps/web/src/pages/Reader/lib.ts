@@ -1,5 +1,3 @@
-import { HEADER_HEIGHT } from '@/shared/lib/appShell';
-
 // manga-страница обычно выше, чем шире — используется, пока реальные width/height ещё не пришли
 export const DEFAULT_PAGE_RATIO = 2 / 3;
 
@@ -10,4 +8,7 @@ export const READER_IMAGE_WIDTH_PROPS = {
   maw: 900,
 };
 
-export const READER_CONTENT_MIN_HEIGHT = `calc(100vh) - ${HEADER_HEIGHT}px`;
+// шапка оверлеем: её отступ приходит из AppShell и обнуляется, когда шапка скрыта
+export const READER_CONTENT_MIN_HEIGHT = 'calc(100dvh - var(--app-shell-header-offset, 0px))';
+
+export const TITLE_NAME_MIN_WIDTH = 180;

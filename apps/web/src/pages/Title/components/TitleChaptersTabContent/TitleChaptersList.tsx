@@ -1,7 +1,5 @@
-import { Card, Center, EmptyState, Loader, Tabs } from '@mantine/core';
+import { Card, Center, Loader, Tabs } from '@mantine/core';
 import { useSearchParams } from 'react-router';
-import { EmptyIcon } from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
 import { SORT_DIRECTION, SortDirectionSchema, type Branch } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
 import ChaptersList from '@/shared/ui/ChaptersList';
@@ -12,7 +10,6 @@ type Props = {
 };
 
 function TitleChaptersList({ titleId, branch }: Props) {
-  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const { data: chaptersData, isPending: isChaptersPending } = useChapters({
     titleId,
@@ -32,21 +29,6 @@ function TitleChaptersList({ titleId, branch }: Props) {
       <Center>
         <Loader />
       </Center>
-    );
-  }
-
-  if (chapters.length === 0) {
-    return (
-      <Tabs.Panel value={branch.id}>
-        <Card withBorder p={0} bg="transparent">
-          <EmptyState
-            description={t('branchHasNoChaptersYet')}
-            size="sm"
-            icon={<EmptyIcon />}
-            py="xs"
-          />
-        </Card>
-      </Tabs.Panel>
     );
   }
 

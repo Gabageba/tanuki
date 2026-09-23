@@ -3,12 +3,12 @@ import { ActionIcon, Divider, Group } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { BookmarkSimpleIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { XXS_QUERY } from '@/shared/lib/breakpoints';
-import ReaderNavigateButton from './ReaderNavigateButton';
-import ReaderChapterName from './ReaderChapterName';
+import ReaderNavigateButton from '../ReaderNavigateButton';
+import ReaderChapterName from '../ReaderChapterName';
 import type { Chapter } from '@tanuki/contracts';
-import ReaderPagesCount from './ReaderPagesCount';
-import ReaderSettingsButton from './ReaderSettingsButton';
-import styles from '../ReaderPage.module.scss';
+import ReaderPagesCount from '../ReaderPagesCount';
+import ReaderSettingsButton from '../ReaderSettingsButton';
+import styles from '../../ReaderPage.module.scss';
 
 type Props = {
   titleId: string;

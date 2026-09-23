@@ -9,21 +9,30 @@ import useReaderHeaderVisibility from './hooks/useReaderHeaderVisibility';
 
 function Reader() {
   const { titleId = '', chapterId = '' } = useParams<{ titleId: string; chapterId: string }>();
-  const { data: chapterData } = useChapterPages({ titleId, chapterId });
+  const { data: chapterData, isPending: isChapterDataPending } = useChapterPages({
+    titleId,
+    chapterId,
+  });
   const { visible, toggle } = useReaderHeaderVisibility();
 
   const prevChapterId = chapterData?.prevChapterId || null;
   const nextChapterId = chapterData?.nextChapterId || null;
 
   return (
-    <AppShell header={{ height: HEADER_HEIGHT, collapsed: !visible, offset: false }}>
+    <AppShell header={{ height: HEADER_HEIGHT, collapsed: !visible }}>
       <ReaderHeader
         titleId={titleId}
         chapterId={chapterId}
         prevChapterId={prevChapterId}
         nextChapterId={nextChapterId}
+        isChapterDataPending={isChapterDataPending}
       />
-      <ReaderPages titleId={titleId} chapterId={chapterId} onTap={toggle} />
+      <ReaderPages
+        titleId={titleId}
+        chapterData={chapterData}
+        onTap={toggle}
+        isChaptersDataPending={isChapterDataPending}
+      />
       <ReaderMobileControls
         titleId={titleId}
         chapterId={chapterId}

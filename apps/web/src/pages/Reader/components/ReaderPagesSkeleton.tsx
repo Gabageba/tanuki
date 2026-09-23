@@ -5,11 +5,10 @@ import {
   READER_IMAGE_WIDTH_PROPS,
   READER_CONTENT_MIN_HEIGHT,
 } from '../lib';
-import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 
 function ReaderPagesSkeleton() {
   return (
-    <Stack mih={READER_CONTENT_MIN_HEIGHT} align="center" mt={HEADER_HEIGHT}>
+    <Stack mih={READER_CONTENT_MIN_HEIGHT} align="center">
       {Array.from({ length: SKELETON_PAGES_COUNT }).map((_, index) => (
         <Skeleton
           key={index}

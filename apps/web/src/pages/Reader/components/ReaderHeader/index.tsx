@@ -8,25 +8,48 @@ import useSource from '@/entities/source/hooks/useSource';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import GoBackButton from '@/shared/ui/GoBackButton';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
-import useChapterPages from '../hooks/useChapterPages';
-import ReaderControls from './ReaderControls';
-import ReaderPagesCount from './ReaderPagesCount';
-
-const TITLE_MIN_WIDTH = 180;
+import useChapterPages from '../../hooks/useChapterPages';
+import ReaderControls from '../ReaderControls';
+import ReaderPagesCount from '../ReaderPagesCount';
+import { TITLE_NAME_MIN_WIDTH } from '../../lib';
+import ReaderHeaderSkeleton from './ReaderHeaderSkeleton';
+import { isEmpty } from '@/shared/lib/isEmpty';
 
 type Props = {
   titleId: string;
   chapterId: string;
   prevChapterId: string | null;
   nextChapterId: string | null;
+  isChapterDataPending: boolean;
 };
 
-function ReaderHeader({ titleId, chapterId, prevChapterId, nextChapterId }: Props) {
+function ReaderHeader({
+  titleId,
+  chapterId,
+  prevChapterId,
+  nextChapterId,
+  isChapterDataPending,
+}: Props) {
   const { t } = useTranslation();
-  const { data: titleData } = useTitleDetails({ titleId });
-  const { data: chaptersData } = useChapters({ titleId });
-  const { data: source } = useSource({ sourceId: titleData?.title.sourceId });
-  const { data: chapterPages } = useChapterPages({ titleId, chapterId });
+  const { data: titleData, isPending: isTitleDetailsPending } = useTitleDetails({ titleId });
+  const { data: chaptersData, isPending: isChaptersDataPending } = useChapters({ titleId });
+  const { data: source, isPending: isSourcePending } = useSource({
+    sourceId: titleData?.title.sourceId,
+  });
+  const { data: chapterPages, isPending: isChapterPagesPending } = useChapterPages({
+    titleId,
+    chapterId,
+  });
+
+  if (
+    isTitleDetailsPending ||
+    isChapterPagesPending ||
+    isChaptersDataPending ||
+    isSourcePending ||
+    isChapterDataPending
+  ) {
+    return <ReaderHeaderSkeleton />;
+  }
 
   const chapters = chaptersData?.items ?? [];
   const currentChapterIndex = chapters.findIndex((chapter) => chapter.id === chapterId);
@@ -35,17 +58,19 @@ function ReaderHeader({ titleId, chapterId, prevChapterId, nextChapterId }: Prop
   return (
     <AppShell.Header>
       <Group px="md" h="100%" gap="md" wrap="nowrap">
-        <Group gap="xs" flex={1} miw={TITLE_MIN_WIDTH} wrap="nowrap">
+        <Group gap="xs" flex={1} miw={TITLE_NAME_MIN_WIDTH} wrap="nowrap">
           <GoBackButton path={generatePath(ROUTE_PATHS.TITLE, { titleId })} />
-          <Stack gap={2} miw={0}>
-            <Title
-              lh={1}
-              order={5}
-              textWrap="nowrap"
-              style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}
-            >
-              {titleData?.title.name}
-            </Title>
+          <Stack gap={4} miw={0}>
+            {titleData && (
+              <Title
+                lh={1}
+                order={5}
+                textWrap="nowrap"
+                style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}
+              >
+                {titleData?.title.name}
+              </Title>
+            )}
             <MidDotGroup
               truncate
               lh={1}
@@ -55,10 +80,12 @@ function ReaderHeader({ titleId, chapterId, prevChapterId, nextChapterId }: Prop
                 c: 'dimmed',
               }}
               items={[
-                t('chapterOfTotal', {
-                  number: chapters.length - currentChapterIndex,
-                  total: chapters.length,
-                }),
+                currentChapterIndex !== -1 &&
+                  !isEmpty(chaptersData?.items) &&
+                  t('chapterOfTotal', {
+                    number: chapters.length - currentChapterIndex,
+                    total: chapters.length,
+                  }),
                 source?.title,
               ]}
             />
