@@ -21,13 +21,13 @@ import {
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { isStaffRole } from '@tanuki/contracts';
+import { COLOR_SCHEME, isStaffRole } from '@tanuki/contracts';
 import MobileNavigationButton from './MobileNavigationButton';
 import { LANGUAGE, getLanguageLabel } from '@/shared/lib/language';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
-import { COLOR_SCHEME, getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
+import { getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
 import styles from './../../Layout.module.scss';
 
 type Props = {

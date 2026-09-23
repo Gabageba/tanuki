@@ -50,6 +50,20 @@
       "when": 1790154106956,
       "tag": "0006_yellow_liz_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790157787928,
+      "tag": "0007_sharp_ben_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790159458020,
+      "tag": "0008_dear_dorian_gray",
+      "breakpoints": true
     }
   ]
 }

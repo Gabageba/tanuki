@@ -14,6 +14,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { EyeIcon, EyeSlashIcon, LockSimpleIcon } from '@phosphor-icons/react';
+import { COLOR_SCHEME, type ColorScheme } from '@tanuki/contracts';
 import {
   CSS_VARIABLES_RESOLVER,
   FONT_FAMILY_MONOSPACE,
@@ -21,7 +22,6 @@ import {
   NEUTRAL_DARK_SHADES,
   NEUTRAL_LIGHT_SHADES,
 } from '../models';
-import { COLOR_SCHEME, type ColorScheme } from '@/shared/lib/colorScheme';
 import {
   PRIMARY_COLOR,
   PRIMARY_COLOR_SHADES,

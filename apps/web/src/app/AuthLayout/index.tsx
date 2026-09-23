@@ -9,16 +9,11 @@ import {
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router';
-import { SOURCE_STATUS } from '@tanuki/contracts';
+import { COLOR_SCHEME, SOURCE_STATUS, type ColorScheme } from '@tanuki/contracts';
 import LogoHorizontal from '../Layout/Header/LogoHorizontal';
 import StatusIndicator from '@/shared/ui/StatusIndicator';
 import { STATUS_OK_COLOR } from '@/shared/lib/palette';
-import {
-  COLOR_SCHEME,
-  getColorSchemeIcon,
-  getColorSchemeLabel,
-  type ColorScheme,
-} from '@/shared/lib/colorScheme';
+import { getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
 import useSources from '@/entities/source/hooks/useSources';
 import { flattenSources } from '@/entities/source/lib';
 import styles from './AuthLayout.module.scss';

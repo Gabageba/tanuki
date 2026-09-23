@@ -165,9 +165,22 @@ export {
   READER_CONTAINER_WIDTH,
   READER_TAP_ZONE_WIDTH,
   READER_PAGE_GAP,
+  READER_CHAPTER_GAP,
   ReaderSettingsSchema,
   type ReaderSettings,
   DEFAULT_READER_SETTINGS,
   UpdateReaderSettingsRequestSchema,
   type UpdateReaderSettingsRequest,
 } from './reader-settings';
+export {
+  COLOR_SCHEME,
+  ColorSchemeSchema,
+  type ColorScheme,
+  VIEW_MODE,
+  ViewModeSchema,
+  type ViewMode,
+  UserSettingsSchema,
+  type UserSettings,
+  UpdateUserSettingsRequestSchema,
+  type UpdateUserSettingsRequest,
+} from './user-settings';

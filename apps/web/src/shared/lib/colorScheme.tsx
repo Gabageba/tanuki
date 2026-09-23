@@ -1,14 +1,6 @@
-import type { MantineColorScheme } from '@mantine/core';
 import { DesktopIcon, MoonIcon, SunIcon } from '@phosphor-icons/react';
 import type { TFunction } from 'i18next';
-import type { EnumLiteralsOf } from '@tanuki/contracts';
-
-export const COLOR_SCHEME = {
-  LIGHT: 'light',
-  DARK: 'dark',
-  AUTO: 'auto',
-} as const satisfies Record<string, MantineColorScheme>;
-export type ColorScheme = EnumLiteralsOf<typeof COLOR_SCHEME>;
+import { COLOR_SCHEME, type ColorScheme } from '@tanuki/contracts';
 
 export const getColorSchemeLabel = (colorScheme: ColorScheme, t: TFunction) => {
   switch (colorScheme) {

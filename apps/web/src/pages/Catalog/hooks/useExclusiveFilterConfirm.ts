@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useLocalStorage } from '@mantine/hooks';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
+import { readSettings, writeSettings } from '@/shared/lib/settings';
 import { applyExclusiveGroups, groupHasSelection } from '../utils/filterSelection';
 
 type PendingChange = {
@@ -13,13 +13,13 @@ type PendingChange = {
 /**
  * Gates a filter change through a confirm step when it's about to clear a sibling
  * `exclusiveGroup` selection (manga-chan.me: tags / "Тип" / "Статус" can't combine on the
- * source) — the user can opt out of future prompts, remembered in localStorage.
+ * source) — the user can opt out of future prompts, remembered in settings (localStorage, synced
+ * to the DB for authorized users — see shared/lib/settings.ts).
  */
 function useExclusiveFilterConfirm() {
-  const [dismissed, setDismissed] = useLocalStorage({
-    key: 'tanuki-catalog-filter-exclusive-confirm-dismissed',
-    defaultValue: false,
-  });
+  const [dismissed, setDismissedState] = useState(
+    () => readSettings().exclusiveFilterConfirmDismissed ?? false,
+  );
   const [pending, setPending] = useState<PendingChange | null>(null);
 
   const applyChange = (
@@ -47,7 +47,10 @@ function useExclusiveFilterConfirm() {
 
   const confirmPending = (rememberChoice: boolean) => {
     if (!pending) return;
-    if (rememberChoice) setDismissed(true);
+    if (rememberChoice) {
+      writeSettings({ exclusiveFilterConfirmDismissed: true });
+      setDismissedState(true);
+    }
     pending.commit(applyExclusiveGroups(pending.groups, pending.group, pending.next));
     setPending(null);
   };

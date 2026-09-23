@@ -232,7 +232,11 @@
       "Bash(pnpm build:contracts)",
       "Bash(pnpm --filter @tanuki/contracts typecheck)",
       "Bash(xargs -I{} sh -c 'echo ==={}; cat {}')",
-      "Bash(xargs -I{} sh -c 'echo ==={}; head -20 {}')"
+      "Bash(xargs -I{} sh -c 'echo ==={}; head -20 {}')",
+      "Bash(pnpm --filter @tanuki/api db:migrate)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(node -e ' *)"
     ],
     "additionalDirectories": [
       "/Users/gabageba/Develop/web/tanuki-parsers-redo/src/main/kotlin/org/koitharu/kotatsu/parsers/site/ru/rulib",

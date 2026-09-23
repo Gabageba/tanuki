@@ -1,13 +1,12 @@
-import type { MantineColorScheme } from '@mantine/core';
-import type { Language } from './language';
-import type { ViewMode } from './viewMode';
+import type { ColorScheme, Language, ViewMode } from '@tanuki/contracts';
 
 export const SETTINGS_STORAGE_KEY = 'tanuki-settings';
 
-type Settings = {
-  colorScheme?: MantineColorScheme;
+export type Settings = {
+  colorScheme?: ColorScheme;
   viewMode?: ViewMode;
   language?: Language;
+  exclusiveFilterConfirmDismissed?: boolean;
 };
 
 export const readSettings = (): Settings => {
@@ -19,6 +18,16 @@ export const readSettings = (): Settings => {
   }
 };
 
+/**
+ * Для авторизованных каждый патч дополнительно летит в БД, чтобы настройки не терялись между
+ * устройствами — обработчик на время сессии логина регистрирует UserSettingsSync
+ * (app/Providers/UserSettingsSync.tsx), гость пишет только сюда, в localStorage.
+ */
+let syncHandler: ((patch: Settings) => void) | null = null;
+export const setSettingsSyncHandler = (handler: ((patch: Settings) => void) | null) => {
+  syncHandler = handler;
+};
+
 export const writeSettings = (patch: Settings) => {
   try {
     window.localStorage.setItem(
@@ -28,4 +37,5 @@ export const writeSettings = (patch: Settings) => {
   } catch {
     // localStorage может быть недоступен (приватный режим)
   }
+  syncHandler?.(patch);
 };

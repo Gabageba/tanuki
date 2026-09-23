@@ -16,6 +16,7 @@ import { ResilienceModule } from './resilience/resilience.module';
 import { SearchModule } from './search/search.module';
 import { SourceProbeModule } from './source-probe/source-probe.module';
 import { SourcesModule } from './sources/sources.module';
+import { UserSettingsModule } from './user-settings/user-settings.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SourcesModule } from './sources/sources.module';
     MatchesModule,
     ImgProxyModule,
     ReaderSettingsModule,
+    UserSettingsModule,
   ],
   providers: [
     // До сих пор ни одно тело запроса не валидировалось на входе — DTO объявляли форму, но

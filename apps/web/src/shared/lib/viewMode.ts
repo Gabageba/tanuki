@@ -1,11 +1,7 @@
-import { type EnumLiteralsOf } from '@tanuki/contracts';
+import { VIEW_MODE, type ViewMode } from '@tanuki/contracts';
 import { readSettings, writeSettings } from './settings';
 
-export const VIEW_MODE = {
-  GRID: 'grid',
-  LIST: 'list',
-} as const;
-export type ViewMode = EnumLiteralsOf<typeof VIEW_MODE>;
+export { VIEW_MODE, type ViewMode };
 
 export const getStoredViewMode = (): ViewMode | undefined => readSettings().viewMode;
 

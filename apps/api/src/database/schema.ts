@@ -17,6 +17,8 @@ import type {
   Language,
   ReaderReadingMode,
   ReaderPageFit,
+  ColorScheme,
+  ViewMode,
 } from '@tanuki/contracts';
 import type { EmailTokenPurpose } from '../auth/models';
 
@@ -189,6 +191,30 @@ export const readerSettings = pgTable('reader_settings', {
   tapZoneWidth: integer('tap_zone_width').notNull(),
   /** Отступ между страницами в вертикальном режиме, в пикселях. */
   pageGap: integer('page_gap').notNull(),
+  /** Отступ между главами в вертикальной ленте, в пикселях. */
+  chapterGap: integer('chapter_gap').notNull(),
+
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Настройки, не завязанные на конкретную страницу (тема, вид каталога, язык, отказ от диалога
+ * исключающих фильтров) — одна строка на пользователя, создаётся при первом сохранении. Источник
+ * истины для гостя — localStorage на клиенте (apps/web/src/shared/lib/settings.ts); эта таблица
+ * синхронизирует его для авторизованных между устройствами. Колонки нет смысла делать notNull:
+ * партиальная строка значит «остального ещё не сохраняли, на клиенте берём из localStorage».
+ */
+export const userSettings = pgTable('user_settings', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  // Тип text, а не pgEnum — см. комментарий у title_links.verdict выше. Литералы объявлены один
+  // раз в контрактах (COLOR_SCHEME / VIEW_MODE) и выводятся типом.
+  colorScheme: text('color_scheme').$type<ColorScheme>(),
+  viewMode: text('view_mode').$type<ViewMode>(),
+  language: text('language').$type<Language>(),
+  exclusiveFilterConfirmDismissed: boolean('exclusive_filter_confirm_dismissed'),
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
