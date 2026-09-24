@@ -68,8 +68,9 @@ const CHAPTERS_PAGE1_JSON = JSON.stringify({
     },
     {
       id: 9002,
-      chapter: 2,
-      tome: 1,
+      // Так их и отдаёт живое API — строками.
+      chapter: '2',
+      tome: '1',
       name: 'Продолжение',
       upload_date: '2024-01-02T10:00:00',
       is_paid: false,
@@ -184,6 +185,12 @@ describe('Remanga parser conformance', () => {
       expect(chapter.uploadDate === 0 || chapter.uploadDate > 1e12).toBe(true);
       expect(chapter.branch).toBe('TeamA, TeamB');
     }
+    expect(manga.chapters!.map((c) => [c.volume, c.number])).toEqual(
+      expect.arrayContaining([
+        [1, 1],
+        [1, 2],
+      ]),
+    );
     expect(new Set(manga.chapters!.map((c) => c.id)).size).toBe(manga.chapters!.length);
     expect(manga.description).toBe('Описание тайтла.');
     expect(manga.tags.map((t) => t.title)).toEqual(['Приключения', 'Веб']);

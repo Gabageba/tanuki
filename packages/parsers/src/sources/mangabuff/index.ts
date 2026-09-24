@@ -498,17 +498,21 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     const hrefRaw = attrOrNull($a, 'href');
     if (!hrefRaw) return null;
     const relUrl = toRelativeUrl(toAbsoluteUrl(hrefRaw, domain), domain);
-    const specificText = textOrNull(
-      $a.find('.chapters__volume, .chapters__value, .chapters__name'),
-    );
-    const title = specificText ?? textOrNull($a) ?? '';
-    const numberMatch = CHAPTER_NUMBER_REGEX.exec(title);
-    const chapterNumber = numberMatch ? parseFloatOrNull(numberMatch[0].replace(',', '.')) : null;
+    // Том, номер и название — три соседних блока («Том 35», «Глава 284», название). Читать их
+    // одной строкой нельзя: первым числом в ней окажется номер тома, а название склеится с
+    // «Том 35Глава 284».
+    const volumeText = textOrNull($a.find('.chapters__volume'));
+    const valueText = textOrNull($a.find('.chapters__value'));
+    const nameText = textOrNull($a.find('.chapters__name'));
+    const numberText = valueText ?? (volumeText || nameText ? null : textOrNull($a));
+    const numberMatch = numberText ? CHAPTER_NUMBER_REGEX.exec(numberText) : null;
+    const volumeMatch = volumeText ? CHAPTER_NUMBER_REGEX.exec(volumeText) : null;
+    const chapterNumber = numberMatch ? parseFloatOrNull(numberMatch[0]) : null;
     return {
       id: generateUid(SOURCE_ID, relUrl),
-      title: nullIfEmpty(title),
+      title: nullIfEmpty(nameText ?? valueText ?? numberText ?? ''),
       number: chapterNumber ?? index + 1,
-      volume: null,
+      volume: volumeMatch ? parseFloatOrNull(volumeMatch[0]) : null,
       url: relUrl,
       scanlator: null,
       uploadDate: parseDdMmYyyy(textOrNull($a.find('.chapters__add-date').first())),

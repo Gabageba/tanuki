@@ -33,6 +33,7 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
 import { toTitleCase } from '../../core/text/strings';
+import { parseFloatOrNull } from '../../core/text/numbers';
 import { NotFoundError } from '../../errors';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
@@ -164,8 +165,9 @@ type MangaJson = {
 
 type ChapterJson = {
   id: number;
-  chapter?: number;
-  tome?: number;
+  /** API отдаёт номер строкой («205.1»), а в старых ответах встречается и числом. */
+  chapter?: number | string;
+  tome?: number | string;
   name?: string;
   upload_date?: string;
   is_paid?: boolean;
@@ -581,8 +583,8 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
         chapters.push({
           id: generateUid(SOURCE_ID, cjo.id),
           title: cjo.name ? toTitleCase(cjo.name) : null,
-          number: cjo.chapter ?? null,
-          volume: cjo.tome ?? null,
+          number: parseFloatOrNull(cjo.chapter?.toString()),
+          volume: parseFloatOrNull(cjo.tome?.toString()),
           url: `/api/v2/titles/chapters/${cjo.id}/`,
           scanlator: cjo.publishers?.[0]?.name ?? branchName,
           uploadDate: parseIsoDate(cjo.upload_date),

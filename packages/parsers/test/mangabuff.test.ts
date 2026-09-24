@@ -61,8 +61,10 @@ const DETAILS_HTML = `<!doctype html><html><body>
     <a href="/genres/priklyucheniya" class="tags__item">Приключения</a>
   </div>
   <a class="chapters__item" href="/manga/one-piece/2">
-    <span class="chapters__value">Глава 2</span>
-    <span class="chapters__add-date">02.01.2024</span>
+    <div class="chapters__volume">Том <span>1</span></div>
+    <div class="chapters__value">Глава <span>2</span></div>
+    <div class="chapters__name">Романс Зоро</div>
+    <div class="chapters__add-date">02.01.2024</div>
   </a>
   <a class="chapters__item" href="/manga/one-piece/1">
     <span class="chapters__value">Глава 1</span>
@@ -224,6 +226,9 @@ describe('MangaBuff parser conformance', () => {
     // oldest-first ordering
     expect(manga.chapters![0]!.number).toBe(1);
     expect(manga.chapters![1]!.number).toBe(2);
+    // Том, номер и название — отдельные блоки, а не одна строка «Том 1Глава 2Романс Зоро».
+    expect(manga.chapters![1]).toMatchObject({ volume: 1, title: 'Романс Зоро' });
+    expect(manga.chapters![0]!.volume).toBeNull();
     expect(manga.rating).toBeCloseTo(0.87, 5);
     expect(manga.releaseState).toBe(TITLE_STATE.ONGOING);
     expect(manga.type).toBe(TITLE_TYPE.MANGA);
