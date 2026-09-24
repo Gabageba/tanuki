@@ -1,9 +1,11 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  doublePrecision,
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -218,6 +220,39 @@ export const userSettings = pgTable('user_settings', {
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Где пользователь остановился в тайтле — одна строка на пару «пользователь × тайтл на
+ * источнике». Общим для подтверждённых совпадений прогресс делает не таблица, а чтение: API
+ * отдаёт строку тайтла вместе со строками всей его группы (TitleLinksService.listConfirmedGroup),
+ * а сервер выравнивает их с главами тайтла (reading-progress/chapter-alignment.ts).
+ */
+export const readingProgress = pgTable(
+  'reading_progress',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    /** linkKeyOf(sourceId, url) — тот же ключ, что в title_links, и по той же причине: Title.id
+     *  у части парсеров (desume) разный в списке и в деталях. */
+    titleKey: text('title_key').notNull(),
+    sourceId: text('source_id').notNull(),
+
+    chapterId: text('chapter_id').notNull(),
+    /** Снимок тома, номера и названия главы: по нему отметку узнают на других источниках
+     *  группы, когда полный список глав её источника недоступен. */
+    chapterVolume: doublePrecision('chapter_volume'),
+    chapterNumber: doublePrecision('chapter_number'),
+    chapterTitle: text('chapter_title'),
+    /** Branch.id — имя ветки или DEFAULT_BRANCH_ID, чтобы фронт открыл нужную ветку. */
+    branchId: text('branch_id').notNull(),
+    pageIndex: integer('page_index').notNull(),
+
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.titleKey] })],
+);
 
 /** Ссылки в письмах: подтверждение почты и сброс пароля — один токен на активную цель за раз. */
 export const emailTokens = pgTable('email_tokens', {

@@ -10,5 +10,7 @@ import { MatchesService } from './matches.service';
   imports: [SourcesModule, ParsersClientModule],
   controllers: [MatchesController],
   providers: [MatchesService, TitleLinksService],
+  // Прогресс чтения делит с матчингом одно понятие «тот же тайтл» — группу подтверждений.
+  exports: [TitleLinksService],
 })
 export class MatchesModule {}

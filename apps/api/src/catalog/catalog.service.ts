@@ -14,6 +14,7 @@ import {
   compareChapterNumber,
   compareChapterNumberDesc,
   computeBranches,
+  detectNumbering,
   normalizeChapter,
   normalizeFilterGroup,
   normalizeTitle,
@@ -83,6 +84,7 @@ export class CatalogService {
 
     return {
       items: filtered.map((chapter) => normalizeChapter(sourceId, titleId, chapter)),
+      numbering: detectNumbering(filtered),
       stale: stale || undefined,
     };
   }

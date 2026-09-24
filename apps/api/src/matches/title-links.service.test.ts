@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TITLE_LINK_VERDICT } from '@tanuki/contracts';
 import type { DatabaseService } from '../database/database.service';
-import { TitleLinksService, orderPair, toTitleLink } from './title-links.service';
+import { TitleLinksService, excludeRejected, orderPair, toTitleLink } from './title-links.service';
 
 const row = {
   aId: 'desume:aaa',
@@ -36,6 +36,26 @@ describe('toTitleLink', () => {
   });
 });
 
+describe('excludeRejected', () => {
+  // Группа 1 собрана цепочкой 1↔2↔3; ключ самого 1 в неё не входит.
+  const group = ['source_b:2', 'source_c:3'];
+
+  it('без прямых отказов оставляет всю цепочку', () => {
+    const links = [
+      { targetId: 'source_b:2', targetName: 'B', verdict: TITLE_LINK_VERDICT.CONFIRMED },
+    ];
+    expect(excludeRejected(group, links)).toEqual(['source_b:2', 'source_c:3']);
+  });
+
+  it('прямой отказ 1↔3 сильнее цепочки 1↔2↔3', () => {
+    const links = [
+      { targetId: 'source_b:2', targetName: 'B', verdict: TITLE_LINK_VERDICT.CONFIRMED },
+      { targetId: 'source_c:3', targetName: 'C', verdict: TITLE_LINK_VERDICT.REJECTED },
+    ];
+    expect(excludeRejected(group, links)).toEqual(['source_b:2']);
+  });
+});
+
 describe('TitleLinksService при недоступной базе', () => {
   // withFallback — единственное место, где сервис решает судьбу отказа, поэтому подделываем
   // именно его: он всегда отдаёт запасное значение, как при мёртвом Postgres.
@@ -46,6 +66,12 @@ describe('TitleLinksService при недоступной базе', () => {
   it('чтение отдаёт пустой список, а не роняет выдачу матчей', async () => {
     const service = new TitleLinksService(unavailable);
     await expect(service.listFor('desume:aaa')).resolves.toEqual([]);
+  });
+
+  it('группа подтверждений пустая, а не роняет выдачу матчей и прогресс', async () => {
+    const service = new TitleLinksService(unavailable);
+    await expect(service.listGroup('desume:aaa')).resolves.toEqual([]);
+    await expect(service.listConfirmedGroup('desume:aaa')).resolves.toEqual([]);
   });
 
   it('запись сообщает об ошибке, а не теряет правку молча', async () => {

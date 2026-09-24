@@ -59,7 +59,13 @@ export {
   type ContentRating,
   type TitleType,
 } from './title';
-export { ChapterSchema, type Chapter } from './chapter';
+export {
+  ChapterSchema,
+  type Chapter,
+  CHAPTER_NUMBERING,
+  ChapterNumberingSchema,
+  type ChapterNumbering,
+} from './chapter';
 export { PageSchema, type Page } from './page';
 export {
   SourceSchema,
@@ -83,7 +89,7 @@ export {
   type SortOrder,
   type SortDirection,
 } from './source';
-export { BranchSchema, type Branch } from './branch';
+export { DEFAULT_BRANCH_ID, BranchSchema, type Branch } from './branch';
 export {
   FilterTypeSchema,
   FilterOptionSchema,
@@ -184,3 +190,18 @@ export {
   UpdateUserSettingsRequestSchema,
   type UpdateUserSettingsRequest,
 } from './user-settings';
+export {
+  ReadingProgressSchema,
+  type ReadingProgress,
+  READING_MARK_CONFIDENCE,
+  ReadingMarkConfidenceSchema,
+  type ReadingMarkConfidence,
+  ReadingProgressProjectionSchema,
+  type ReadingProgressProjection,
+  LinkedReadingProgressSchema,
+  type LinkedReadingProgress,
+  TitleReadingProgressResponseSchema,
+  type TitleReadingProgressResponse,
+  UpdateReadingProgressRequestSchema,
+  type UpdateReadingProgressRequest,
+} from './reading-progress';

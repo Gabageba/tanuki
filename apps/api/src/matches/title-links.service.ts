@@ -5,6 +5,13 @@ import { StorageUnavailableException } from '../common/errors';
 import { DatabaseService } from '../database/database.service';
 import { titleLinks } from '../database/schema';
 
+/**
+ * Предохранитель для обхода группы: настоящая группа — это один тайтл на нескольких источниках,
+ * так что больше пары десятков ключей в ней не бывает. Упереться в лимит можно только из-за
+ * ошибочных подтверждений, склеивших разные тайтлы в цепочку.
+ */
+const TITLE_GROUP_MAX_SIZE = 64;
+
 export type TitleLink = {
   /** Id второй стороны связи относительно того тайтла, который спрашивали. */
   targetId: string;
@@ -52,6 +59,20 @@ export const toTitleLink = (row: LinkRow, titleId: string): TitleLink => {
   };
 };
 
+/**
+ * Прямой отказ сильнее цепочки подтверждений: если 1↔3 явно отмечено «не он», 3 не входит в
+ * группу 1, даже если есть 1↔2↔3. Иначе «Не он» на карточке, найденной через цепочку, ничего бы
+ * не делал — строка REJECTED легла бы в базу, а тайтл остался бы подтверждённым.
+ */
+export const excludeRejected = (groupKeys: string[], directLinks: TitleLink[]): string[] => {
+  const rejected = new Set(
+    directLinks
+      .filter((link) => link.verdict === TITLE_LINK_VERDICT.REJECTED)
+      .map((link) => link.targetId),
+  );
+  return groupKeys.filter((key) => !rejected.has(key));
+};
+
 @Injectable()
 export class TitleLinksService {
   constructor(private readonly database: DatabaseService) {}
@@ -70,6 +91,44 @@ export class TitleLinksService {
 
       return rows.map((row) => toTitleLink(row, titleId));
     }, []);
+  }
+
+  /**
+   * Все тайтлы, связанные с этим цепочкой подтверждений: 1↔2 и 2↔3 значат, что 1, 2 и 3 — один
+   * тайтл. Сам titleId в ответ не входит. Прямые отказы здесь не учитываются — их снимает
+   * excludeRejected, потому что отказ касается только той пары, между которой поставлен.
+   *
+   * UNION (а не UNION ALL) отбрасывает уже посещённые ключи, поэтому обход кольца
+   * 1↔2↔3↔1 заканчивается сам. База недоступна — пустая группа, как и в listFor.
+   */
+  async listGroup(titleId: string): Promise<string[]> {
+    return this.database.withFallback(async () => {
+      const rows = await this.database.db.execute<{ key: string }>(sql`
+        WITH RECURSIVE title_group(key) AS (
+          SELECT ${titleId}::text
+          UNION
+          SELECT CASE WHEN link.a_id = title_group.key THEN link.b_id ELSE link.a_id END
+          FROM title_links AS link
+          JOIN title_group ON link.a_id = title_group.key OR link.b_id = title_group.key
+          WHERE link.verdict = ${TITLE_LINK_VERDICT.CONFIRMED}
+        )
+        SELECT key FROM title_group LIMIT ${TITLE_GROUP_MAX_SIZE}
+      `);
+
+      return rows.map((row) => row.key).filter((key) => key !== titleId);
+    }, []);
+  }
+
+  /**
+   * Подтверждённая группа тайтла за вычетом тех, кому он сам отказал напрямую. Именно этот
+   * набор считается «тем же тайтлом» и в выдаче совпадений, и в прогрессе чтения.
+   */
+  async listConfirmedGroup(titleId: string): Promise<string[]> {
+    const [group, directLinks] = await Promise.all([
+      this.listGroup(titleId),
+      this.listFor(titleId),
+    ]);
+    return excludeRejected(group, directLinks);
   }
 
   /**

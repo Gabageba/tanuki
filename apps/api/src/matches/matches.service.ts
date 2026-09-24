@@ -20,7 +20,7 @@ import { ENV } from '../config/env.module';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawTitle } from '../parsers-client/parsers-client.types';
 import { SourcesService } from '../sources/sources.service';
-import { linkKeyOf, TitleLinksService, parseLinkKey } from './title-links.service';
+import { excludeRejected, linkKeyOf, TitleLinksService, parseLinkKey } from './title-links.service';
 import {
   FALLBACK_WAVE_TIME_SHARE,
   MATCH_ALGO_VERSION,
@@ -123,36 +123,40 @@ export class MatchesService {
   /**
    * Накладывает решения людей на алгоритмическую выдачу: забракованные пары убирает,
    * подтверждённые поднимает наверх, а подтверждённые, но не найденные веером, дотягивает
-   * отдельным запросом деталей.
+   * отдельным запросом деталей. Подтверждённым считается всё, что связано с тайтлом цепочкой
+   * подтверждений (см. TitleLinksService.listGroup), а не только прямые связи.
    */
   private async applyLinks(
     refKey: string,
     entries: MatchCacheEntry[],
   ): Promise<TitleMatchesResponse['items']> {
-    const links = await this.links.listFor(refKey);
-    if (links.length === 0) return entries.map((entry) => this.toMatch(entry));
+    const [links, group] = await Promise.all([
+      this.links.listFor(refKey),
+      this.links.listGroup(refKey),
+    ]);
+    if (links.length === 0 && group.length === 0)
+      return entries.map((entry) => this.toMatch(entry));
 
-    const verdicts = new Map(links.map((link) => [link.targetId, link]));
+    const confirmedKeys = new Set(excludeRejected(group, links));
+    const rejectedKeys = new Set(
+      links
+        .filter((link) => link.verdict === TITLE_LINK_VERDICT.REJECTED)
+        .map((link) => link.targetId),
+    );
 
     const kept = entries.filter(
-      (entry) =>
-        verdicts.get(linkKeyOf(entry.sourceId, entry.raw.url))?.verdict !==
-        TITLE_LINK_VERDICT.REJECTED,
+      (entry) => !rejectedKeys.has(linkKeyOf(entry.sourceId, entry.raw.url)),
     );
 
-    const confirmed = kept.map((entry) => {
-      const link = verdicts.get(linkKeyOf(entry.sourceId, entry.raw.url));
-      return link?.verdict === TITLE_LINK_VERDICT.CONFIRMED
+    const confirmed = kept.map((entry) =>
+      confirmedKeys.has(linkKeyOf(entry.sourceId, entry.raw.url))
         ? { ...entry, confidence: MATCH_CONFIDENCE.CONFIRMED }
-        : entry;
-    });
-
-    const missing = links.filter(
-      (link) =>
-        link.verdict === TITLE_LINK_VERDICT.CONFIRMED &&
-        !confirmed.some((entry) => linkKeyOf(entry.sourceId, entry.raw.url) === link.targetId),
+        : entry,
     );
-    const fetched = await this.fetchConfirmed(missing.map((link) => link.targetId));
+
+    const found = new Set(confirmed.map((entry) => linkKeyOf(entry.sourceId, entry.raw.url)));
+    const missing = [...confirmedKeys].filter((key) => !found.has(key));
+    const fetched = await this.fetchConfirmed(missing);
 
     const items = [...fetched, ...confirmed].map((entry) => this.toMatch(entry));
     // Подтверждённые всегда первыми; остальные уже отсортированы отбором.

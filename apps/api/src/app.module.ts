@@ -12,6 +12,7 @@ import { ImgProxyModule } from './img-proxy/img-proxy.module';
 import { InvitesModule } from './invites/invites.module';
 import { MatchesModule } from './matches/matches.module';
 import { ReaderSettingsModule } from './reader-settings/reader-settings.module';
+import { ReadingProgressModule } from './reading-progress/reading-progress.module';
 import { ResilienceModule } from './resilience/resilience.module';
 import { SearchModule } from './search/search.module';
 import { SourceProbeModule } from './source-probe/source-probe.module';
@@ -36,6 +37,7 @@ import { UserSettingsModule } from './user-settings/user-settings.module';
     MatchesModule,
     ImgProxyModule,
     ReaderSettingsModule,
+    ReadingProgressModule,
     UserSettingsModule,
   ],
   providers: [

@@ -1,4 +1,18 @@
 import { z } from 'zod';
+import type { EnumLiteralsOf } from './utils';
+
+/**
+ * Как ветка нумерует главы. PER_VOLUME — номер начинается заново в каждом томе или сезоне
+ * («Т. 2 Гл. 5»), и без тома номер неоднозначен; GLOBAL — сквозной через все тома. Номера двух
+ * веток сравнимы, только если способ один.
+ */
+export const CHAPTER_NUMBERING = {
+  PER_VOLUME: 'perVolume',
+  GLOBAL: 'global',
+} as const;
+export type ChapterNumbering = EnumLiteralsOf<typeof CHAPTER_NUMBERING>;
+
+export const ChapterNumberingSchema = z.enum(CHAPTER_NUMBERING);
 
 export const ChapterSchema = z.object({
   id: z.string(), // sourceId + opaqueId, see Title.id — use as-is for routes/API calls

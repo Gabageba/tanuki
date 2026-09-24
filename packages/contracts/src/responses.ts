@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { BranchSchema } from './branch';
-import { ChapterSchema } from './chapter';
+import { ChapterNumberingSchema, ChapterSchema } from './chapter';
 import { FilterGroupSchema } from './filter';
 import { TitleSchema } from './title';
 import { PageSchema } from './page';
@@ -34,6 +34,8 @@ export type TitleDetailsResponse = z.infer<typeof TitleDetailsResponseSchema>;
 
 export const ChaptersResponseSchema = z.object({
   items: z.array(ChapterSchema),
+  /** Как ветка нумерует главы: при нумерации по томам номер показывается вместе с томом. */
+  numbering: ChapterNumberingSchema,
   stale: z.boolean().optional(),
 });
 

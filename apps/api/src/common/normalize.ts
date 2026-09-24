@@ -1,5 +1,8 @@
 import {
+  CHAPTER_NUMBERING,
   CONTENT_RATING,
+  DEFAULT_BRANCH_ID,
+  type ChapterNumbering,
   type Branch,
   type Chapter,
   type FilterGroup,
@@ -127,6 +130,25 @@ export const normalizeTitle = (
 
 /** Главу без номера сравнивать не с чем — источник его просто не отдаёт, поэтому такие главы
  *  уходят в хвост нумерованных, сохраняя порядок источника (Array.prototype.sort стабилен). */
+/**
+ * Нумерация по томам — когда заново, с 0 или 1, начинается большинство томов. Не «номер хоть раз
+ * сбросился»: одной главы с ошибочным томом или экстры с чужим номером хватало, чтобы сквозную
+ * нумерацию приняли за потомовую и номера перестали сравниваться совсем.
+ */
+export const detectNumbering = (chapters: RawChapter[]): ChapterNumbering => {
+  const firstByVolume = new Map<number, number>();
+  for (const { volume, number } of chapters) {
+    if (volume === null || number === null) continue;
+    firstByVolume.set(volume, Math.min(firstByVolume.get(volume) ?? number, number));
+  }
+  if (firstByVolume.size < 2) return CHAPTER_NUMBERING.GLOBAL;
+
+  const restarting = [...firstByVolume.values()].filter((first) => first <= 1).length;
+  return restarting * 2 > firstByVolume.size
+    ? CHAPTER_NUMBERING.PER_VOLUME
+    : CHAPTER_NUMBERING.GLOBAL;
+};
+
 export const compareChapterNumber = (a: RawChapter, b: RawChapter): number => {
   if (a.number === null) return b.number === null ? 0 : 1;
   if (b.number === null) return -1;
@@ -177,7 +199,7 @@ type BranchGroup = {
   items: RawChapter[];
 };
 
-const groupByBranch = (chapters: RawChapter[]): BranchGroup[] => {
+export const groupByBranch = (chapters: RawChapter[]): BranchGroup[] => {
   const groups = new Map<string | null, RawChapter[]>();
   for (const chapter of chapters) {
     const list = groups.get(chapter.branch) ?? [];
@@ -194,10 +216,8 @@ const groupByBranch = (chapters: RawChapter[]): BranchGroup[] => {
     });
 };
 
-/** Источник без веток помечает главы `branch: null` — наружу такая ветка уходит под
- *  синтетическим id, который listChapters разворачивает обратно через toBranchKey. */
-export const DEFAULT_BRANCH_ID = 'default';
-
+/** Синтетический id ветки без имени (DEFAULT_BRANCH_ID из контрактов) listChapters
+ *  разворачивает обратно в `branch: null`. */
 export const toBranchKey = (branchId: string): string | null => {
   return branchId === DEFAULT_BRANCH_ID ? null : branchId;
 };
