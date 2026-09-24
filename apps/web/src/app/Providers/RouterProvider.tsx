@@ -25,6 +25,22 @@ import ResetPassword from '@/pages/ResetPassword';
 import Invites from '@/pages/Invites';
 import Terms from '@/pages/Terms';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import Playground from '@/pages/Playground';
+import PlaygroundReadingMarks from '@/pages/Playground/ReadingMarks';
+
+// Песочница с макетами вариантов интерфейса — только для разработки, в прод-сборку не попадает.
+const PLAYGROUND_ROUTES = import.meta.env.DEV
+  ? [
+      {
+        path: ROUTE_PATHS.PLAYGROUND,
+        element: <Playground />,
+      },
+      {
+        path: ROUTE_PATHS.PLAYGROUND_READING_MARKS,
+        element: <PlaygroundReadingMarks />,
+      },
+    ]
+  : [];
 
 const router = createBrowserRouter([
   {
@@ -65,6 +81,7 @@ const router = createBrowserRouter([
             path: ROUTE_PATHS.BOOKMARKS,
             element: <Bookmarks />,
           },
+          ...PLAYGROUND_ROUTES,
           {
             element: <RequireStaff />,
             children: [

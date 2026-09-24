@@ -1,5 +1,6 @@
 import { Avatar as MantineAvatar, Group, Menu, useMantineColorScheme } from '@mantine/core';
 import {
+  FlaskIcon,
   GearSixIcon,
   GlobeIcon,
   PaletteIcon,
@@ -41,6 +42,11 @@ function Avatar() {
         {isStaffRole(user?.role) && (
           <Menu.Item component={Link} to={ROUTE_PATHS.INVITES} leftSection={<TicketIcon />}>
             {t('invites')}
+          </Menu.Item>
+        )}
+        {import.meta.env.DEV && (
+          <Menu.Item component={Link} to={ROUTE_PATHS.PLAYGROUND} leftSection={<FlaskIcon />}>
+            {t('playground')}
           </Menu.Item>
         )}
         <Menu.Item leftSection={<GearSixIcon />}>Настройки</Menu.Item>

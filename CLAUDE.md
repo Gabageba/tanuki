@@ -192,3 +192,12 @@
   it's translated. Give the whole phrase its own single key with interpolation instead
   (`downloadedChaptersAbbrev`: «Скачано {{count}} гл.»), even if part of that value duplicates
   another key's text.
+
+## Playground
+
+- Mock-ups of UI variants live in `apps/web/src/pages/Playground/<Task>/`, one page per task, listed
+  in `PLAYGROUND_TASKS` (`apps/web/src/pages/Playground/models.ts`). Their texts skip i18n.
+- Once a variant is chosen, the page is **kept** as a record of the decision, not deleted: fill in
+  the task's `decision` and describe the chosen variant in the relevant `docs/` file.
+- Playground routes are registered only under `import.meta.env.DEV` (`RouterProvider.tsx`), so the
+  pages never reach the production build. Keep it that way for every new page.

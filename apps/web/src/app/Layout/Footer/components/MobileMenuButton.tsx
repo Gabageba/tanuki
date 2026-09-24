@@ -13,6 +13,7 @@ import {
   CaretDownIcon,
   CaretUpIcon,
   CheckIcon,
+  FlaskIcon,
   GlobeIcon,
   ListIcon,
   PaletteIcon,
@@ -147,6 +148,24 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
                 leftSection={<TicketIcon />}
               >
                 {t('invites')}
+              </Button>
+            </>
+          )}
+          {import.meta.env.DEV && (
+            <>
+              <Divider />
+              <Button
+                className={styles.switcherOption}
+                onClick={() => {
+                  setIsOpened(false);
+                  navigate(ROUTE_PATHS.PLAYGROUND);
+                }}
+                variant="tile"
+                justify="flex-start"
+                size="md"
+                leftSection={<FlaskIcon />}
+              >
+                {t('playground')}
               </Button>
             </>
           )}

@@ -1,0 +1,518 @@
+.row {
+  padding-inline: var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  transition: background-color 300ms ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &[data-highlighted] {
+    background-color: var(--mantine-primary-color-light);
+  }
+}
+
+.timelineLine {
+  flex: 1;
+  width: 2px;
+  background-color: var(--mantine-color-default-border);
+
+  &[data-active] {
+    background-color: var(--mantine-primary-color-filled);
+  }
+
+  /* J: главы, дочитанные на других источниках. */
+  &[data-elsewhere] {
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--mantine-primary-color-filled) 0 3px,
+      transparent 3px 6px
+    );
+  }
+}
+
+.approximate {
+  opacity: 0.55;
+  outline: 1px dashed var(--mantine-color-dimmed);
+  outline-offset: 1px;
+}
+
+.unplaced {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+.dimmedText {
+  opacity: 0.55;
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--dot-color);
+
+  &[data-approximate] {
+    background-color: transparent;
+    border: 1.5px dashed var(--dot-color);
+  }
+}
+
+.lane,
+.laneSegment {
+  width: 2px;
+  background-color: var(--lane-base);
+
+  &[data-active] {
+    background-color: var(--lane-color);
+  }
+
+  &[data-active][data-approximate] {
+    background-color: transparent;
+    border-left: 2px dashed var(--lane-color);
+  }
+}
+
+.lane {
+  flex: 1;
+}
+
+.laneSegment {
+  flex: none;
+  height: 18px;
+}
+
+.stackItem {
+  flex: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
+}
+
+.questionBadge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--mantine-color-white);
+  background-color: var(--mantine-color-orange-filled);
+  box-shadow: 0 0 0 1.5px var(--mantine-color-body);
+}
+
+/* A2: ветка от круга к стопке. */
+.branch {
+  flex: none;
+  height: 0;
+  border-top: 2px solid var(--mantine-color-default-border);
+
+  &[data-approximate] {
+    border-top-style: dashed;
+    border-top-color: var(--mantine-color-dimmed);
+  }
+}
+
+/* A3: стопка в углу круга. */
+.nodeBadge {
+  position: absolute;
+  bottom: -5px;
+  left: 11px;
+}
+
+/* A4: скобка вдоль глав, между которыми может быть примерное место. */
+.rangeBracket {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  border-left: 2px dashed var(--mantine-color-dimmed);
+
+  &[data-start] {
+    top: 50%;
+    border-top: 2px dashed var(--mantine-color-dimmed);
+  }
+
+  &[data-end] {
+    bottom: 50%;
+    border-bottom: 2px dashed var(--mantine-color-dimmed);
+  }
+}
+
+.legendBracket {
+  flex: none;
+  width: 6px;
+  height: 16px;
+  border: 2px dashed var(--mantine-color-dimmed);
+  border-right: none;
+}
+
+/* Счётчик «+N» в верхнем углу одиночной иконки (A2a, A2b). */
+.countBadge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 13px;
+  height: 13px;
+  padding-inline: 2px;
+  border-radius: 7px;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 13px;
+  text-align: center;
+  color: var(--mantine-color-white);
+  background-color: var(--mantine-color-gray-filled);
+  box-shadow: 0 0 0 1.5px var(--mantine-color-body);
+}
+
+/* A2d: ветка кончается точкой. */
+.branchDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--mantine-color-dimmed);
+}
+
+/* F: разделитель «остановились здесь» между строками. */
+.markDivider {
+  min-height: 26px;
+  padding-inline: var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.markDividerLine {
+  flex: 1;
+  min-width: 8px;
+  height: 0;
+  border-top: 1px solid var(--mantine-color-dimmed);
+
+  &[data-approximate] {
+    border-top-style: dashed;
+  }
+}
+
+/* H: полоса-миникарта справа от списка. */
+.rail {
+  &::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    content: '';
+    border-radius: 1px;
+    background-color: var(--mantine-color-default-border);
+    transform: translateX(-50%);
+  }
+}
+
+.railOwn {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--mantine-primary-color-filled);
+  transform: translateY(-50%);
+}
+
+.railMarker {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  transform: translate(-50%, -50%);
+}
+
+/* I: своя отметка, когда смотрим глазами другого источника. */
+.ownGhostNode {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px dashed var(--mantine-primary-color-filled);
+}
+
+/* L: шкала как у плеера. */
+.playerTrack {
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--mantine-color-default-border);
+}
+
+.playerOwn,
+.playerElsewhere {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 3px;
+}
+
+.playerOwn {
+  background-color: var(--mantine-primary-color-filled);
+}
+
+.playerElsewhere {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--mantine-primary-color-filled) 0 3px,
+    var(--mantine-primary-color-light) 3px 6px
+  );
+  opacity: 0.6;
+}
+
+.playerThumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: var(--mantine-primary-color-filled);
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
+  transform: translate(-50%, -50%);
+}
+
+.playerPin {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  padding-bottom: 10px;
+  transform: translateX(-50%);
+
+  &::after {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    height: 10px;
+    content: '';
+    border-left: 2px solid var(--mantine-color-dimmed);
+    transform: translateX(-50%);
+  }
+
+  &[data-approximate]::after {
+    border-left-style: dashed;
+  }
+}
+
+/* M: гонка источников. */
+.raceRow {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--mantine-radius-sm);
+
+  &:hover:not(:disabled) {
+    background-color: var(--mantine-color-default-hover);
+  }
+
+  &[data-own] {
+    background-color: var(--mantine-primary-color-light);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+}
+
+/* N: сетка глав. */
+.gridCell,
+.gridLegendCell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 6px;
+  border: 1px solid var(--mantine-color-default-border);
+  color: var(--mantine-color-dimmed);
+
+  &[data-zone='read'],
+  &[data-zone='current'] {
+    border-color: transparent;
+    color: var(--mantine-color-white);
+    background-color: var(--mantine-primary-color-filled);
+  }
+
+  &[data-zone='current'] {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 2px;
+  }
+
+  &[data-zone='elsewhere'] {
+    border: 1.5px dashed var(--mantine-primary-color-filled);
+    color: var(--mantine-primary-color-filled);
+    background-color: var(--mantine-primary-color-light);
+  }
+}
+
+.gridCell {
+  width: 30px;
+  height: 30px;
+}
+
+.gridLegendCell {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.gridCellMarks {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  pointer-events: none;
+}
+
+/* Q: кольцо прогресса. */
+.ring {
+  transform: rotate(-90deg);
+
+  circle {
+    fill: none;
+  }
+}
+
+.ringTrack {
+  stroke: var(--mantine-color-default-border);
+}
+
+.ringElsewhere {
+  stroke: var(--mantine-primary-color-filled);
+  opacity: 0.3;
+}
+
+.ringOwn {
+  stroke: var(--mantine-primary-color-filled);
+  stroke-linecap: round;
+}
+
+.ringCenter {
+  position: absolute;
+  inset: 0;
+  justify-content: center;
+}
+
+.ringPin {
+  position: absolute;
+  display: flex;
+  transform: translate(-50%, -50%);
+}
+
+/* O: разделы вместо таймлайна. */
+.sectionHeader {
+  display: block;
+  width: 100%;
+  padding: 8px var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  background-color: var(--mantine-color-default-hover);
+}
+
+.sectionCaret {
+  flex: none;
+  transition: transform 150ms ease;
+
+  &[data-collapsed] {
+    transform: rotate(-90deg);
+  }
+}
+
+/* P: корешок и закладки-ленточки. */
+.spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6px;
+  width: 6px;
+  background-color: var(--mantine-color-default-border);
+
+  &[data-zone='read'],
+  &[data-zone='current'] {
+    background-color: var(--mantine-primary-color-filled);
+  }
+
+  &[data-zone='elsewhere'] {
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--mantine-primary-color-filled) 0 4px,
+      var(--mantine-primary-color-light) 4px 8px
+    );
+  }
+
+  &[data-first] {
+    top: 8px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+  }
+
+  &[data-last] {
+    bottom: 8px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+  }
+}
+
+.ribbon {
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * var(--mantine-spacing-md));
+  display: flex;
+  align-items: center;
+  width: 48px;
+  height: 20px;
+  padding-left: 18px;
+  color: var(--mantine-color-white);
+  background-color: var(--ribbon-color, var(--mantine-primary-color-filled));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%);
+  transform: translateY(-50%);
+
+  &[data-own] {
+    padding-left: 20px;
+    background-color: var(--mantine-primary-color-filled);
+  }
+
+  &[data-shifted] {
+    transform: translateY(0);
+  }
+
+  &[data-approximate] {
+    opacity: 0.55;
+  }
+}
+
+.ribbonCount {
+  margin-left: 2px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* R: узел-диаграмма покрытия. */
+.coverageNode {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--mantine-primary-color-filled) var(--coverage),
+    var(--mantine-color-default-border) 0
+  );
+
+  &[data-own] {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 2px;
+  }
+}
+
+/* A2e: своя отметка в кольце, как узел в R. */
+.ownNodeRing {
+  flex: none;
+  display: flex;
+  border-radius: 50%;
+  outline: 2px solid var(--mantine-primary-color-filled);
+}
