@@ -1,18 +1,116 @@
+/* Левый отступ строки лежит здесь, а не у .chapter, — так он входит в зону нажатия узла.
+   Лишние 2px — место под кольцо своей отметки (.ownNode): тело NavLink режет всё, что вылезает
+   за край. */
 .chapterTimeline {
-  svg {
-    transition: fill 100ms ease;
-  }
+  display: flex;
+  padding-left: calc(var(--mantine-spacing-md) + 2px);
+  padding-right: 2px;
 
-  &:hover {
-    svg {
-      fill: var(--mantine-primary-color-filled);
+  /* Зона нажатия захватывает и половину отступа до номера главы. */
+  &[data-markable] {
+    margin-right: calc(var(--mantine-spacing-xs) * -1);
+    padding-right: calc(var(--mantine-spacing-xs) + 2px);
+    cursor: pointer;
+
+    &:hover .timelineNode {
+      color: var(--mantine-primary-color-filled);
     }
   }
 }
 
+/* Узел красится тем же способом и с тем же переходом, что и линия, — иначе отстаёт от неё.
+   Обводка в цвет заливки утолщает кольцо: у Phosphor толще bold начертания нет. */
+.timelineNode {
+  color: var(--mantine-color-default-border);
+  fill: currentcolor;
+  stroke: currentcolor;
+  stroke-width: 10;
+  transition: color 200ms ease;
+
+  &[data-active] {
+    color: var(--mantine-primary-color-filled);
+  }
+}
+
+.timelineLine {
+  flex: 1;
+  width: 2px;
+  background-color: var(--mantine-color-default-border);
+  transition: background-color 200ms ease;
+
+  &[data-active] {
+    background-color: var(--mantine-primary-color-filled);
+  }
+
+  /* У крайних строк отрезок за краем списка скрыт, но место держит — узел остаётся по центру. */
+  &[data-hidden] {
+    visibility: hidden;
+  }
+}
+
+.ownNode {
+  display: flex;
+  border-radius: 50%;
+  outline: 2px solid var(--mantine-primary-color-filled);
+}
+
+/* Ветка от узла к иконке отметок: тянется через отступ строки (gap md у Group). */
+.markBranch {
+  flex: none;
+  width: var(--mantine-spacing-md);
+  height: 0;
+  margin-left: calc(var(--mantine-spacing-md) * -1);
+  border-top: 2px solid var(--mantine-color-default-border);
+  transition: border-color 200ms ease;
+
+  /* Лежит поверх зоны нажатия узла — клик должен пройти сквозь. */
+  pointer-events: none;
+
+  &[data-approximate] {
+    border-top-style: dashed;
+    border-top-color: var(--mantine-color-dimmed);
+  }
+
+  /* Отметка на текущей или прочитанной главе — ветка в цвет линии прочитанного. */
+  &[data-active] {
+    border-top-color: var(--mantine-primary-color-filled);
+  }
+}
+
+.markIcon {
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
+}
+
+/* Примерное место: иконка приглушена и обведена пунктиром. */
+.markSourceIcon[data-approximate] {
+  opacity: 0.55;
+  outline: 1px dashed var(--mantine-color-dimmed);
+  outline-offset: 1px;
+}
+
+/* Счётчик «+N» в верхнем углу иконки. */
+.markCount {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 13px;
+  height: 13px;
+  padding-inline: 2px;
+  border-radius: 7px;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 13px;
+  text-align: center;
+  color: var(--mantine-color-white);
+  background-color: var(--mantine-color-gray-filled);
+  box-shadow: 0 0 0 1.5px var(--mantine-color-body);
+}
+
 .chapter {
   border-radius: 0 !important;
-  padding-inline: var(--mantine-spacing-md);
+  padding-left: 0;
+  padding-right: var(--mantine-spacing-md);
   padding-block: 0;
   border-bottom: 1px solid var(--mantine-color-default-border);
 
@@ -22,5 +120,13 @@
 
   &[data-last] {
     border-bottom: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timelineNode,
+  .timelineLine,
+  .markBranch {
+    transition: none;
   }
 }

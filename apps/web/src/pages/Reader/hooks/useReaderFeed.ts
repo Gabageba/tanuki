@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { generatePath, useNavigate } from 'react-router';
+import { generatePath, useNavigate, useSearchParams } from 'react-router';
 import { READER_READING_MODE, type ReaderReadingMode } from '@tanuki/contracts';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
-import { CHAPTER_PRELOAD_REMAINING_PAGES, getChapterPagesQueryOptions } from '../lib';
+import { READER_PAGE_SEARCH_PARAM, ROUTE_PATHS } from '@/shared/lib/routes';
+import {
+  CHAPTER_PRELOAD_REMAINING_PAGES,
+  getChapterPagesQueryOptions,
+  parseReaderPageParam,
+} from '../lib';
 import type { ReaderFeedChapter, ReaderPosition } from '../models';
 import useCurrentPageObserver from './useCurrentPageObserver';
 
@@ -22,10 +26,20 @@ type Params = {
  */
 function useReaderFeed({ titleId, chapterId, readingMode }: Params) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [chapterIds, setChapterIds] = useState([chapterId]);
-  const [position, setPosition] = useState<ReaderPosition>({ chapterId, pageIndex: 0 });
+  // Страница из ссылки «Продолжить» читается один раз, при входе: дальше позиция живёт своей
+  // жизнью, а параметр убирается из адреса, чтобы перезагрузка не вернула на устаревшее место.
+  const [initialPosition] = useState<ReaderPosition>(() => ({
+    chapterId,
+    pageIndex: parseReaderPageParam(searchParams.get(READER_PAGE_SEARCH_PARAM)),
+  }));
+  const [position, setPosition] = useState<ReaderPosition>(initialPosition);
   const [renderedChapterId, setRenderedChapterId] = useState(chapterId);
-  const [scrollTarget, setScrollTarget] = useState<ReaderPosition | null>(null);
+  // В вертикальном режиме к восстановленной странице ещё нужно прокрутить.
+  const [scrollTarget, setScrollTarget] = useState<ReaderPosition | null>(
+    initialPosition.pageIndex > 0 ? initialPosition : null,
+  );
   const [tailChapterId, setTailChapterId] = useState<string | null>(null);
 
   const { registerPage, scrollToPosition } = useCurrentPageObserver({
@@ -102,6 +116,25 @@ function useReaderFeed({ titleId, chapterId, readingMode }: Params) {
   }
 
   const activeChapter = chapters.find((chapter) => chapter.chapterId === position.chapterId);
+
+  // Сохранённая страница могла исчезнуть: источник пересобрал главу, и страниц стало меньше.
+  // Тогда встаём на последнюю, а не на пустое место за концом главы.
+  const activePagesLength = activeChapter?.pages.length ?? 0;
+  if (activePagesLength > 0 && position.pageIndex >= activePagesLength) {
+    setPosition({ chapterId: position.chapterId, pageIndex: activePagesLength - 1 });
+  }
+
+  useEffect(() => {
+    if (!searchParams.has(READER_PAGE_SEARCH_PARAM)) return;
+
+    setSearchParams(
+      (params) => {
+        params.delete(READER_PAGE_SEARCH_PARAM);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
 
   // replace, а не push: иначе выход из читалки после десятка глав требовал бы десятка «назад».
   useEffect(() => {

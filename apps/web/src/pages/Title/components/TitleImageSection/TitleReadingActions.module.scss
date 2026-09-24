@@ -1,0 +1,26 @@
+/* Основная кнопка делит ряд со стрелкой и занимает всё, что от неё осталось. */
+.splitButton > :first-child {
+  flex: 1;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.menuButton {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+.sourceIcon {
+  /* Примерное место: иконка приглушена и обведена пунктиром. */
+  &[data-approximate] {
+    opacity: 0.55;
+    outline: 1px dashed var(--mantine-color-dimmed);
+    outline-offset: 1px;
+  }
+
+  /* Места в ветке не нашлось. */
+  &[data-unplaced] {
+    opacity: 0.5;
+    filter: grayscale(1);
+  }
+}

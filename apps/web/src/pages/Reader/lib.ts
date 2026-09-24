@@ -21,6 +21,10 @@ export const CHAPTER_PRELOAD_REMAINING_PAGES = 3;
  *  пересекает её всегда ровно одна страница — она и считается текущей. */
 export const CURRENT_PAGE_ROOT_MARGIN = '-50% 0px -50% 0px';
 
+/** Собственная прокрутка читателя — колесо, палец, клавиши: после неё восстановленную страницу
+ *  больше не удерживаем. Событие scroll не годится — его вызывает и сама подгонка. */
+export const PIN_RELEASE_EVENTS = ['wheel', 'touchmove', 'keydown'] as const;
+
 export const getChapterPagesQueryOptions = (titleId: string, chapterId: string) =>
   queryOptions({
     queryKey: ['pages', titleId, chapterId],
@@ -43,6 +47,13 @@ export const getReaderPagePosition = (element: Element): ReaderPosition | null =
 
 /** Без элемента прокручивает наверх: значит лента только что пересобралась с нужной главы и её
  *  начало — и есть самый верх. */
+/** `?page=` из ссылки «Продолжить» — номер с единицы, в позицию он ложится индексом. Мусор и
+ *  отсутствие параметра значат начало главы. */
+export const parseReaderPageParam = (value: string | null) => {
+  const page = Number.parseInt(value ?? '', 10);
+  return Number.isNaN(page) ? 0 : Math.max(0, page - 1);
+};
+
 export const scrollToReaderPage = (element?: HTMLElement) => {
   const top = element ? element.getBoundingClientRect().top + window.scrollY : 0;
   window.scrollTo({ top, behavior: 'instant' });

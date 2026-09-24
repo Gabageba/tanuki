@@ -1,7 +1,7 @@
-import { AppShell, Group, Stack, Title } from '@mantine/core';
+import { AppShell, Group, Progress, Stack, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { generatePath } from 'react-router';
-
+import { CHAPTER_NUMBERING } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
 import useTitleDetails from '@/entities/title/hooks/useTitleDetails';
 import useSource from '@/entities/source/hooks/useSource';
@@ -47,9 +47,12 @@ function ReaderHeader({
 
   const chapters = chaptersData?.items ?? [];
   const currentChapterIndex = chapters.findIndex((chapter) => chapter.id === chapterId);
+  const chapterProgress = pagesLength ? (page / pagesLength) * 100 : 0;
 
+  // Вместо нижней границы шапки — полоса прогресса по текущей главе: трек занимает место бордера,
+  // а заполнение растёт по мере чтения.
   return (
-    <AppShell.Header>
+    <AppShell.Header withBorder={false}>
       <Group px="md" h="100%" gap="md" wrap="nowrap">
         <Group gap="xs" flex={1} miw={TITLE_NAME_MIN_WIDTH} wrap="nowrap">
           <GoBackButton path={generatePath(ROUTE_PATHS.TITLE, { titleId })} />
@@ -92,10 +95,20 @@ function ReaderHeader({
           nextChapterId={nextChapterId}
           titleId={titleId}
           chapters={chapters}
+          numbering={chaptersData?.numbering ?? CHAPTER_NUMBERING.GLOBAL}
           currentChapterIndex={currentChapterIndex}
           visibleFrom="md"
         />
       </Group>
+      <Progress
+        value={chapterProgress}
+        size={2}
+        radius={0}
+        pos="absolute"
+        bottom={0}
+        left={0}
+        right={0}
+      />
     </AppShell.Header>
   );
 }

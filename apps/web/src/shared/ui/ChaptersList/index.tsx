@@ -2,11 +2,17 @@ import type { MantineStyleProps } from '@mantine/core';
 import { Box, EmptyState, NavLink, ScrollArea } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useRef } from 'react';
-import { generatePath, Link } from 'react-router';
+import { Link } from 'react-router';
 import { EmptyIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import type { Chapter } from '@tanuki/contracts';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
+import {
+  SORT_DIRECTION,
+  type Chapter,
+  type ChapterNumbering,
+  type SortDirection,
+} from '@tanuki/contracts';
+import type { LinkedReadingMark, ReadingMark } from '@/entities/title/models';
+import { getChapterReadStatus, getReaderPath } from '@/entities/title/readingProgress';
 import ChapterItem from './ChapterItem';
 import styles from './ChapterList.module.scss';
 
@@ -14,20 +20,34 @@ const CHAPTER_ESTIMATED_SIZE = 64;
 
 type Props = {
   chapters: Chapter[];
+  /** Как ветка нумерует главы: при нумерации по томам номер показывается вместе с томом. */
+  numbering: ChapterNumbering;
   titleId: string;
   mah?: MantineStyleProps['mah'];
   showDate?: boolean;
   activeChapterId?: string;
   onChapterSelect?: () => void;
+  /** Своя отметка в этом списке (resolveOwnMark): по ней красится прочитанное. */
+  ownMark?: ReadingMark;
+  /** Отметки других источников, перенесённые на главы этого списка (resolveLinkedMarks). */
+  linkedMarks?: LinkedReadingMark[];
+  /** Порядок, в котором пришли chapters: от него зависит, с какой стороны прочитанное. */
+  direction?: SortDirection;
+  onMarkChapter?: (chapter: Chapter) => void;
 };
 
 function ChaptersList({
   chapters,
+  numbering,
   titleId,
   mah = '100%',
   showDate = false,
   activeChapterId,
   onChapterSelect,
+  ownMark,
+  linkedMarks = [],
+  direction = SORT_DIRECTION.DESC,
+  onMarkChapter,
 }: Props) {
   const { t } = useTranslation();
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -47,8 +67,24 @@ function ChaptersList({
     }
   }, [activeIndex, virtualizer]);
 
+  const ownIndex = ownMark
+    ? chapters.findIndex((chapter) => chapter.id === ownMark.chapter.id)
+    : -1;
+
+  const marksByChapterId = new Map<string, LinkedReadingMark[]>();
+  for (const mark of linkedMarks) {
+    marksByChapterId.set(mark.chapter.id, [...(marksByChapterId.get(mark.chapter.id) ?? []), mark]);
+  }
+
   if (chapters.length === 0) {
-    <EmptyState description={t('branchHasNoChaptersYet')} size="sm" icon={<EmptyIcon />} py="xs" />;
+    return (
+      <EmptyState
+        description={t('branchHasNoChaptersYet')}
+        size="sm"
+        icon={<EmptyIcon />}
+        py="xs"
+      />
+    );
   }
 
   return (
@@ -60,6 +96,11 @@ function ChaptersList({
             return null;
           }
 
+          // Глава с отметкой открывается там, где остановились, — иначе повторный вход начинал бы
+          // её с первой страницы, а читалка тут же записала бы это начало поверх отметки.
+          const isMarked = virtualItem.index === ownIndex;
+          const pageIndex = isMarked && ownMark ? ownMark.pageIndex : 0;
+
           return (
             <Box
               key={chapter.id}
@@ -69,7 +110,6 @@ function ChaptersList({
               top={0}
               left={0}
               w="100%"
-
               style={{
                 transform: `translateY(${virtualItem.start}px)`,
               }}
@@ -78,8 +118,22 @@ function ChaptersList({
                 className={styles.chapter}
                 data-last={virtualItem.index === chapters.length - 1 || undefined}
                 component={Link}
-                to={generatePath(ROUTE_PATHS.READER, { titleId, chapterId: chapter.id })}
-                label={<ChapterItem chapter={chapter} showDate={showDate} />}
+                to={getReaderPath(titleId, chapter.id, pageIndex)}
+                label={
+                  <ChapterItem
+                    chapter={chapter}
+                    numbering={numbering}
+                    showDate={showDate}
+                    status={getChapterReadStatus(virtualItem.index, ownIndex, direction)}
+                    isMarked={isMarked}
+                    linkedMarks={marksByChapterId.get(chapter.id)}
+                    withMarksSlot={linkedMarks.length > 0}
+                    isReadBelow={direction === SORT_DIRECTION.DESC}
+                    isFirst={virtualItem.index === 0}
+                    isLast={virtualItem.index === chapters.length - 1}
+                    onMark={onMarkChapter && (() => onMarkChapter(chapter))}
+                  />
+                }
                 onClick={onChapterSelect}
               />
             </Box>

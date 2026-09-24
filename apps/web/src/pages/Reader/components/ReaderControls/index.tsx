@@ -5,7 +5,7 @@ import { BookmarkSimpleIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-ico
 import { XXS_QUERY } from '@/shared/lib/breakpoints';
 import ReaderNavigateButton from '../ReaderNavigateButton';
 import ReaderChapterName from '../ReaderChapterName';
-import type { Chapter } from '@tanuki/contracts';
+import type { Chapter, ChapterNumbering } from '@tanuki/contracts';
 import ReaderPagesCount from '../ReaderPagesCount';
 import ReaderSettingsButton from '../ReaderSettingsButton';
 import styles from '../../ReaderPage.module.scss';
@@ -17,6 +17,7 @@ type Props = {
   page: number;
   pagesLength: number | null;
   chapters: Chapter[];
+  numbering: ChapterNumbering;
   currentChapterIndex: number;
   visibleFrom?: MantineBreakpoint;
   hiddenFrom?: MantineBreakpoint;
@@ -29,6 +30,7 @@ function ReaderControls({
   prevChapterId,
   nextChapterId,
   chapters,
+  numbering,
   currentChapterIndex,
   visibleFrom,
   hiddenFrom,
@@ -50,6 +52,7 @@ function ReaderControls({
           <ReaderChapterName
             currentChapter={currentChapter}
             chapters={chapters}
+            numbering={numbering}
             titleId={titleId}
           />
           <ReaderNavigateButton

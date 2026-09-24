@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import {
   CURRENT_PAGE_ROOT_MARGIN,
+  PIN_RELEASE_EVENTS,
   getReaderPageKey,
   getReaderPagePosition,
   scrollToReaderPage,
@@ -25,9 +26,52 @@ type Params = {
 function useCurrentPageObserver({ enabled, onChange }: Params) {
   const elements = useRef(new Map<string, HTMLElement>());
   const observer = useRef<IntersectionObserver | null>(null);
+  /** Страница, к которой просили прокрутить, пока её ещё не отрисовали, — так бывает при входе
+   *  по «Продолжить» на середину главы: страниц ещё нет, они приедут с запросом. */
+  const pendingKey = useRef<string | null>(null);
+  /** Снимает удержание страницы, к которой прокрутили последней (см. pinPage). */
+  const unpin = useRef<(() => void) | null>(null);
+
+  /**
+   * Прокрутка к странице — ещё не конец: страницы выше неё, пока грузятся, держат место по
+   * пропорциям-заглушкам, а загрузившись, вырастают до настоящих — и нужная уезжает вниз, а на
+   * экран вместо неё выезжает одна из прежних (и тут же сохраняется как позиция). Поэтому до
+   * первого собственного движения читателя страница удерживается: каждое изменение высоты ленты
+   * снова ставит её на место. ResizeObserver срабатывает раньше, чем пересчитываются пересечения,
+   * так что наблюдатель текущей страницы промежуточного сдвига не видит.
+   */
+  const pinPage = useCallback((element: HTMLElement) => {
+    unpin.current?.();
+    scrollToReaderPage(element);
+
+    const resizeObserver = new ResizeObserver(() => scrollToReaderPage(element));
+    resizeObserver.observe(document.body);
+
+    const release = () => {
+      resizeObserver.disconnect();
+      PIN_RELEASE_EVENTS.forEach((type) => window.removeEventListener(type, release));
+      window.removeEventListener('pointerdown', handlePointerDown);
+      if (unpin.current === release) unpin.current = null;
+    };
+    // Клик по самому документу — это полоса прокрутки; тап по странице (он прячет шапку) место
+    // чтения не меняет и удержание не снимает.
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target === document.documentElement) release();
+    };
+
+    PIN_RELEASE_EVENTS.forEach((type) => window.addEventListener(type, release, { passive: true }));
+    window.addEventListener('pointerdown', handlePointerDown);
+    unpin.current = release;
+  }, []);
+
+  useEffect(() => () => unpin.current?.(), []);
 
   useEffect(() => {
-    if (!enabled) return;
+    // В горизонтальном режиме прокручивать ленту незачем — и удерживать в ней страницу тоже.
+    if (!enabled) {
+      unpin.current?.();
+      return;
+    }
 
     const current = new IntersectionObserver(
       (entries) => {
@@ -49,23 +93,43 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
     };
   }, [enabled, onChange]);
 
-  const registerPage = useCallback((element: HTMLElement | null) => {
-    const position = element && getReaderPagePosition(element);
-    if (!element || !position) return;
+  const registerPage = useCallback(
+    (element: HTMLElement | null) => {
+      const position = element && getReaderPagePosition(element);
+      if (!element || !position) return;
 
-    const key = getReaderPageKey(position);
-    elements.current.set(key, element);
-    observer.current?.observe(element);
+      const key = getReaderPageKey(position);
+      elements.current.set(key, element);
+      // Прокрутка идёт в том же коммите, что и регистрация, — раньше, чем наблюдатель успеет
+      // сообщить о первой странице под центром экрана и перезаписать ей восстановленную позицию.
+      if (pendingKey.current === key) {
+        pendingKey.current = null;
+        pinPage(element);
+      }
+      observer.current?.observe(element);
 
-    return () => {
-      elements.current.delete(key);
-      observer.current?.unobserve(element);
-    };
-  }, []);
+      return () => {
+        elements.current.delete(key);
+        observer.current?.unobserve(element);
+      };
+    },
+    [pinPage],
+  );
 
-  const scrollToPosition = useCallback((position: ReaderPosition) => {
-    scrollToReaderPage(elements.current.get(getReaderPageKey(position)));
-  }, []);
+  const scrollToPosition = useCallback(
+    (position: ReaderPosition) => {
+      const key = getReaderPageKey(position);
+      const element = elements.current.get(key);
+      pendingKey.current = element ? null : key;
+      if (element) {
+        pinPage(element);
+      } else {
+        unpin.current?.();
+        scrollToReaderPage();
+      }
+    },
+    [pinPage],
+  );
 
   return { registerPage, scrollToPosition };
 }

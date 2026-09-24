@@ -2,23 +2,34 @@ import { Button, Drawer, Group, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useMediaQuery } from '@mantine/hooks';
-import type { Chapter } from '@tanuki/contracts';
+import type { Chapter, ChapterNumbering } from '@tanuki/contracts';
 import { isEmpty } from '@/shared/lib/isEmpty';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import ChaptersList from '@/shared/ui/ChaptersList';
 import { XXS_QUERY } from '@/shared/lib/breakpoints';
+import useReadingProgress from '@/entities/title/hooks/useReadingProgress';
+import useUpdateReadingProgress from '@/entities/title/hooks/useUpdateReadingProgress';
+import {
+  getChapterBranchId,
+  getChapterNumberLabel,
+  resolveLinkedMarks,
+  resolveOwnMark,
+} from '@/entities/title/readingProgress';
 
 type Props = {
   chapters: Chapter[];
+  numbering: ChapterNumbering;
   currentChapter: Chapter;
   titleId: string;
 };
 
-function ReaderChapterName({ chapters, currentChapter, titleId }: Props) {
+function ReaderChapterName({ chapters, numbering, currentChapter, titleId }: Props) {
   const { t } = useTranslation();
   const isXxs = useMediaQuery(XXS_QUERY, false);
 
   const [isDrawerOpened, setIsDrawerOpened] = useState(false);
+  const { data: progress } = useReadingProgress({ titleId });
+  const { mutate: updateProgress } = useUpdateReadingProgress({ titleId });
 
   return (
     <>
@@ -26,8 +37,7 @@ function ReaderChapterName({ chapters, currentChapter, titleId }: Props) {
         <MidDotGroup
           truncate
           items={[
-            !isEmpty(currentChapter.number) &&
-              t('chapterNumberAbbrev', { number: currentChapter.number }),
+            !isEmpty(currentChapter.number) && getChapterNumberLabel(currentChapter, numbering, t),
             currentChapter.title,
           ]}
         />
@@ -52,9 +62,15 @@ function ReaderChapterName({ chapters, currentChapter, titleId }: Props) {
         <ChaptersList
           showDate={isXxs}
           chapters={chapters}
+          numbering={numbering}
           titleId={titleId}
           activeChapterId={currentChapter.id}
           onChapterSelect={() => setIsDrawerOpened(false)}
+          ownMark={resolveOwnMark(progress, chapters, numbering)}
+          linkedMarks={resolveLinkedMarks(progress, chapters, getChapterBranchId(currentChapter))}
+          onMarkChapter={(chapter) =>
+            updateProgress({ chapterId: chapter.id, pageIndex: 0, chapter })
+          }
         />
       </Drawer>
     </>

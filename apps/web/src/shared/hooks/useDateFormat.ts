@@ -34,28 +34,46 @@ function useDateFormat() {
     return `${formatDate(isoDate)}, ${time}`;
   };
 
-  const RELATIVE_UNITS: readonly (readonly [seconds: number, unit: Intl.RelativeTimeFormatUnit])[] =
-    [
-      [60 * 60 * 24 * 365, 'year'],
-      [60 * 60 * 24 * 30, 'month'],
-      [60 * 60 * 24, 'day'],
-      [60 * 60, 'hour'],
-      [60, 'minute'],
-    ];
-
-  /** «2 часа назад», «3 дня назад» — для дат, где важна давность, а не сам день. */
-  const formatRelative = (isoDate: string) => {
-    const elapsedSeconds = (Date.now() - new Date(isoDate).getTime()) / 1000;
-    const unit = RELATIVE_UNITS.find(([seconds]) => elapsedSeconds >= seconds);
-    if (!unit) {
-      return t('justNow');
+  /** «10 сент» — год опускается, если дата из текущего года. */
+  const formatDateCompact = (isoDate: string) => {
+    const date = new Date(isoDate);
+    if (date.getFullYear() !== new Date().getFullYear()) {
+      return formatDate(isoDate);
     }
 
-    const [seconds, name] = unit;
-    return new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' }).format(
-      -Math.floor(elapsedSeconds / seconds),
-      name,
-    );
+    const parts = new Intl.DateTimeFormat(i18n.language, {
+      day: 'numeric',
+      month: 'short',
+    }).formatToParts(date);
+    const part = (type: 'day' | 'month') => parts.find((p) => p.type === type)?.value ?? '';
+
+    return `${part('day')} ${part('month').replace('.', '')}`;
+  };
+
+  /**
+   * «5мин назад», «2ч назад», «3д назад» — для дат, где важна давность, а не сам день.
+   * Начиная с недели давность уже не читается с одного взгляда — показываем дату: «10 сент».
+   */
+  const formatRelative = (isoDate: string) => {
+    const elapsedMinutes = Math.floor((Date.now() - new Date(isoDate).getTime()) / 60_000);
+    if (elapsedMinutes < 1) {
+      return t('justNow');
+    }
+    if (elapsedMinutes < 60) {
+      return t('minutesAgoAbbrev', { count: elapsedMinutes });
+    }
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) {
+      return t('hoursAgoAbbrev', { count: elapsedHours });
+    }
+
+    const elapsedDays = Math.floor(elapsedHours / 24);
+    if (elapsedDays < 7) {
+      return t('daysAgoAbbrev', { count: elapsedDays });
+    }
+
+    return formatDateCompact(isoDate);
   };
 
   return {

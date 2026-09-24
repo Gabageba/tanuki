@@ -3,17 +3,14 @@ import {
   ActionIcon,
   Alert,
   Box,
-  Button,
   Center,
   Grid,
   Group,
   Image,
   Menu,
   Overlay,
-  Progress,
   Select,
   Stack,
-  Text,
 } from '@mantine/core';
 import {
   ArrowsClockwiseIcon,
@@ -27,7 +24,7 @@ import CoverImage from '@/shared/ui/CoverImage';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { TitleDetailsQuery } from '../../models';
 import TitleImageSectionSkeleton from './TitleImageSectionSkeleton';
-import MidDot from '@/shared/ui/MidDot';
+import TitleReadingActions from './TitleReadingActions';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import styles from '../../Title.module.scss';
 
@@ -75,15 +72,7 @@ function TitleImageSection() {
           </Center>
         </Box>
         <Stack gap={8}>
-          <Button>
-            {t('continue')} <MidDot /> {t('chapterNumberAbbrev', { number: 97 })}
-          </Button>
-          <Group gap={8}>
-            <Progress value={30} size="sm" flex={1} />
-            <Text fz={12} c="terracotta">
-              97 / 214
-            </Text>
-          </Group>
+          <TitleReadingActions titleId={title.id} />
           <Group gap={8}>
             <Select
               flex={1}

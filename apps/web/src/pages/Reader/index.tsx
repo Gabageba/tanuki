@@ -8,6 +8,7 @@ import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 import useReaderFeed from './hooks/useReaderFeed';
 import useReaderHeaderVisibility from './hooks/useReaderHeaderVisibility';
 import useReaderSettings from './hooks/useReaderSettings';
+import useSaveReadingProgress from './hooks/useSaveReadingProgress';
 
 function Reader() {
   const { titleId = '', chapterId = '' } = useParams<{ titleId: string; chapterId: string }>();
@@ -23,6 +24,7 @@ function Reader() {
     isPending,
   } = useReaderFeed({ titleId, chapterId, readingMode: settings.readingMode });
   const { visible, toggle } = useReaderHeaderVisibility();
+  useSaveReadingProgress({ titleId, position });
 
   // Шапка и контролы говорят о главе, которую читают прямо сейчас, а не о той, с которой чтение
   // начиналось: в ленте это разные главы, и адрес идёт следом за первой. Пока подклеенная глава

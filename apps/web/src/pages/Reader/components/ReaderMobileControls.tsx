@@ -1,4 +1,5 @@
 import { Paper } from '@mantine/core';
+import { CHAPTER_NUMBERING } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
 import ReaderControls from './ReaderControls';
 import { HEADER_HEIGHT } from '@/shared/lib/appShell';
@@ -55,6 +56,7 @@ function ReaderMobileControls({
         nextChapterId={nextChapterId}
         titleId={titleId}
         chapters={chapters}
+        numbering={chaptersData?.numbering ?? CHAPTER_NUMBERING.GLOBAL}
         currentChapterIndex={currentChapterIndex}
       />
     </Paper>

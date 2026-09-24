@@ -1,5 +1,6 @@
-import { Box, Center, Image, Paper, Skeleton } from '@mantine/core';
+import { Box, Button, Center, Image, Paper, Skeleton, Stack } from '@mantine/core';
 import { useEffect, useRef, useState, type Ref } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ImageBrokenIcon } from '@phosphor-icons/react';
 import type { Page, ReaderSettings } from '@tanuki/contracts';
 import { DEFAULT_PAGE_RATIO, getReaderImageDimensionProps } from '../lib';
@@ -36,12 +37,17 @@ type Props = {
 function ReaderPageImage({ page, chapterId, settings, hidden, eager, alt, ref }: Props) {
   const [isBroken, setIsBroken] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // Номер попытки — ключ <img>: повтор монтирует его заново, и браузер запрашивает страницу ещё
+  // раз. Кэша у упавшего ответа нет (прокси ставит Cache-Control только на успешный), так что
+  // адрес тот же.
+  const [attempt, setAttempt] = useState(0);
+  const { t } = useTranslation();
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     if (!eager) return;
     imgRef.current?.decode().catch(() => {});
-  }, [eager, page.url]);
+  }, [eager, page.url, attempt]);
   // Источник отдаёт размеры не всегда, а в режиме «страница целиком» по ним считается ширина
   // страницы — ошибка в пропорциях там сразу видна пустыми полями вокруг страницы. Поэтому как
   // только картинка загрузилась, берём её настоящие пропорции.
@@ -76,13 +82,28 @@ function ReaderPageImage({ page, chapterId, settings, hidden, eager, alt, ref }:
       {isBroken ? (
         <Paper h="100%" radius={0}>
           <Center h="100%" c="dimmed">
-            <ImageBrokenIcon size={38} />
+            <Stack align="center" gap="sm">
+              <ImageBrokenIcon size={38} />
+              <Button
+                variant="default"
+                size="xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsBroken(false);
+                  setIsLoading(true);
+                  setAttempt((value) => value + 1);
+                }}
+              >
+                {t('retry')}
+              </Button>
+            </Stack>
           </Center>
         </Paper>
       ) : (
         <>
           {isLoading && <Skeleton pos="absolute" inset={0} radius={0} />}
           <Image
+            key={attempt}
             ref={imgRef}
             radius={0}
             fit="contain"
