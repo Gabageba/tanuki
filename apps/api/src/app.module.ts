@@ -18,6 +18,7 @@ import { SearchModule } from './search/search.module';
 import { SourceProbeModule } from './source-probe/source-probe.module';
 import { SourcesModule } from './sources/sources.module';
 import { UserSettingsModule } from './user-settings/user-settings.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { UserSettingsModule } from './user-settings/user-settings.module';
     ReaderSettingsModule,
     ReadingProgressModule,
     UserSettingsModule,
+    UsersModule,
   ],
   providers: [
     // До сих пор ни одно тело запроса не валидировалось на входе — DTO объявляли форму, но

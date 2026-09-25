@@ -32,6 +32,9 @@
   "abandoned": "Abandoned",
   "announcement": "Upcoming",
   "sinceDate": "since {{date}}",
+  "inTanukiSince": "on Tanuki since {{date}}",
+  "countDays_one": "{{count}} day",
+  "countDays_other": "{{count}} days",
   "checkedAgo": "checked {{relative}}",
   "online": "Online",
   "unstable": "Unstable",
@@ -311,5 +314,11 @@
   "lastParsed": "last parsed {{relative}}",
   "importFromFiles": "import from files",
   "profile": "Profile",
-  "settings": "Settings"
+  "settings": "Settings",
+  "change": "Change",
+  "edit": "Edit",
+  "delete": "Delete",
+  "scale": "Scale",
+  "newAvatar": "New avatar",
+  "readingTime": "Reading time"
 }

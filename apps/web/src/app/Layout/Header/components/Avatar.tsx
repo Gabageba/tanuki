@@ -32,6 +32,7 @@ function Avatar() {
           className={styles.avatar}
           variant="outline"
           visibleFrom="md"
+          src={user?.avatarUrl}
           name={user?.username}
           size={34}
         />

@@ -56,8 +56,20 @@ export const CurrentUserSchema = z.object({
   username: UsernameSchema,
   role: UserRoleSchema,
   language: LanguageSchema,
+  /** Ссылка с версией в query — после смены аватара она другая, так что кешировать её можно навсегда. */
+  avatarUrl: z.string().nullable(),
+  /** Дата регистрации — `YYYY-MM-DDTHH:MM:SSZ`. */
+  createdAt: z.string(),
 });
 export type CurrentUser = z.infer<typeof CurrentUserSchema>;
+
+export const UpdateProfileRequestSchema = z.object({
+  username: UsernameSchema,
+});
+export type UpdateProfileRequest = z.infer<typeof UpdateProfileRequestSchema>;
+
+/** Сколько байт исходной картинки принимает загрузка аватара — дальше сервер её всё равно ужмёт. */
+export const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
 
 export const RegisterRequestSchema = z.object({
   inviteCode: z.string().min(1),

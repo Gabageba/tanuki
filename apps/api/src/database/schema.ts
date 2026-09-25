@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  customType,
   doublePrecision,
   index,
   integer,
@@ -125,6 +126,12 @@ export const users = pgTable(
     /** Язык интерфейса на момент регистрации — на нём уходят письма. */
     language: text('language').$type<Language>().notNull(),
 
+    /**
+     * Когда последний раз меняли аватар; null — аватара нет. Живёт здесь, а не только в
+     * user_avatars, чтобы собрать ссылку на аватар без лишнего запроса за самими байтами.
+     */
+    avatarUpdatedAt: timestamp('avatar_updated_at', { withTimezone: true }),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -218,6 +225,22 @@ export const userSettings = pgTable('user_settings', {
   language: text('language').$type<Language>(),
   exclusiveFilterConfirmDismissed: boolean('exclusive_filter_confirm_dismissed'),
 
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+const bytea = customType<{ data: Buffer }>({
+  dataType: () => 'bytea',
+});
+
+/**
+ * Аватар пользователя, уже ужатый до webp. Отдельной таблицей, чтобы байты не тянулись в каждый
+ * select из users (например, при разборе сессии на каждом запросе).
+ */
+export const userAvatars = pgTable('user_avatars', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  data: bytea('data').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

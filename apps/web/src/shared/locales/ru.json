@@ -32,6 +32,11 @@
   "abandoned": "Заброшен",
   "announcement": "Анонс",
   "sinceDate": "с {{date}}",
+  "inTanukiSince": "в Tanuki с {{date}}",
+  "countDays_one": "{{count}} день",
+  "countDays_few": "{{count}} дня",
+  "countDays_many": "{{count}} дней",
+  "countDays_other": "{{count}} дней",
   "checkedAgo": "проверен {{relative}}",
   "online": "Онлайн",
   "unstable": "Нестабилен",
@@ -329,5 +334,11 @@
   "lastParsed": "последний парсинг {{relative}}",
   "importFromFiles": "импорт из файлов",
   "profile": "Профиль",
-  "settings": "Настройки"
+  "settings": "Настройки",
+  "change": "Сменить",
+  "edit": "Редактировать",
+  "delete": "Удалить",
+  "scale": "Масштаб",
+  "newAvatar": "Новый аватар",
+  "readingTime": "Время чтения"
 }

@@ -71,6 +71,13 @@
       "when": 1790180766224,
       "tag": "0009_careful_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790340416736,
+      "tag": "0010_wild_namora",
+      "breakpoints": true
     }
   ]
 }

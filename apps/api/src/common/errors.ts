@@ -157,6 +157,12 @@ export class UsernameTakenException extends ApiException {
   }
 }
 
+export class InvalidImageException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.INVALID_IMAGE, 'Не удалось прочитать картинку', HttpStatus.BAD_REQUEST);
+  }
+}
+
 export class InviteInvalidException extends ApiException {
   constructor() {
     super(

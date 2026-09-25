@@ -1,6 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, gt, ilike, isNull } from 'drizzle-orm';
-import { PostgresError } from 'postgres';
 import type { CurrentUser, Language, RegisterRequest } from '@tanuki/contracts';
 import {
   ApiException,
@@ -16,21 +15,15 @@ import { generateToken, hashToken } from '../common/token.util';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { DatabaseService } from '../database/database.service';
+import { getUniqueViolation } from '../database/pg-error.util';
 import { emailTokens, invites, users } from '../database/schema';
 import { MailService } from '../mail/mail.service';
+import { toCurrentUser } from '../users/users.util';
 import { EMAIL_TOKEN_PURPOSE, EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from './models';
 import { PasswordService } from './password.service';
-import { SessionService, type SessionMeta, type SessionUser } from './session.service';
+import { SessionService, type SessionMeta } from './session.service';
 
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();
-
-const toCurrentUser = (user: SessionUser): CurrentUser => ({
-  id: user.id,
-  email: user.email,
-  username: user.username,
-  role: user.role,
-  language: user.language,
-});
 
 export type AuthResult = {
   user: CurrentUser;
@@ -100,12 +93,9 @@ export class AuthService {
       });
     } catch (error) {
       if (error instanceof ApiException) throw error;
-      if (error instanceof PostgresError && error.code === '23505') {
-        if (error.constraint_name === 'users_email_lower_idx') throw new EmailTakenException();
-        if (error.constraint_name === 'users_username_lower_idx') {
-          throw new UsernameTakenException();
-        }
-      }
+      const violatedIndex = getUniqueViolation(error);
+      if (violatedIndex === 'users_email_lower_idx') throw new EmailTakenException();
+      if (violatedIndex === 'users_username_lower_idx') throw new UsernameTakenException();
       throw new StorageUnavailableException();
     }
 

@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
+import { AVATAR_MAX_BYTES } from '@tanuki/contracts';
 import { AppModule } from './app.module';
 import { ApiErrorDto } from './common/error.dto';
 import { HttpExceptionFilter } from './common/http-exception.filter';
@@ -23,6 +24,17 @@ const bootstrap = async () => {
   );
 
   await app.register(fastifyCookie);
+
+  // Загрузка аватара шлёт картинку сырым телом (PUT /users/me/avatar) — без multipart-плагина.
+  // Fastify по умолчанию не знает image/* и ответил бы 415, а лимит свой, больше общего 1 МБ.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addContentTypeParser(
+      /^image\//,
+      { parseAs: 'buffer', bodyLimit: AVATAR_MAX_BYTES },
+      (_request, body, done) => done(null, body),
+    );
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalFilters(new HttpExceptionFilter());

@@ -19,6 +19,7 @@ import { ENV } from '../config/env.module';
 import { InvitesService } from '../invites/invites.service';
 import { RATE_LIMIT } from '../rate-limit/models';
 import { RateLimitService } from '../rate-limit/rate-limit.service';
+import { toCurrentUser } from '../users/users.util';
 import { AuthService, type AuthResult } from './auth.service';
 import {
   CheckUsernameResponseDto,
@@ -153,13 +154,7 @@ export class AuthController {
   @ApiOkResponse({ type: CurrentUserDto })
   @Get('me')
   me(@CurrentUserParam() user: SessionUser): CurrentUser {
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      role: user.role,
-      language: user.language,
-    };
+    return toCurrentUser(user);
   }
 
   @ApiOperation({ summary: 'Выход — отзывает текущую сессию' })

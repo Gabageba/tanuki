@@ -23,6 +23,7 @@ export const API_ERROR_CODE = {
   INVITE_INVALID: 'inviteInvalid',
   TOKEN_INVALID: 'tokenInvalid',
   TOO_MANY_REQUESTS: 'tooManyRequests',
+  INVALID_IMAGE: 'invalidImage',
 } as const;
 export type ApiErrorCode = EnumLiteralsOf<typeof API_ERROR_CODE>;
 

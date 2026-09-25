@@ -41,6 +41,9 @@ export {
   type CreateInviteResponse,
   InviteCheckResponseSchema,
   type InviteCheckResponse,
+  UpdateProfileRequestSchema,
+  type UpdateProfileRequest,
+  AVATAR_MAX_BYTES,
 } from './auth';
 export { TagSchema, type Tag } from './tag';
 export {

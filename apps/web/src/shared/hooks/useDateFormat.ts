@@ -90,6 +90,21 @@ function useDateFormat() {
       : t('minutesAbbrev', { count: minutes });
   };
 
+  /**
+   * «марта 2024» — месяц и год без дня. Месяц берётся из полной даты, а не из `{ month: 'long' }`
+   * отдельно: так Intl отдаёт его в родительном падеже, который нужен после «с».
+   */
+  const formatMonthYear = (isoDate: string) => {
+    const parts = new Intl.DateTimeFormat(i18n.language, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).formatToParts(new Date(isoDate));
+    const part = (type: 'month' | 'year') => parts.find((p) => p.type === type)?.value ?? '';
+
+    return `${part('month')} ${part('year')}`;
+  };
+
   /** «сентябрь» — название текущего месяца в именительном падеже. */
   const getCurrentMonthName = () =>
     new Intl.DateTimeFormat(i18n.language, { month: 'long' }).format(new Date());
@@ -108,6 +123,12 @@ function useDateFormat() {
         return null;
       }
       return formatDateTime(isoDate);
+    },
+    formatMonthYear: (isoDate: string | null) => {
+      if (!isoDate) {
+        return null;
+      }
+      return formatMonthYear(isoDate);
     },
     formatDateNumeric: (isoDate: string | null) => {
       if (!isoDate) {

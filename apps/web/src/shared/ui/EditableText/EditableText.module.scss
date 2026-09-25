@@ -1,0 +1,106 @@
+// Текст и поле ввода рендерятся в один и тот же .box с одинаковыми padding и border, а строка
+// контента в обоих режимах ровно 1lh (lh заголовка) — поэтому подсветка при наведении и поле
+// совпадают по высоте один в один при любом размере заголовка. Стили Mantine подключены в @layer,
+// так что правила ниже перебивают их без !important
+.root {
+  --editable-text-padding-x: 8px;
+  --editable-text-padding-y: 4px;
+
+  display: flex;
+  min-width: 0;
+}
+
+.box {
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% + 2 * (var(--editable-text-padding-x) + 1px));
+  min-width: 0;
+  margin-inline: calc(-1 * (var(--editable-text-padding-x) + 1px));
+  padding-block: var(--editable-text-padding-y);
+  padding-left: var(--editable-text-padding-x);
+  padding-right: var(--editable-text-padding-y);
+  border: 1px solid transparent;
+  border-radius: var(--mantine-radius-md);
+
+  // UnstyledButton ставит свой font-size (md) — без этого текст мельче заголовка и поля ввода
+  font: inherit;
+  cursor: text;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+
+  @media (hover: hover) {
+    &:not([data-editing]):hover {
+      background-color: var(--mantine-color-default-hover);
+    }
+  }
+
+  &:not([data-editing]):focus-visible {
+    background-color: var(--mantine-color-default-hover);
+  }
+
+  &[data-editing] {
+    background-color: var(--mantine-color-default-hover);
+    border-color: var(--mantine-color-default-border);
+    cursor: default;
+
+    &:focus-within {
+      border-color: var(--mantine-primary-color-filled);
+    }
+  }
+
+  &[data-error] {
+    border-color: var(--mantine-color-error);
+  }
+}
+
+// overflow: hidden у truncate срезал бы выносные элементы (g, у, р) при lh меньше ~1.3 —
+// padding продлевает область обрезки вниз, а margin возвращает высоту блока к 1lh
+.text {
+  display: block;
+  height: calc(1lh + 0.25em);
+  min-width: 0;
+  margin-bottom: -0.25em;
+  padding-bottom: 0.25em;
+}
+
+.pencil {
+  flex-shrink: 0;
+  color: var(--mantine-color-dimmed);
+  transition: color 150ms ease;
+
+  @media (hover: hover) {
+    .box:hover & {
+      color: var(--mantine-color-text);
+    }
+  }
+}
+
+// Корень TextInput ставит свой line-height (1.55) — без inherit 1lh у поля был бы выше, чем у текста
+.field,
+.wrapper {
+  min-width: 0;
+  margin: 0;
+  line-height: inherit;
+}
+
+.input {
+  height: 1lh;
+  min-height: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+
+// Размер кнопки — одна строка текста заголовка. <button> не наследует шрифт (браузер ставит ~13px),
+// поэтому без font: inherit и 1lh, и иконки в em считались бы от него; line-height 1 Mantine тоже
+// перебивается
+.action {
+  --ai-size: 1lh;
+  --ai-radius: var(--mantine-radius-sm);
+
+  flex-shrink: 0;
+  font: inherit;
+}
