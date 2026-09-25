@@ -1,6 +1,5 @@
 import { useRef } from 'react';
 import { Box, Group, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import type { Chapter } from '@tanuki/contracts';
 import { TIMELINE_ZONE, type DemoState } from '../models';
 import {
@@ -25,7 +24,6 @@ type Props = {
  * GitHub-календарь: 300 глав влезают в пару экранов, тап по клетке — к главе.
  */
 function ChapterGrid({ demo }: Props) {
-  const { t } = useTranslation();
   const scopeRef = useRef<HTMLDivElement>(null);
 
   const volumes = getReadingOrder(demo).reduce((result, chapter) => {
@@ -38,7 +36,7 @@ function ChapterGrid({ demo }: Props) {
     return (
       <Tooltip
         key={chapter.id}
-        label={`${getChapterLabel(chapter, t)} · ${chapter.title}`}
+        label={`${getChapterLabel(chapter)} · ${chapter.title}`}
         withinPortal
       >
         <UnstyledButton

@@ -1,12 +1,11 @@
 import { useRef } from 'react';
 import { Box, Group, Progress, Stack, Text, UnstyledButton } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import SourceIcon from '@/entities/source/components/SourceIcon';
-import { getProgressChapterLabel } from '@/entities/title/readingProgress';
 import type { DemoMark, DemoState } from '../models';
 import {
   findPlacedMark,
   getChapterLabel,
+  getProgressLabel,
   getReadCount,
   hasApproximateSymbol,
   isApproximate,
@@ -25,7 +24,6 @@ type Props = {
  * штриховкой. Строки списка не трогаем.
  */
 function SourceRace({ demo }: Props) {
-  const { t } = useTranslation();
   const scopeRef = useRef<HTMLDivElement>(null);
   const total = demo.chapters.length;
   const ownCount = getReadCount(demo, demo.own?.chapter);
@@ -76,8 +74,8 @@ function SourceRace({ demo }: Props) {
                       {renderDelta(mark, count)}
                       <Text fz={12} c="dimmed" ff="monospace">
                         {placed
-                          ? `${hasApproximateSymbol(demo.approximateStyle, placed.confidence) ? '≈ ' : ''}${getChapterLabel(placed.chapter, t)}`
-                          : getProgressChapterLabel(mark.progress, t)}
+                          ? `${hasApproximateSymbol(demo.approximateStyle, placed.confidence) ? '≈ ' : ''}${getChapterLabel(placed.chapter)}`
+                          : getProgressLabel(mark.progress)}
                       </Text>
                     </Group>
                   </Group>

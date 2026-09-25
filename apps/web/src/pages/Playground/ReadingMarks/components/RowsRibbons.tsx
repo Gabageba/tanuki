@@ -1,6 +1,5 @@
 import { Box, Tooltip, UnstyledButton } from '@mantine/core';
 import { BookmarkSimpleIcon } from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import type { DemoState } from '../models';
 import { getChapterLabel, getChapterMarks, getTimelineZone, hasApproximateMarks } from '../lib';
@@ -19,8 +18,6 @@ type Props = {
  * своя — акцентная, чужие — с иконкой. Примерное место — ленточка полупрозрачная, с пунктиром.
  */
 function RowsRibbons({ demo }: Props) {
-  const { t } = useTranslation();
-
   return (
     <DemoChaptersCard
       demo={demo}
@@ -43,7 +40,7 @@ function RowsRibbons({ demo }: Props) {
                   data-last={index === demo.chapters.length - 1 || undefined}
                 />
                 {isOwn && (
-                  <Tooltip label={`Вы: ${getChapterLabel(chapter, t)}`} withinPortal>
+                  <Tooltip label={`Вы: ${getChapterLabel(chapter)}`} withinPortal>
                     <Box className={styles.ribbon} data-own>
                       <BookmarkSimpleIcon size={12} weight="fill" />
                     </Box>

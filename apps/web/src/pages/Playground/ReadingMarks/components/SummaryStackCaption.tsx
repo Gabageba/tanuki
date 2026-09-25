@@ -1,5 +1,4 @@
 import { Group, Text, UnstyledButton } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import MidDot from '@/shared/ui/MidDot';
 import type { DemoState } from '../models';
 import {
@@ -18,7 +17,6 @@ type Props = {
 
 /** S2: стопка и подпись о главном — какой источник ушёл дальше своей отметки. */
 function SummaryStackCaption({ demo }: Props) {
-  const { t } = useTranslation();
   const furthest = getFurthestPlacedMark(demo);
 
   return (
@@ -38,7 +36,7 @@ function SummaryStackCaption({ demo }: Props) {
                   Дальше всех: {furthest.mark.source.title} <MidDot />{' '}
                   <Text span inherit ff="monospace">
                     {hasApproximateSymbol(demo.approximateStyle, furthest.confidence) && '≈ '}
-                    {getChapterLabel(furthest.chapter, t)}
+                    {getChapterLabel(furthest.chapter)}
                   </Text>
                 </>
               ) : (

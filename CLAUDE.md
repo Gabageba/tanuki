@@ -201,7 +201,10 @@
 ## Playground
 
 - Mock-ups of UI variants live in `apps/web/src/pages/Playground/<Task>/`, one page per task, listed
-  in `PLAYGROUND_TASKS` (`apps/web/src/pages/Playground/models.ts`). Their texts skip i18n.
+  in `PLAYGROUND_TASKS` (`apps/web/src/pages/Playground/models.ts`). Their texts skip i18n: write
+  plain literals (Russian) right in the JSX and never add playground strings to
+  `shared/locales/{ru,en}.json` — those dictionaries only hold text of the real app. Likewise, a
+  playground page never calls `t()`, and an i18n audit of `apps/web` skips `pages/Playground/`.
 - Once a variant is chosen, the page is **kept** as a record of the decision, not deleted: fill in
   the task's `decision` and describe the chosen variant in the relevant `docs/` file.
 - Playground routes are registered only under `import.meta.env.DEV` (`RouterProvider.tsx`), so the

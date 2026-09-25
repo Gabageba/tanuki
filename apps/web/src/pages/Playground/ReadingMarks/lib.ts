@@ -1,9 +1,9 @@
-import type { TFunction } from 'i18next';
 import {
   READING_MARK_CONFIDENCE,
   SORT_DIRECTION,
   type Chapter,
   type ReadingMarkConfidence,
+  type ReadingProgress,
 } from '@tanuki/contracts';
 import {
   APPROXIMATE_STYLE,
@@ -143,13 +143,19 @@ export const getFurthestPlacedMark = (demo: DemoState) => {
   return furthest;
 };
 
-/** «Т. 2 Гл. 4» или «Гл. 10» — глава этого тайтла в нумерации её ветки. */
-export const getChapterLabel = (chapter: Chapter, t: TFunction) => {
-  if (chapter.number === null) return chapter.title ?? t('untitled');
-  return chapter.volume === null
-    ? t('chapterNumberAbbrev', { number: chapter.number })
-    : t('volumeChapterNumberAbbrev', { volume: chapter.volume, number: chapter.number });
+/** «Т. 2 Гл. 4» или «Гл. 10» — номер главы, как его показывают в списке; без номера — название. */
+const formatChapterLabel = (volume: number | null, number: number | null, title: string | null) => {
+  if (number === null) return title ?? 'Без названия';
+  return volume === null ? `Гл. ${number}` : `Т. ${volume} Гл. ${number}`;
 };
+
+/** Глава этого тайтла в нумерации её ветки. */
+export const getChapterLabel = (chapter: Chapter) =>
+  formatChapterLabel(chapter.volume, chapter.number, chapter.title);
+
+/** Глава отметки так, как её называет источник отметки. */
+export const getProgressLabel = (progress: ReadingProgress) =>
+  formatChapterLabel(progress.chapterVolume, progress.chapterNumber, progress.chapterTitle);
 
 /** Иконки всех источников, где читали, свежие первыми, — для стопки в сводке. */
 export const getSummaryStackItems = (demo: DemoState): SourceStackItem[] =>

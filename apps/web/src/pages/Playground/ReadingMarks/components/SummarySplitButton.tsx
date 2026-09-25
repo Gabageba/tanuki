@@ -1,12 +1,10 @@
 import { Button, Group, Menu, Stack, Text } from '@mantine/core';
 import { CaretDownIcon } from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
-import { getProgressChapterLabel } from '@/entities/title/readingProgress';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import MidDot from '@/shared/ui/MidDot';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import type { DemoState } from '../models';
-import { findPlacedMark, getChapterLabel, hasApproximateSymbol } from '../lib';
+import { findPlacedMark, getChapterLabel, getProgressLabel, hasApproximateSymbol } from '../lib';
 import OwnContinue from './OwnContinue';
 import styles from '../ReadingMarks.module.scss';
 
@@ -19,13 +17,12 @@ type Props = {
  * главу и открывает её. Места, которого в ветке нет, выбрать нельзя.
  */
 function SummarySplitButton({ demo }: Props) {
-  const { t } = useTranslation();
   const { formatRelative } = useDateFormat();
 
   const button = (
     <Group gap={1} wrap="nowrap">
       <Button flex={1} style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}>
-        {t('continue')} <MidDot mx={4} /> {demo.own ? getChapterLabel(demo.own.chapter, t) : null}
+        Продолжить <MidDot mx={4} /> {demo.own ? getChapterLabel(demo.own.chapter) : null}
       </Button>
       <Menu position="bottom-end" width={300} withinPortal>
         <Menu.Target>
@@ -60,8 +57,8 @@ function SummarySplitButton({ demo }: Props) {
                   <Text fz="sm">{mark.source.title}</Text>
                   <Text fz={12} c="dimmed" ff="monospace">
                     {placed
-                      ? `${hasApproximateSymbol(demo.approximateStyle, placed.confidence) ? '≈ ' : ''}${getChapterLabel(placed.chapter, t)}`
-                      : getProgressChapterLabel(mark.progress, t)}
+                      ? `${hasApproximateSymbol(demo.approximateStyle, placed.confidence) ? '≈ ' : ''}${getChapterLabel(placed.chapter)}`
+                      : getProgressLabel(mark.progress)}
                   </Text>
                 </Stack>
               </Menu.Item>

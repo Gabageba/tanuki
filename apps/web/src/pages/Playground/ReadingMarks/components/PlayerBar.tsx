@@ -1,6 +1,5 @@
 import { useRef } from 'react';
 import { Box, Group, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import type { DemoState } from '../models';
 import {
   getChapterLabel,
@@ -27,7 +26,6 @@ type Props = {
  * списке. В строках списка нет ни таймлайна, ни иконок.
  */
 function PlayerBar({ demo }: Props) {
-  const { t } = useTranslation();
   const scopeRef = useRef<HTMLDivElement>(null);
   const readingOrder = getReadingOrder(demo);
   const total = readingOrder.length;
@@ -70,20 +68,20 @@ function PlayerBar({ demo }: Props) {
           <Box className={styles.playerElsewhere} w={toPercent(furthestCount)} />
           <Box className={styles.playerOwn} w={toPercent(ownCount)} />
           {demo.own && (
-            <Tooltip label={`Вы: ${getChapterLabel(demo.own.chapter, t)}`} withinPortal>
+            <Tooltip label={`Вы: ${getChapterLabel(demo.own.chapter)}`} withinPortal>
               <Box className={styles.playerThumb} style={{ left: toPercent(ownCount) }} />
             </Tooltip>
           )}
         </Box>
         <Group justify="space-between">
           <Text fz={12} c="dimmed" ff="monospace">
-            {first && getChapterLabel(first, t)}
+            {first && getChapterLabel(first)}
           </Text>
           <Text fz={12} c="dimmed" ff="monospace">
             {ownCount} / {total}
           </Text>
           <Text fz={12} c="dimmed" ff="monospace">
-            {last && getChapterLabel(last, t)}
+            {last && getChapterLabel(last)}
           </Text>
         </Group>
       </Stack>

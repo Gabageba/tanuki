@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Button, Group, Progress, Stack, Text } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import { SORT_DIRECTION } from '@tanuki/contracts';
 import MidDot from '@/shared/ui/MidDot';
 import type { DemoState } from '../models';
@@ -16,7 +15,6 @@ type Props = {
 
 /** «Продолжить» по своей отметке и полоса прогресса — как в шапке тайтла. children — сводка. */
 function OwnContinue({ demo, rightSection, button, children }: Props) {
-  const { t } = useTranslation();
   const { own, chapters } = demo;
   const ownIndex = getChapterIndex(demo, own?.chapter);
   const readCount =
@@ -31,7 +29,7 @@ function OwnContinue({ demo, rightSection, button, children }: Props) {
       {button ?? (
         <Button component="div" rightSection={rightSection} justify="space-between" fullWidth>
           <span>
-            {t('continue')} <MidDot /> {own ? getChapterLabel(own.chapter, t) : null}
+            Продолжить <MidDot /> {own ? getChapterLabel(own.chapter) : null}
           </span>
         </Button>
       )}

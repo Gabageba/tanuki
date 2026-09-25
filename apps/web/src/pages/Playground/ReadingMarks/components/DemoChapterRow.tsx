@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Box, Flex, Group, Stack, Text } from '@mantine/core';
 import { CircleIcon } from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
 import { SORT_DIRECTION, type Chapter } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import { CHAPTER_READ_STATUS } from '@/entities/title/models';
@@ -49,7 +48,6 @@ function DemoChapterRow({
   meta,
   below,
 }: Props) {
-  const { t } = useTranslation();
   const { formatDateNumeric } = useDateFormat();
 
   const ownIndex = getChapterIndex(demo, demo.own?.chapter);
@@ -99,7 +97,7 @@ function DemoChapterRow({
       <Stack flex={1} miw={0} py="xs" gap={2} justify="center">
         <Flex gap="xs" align="center" wrap="nowrap">
           <Text flex="none" ff="monospace">
-            {getChapterLabel(chapter, t)}
+            {getChapterLabel(chapter)}
           </Text>
           <Text flex={1} miw={0} truncate="end">
             {chapter.title}

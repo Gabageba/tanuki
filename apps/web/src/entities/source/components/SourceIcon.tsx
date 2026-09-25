@@ -183,7 +183,7 @@ function SourceIcon({ id, title, size = 40, ...restProps }: Props) {
       name={title}
       color="initials"
       size={size}
-      alt="title"
+      alt={title}
       style={style}
       {...restProps}
     >

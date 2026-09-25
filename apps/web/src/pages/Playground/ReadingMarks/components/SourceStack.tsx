@@ -1,5 +1,4 @@
 import { Avatar, Box, Flex, Stack, Text, Tooltip } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import { APPROXIMATE_STYLE, type ApproximateStyle, type SourceStackItem } from '../models';
 import { hasQuestionBadge, isApproximate, isDimmedApproximate } from '../lib';
@@ -26,7 +25,6 @@ function SourceStack({
   max = items.length,
   vertical = false,
 }: Props) {
-  const { t } = useTranslation();
   const visible = items.length > max ? items.slice(0, max - 1) : items;
   const hiddenCount = items.length - visible.length;
   const overlap = size / 3;
@@ -39,7 +37,7 @@ function SourceStack({
   const getTooltip = (item: SourceStackItem) => {
     if (!item.confidence) return `${item.source.title}: места в этой ветке не нашлось`;
     return isApproximate(item.confidence)
-      ? `${item.source.title}: ${t('placeIsApproximate').toLowerCase()}`
+      ? `${item.source.title}: место определено примерно`
       : item.source.title;
   };
 

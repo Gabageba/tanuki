@@ -1,5 +1,4 @@
 import { Avatar, Box, Group, Text } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import { APPROXIMATE_STYLE, type ApproximateStyle } from '../models';
 import styles from '../ReadingMarks.module.scss';
 
@@ -32,8 +31,6 @@ const renderApproximateSample = (approximateStyle: ApproximateStyle) => {
 
 /** Строка над списком глав: что значит значок примерного места. */
 function ApproximateLegend({ approximateStyle }: Props) {
-  const { t } = useTranslation();
-
   return (
     <Group
       gap={8}
@@ -44,7 +41,7 @@ function ApproximateLegend({ approximateStyle }: Props) {
     >
       {renderApproximateSample(approximateStyle)}
       <Text fz={12} c="dimmed">
-        — {t('placeIsApproximate').toLowerCase()}
+        — место определено примерно
       </Text>
     </Group>
   );

@@ -24,7 +24,7 @@ function ReadingTimeCard() {
 
   return (
     <ProfileStatisticCard
-      label={t('Время чтения')}
+      label={t('readingTime')}
       footer={
         <Text fz={12} c="dimmed">
           {t('mostOftenReadBetween', { from: peakFrom, to: peakTo, percent: `${peakPercent}%` })}{' '}

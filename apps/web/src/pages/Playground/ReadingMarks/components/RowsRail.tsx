@@ -1,5 +1,4 @@
 import { Box, Flex, Tooltip, UnstyledButton } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import type { DemoState } from '../models';
 import {
   getChapterIndex,
@@ -23,7 +22,6 @@ type Props = {
  * без прокрутки; тап по иконке — прокрутка к главе.
  */
 function RowsRail({ demo }: Props) {
-  const { t } = useTranslation();
   const count = demo.chapters.length;
   const getTop = (index: number) => `${((index + 0.5) / count) * 100}%`;
   const ownIndex = getChapterIndex(demo, demo.own?.chapter);
@@ -43,7 +41,7 @@ function RowsRail({ demo }: Props) {
       </Box>
       <Box pos="relative" w={22} flex="none" className={styles.rail}>
         {demo.own && ownIndex !== -1 && (
-          <Tooltip label={`Вы: ${getChapterLabel(demo.own.chapter, t)}`} withinPortal>
+          <Tooltip label={`Вы: ${getChapterLabel(demo.own.chapter)}`} withinPortal>
             <Box className={styles.railOwn} style={{ top: getTop(ownIndex) }} />
           </Tooltip>
         )}

@@ -1,13 +1,17 @@
 import { ActionIcon, Group, Stack, Text } from '@mantine/core';
 import { ArrowRightIcon } from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
 import { READING_MARK_CONFIDENCE } from '@tanuki/contracts';
-import { getProgressChapterLabel } from '@/entities/title/readingProgress';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import MidDot from '@/shared/ui/MidDot';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import type { DemoMark, DemoState } from '../models';
-import { findPlacedMark, getChapterLabel, hasApproximateSymbol, isDimmedApproximate } from '../lib';
+import {
+  findPlacedMark,
+  getChapterLabel,
+  getProgressLabel,
+  hasApproximateSymbol,
+  isDimmedApproximate,
+} from '../lib';
 import styles from '../ReadingMarks.module.scss';
 
 type Props = {
@@ -22,11 +26,10 @@ type Props = {
  * нумерация отличается, видно обе: «Гл. 10 → Т. 2 Гл. 4».
  */
 function MarkLine({ demo, mark, withGoTo = false }: Props) {
-  const { t } = useTranslation();
   const { formatRelative } = useDateFormat();
   const placed = findPlacedMark(demo, mark);
-  const sourceLabel = getProgressChapterLabel(mark.progress, t);
-  const targetLabel = placed && getChapterLabel(placed.chapter, t);
+  const sourceLabel = getProgressLabel(mark.progress);
+  const targetLabel = placed && getChapterLabel(placed.chapter);
 
   return (
     <Group gap={8} wrap="nowrap" align="flex-start">
@@ -72,7 +75,7 @@ function MarkLine({ demo, mark, withGoTo = false }: Props) {
         </Text>
         {placed && placed.confidence === READING_MARK_CONFIDENCE.APPROXIMATE && (
           <Text fz={11} c="dimmed">
-            {t('placeIsApproximate')}
+            Место определено примерно
           </Text>
         )}
         {!placed && (

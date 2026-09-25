@@ -1,5 +1,4 @@
 import { Box, Tooltip } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import type { ApproximateStyle, SourceStackItem } from '../models';
 import { hasQuestionBadge, isApproximate, isDimmedApproximate } from '../lib';
@@ -16,14 +15,13 @@ type Props = {
  * у одной иконки, сколько бы источников ни сошлось на главе.
  */
 function SourceCounterIcon({ items, approximateStyle, size }: Props) {
-  const { t } = useTranslation();
   const [first] = items;
   if (!first) return null;
 
   const tooltip = items
     .map((item) =>
       isApproximate(item.confidence)
-        ? `${item.source.title}: ${t('placeIsApproximate').toLowerCase()}`
+        ? `${item.source.title}: место определено примерно`
         : item.source.title,
     )
     .join(', ');

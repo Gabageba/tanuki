@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Card, Collapse, Group, Text, UnstyledButton } from '@mantine/core';
 import { CaretDownIcon } from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
 import { SORT_DIRECTION, type Chapter } from '@tanuki/contracts';
 import { TIMELINE_ZONE, type DemoState, type TimelineZone } from '../models';
 import {
@@ -36,7 +35,6 @@ type Section = {
  * заголовку раздела; иконки в строках — только на главах, где остановились.
  */
 function RowsSections({ demo }: Props) {
-  const { t } = useTranslation();
   const [openedZones, setOpenedZones] = useState<TimelineZone[]>([
     TIMELINE_ZONE.UNREAD,
     TIMELINE_ZONE.ELSEWHERE,
@@ -62,8 +60,8 @@ function RowsSections({ demo }: Props) {
     const last = (isDesc ? chapters[0] : chapters.at(-1))?.chapter;
     const range =
       first && last && first !== last
-        ? `${getChapterLabel(first, t)} – ${getChapterLabel(last, t)}`
-        : first && getChapterLabel(first, t);
+        ? `${getChapterLabel(first)} – ${getChapterLabel(last)}`
+        : first && getChapterLabel(first);
 
     const title = (() => {
       switch (zone) {
