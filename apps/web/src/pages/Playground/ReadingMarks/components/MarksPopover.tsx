@@ -1,6 +1,5 @@
 import type { ReactElement } from 'react';
 import { Button, Popover, Stack } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
 import type { DemoMark, DemoState } from '../models';
 import MarkLine from './MarkLine';
 
@@ -15,8 +14,6 @@ type Props = {
 };
 
 function MarksPopover({ demo, marks, withContinue = false, withGoTo = false, children }: Props) {
-  const { t } = useTranslation();
-
   return (
     <Popover position="bottom-start" shadow="md" withinPortal>
       <Popover.Target>{children}</Popover.Target>
@@ -27,7 +24,7 @@ function MarksPopover({ demo, marks, withContinue = false, withGoTo = false, chi
           ))}
           {withContinue && (
             <Button size="xs" variant="light">
-              {t('continueFromHere')}
+              Продолжить отсюда
             </Button>
           )}
         </Stack>

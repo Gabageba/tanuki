@@ -94,3 +94,7 @@ export const STATUS_DOWN_COLOR_SHADES: MantineColorsTuple = [
   '#a93a46',
   '#8d313a',
 ];
+
+// Нейтральная заливка столбиков и полос — приглушённый текст на полупрозрачности, работает в обеих
+// схемах. Акцентная — `var(--mantine-primary-color-filled)`.
+export const NEUTRAL_BAR_COLOR = 'color-mix(in srgb, var(--mantine-color-dimmed) 40%, transparent)';

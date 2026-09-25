@@ -19,6 +19,7 @@ export const ROUTE_PATHS = {
   PRIVACY_POLICY: '/privacy',
   PLAYGROUND: '/playground',
   PLAYGROUND_READING_MARKS: '/playground/reading-marks',
+  PROFILE: '/profile',
 } as const;
 
 export type RoutePath = EnumLiteralsOf<typeof ROUTE_PATHS>;
@@ -26,3 +27,12 @@ export type RoutePath = EnumLiteralsOf<typeof ROUTE_PATHS>;
 /** Страница главы, с которой открыть читалку (с единицы) — так «Продолжить» возвращает туда, где
  *  остановились. Читалка берёт её один раз при входе, дальше адрес за чтением переписывает сама. */
 export const READER_PAGE_SEARCH_PARAM = 'page';
+
+/** Вкладка страницы тайтла — в адресе, чтобы возврат из читалки попадал обратно на главы. */
+export const TITLE_TAB_SEARCH_PARAM = 'tab';
+
+export const TITLE_TABS = {
+  INFO: 'info',
+  CHAPTERS: 'chapters',
+} as const;
+export type TitleTab = EnumLiteralsOf<typeof TITLE_TABS>;

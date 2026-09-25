@@ -183,7 +183,7 @@ function TitleInfo({ title }: Props) {
       <SimpleGrid cols={{ base: 2, xs: 3 }} spacing="lg">
         {infoData.map((block, index) => (
           <Stack key={index} gap="sm">
-            <Text c="dimmed" lh={1}>
+            <Text c="dimmed" lh={1} fz={12} tt="uppercase" lts={1}>
               {block.label}
             </Text>
             <Divider />

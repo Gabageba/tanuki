@@ -38,7 +38,9 @@ function Avatar() {
       </Menu.Target>
       <Menu.Dropdown>
         {user && <Menu.Label>{user.username}</Menu.Label>}
-        <Menu.Item leftSection={<UserIcon />}>Профиль</Menu.Item>
+        <Menu.Item leftSection={<UserIcon />} component={Link} to={ROUTE_PATHS.PROFILE}>
+          {t('profile')}
+        </Menu.Item>
         {isStaffRole(user?.role) && (
           <Menu.Item component={Link} to={ROUTE_PATHS.INVITES} leftSection={<TicketIcon />}>
             {t('invites')}
@@ -49,7 +51,7 @@ function Avatar() {
             {t('playground')}
           </Menu.Item>
         )}
-        <Menu.Item leftSection={<GearSixIcon />}>Настройки</Menu.Item>
+        <Menu.Item leftSection={<GearSixIcon />}>{t('settings')}</Menu.Item>
         <Menu.Sub>
           <Menu.Sub.Target>
             <Menu.Sub.Item leftSection={<PaletteIcon />}>{t('theme')}</Menu.Sub.Item>

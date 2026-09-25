@@ -7,11 +7,12 @@ import InfiniteScrollTrigger from './components/InfiniteScrollTrigger';
 import ErrorNotification from './components/ErrorNotification';
 import useQuery from './hooks/useQuery';
 import useParams from './hooks/useParams';
+import useNoQuery from './hooks/useNoQuery';
 import { PageLayoutParamsContext, PageLayoutQueryContext } from './context';
 import type { PageLayoutBaseQuery } from './models';
 
 type Props<TQuery extends PageLayoutBaseQuery, TParams> = {
-  useQuery: (params: TParams) => TQuery;
+  useQuery?: (params: TParams) => TQuery;
   params?: TParams;
   children: ReactNode;
 };
@@ -22,7 +23,8 @@ function PageLayout<TQuery extends PageLayoutBaseQuery, TParams = undefined>({
   children,
 }: Props<TQuery, TParams>) {
   const [params, setParams] = useState<TParams>(initialParams);
-  const query = useQuery(params);
+  const usePageQuery: (params: TParams) => TQuery | null = useQuery ?? useNoQuery;
+  const query = usePageQuery(params);
 
   return (
     <PageLayoutQueryContext.Provider value={query}>

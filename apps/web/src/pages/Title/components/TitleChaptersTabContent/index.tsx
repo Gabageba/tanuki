@@ -1,4 +1,5 @@
-import { Button, Group, Scroller, Stack, Tabs, Text } from '@mantine/core';
+import { Button, EmptyState, Group, Scroller, Stack, Tabs, Text } from '@mantine/core';
+import { EmptyIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import type { Branch } from '@tanuki/contracts';
@@ -13,6 +14,17 @@ type Props = {
 function TitleChaptersTabContent({ branches, titleId }: Props) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<string | null>(branches[0]?.id || null);
+
+  if (branches.length === 0) {
+    return (
+      <EmptyState
+        title={t('chaptersNotFound')}
+        description={t('sourceHasNoChaptersYet')}
+        size="sm"
+        icon={<EmptyIcon />}
+      />
+    );
+  }
 
   return (
     <Tabs variant="tile" value={activeTab} onChange={setActiveTab}>

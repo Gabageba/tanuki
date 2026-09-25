@@ -25,7 +25,9 @@ function SourceCard({ source }: Props) {
             <Text fz={20} lh={1}>
               {getFlagByLocale(source.locale)}
             </Text>
-            <Text ff="monospace">{source.locale.toUpperCase()}</Text>
+            <Text ff="monospace" tt="uppercase" lts={1}>
+              {source.locale}
+            </Text>
           </Group>
 
           <SourceStatusBadge source={source} />

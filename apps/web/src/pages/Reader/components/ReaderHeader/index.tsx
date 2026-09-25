@@ -7,7 +7,7 @@ import useTitleDetails from '@/entities/title/hooks/useTitleDetails';
 import useSource from '@/entities/source/hooks/useSource';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import GoBackButton from '@/shared/ui/GoBackButton';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
+import { ROUTE_PATHS, TITLE_TAB_SEARCH_PARAM, TITLE_TABS } from '@/shared/lib/routes';
 import ReaderControls from '../ReaderControls';
 import ReaderPagesCount from '../ReaderPagesCount';
 import { TITLE_NAME_MIN_WIDTH } from '../../lib';
@@ -55,7 +55,9 @@ function ReaderHeader({
     <AppShell.Header withBorder={false}>
       <Group px="md" h="100%" gap="md" wrap="nowrap">
         <Group gap="xs" flex={1} miw={TITLE_NAME_MIN_WIDTH} wrap="nowrap">
-          <GoBackButton path={generatePath(ROUTE_PATHS.TITLE, { titleId })} />
+          <GoBackButton
+            path={`${generatePath(ROUTE_PATHS.TITLE, { titleId })}?${TITLE_TAB_SEARCH_PARAM}=${TITLE_TABS.CHAPTERS}`}
+          />
           <Stack gap={4} miw={0}>
             {titleData && (
               <Title

@@ -1,5 +1,5 @@
 import type { GroupProps } from '@mantine/core';
-import { Anchor, Group } from '@mantine/core';
+import { Anchor, Box, Group } from '@mantine/core';
 import { Children, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useRowClamp from './hooks/useRowClamp';
@@ -35,7 +35,9 @@ function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restPr
       : Children.toArray(children).slice(0, visibleCount);
 
   return (
-    <>
+    // Single in-flow root: the measure clone and toggle are absolutely/fixed positioned,
+    // so they don't pick up a parent Stack's gap as extra spacing.
+    <Box pos="relative">
       {/* Always renders the full, untrimmed content so useRowClamp measures real rows
           instead of the already-trimmed output below — invisible and out of the flow. */}
       <Group
@@ -43,7 +45,15 @@ function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restPr
         {...restProps}
         gap={gap}
         aria-hidden
-        style={{ visibility: 'hidden', height: 0, overflow: 'hidden' }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          visibility: 'hidden',
+          height: 0,
+          overflow: 'hidden',
+        }}
       >
         {children}
       </Group>
@@ -68,7 +78,7 @@ function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restPr
           </Anchor>
         )}
       </Group>
-    </>
+    </Box>
   );
 }
 

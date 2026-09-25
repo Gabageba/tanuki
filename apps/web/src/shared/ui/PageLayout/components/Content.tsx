@@ -1,8 +1,8 @@
 import { Center, Container, Group, Loader, Title } from '@mantine/core';
-import { useMemo, type ReactNode } from 'react';
+import { useContext, useMemo, type ReactNode } from 'react';
 import ApiErrorText from '../../ApiErrorText';
-import useQuery from '../hooks/useQuery';
 import GoBackButton from '../../GoBackButton';
+import { PageLayoutQueryContext } from '../context';
 
 type Props = {
   children: ReactNode;
@@ -13,7 +13,11 @@ type Props = {
 };
 
 function Content({ children, title, actions, showLoading = true, goBack }: Props) {
-  const { isPending, isError, error } = useQuery();
+  // Запрос у PageLayout необязателен — без него контент просто рендерится сразу.
+  const query = useContext(PageLayoutQueryContext);
+  const isPending = query?.isPending ?? false;
+  const isError = query?.isError ?? false;
+  const error = query?.error ?? null;
 
   const renderContent = useMemo(() => {
     if (isPending && showLoading) {

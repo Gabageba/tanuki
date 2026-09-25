@@ -24,7 +24,7 @@ function StatusIndicator({
   gap = 6,
 }: Props) {
   return (
-    <Group gap={gap} align="center" wrap="nowrap">
+    <Group gap={gap} align="center" wrap="nowrap" lh={1}>
       <Box bg={color} bdrs="50%" w={fz / 2} h={fz / 2} flex="none" mt={dotMt} />
       <Text c={coloredText ? color : undefined} fz={fz} fw={fw} lh={1} visibleFrom={visibleFrom}>
         {label}

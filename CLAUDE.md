@@ -83,8 +83,13 @@
 ## Placement
 
 - Keep code next to its only consumer: constants of a component go into its sibling `models.ts` or
-  straight into the component file when there are just a couple of them. `shared/` is for things
-  with more than one consumer — don't create a folder there for a single import.
+  straight into the component file when there are just a couple of them.
+- `shared/` is for things with more than one consumer — and for generic UI building blocks that
+  know nothing about the feature they're used in and are expected to be reused elsewhere, even if
+  there's only one call site today (`BarChart`, `ProgressList`: they take plain data via props, no
+  feature types, mocks or domain logic inside). A feature-specific component stays next to its
+  consumer until a second one actually appears. Don't create a folder in `shared/` for a single
+  import.
 - No one-call wrappers around library hooks. Call the library hook in the component.
 
 ## Colors

@@ -79,6 +79,7 @@ function ChaptersList({
   if (chapters.length === 0) {
     return (
       <EmptyState
+        title={t('chaptersNotFound')}
         description={t('branchHasNoChaptersYet')}
         size="sm"
         icon={<EmptyIcon />}

@@ -20,7 +20,12 @@ function TitleMatchesScroller({ matches, mutateTitleLink, isTitleLinkPending, is
 
   if (!matches?.length) {
     return (
-      <EmptyState description={t('algorithmFoundNoSimilarTitles')} size="sm" icon={<EmptyIcon />} />
+      <EmptyState
+        title={t('similarTitlesNotFound')}
+        description={t('algorithmFoundNoSimilarTitles')}
+        size="sm"
+        icon={<EmptyIcon />}
+      />
     );
   }
   const groups = Object.values(MATCH_CONFIDENCE)

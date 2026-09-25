@@ -11,7 +11,7 @@ function SourcesList() {
   const { data } = PageLayout.useQuery<SourcesQuery>();
 
   return (
-    <Stack gap="xl">
+    <Stack gap="lg">
       {Object.values(SOURCE_CONTENT_TYPE)
         .map((contentType) => ({ contentType, sources: data?.[contentType] ?? [] }))
         .filter(({ sources }) => sources.length > 0)
@@ -19,7 +19,7 @@ function SourcesList() {
           <div key={contentType}>
             <Divider
               label={
-                <Title order={4} fw={600}>
+                <Title order={6} fw={600} tt="uppercase" lts={1}>
                   {getLabelByContentType(contentType, t)}
                 </Title>
               }

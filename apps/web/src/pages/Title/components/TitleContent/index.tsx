@@ -6,11 +6,10 @@ import { useTranslation } from 'react-i18next';
 import TitleInfoTabContent from './TitleInfoTabContent';
 import { SORT_DIRECTION, SortDirectionSchema, type Branch, type Title } from '@tanuki/contracts';
 import TitleChaptersTabContent from '../TitleChaptersTabContent';
+import { TITLE_TAB_SEARCH_PARAM, TITLE_TABS, type TitleTab } from '@/shared/lib/routes';
 
-const TITLE_CONTENT_TABS = {
-  INFO: 'info',
-  CHAPTERS: 'chapters',
-} as const;
+const isTitleTab = (value: string | null): value is TitleTab =>
+  Object.values<string | null>(TITLE_TABS).includes(value);
 
 type Props = {
   title: Title;
@@ -19,15 +18,34 @@ type Props = {
 
 function TitleContent({ title, branches }: Props) {
   const { t } = useTranslation();
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabParam = searchParams.get(TITLE_TAB_SEARCH_PARAM);
+  const activeTab = isTitleTab(tabParam) ? tabParam : TITLE_TABS.INFO;
+
+  const handleTabChange = (value: string | null) => {
+    if (!isTitleTab(value)) return;
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set(TITLE_TAB_SEARCH_PARAM, value);
+        return next;
+      },
+      { replace: true },
+    );
+  };
 
   useEffect(() => {
     setSearchParams(
       (prev) => {
-        if (SortDirectionSchema.safeParse(prev.get('direction')).success) return prev;
+        const hasTab = isTitleTab(prev.get(TITLE_TAB_SEARCH_PARAM));
+        const hasDirection = SortDirectionSchema.safeParse(prev.get('direction')).success;
+        if (hasTab && hasDirection) return prev;
 
         const next = new URLSearchParams(prev);
-        next.set('direction', SORT_DIRECTION.DESC);
+        if (!hasTab) next.set(TITLE_TAB_SEARCH_PARAM, TITLE_TABS.INFO);
+        if (!hasDirection) next.set('direction', SORT_DIRECTION.DESC);
         return next;
       },
       { replace: true },
@@ -37,13 +55,13 @@ function TitleContent({ title, branches }: Props) {
   const TABS = useMemo(
     () => [
       {
-        id: TITLE_CONTENT_TABS.INFO,
+        id: TITLE_TABS.INFO,
         title: t('aboutTitle'),
         icon: <InfoIcon />,
         content: <TitleInfoTabContent title={title} />,
       },
       {
-        id: TITLE_CONTENT_TABS.CHAPTERS,
+        id: TITLE_TABS.CHAPTERS,
         title: t('chapters'),
         icon: <ListDashesIcon />,
         content: <TitleChaptersTabContent branches={branches} titleId={title.id} />,
@@ -53,7 +71,7 @@ function TitleContent({ title, branches }: Props) {
   );
 
   return (
-    <Tabs defaultValue={TITLE_CONTENT_TABS.INFO}>
+    <Tabs value={activeTab} onChange={handleTabChange}>
       <Tabs.List>
         {TABS.map((tab) => (
           <Tabs.Tab key={tab.id} value={tab.id} leftSection={tab.icon}>

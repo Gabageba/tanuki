@@ -22,7 +22,7 @@ function TitleMetaItem<T extends MetaItemValue = MetaItemValue>({
         return <Mdash />;
       }
 
-      return <MidDotGroup items={rawValue.filter(Boolean)} text={{ lh: 1 }} />;
+      return <MidDotGroup items={rawValue.filter(Boolean)} text={{ lh: 1 }} lh={1} />;
     }
 
     return isEmpty(rawValue) ? <Mdash /> : rawValue;
@@ -30,7 +30,7 @@ function TitleMetaItem<T extends MetaItemValue = MetaItemValue>({
 
   return (
     <Stack gap={8}>
-      <Text lh={1} c="dimmed" fz={12}>
+      <Text lh={1} c="dimmed" fz={11} tt="uppercase" lts={1}>
         {label}
       </Text>
       <Text component="div" lh={1}>

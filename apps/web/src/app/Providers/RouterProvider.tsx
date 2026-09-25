@@ -27,6 +27,7 @@ import Terms from '@/pages/Terms';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import Playground from '@/pages/Playground';
 import PlaygroundReadingMarks from '@/pages/Playground/ReadingMarks';
+import Profile from '@/pages/Profile';
 
 // Песочница с макетами вариантов интерфейса — только для разработки, в прод-сборку не попадает.
 const PLAYGROUND_ROUTES = import.meta.env.DEV
@@ -90,6 +91,10 @@ const router = createBrowserRouter([
                 element: <Invites />,
               },
             ],
+          },
+          {
+            path: ROUTE_PATHS.PROFILE,
+            element: <Profile />,
           },
         ],
       },

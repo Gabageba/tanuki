@@ -88,7 +88,7 @@ function ReaderPages({
   if (isFeedEmpty) {
     return (
       <AppShell.Main>
-        <EmptyState />
+        <EmptyState title={t('pagesNotFound')} description={t('sourceReturnedNoPages')} />
       </AppShell.Main>
     );
   }

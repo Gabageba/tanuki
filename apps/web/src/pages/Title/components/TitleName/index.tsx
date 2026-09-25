@@ -36,6 +36,7 @@ function TitleName({ title }: Props) {
           gap={8}
           maxRows={1}
           separatorProps={{ c: 'dimmed', lh: 1 }}
+          lh={1}
           text={{
             lh: 1,
             c: 'dimmed',

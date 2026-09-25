@@ -76,7 +76,27 @@ function useDateFormat() {
     return formatDateCompact(isoDate);
   };
 
+  /**
+   * «3 ч 12 м», «45 м» — длительность в минутах; часы опускаются, пока их нет.
+   * `separator` — то, что стоит между часами и минутами: по умолчанию обычный пробел, для крупного
+   * моноширинного текста можно передать более узкий, например `'\u2009'` (тонкий пробел).
+   */
+  const formatDuration = (totalMinutes: number) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return hours
+      ? t('hoursMinutesAbbrev', { hours, minutes })
+      : t('minutesAbbrev', { count: minutes });
+  };
+
+  /** «сентябрь» — название текущего месяца в именительном падеже. */
+  const getCurrentMonthName = () =>
+    new Intl.DateTimeFormat(i18n.language, { month: 'long' }).format(new Date());
+
   return {
+    formatDuration,
+    getCurrentMonthName,
     formatDate: (isoDate: string | null) => {
       if (!isoDate) {
         return null;

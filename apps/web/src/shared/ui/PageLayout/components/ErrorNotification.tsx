@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useContext, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { ApiRequestError } from '@/shared/api/client';
-import useQuery from '../hooks/useQuery';
+import { PageLayoutQueryContext } from '../context';
 
 type Props = {
   title: string;
@@ -9,7 +9,9 @@ type Props = {
 };
 
 function ErrorNotification({ title, fallbackMessage }: Props) {
-  const { isError, error } = useQuery();
+  const query = useContext(PageLayoutQueryContext);
+  const isError = query?.isError ?? false;
+  const error = query?.error ?? null;
 
   useEffect(() => {
     if (isError) {
