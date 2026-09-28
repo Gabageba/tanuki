@@ -75,6 +75,31 @@ export const projectLinkedRow = (
   });
 };
 
+/**
+ * Глава тайтла вместе с его деталями — у источника, а не со слов клиента: снимок главы потом
+ * узнают на других источниках. Детали кешированы и почти всегда тёплые — читалка только что
+ * грузила по ним соседние главы.
+ */
+export const findTitleChapter = async (
+  parsersClient: ParsersClientService,
+  sourceId: string,
+  titleId: string,
+  chapterId: string,
+) => {
+  const titleRef = decodeTitleId(titleId);
+  const { sourceId: chapterSourceId, opaqueId } = splitCompositeId(chapterId);
+  if (chapterSourceId !== sourceId) throw new NotFoundApiException('Глава не из этого тайтла');
+
+  const chapterRef = decodeChapterId(opaqueId);
+  const { data } = await parsersClient.getDetails(sourceId, titleRef.url);
+  const chapter = (data.chapters ?? []).find(
+    (item) => item.id === chapterRef.id && item.branch === chapterRef.branch,
+  );
+  if (!chapter) throw new NotFoundApiException('Глава не найдена');
+
+  return { titleRef, details: data, chapter };
+};
+
 @Injectable()
 export class ReadingProgressService {
   constructor(
@@ -160,27 +185,19 @@ export class ReadingProgressService {
     });
   }
 
-  /**
-   * Номер, название и ветку главы берём у источника сами (детали кешированы и почти всегда
-   * тёплые — читалка только что грузила по ним соседние главы), а не доверяем клиенту: по этому
-   * снимку отметку потом узнают на других источниках.
-   */
+  /** Номер, название и ветку главы берём у источника сами — см. findTitleChapter. */
   async update(
     userId: string,
     sourceId: string,
     titleId: string,
     body: UpdateReadingProgressRequest,
   ): Promise<ReadingProgress> {
-    const titleRef = decodeTitleId(titleId);
-    const { sourceId: chapterSourceId, opaqueId } = splitCompositeId(body.chapterId);
-    if (chapterSourceId !== sourceId) throw new NotFoundApiException('Глава не из этого тайтла');
-
-    const chapterRef = decodeChapterId(opaqueId);
-    const { data } = await this.parsersClient.getDetails(sourceId, titleRef.url);
-    const chapter = (data.chapters ?? []).find(
-      (item) => item.id === chapterRef.id && item.branch === chapterRef.branch,
+    const { titleRef, chapter } = await findTitleChapter(
+      this.parsersClient,
+      sourceId,
+      titleId,
+      body.chapterId,
     );
-    if (!chapter) throw new NotFoundApiException('Глава не найдена');
 
     const values = {
       sourceId,

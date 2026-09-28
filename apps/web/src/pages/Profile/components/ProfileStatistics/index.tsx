@@ -1,53 +1,93 @@
-import { SimpleGrid, Stack } from '@mantine/core';
+import { Center, Loader, SimpleGrid, Stack } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { BooksIcon, FireIcon, TrendDownIcon, TrendUpIcon } from '@phosphor-icons/react';
-import SourcesCard from './cards/SourcesCard';
+import { BooksIcon, FireIcon } from '@phosphor-icons/react';
+import useProfileStatistics from '@/entities/user/hooks/useProfileStatistics';
 import useDateFormat from '@/shared/hooks/useDateFormat';
+import ApiErrorText from '@/shared/ui/ApiErrorText';
+import SourcesCard from './cards/SourcesCard';
 import ProfileStatisticMetaCard from './cards/ProfileStatisticMetaCard';
 import ChaptersReadCard from './cards/ChaptersReadCard';
 import ReadingTimeCard from './cards/ReadingTimeCard';
-import GenresCard from './cards/GentresCard';
+import TagsCard from './cards/TagsCard';
+import ProfileStatisticsEmpty from './ProfileStatisticsEmpty';
+import { formatSigned, getMonthDeltaPercent, getTodayDelta, getTrendHint } from './lib';
 
 function ProfileStatistics() {
   const { t } = useTranslation();
   const { getCurrentMonthName } = useDateFormat();
+  const { data: statistics, isPending, error } = useProfileStatistics();
+
+  if (isPending) {
+    return (
+      <Center mt="lg">
+        <Loader />
+      </Center>
+    );
+  }
+
+  if (!statistics) return <ApiErrorText error={error} />;
+
+  if (!statistics.hasActivity) return <ProfileStatisticsEmpty />;
+
+  const { today, month, totals, streak } = statistics;
+  const todayDelta = getTodayDelta(statistics);
+  const monthDeltaPercent = getMonthDeltaPercent(statistics);
 
   return (
     <Stack mt="lg">
       <SimpleGrid cols={{ base: 2, md: 4 }}>
         <ProfileStatisticMetaCard
           label={t('forToday')}
-          value={9}
-          unit={t('chapter', { count: 9 })}
-          hint={{ icon: <TrendUpIcon />, text: t('vsAverageDay', { value: '+3' }), color: 'green' }}
+          value={today.chapters}
+          unit={t('chapter', { count: today.chapters })}
+          hint={
+            todayDelta === null
+              ? undefined
+              : getTrendHint(todayDelta, t('vsAverageDay', { value: formatSigned(todayDelta) }))
+          }
         />
         <ProfileStatisticMetaCard
           label={t('forMonth', { month: getCurrentMonthName() })}
-          value={214}
-          unit={t('chapter', { count: 214 })}
-          hint={{ icon: <TrendDownIcon />, text: t('vsLastMonth', { value: '−9%' }), color: 'red' }}
+          value={month.chapters}
+          unit={t('chapter', { count: month.chapters })}
+          hint={
+            monthDeltaPercent === null
+              ? undefined
+              : getTrendHint(
+                  monthDeltaPercent,
+                  t('vsUsualPace', { value: `${formatSigned(monthDeltaPercent)}%` }),
+                )
+          }
         />
         <ProfileStatisticMetaCard
           label={t('allTime')}
-          value={4218}
-          unit={t('chapter', { count: 4218 })}
-          hint={{
-            icon: <BooksIcon />,
-            text: t('countTitlesFinished', { count: 148, finished: 61 }),
-          }}
+          value={totals.chapters}
+          unit={t('chapter', { count: totals.chapters })}
+          hint={{ icon: <BooksIcon />, text: t('countTitles', { count: totals.titles }) }}
         />
         <ProfileStatisticMetaCard
           label={t('dayStreak')}
-          value={23}
-          unit={t('day', { count: 23 })}
-          hint={{ icon: <FireIcon />, text: t('personalBest', { value: 41 }), color: 'terracotta' }}
+          value={streak.current}
+          unit={t('day', { count: streak.current })}
+          hint={
+            streak.best > 0
+              ? {
+                  icon: <FireIcon />,
+                  text: t('personalBest', { value: streak.best }),
+                  color: 'terracotta',
+                }
+              : undefined
+          }
         />
       </SimpleGrid>
       <SimpleGrid cols={{ base: 1, md: 2 }}>
-        <ChaptersReadCard />
-        <ReadingTimeCard />
-        <GenresCard />
-        <SourcesCard />
+        <ChaptersReadCard
+          chaptersByDay={statistics.chaptersByDay}
+          chaptersByMonth={statistics.chaptersByMonth}
+        />
+        <ReadingTimeCard readingTime={statistics.readingTime} />
+        <TagsCard tags={statistics.tags} />
+        <SourcesCard sources={statistics.sources} />
       </SimpleGrid>
     </Stack>
   );

@@ -7,36 +7,28 @@ export const STATISTIC_PERIOD = {
 } as const;
 export type StatisticPeriod = EnumLiteralsOf<typeof STATISTIC_PERIOD>;
 
-export type ChaptersReadPoint = {
-  date: string;
-  count: number;
+/**
+ * Дата столбика — уже календарная дата в поясе пользователя, так что собирается как местная:
+ * new Date('YYYY-MM-DD') прочитал бы её как полночь UTC, и западнее Гринвича подпись съехала бы
+ * на день назад.
+ */
+const toLocalDate = (isoDate: string) => {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(year!, month! - 1, day);
 };
 
-export type GenreStatistic = {
-  name: string;
-  chapters: number;
-};
-
-export type ReadingTimeStatistic = {
-  totalMinutes: number;
-  averagePerDayMinutes: number;
-  weekdaysPerDayMinutes: number;
-  weekendsPerDayMinutes: number;
-  peakFrom: string;
-  peakTo: string;
-  peakPercent: number;
-  averageSessionMinutes: number;
-};
-
-/** «пн» / «25» / «сент» — подпись под столбиком. */
+/**
+ * «пн» / «25.09» / «сент» — подпись под столбиком. За месяц подписан не каждый день, а ряд
+ * переходит через границу месяцев, поэтому одного числа мало — нужен и месяц.
+ */
 export const formatBarLabel = (isoDate: string, period: StatisticPeriod, locale: string) => {
-  const date = new Date(isoDate);
+  const date = toLocalDate(isoDate);
 
   switch (period) {
     case STATISTIC_PERIOD.WEEK:
       return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
     case STATISTIC_PERIOD.MONTH:
-      return String(date.getDate());
+      return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' }).format(date);
     case STATISTIC_PERIOD.YEAR:
       return new Intl.DateTimeFormat(locale, { month: 'short' }).format(date).replace('.', '');
   }
@@ -44,7 +36,7 @@ export const formatBarLabel = (isoDate: string, period: StatisticPeriod, locale:
 
 /** «пт, 25 сентября» / «сентябрь 2026 г.» — заголовок подсказки над столбиком. */
 export const formatBarDate = (isoDate: string, period: StatisticPeriod, locale: string) => {
-  const date = new Date(isoDate);
+  const date = toLocalDate(isoDate);
 
   switch (period) {
     case STATISTIC_PERIOD.WEEK:
@@ -59,8 +51,5 @@ export const formatBarDate = (isoDate: string, period: StatisticPeriod, locale: 
   }
 };
 
-export type SourceStatistic = {
-  id: string;
-  title: string;
-  chapters: number;
-};
+/** Час начала окна → «22:00». */
+export const formatHour = (hour: number) => `${String(hour % 24).padStart(2, '0')}:00`;

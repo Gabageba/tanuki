@@ -1,19 +1,31 @@
-import { Box, Divider, Group, Stack, Text } from '@mantine/core';
+import { Box, Divider, EmptyState, Group, Stack, Text } from '@mantine/core';
+import { GlobeIcon } from '@phosphor-icons/react';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProfileStatisticCard from './ProfileStatisticCard';
+import type { SourceStatistic } from '@tanuki/contracts';
 import { NEUTRAL_BAR_COLOR } from '@/shared/lib/palette';
-import { SOURCES_MOCK } from './mocks';
 
-function SourcesCard() {
+type Props = {
+  sources: SourceStatistic[];
+};
+
+function SourcesCard({ sources }: Props) {
   const { t } = useTranslation();
 
-  const total = SOURCES_MOCK.reduce((sum, { chapters }) => sum + chapters, 0);
+  const total = sources.reduce((sum, { chapters }) => sum + chapters, 0);
 
   return (
     <ProfileStatisticCard label={t('sources')} extra={t('whereReadFrom')}>
       <Stack gap="sm">
-        {SOURCES_MOCK.map(({ id, title, chapters }, index) => (
+        {sources.length === 0 && (
+          <EmptyState
+            title={t('noDataYet')}
+            description={t('sourcesYouReadOnWillAppearHere')}
+            icon={<GlobeIcon />}
+          />
+        )}
+        {sources.map(({ id, title, chapters }, index) => (
           <Fragment key={id}>
             {index > 0 && <Divider />}
             <Group justify="space-between" wrap="nowrap" align="flex-start" gap={8}>

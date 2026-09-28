@@ -24,6 +24,7 @@ export class UserSettingsService {
         viewMode: row.viewMode ?? undefined,
         language: row.language ?? undefined,
         exclusiveFilterConfirmDismissed: row.exclusiveFilterConfirmDismissed ?? undefined,
+        timeZone: row.timeZone ?? undefined,
       };
     }, {});
   }

@@ -14,6 +14,7 @@ import {
   CaretUpIcon,
   CheckIcon,
   FlaskIcon,
+  GearSixIcon,
   GlobeIcon,
   ListIcon,
   PaletteIcon,
@@ -133,6 +134,19 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
               ))}
             </Stack>
           </Collapse>
+          <Button
+            className={styles.switcherOption}
+            onClick={() => {
+              setIsOpened(false);
+              navigate(ROUTE_PATHS.SETTINGS);
+            }}
+            variant="tile"
+            justify="flex-start"
+            size="md"
+            leftSection={<GearSixIcon />}
+          >
+            {t('settings')}
+          </Button>
           {isStaffRole(user?.role) && (
             <>
               <Divider />

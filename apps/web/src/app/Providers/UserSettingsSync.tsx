@@ -35,7 +35,16 @@ function UserSettingsSync() {
     if (!user || !serverSettings || appliedRef.current) return;
     appliedRef.current = true;
 
-    const hasStoredSettings = Object.values(serverSettings).some((value) => value !== undefined);
+    // Часовой пояс нужен только серверу — для статистики чтения. Пока его нет, берём браузерный;
+    // дальше он меняется лишь вручную, на странице настроек.
+    if (!serverSettings.timeZone) {
+      updateUserSettings.mutate({ timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+    }
+
+    // Пояс сервер знает и без localStorage — сам по себе он не значит, что остальное уже в БД.
+    const hasStoredSettings = Object.entries(serverSettings).some(
+      ([key, value]) => key !== 'timeZone' && value !== undefined,
+    );
     if (!hasStoredSettings) {
       const local = readSettings();
       if (Object.values(local).some((value) => value !== undefined)) {

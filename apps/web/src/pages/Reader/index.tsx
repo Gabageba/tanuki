@@ -8,7 +8,9 @@ import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 import useReaderFeed from './hooks/useReaderFeed';
 import useReaderHeaderVisibility from './hooks/useReaderHeaderVisibility';
 import useReaderSettings from './hooks/useReaderSettings';
+import useRecordChapterRead from './hooks/useRecordChapterRead';
 import useSaveReadingProgress from './hooks/useSaveReadingProgress';
+import useTrackReadingTime from './hooks/useTrackReadingTime';
 
 function Reader() {
   const { titleId = '', chapterId = '' } = useParams<{ titleId: string; chapterId: string }>();
@@ -30,6 +32,8 @@ function Reader() {
   // начиналось: в ленте это разные главы, и адрес идёт следом за первой. Пока подклеенная глава
   // грузится, страниц у неё ещё нет — счётчик прячем, а не показываем «1 / 0».
   const pagesLength = activeChapter?.pages.length || null;
+  useRecordChapterRead({ titleId, position, pagesLength });
+  useTrackReadingTime();
 
   // offset: false — шапка не отодвигает контент, а лежит поверх него (она и так fixed). Иначе её
   // показ/скрытие меняло бы доступную высоту, а с ней и размер страницы в режиме «страница

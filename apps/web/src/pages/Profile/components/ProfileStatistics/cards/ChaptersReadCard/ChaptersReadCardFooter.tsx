@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Group } from '@mantine/core';
-import { STATISTIC_PERIOD, type ChaptersReadPoint, type StatisticPeriod } from '../lib';
+import type { ChaptersReadPoint } from '@tanuki/contracts';
+import { STATISTIC_PERIOD, type StatisticPeriod } from '../lib';
 import ChaptersReadCardStat from './ChaptersReadCardStat';
 
 type Props = {

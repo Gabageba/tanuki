@@ -17,6 +17,18 @@ export const VIEW_MODE = {
 export type ViewMode = EnumLiteralsOf<typeof VIEW_MODE>;
 export const ViewModeSchema = z.enum(VIEW_MODE);
 
+/** Зону проверяет сам Intl: он знает ровно те IANA-зоны, с которыми потом и будет считать. */
+export const isValidTimeZone = (timeZone: string) => {
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const TimeZoneSchema = z.string().min(1).refine(isValidTimeZone);
+
 /**
  * Настройки, не завязанные на конкретную страницу (тема, вид каталога, язык, отказ от диалога
  * исключающих фильтров) — одна строка на пользователя в БД, синхронизирующая их между
@@ -28,6 +40,8 @@ export const UserSettingsSchema = z.object({
   viewMode: ViewModeSchema.optional(),
   language: LanguageSchema.optional(),
   exclusiveFilterConfirmDismissed: z.boolean().optional(),
+  /** Часовой пояс, по которому статистика чтения режет сутки и месяцы. */
+  timeZone: TimeZoneSchema.optional(),
 });
 export type UserSettings = z.infer<typeof UserSettingsSchema>;
 

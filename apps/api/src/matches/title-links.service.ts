@@ -73,6 +73,52 @@ export const excludeRejected = (groupKeys: string[], directLinks: TitleLink[]): 
   return groupKeys.filter((key) => !rejected.has(key));
 };
 
+type LinkEdge = Pick<LinkRow, 'aId' | 'bId' | 'verdict'>;
+
+/**
+ * Канонический ключ каждого тайтла — наименьший ключ его подтверждённой группы (с ним самим).
+ * Группа та же, что у listConfirmedGroup: цепочка подтверждений без прямых отказов и не больше
+ * TITLE_GROUP_MAX_SIZE ключей. Тайтлы одной группы получают один ключ — по нему статистика и
+ * считает их одним тайтлом.
+ */
+export const toCanonicalKeys = (keys: string[], links: LinkEdge[]): Map<string, string> => {
+  const confirmed = new Map<string, string[]>();
+  const connect = (from: string, to: string) => {
+    const targets = confirmed.get(from) ?? [];
+    targets.push(to);
+    confirmed.set(from, targets);
+  };
+  for (const link of links) {
+    if (link.verdict !== TITLE_LINK_VERDICT.CONFIRMED) continue;
+    connect(link.aId, link.bId);
+    connect(link.bId, link.aId);
+  }
+
+  const canonical = new Map<string, string>();
+  for (const key of keys) {
+    const visited = new Set([key]);
+    const queue = [key];
+    while (queue.length > 0 && visited.size < TITLE_GROUP_MAX_SIZE) {
+      const current = queue.shift()!;
+      for (const next of confirmed.get(current) ?? []) {
+        if (visited.has(next) || visited.size >= TITLE_GROUP_MAX_SIZE) continue;
+        visited.add(next);
+        queue.push(next);
+      }
+    }
+
+    const directLinks = links
+      .filter((link) => link.aId === key || link.bId === key)
+      .map((link) => toTitleLink({ ...link, aName: '', bName: '' }, key));
+    const group = excludeRejected([...visited], directLinks);
+    canonical.set(
+      key,
+      group.reduce((min, item) => (item < min ? item : min), key),
+    );
+  }
+  return canonical;
+};
+
 @Injectable()
 export class TitleLinksService {
   constructor(private readonly database: DatabaseService) {}
@@ -129,6 +175,45 @@ export class TitleLinksService {
       this.listFor(titleId),
     ]);
     return excludeRejected(group, directLinks);
+  }
+
+  /**
+   * Канонические ключи сразу для многих тайтлов (см. toCanonicalKeys) — одним запросом вместо
+   * listConfirmedGroup на каждый. Все связи, до которых дотягиваются подтверждения от этих
+   * ключей, выбираются целиком, а группы собираются уже в памяти. База недоступна — каждый тайтл
+   * сам себе группа.
+   */
+  async listCanonicalKeys(keys: string[]): Promise<Map<string, string>> {
+    const alone = new Map(keys.map((key) => [key, key]));
+    if (keys.length === 0) return alone;
+
+    return this.database.withFallback(async () => {
+      const startKeys = sql.join(
+        keys.map((key) => sql`${key}`),
+        sql`, `,
+      );
+      const rows = await this.database.db.execute<{
+        a_id: string;
+        b_id: string;
+        verdict: TitleLinkVerdict;
+      }>(sql`
+        WITH RECURSIVE reach(key) AS (
+          SELECT unnest(ARRAY[${startKeys}]::text[])
+          UNION
+          SELECT CASE WHEN link.a_id = reach.key THEN link.b_id ELSE link.a_id END
+          FROM title_links AS link
+          JOIN reach ON link.a_id = reach.key OR link.b_id = reach.key
+          WHERE link.verdict = ${TITLE_LINK_VERDICT.CONFIRMED}
+        )
+        SELECT a_id, b_id, verdict FROM title_links
+        WHERE a_id IN (SELECT key FROM reach) OR b_id IN (SELECT key FROM reach)
+      `);
+
+      return toCanonicalKeys(
+        keys,
+        rows.map((row) => ({ aId: row.a_id, bId: row.b_id, verdict: row.verdict })),
+      );
+    }, alone);
   }
 
   /**

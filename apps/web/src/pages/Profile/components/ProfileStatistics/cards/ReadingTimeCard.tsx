@@ -1,11 +1,19 @@
 import { useTranslation } from 'react-i18next';
 import { Group, Stack, Text } from '@mantine/core';
+import type { ReadingTimeStatistic } from '@tanuki/contracts';
 import ProfileStatisticCard from './ProfileStatisticCard';
-import { READING_TIME_MOCK } from './mocks';
+import { formatHour } from './lib';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import ProgressList from '@/shared/ui/ProgressList';
 
-function ReadingTimeCard() {
+/** Ширина окна пика — столько же часов, сколько отсчитывает сервер. */
+const PEAK_WINDOW_HOURS = 2;
+
+type Props = {
+  readingTime: ReadingTimeStatistic;
+};
+
+function ReadingTimeCard({ readingTime }: Props) {
   const { t } = useTranslation();
   const { formatDuration, getCurrentMonthName } = useDateFormat();
 
@@ -14,11 +22,9 @@ function ReadingTimeCard() {
     averagePerDayMinutes,
     weekdaysPerDayMinutes,
     weekendsPerDayMinutes,
-    peakFrom,
-    peakTo,
-    peakPercent,
+    peak,
     averageSessionMinutes,
-  } = READING_TIME_MOCK;
+  } = readingTime;
 
   const maxPerDay = Math.max(averagePerDayMinutes, weekdaysPerDayMinutes, weekendsPerDayMinutes);
 
@@ -26,10 +32,16 @@ function ReadingTimeCard() {
     <ProfileStatisticCard
       label={t('readingTime')}
       footer={
-        <Text fz={12} c="dimmed">
-          {t('mostOftenReadBetween', { from: peakFrom, to: peakTo, percent: `${peakPercent}%` })}{' '}
-          {t('averageSessionMinutes', { count: averageSessionMinutes })}
-        </Text>
+        peak && (
+          <Text fz={12} c="dimmed">
+            {t('mostOftenReadBetween', {
+              from: formatHour(peak.fromHour),
+              to: formatHour(peak.fromHour + PEAK_WINDOW_HOURS),
+              percent: `${peak.percent}%`,
+            })}{' '}
+            {t('averageSessionMinutes', { count: averageSessionMinutes })}
+          </Text>
+        )
       }
     >
       <Stack gap="md">

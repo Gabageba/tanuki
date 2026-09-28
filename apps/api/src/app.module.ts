@@ -13,6 +13,7 @@ import { InvitesModule } from './invites/invites.module';
 import { MatchesModule } from './matches/matches.module';
 import { ReaderSettingsModule } from './reader-settings/reader-settings.module';
 import { ReadingProgressModule } from './reading-progress/reading-progress.module';
+import { ReadingStatisticsModule } from './reading-statistics/reading-statistics.module';
 import { ResilienceModule } from './resilience/resilience.module';
 import { SearchModule } from './search/search.module';
 import { SourceProbeModule } from './source-probe/source-probe.module';
@@ -39,6 +40,7 @@ import { UsersModule } from './users/users.module';
     ImgProxyModule,
     ReaderSettingsModule,
     ReadingProgressModule,
+    ReadingStatisticsModule,
     UserSettingsModule,
     UsersModule,
   ],

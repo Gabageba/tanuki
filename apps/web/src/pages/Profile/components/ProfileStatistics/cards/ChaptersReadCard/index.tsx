@@ -1,18 +1,40 @@
 import { useTranslation } from 'react-i18next';
 import { SegmentedControl } from '@mantine/core';
 import { useState } from 'react';
+import type { ChaptersReadPoint } from '@tanuki/contracts';
 import ProfileStatisticCard from '../ProfileStatisticCard';
 import type { StatisticPeriod } from '../lib';
 import { formatBarDate, formatBarLabel, STATISTIC_PERIOD } from '../lib';
 import BarChart from '@/shared/ui/BarChart';
 import ChaptersReadCardFooter from './ChaptersReadCardFooter';
-import { getChaptersReadMock } from '../mocks';
 
-function ChaptersReadCard() {
+const WEEK_DAYS = 7;
+
+type Props = {
+  chaptersByDay: ChaptersReadPoint[];
+  chaptersByMonth: ChaptersReadPoint[];
+};
+
+const getPeriodPoints = (
+  period: StatisticPeriod,
+  chaptersByDay: ChaptersReadPoint[],
+  chaptersByMonth: ChaptersReadPoint[],
+) => {
+  switch (period) {
+    case STATISTIC_PERIOD.WEEK:
+      return chaptersByDay.slice(-WEEK_DAYS);
+    case STATISTIC_PERIOD.MONTH:
+      return chaptersByDay;
+    case STATISTIC_PERIOD.YEAR:
+      return chaptersByMonth;
+  }
+};
+
+function ChaptersReadCard({ chaptersByDay, chaptersByMonth }: Props) {
   const { t, i18n } = useTranslation();
   const [period, setPeriod] = useState<StatisticPeriod>(STATISTIC_PERIOD.WEEK);
 
-  const points = getChaptersReadMock(period);
+  const points = getPeriodPoints(period, chaptersByDay, chaptersByMonth);
 
   const items = points.map(({ date, count }) => ({
     key: date,
@@ -41,7 +63,12 @@ function ChaptersReadCard() {
       }
       footer={<ChaptersReadCardFooter points={points} period={period} />}
     >
-      <BarChart items={items} highlightedIndex={items.length - 1} />
+      <BarChart
+        items={items}
+        highlightedIndex={items.length - 1}
+        // Подписи через неделю — каждая попадает на тот же день недели, что и сегодня.
+        labelStep={WEEK_DAYS}
+      />
     </ProfileStatisticCard>
   );
 }

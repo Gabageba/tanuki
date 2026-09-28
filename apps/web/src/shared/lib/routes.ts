@@ -19,7 +19,9 @@ export const ROUTE_PATHS = {
   PRIVACY_POLICY: '/privacy',
   PLAYGROUND: '/playground',
   PLAYGROUND_READING_MARKS: '/playground/reading-marks',
+  PLAYGROUND_CHART_LABELS: '/playground/chart-labels',
   PROFILE: '/profile',
+  SETTINGS: '/settings',
 } as const;
 
 export type RoutePath = EnumLiteralsOf<typeof ROUTE_PATHS>;

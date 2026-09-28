@@ -7,6 +7,7 @@ import {
   integer,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -224,6 +225,8 @@ export const userSettings = pgTable('user_settings', {
   viewMode: text('view_mode').$type<ViewMode>(),
   language: text('language').$type<Language>(),
   exclusiveFilterConfirmDismissed: boolean('exclusive_filter_confirm_dismissed'),
+  /** IANA-зона («Europe/Moscow»): по ней статистика чтения режет сутки и месяцы. */
+  timeZone: text('time_zone'),
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -275,6 +278,54 @@ export const readingProgress = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.titleKey] })],
+);
+
+/**
+ * Прочитанные главы — журнал для статистики. Глава прочитана, когда читатель дошёл до её последней
+ * страницы; строка пишется один раз (PK), так что перечитывание дату первого прочтения не
+ * сдвигает. Одну главу на разных источниках склеивает уже подсчёт — по связям тайтлов на момент
+ * запроса (reading-statistics/statistics.ts), а не запись.
+ */
+export const chapterReads = pgTable(
+  'chapter_reads',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    chapterId: text('chapter_id').notNull(),
+    sourceId: text('source_id').notNull(),
+    /** linkKeyOf(sourceId, url) — по нему глава находит свою группу в title_links. */
+    titleKey: text('title_key').notNull(),
+    /** Снимок тома и номера: по ним одна глава узнаётся на связанных источниках. */
+    chapterVolume: doublePrecision('chapter_volume'),
+    chapterNumber: doublePrecision('chapter_number'),
+    /** Названия тегов тайтла на момент прочтения — для разбивки по тегам. */
+    tags: text('tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    readAt: timestamp('read_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.chapterId] }),
+    index('chapter_reads_user_read_at_idx').on(table.userId, table.readAt),
+  ],
+);
+
+/**
+ * Активное время в читалке, по минутам: строка — минута (UTC), в которой читатель был на месте,
+ * и сколько секунд из неё он читал. Из этих минут подсчёт собирает сессии и час пик.
+ */
+export const readingActivity = pgTable(
+  'reading_activity',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    minute: timestamp('minute', { withTimezone: true }).notNull(),
+    seconds: smallint('seconds').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.minute] })],
 );
 
 /** Ссылки в письмах: подтверждение почты и сброс пароля — один токен на активную цель за раз. */

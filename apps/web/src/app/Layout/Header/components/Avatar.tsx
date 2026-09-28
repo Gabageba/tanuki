@@ -52,7 +52,9 @@ function Avatar() {
             {t('playground')}
           </Menu.Item>
         )}
-        <Menu.Item leftSection={<GearSixIcon />}>{t('settings')}</Menu.Item>
+        <Menu.Item leftSection={<GearSixIcon />} component={Link} to={ROUTE_PATHS.SETTINGS}>
+          {t('settings')}
+        </Menu.Item>
         <Menu.Sub>
           <Menu.Sub.Target>
             <Menu.Sub.Item leftSection={<PaletteIcon />}>{t('theme')}</Menu.Sub.Item>
