@@ -14,6 +14,14 @@ export type PlaygroundTask = {
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
   {
+    path: ROUTE_PATHS.PLAYGROUND_CHART_LABELS,
+    title: 'Подписи месячного графика',
+    description:
+      'Как подписать 30 столбиков «Прочитано глав» за месяц, чтобы было видно и дату, и к какому столбику она относится.',
+    createdAt: '2026-09-28',
+    decision: 'L6',
+  },
+  {
     path: ROUTE_PATHS.PLAYGROUND_READING_MARKS,
     title: 'Отметки других источников',
     description:

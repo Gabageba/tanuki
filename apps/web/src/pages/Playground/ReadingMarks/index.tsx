@@ -13,7 +13,7 @@ import {
 import { buildChapters, placeMark } from './lib';
 import { DEMO_BRANCHES, OWN_MARK, getDemoMarks } from './mocks';
 import DemoControls from './components/DemoControls';
-import DemoSection from './components/DemoSection';
+import DemoSection from '../components/DemoSection';
 import SummaryStackPopover from './components/SummaryStackPopover';
 import SummaryStackCaption from './components/SummaryStackCaption';
 import SummaryButtonStack from './components/SummaryButtonStack';
