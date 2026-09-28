@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CURRENT_PAGE_ROOT_MARGIN,
   PIN_RELEASE_EVENTS,
@@ -31,6 +31,8 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
   const pendingKey = useRef<string | null>(null);
   /** Снимает удержание страницы, к которой прокрутили последней (см. pinPage). */
   const unpin = useRef<(() => void) | null>(null);
+  /** Пока страница удерживается, лента прокручивается сама — это не движение читателя. */
+  const [isPinned, setIsPinned] = useState(false);
 
   /**
    * Прокрутка к странице — ещё не конец: страницы выше неё, пока грузятся, держат место по
@@ -51,7 +53,10 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
       resizeObserver.disconnect();
       PIN_RELEASE_EVENTS.forEach((type) => window.removeEventListener(type, release));
       window.removeEventListener('pointerdown', handlePointerDown);
-      if (unpin.current === release) unpin.current = null;
+      if (unpin.current === release) {
+        unpin.current = null;
+        setIsPinned(false);
+      }
     };
     // Клик по самому документу — это полоса прокрутки; тап по странице (он прячет шапку) место
     // чтения не меняет и удержание не снимает.
@@ -62,6 +67,7 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
     PIN_RELEASE_EVENTS.forEach((type) => window.addEventListener(type, release, { passive: true }));
     window.addEventListener('pointerdown', handlePointerDown);
     unpin.current = release;
+    setIsPinned(true);
   }, []);
 
   useEffect(() => () => unpin.current?.(), []);
@@ -131,7 +137,7 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
     [pinPage],
   );
 
-  return { registerPage, scrollToPosition };
+  return { registerPage, scrollToPosition, isPinned };
 }
 
 export default useCurrentPageObserver;

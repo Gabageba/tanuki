@@ -42,7 +42,7 @@ function useReaderFeed({ titleId, chapterId, readingMode }: Params) {
   );
   const [tailChapterId, setTailChapterId] = useState<string | null>(null);
 
-  const { registerPage, scrollToPosition } = useCurrentPageObserver({
+  const { registerPage, scrollToPosition, isPinned } = useCurrentPageObserver({
     enabled: readingMode === READER_READING_MODE.VERTICAL,
     onChange: setPosition,
   });
@@ -171,6 +171,8 @@ function useReaderFeed({ titleId, chapterId, readingMode }: Params) {
     setPosition,
     prependChapter,
     registerPage,
+    /** Лента сама держит страницу на месте, и прокрутка сейчас не от читателя. */
+    isPinned,
     /** Скелетон во весь экран — только для первой загрузки, когда показать нечего в принципе.
      *  Глава, подклеенная к уже прочитанным, ждёт лоадером и картинки из ленты не выкидывает. */
     isPending: chapters.every((chapter) => chapter.isPending),
