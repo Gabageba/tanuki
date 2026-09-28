@@ -30,7 +30,7 @@ function SourceCard({ source }: Props) {
             </Text>
           </Group>
 
-          <SourceStatusBadge source={source} />
+          <SourceStatusBadge source={source} visibleFrom="xxs" />
         </Stack>
       </Group>
     </Card>
