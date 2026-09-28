@@ -58,6 +58,7 @@ function useReaderFeed({ titleId, chapterId, readingMode }: Params) {
     nextChapterId: results[index]?.data?.nextChapterId ?? null,
     isPending: results[index]?.isPending ?? true,
     isError: results[index]?.isError ?? false,
+    error: results[index]?.error ?? null,
     refetch: () => {
       void results[index]?.refetch();
     },

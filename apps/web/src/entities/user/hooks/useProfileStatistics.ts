@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ProfileStatisticsResponse } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
-
 export const PROFILE_STATISTICS_QUERY_KEY = ['profile-statistics'] as const;
 
 function useProfileStatistics() {

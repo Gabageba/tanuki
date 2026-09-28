@@ -5,7 +5,6 @@ import { useSearchParams } from 'react-router';
 import { CaretDownIcon, CaretUpIcon, FunnelIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import PageLayout from '@/shared/ui/PageLayout';
-import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { SORT_DIRECTION, type FilterSelection } from '@tanuki/contracts';
 import useSource from '@/entities/source/hooks/useSource';
 import { resolveEffectiveSortOrders, resolveOrder } from '../../utils/sortOrder';
@@ -26,13 +25,7 @@ type Props = {
 function CatalogSettings({ sourceId }: Props) {
   const { t } = useTranslation();
   const { data: source, isPending: isSourcePending } = useSource({ sourceId });
-  const {
-    data: filters,
-    isPending: isFiltersPending,
-    isError: isFiltersError,
-    error: filtersError,
-    refetch: refetchFilters,
-  } = useFilters({ sourceId });
+  const { data: filters, isPending: isFiltersPending } = useFilters({ sourceId });
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
   const [, setSearchParams] = useSearchParams();
 
@@ -107,14 +100,6 @@ function CatalogSettings({ sourceId }: Props) {
             >
               <Text>{t('filters')}</Text>
             </Button>
-          )}
-          {isFiltersError && (
-            <Group gap="xs" wrap="nowrap">
-              <ApiErrorText error={filtersError} />
-              <Button variant="subtle" size="compact-sm" onClick={() => refetchFilters()}>
-                {t('retry')}
-              </Button>
-            </Group>
           )}
         </Grid.Col>
         <Grid.Col span={{ base: 12, xs: 'content' }} order={{ base: 3, xs: 2 }}>

@@ -3,10 +3,8 @@ import { Anchor, Button, Divider, Stack, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { notifications } from '@mantine/notifications';
 import { EnvelopeSimpleIcon } from '@phosphor-icons/react';
 import type { Language } from '@tanuki/contracts';
-import { ApiRequestError } from '@/shared/api/client';
 import { validateEmail } from '@/shared/lib/authValidation';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useForgotPassword from './hooks/useForgotPassword';
@@ -44,12 +42,6 @@ function ForgotPassword() {
       { email: values.email.trim(), language: i18n.language as Language },
       {
         onSuccess: () => setSubmitted(true),
-        onError: (error) =>
-          notifications.show({
-            color: 'red',
-            title: t('error'),
-            message: error instanceof ApiRequestError ? error.message : t('tryAgainLater'),
-          }),
       },
     );
   });

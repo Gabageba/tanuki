@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
-import { apiFetch, ApiRequestError } from '@/shared/api/client';
+import { apiFetch } from '@/shared/api/client';
 
 function useProbeAllSources() {
   const { t } = useTranslation();
@@ -13,12 +13,6 @@ function useProbeAllSources() {
       queryClient.invalidateQueries({ queryKey: ['sources'] });
       notifications.show({ color: 'green', title: t('checkFinished'), message: t('allSources') });
     },
-    onError: (error) =>
-      notifications.show({
-        color: 'red',
-        title: t('error'),
-        message: error instanceof ApiRequestError ? error.message : t('checkFailed'),
-      }),
   });
 }
 

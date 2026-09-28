@@ -1,38 +1,56 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { API_ERROR_CODE, type ApiErrorCode } from '@tanuki/contracts';
+import { API_ERROR_CODE, LANGUAGE, type ApiErrorCode } from '@tanuki/contracts';
+import {
+  translateErrorMessage,
+  type ErrorMessageKey,
+  type ErrorMessageParams,
+} from './error-messages';
 
+type ApiExceptionOptions = {
+  params?: ErrorMessageParams;
+  sourceId?: string;
+  retryAfter?: number;
+  /** Внутренняя подробность для логов и статуса источника — клиенту не уходит. */
+  detail?: string;
+};
+
+/**
+ * Клиенту уходит `messageKey`, переведённый на язык запроса (см. HttpExceptionFilter).
+ * `message` самого исключения — внутренний текст для логов: `detail`, если он есть, иначе
+ * русский перевод ключа.
+ */
 export class ApiException extends HttpException {
+  public readonly params?: ErrorMessageParams;
+  public readonly sourceId?: string;
+  public readonly retryAfter?: number;
+
   constructor(
     public readonly code: ApiErrorCode,
-    message: string,
+    public readonly messageKey: ErrorMessageKey,
     status: HttpStatus,
-    public readonly sourceId?: string,
-    public readonly retryAfter?: number,
+    { params, sourceId, retryAfter, detail }: ApiExceptionOptions = {},
   ) {
-    super(message, status);
+    super(detail ?? translateErrorMessage(LANGUAGE.RU, messageKey, params), status);
+    this.params = params;
+    this.sourceId = sourceId;
+    this.retryAfter = retryAfter;
   }
 }
 
 export class SourceUnavailableException extends ApiException {
   constructor(sourceId?: string, retryAfter = 30) {
-    super(
-      API_ERROR_CODE.SOURCE_UNAVAILABLE,
-      'Источник недоступен',
-      HttpStatus.SERVICE_UNAVAILABLE,
+    super(API_ERROR_CODE.SOURCE_UNAVAILABLE, 'sourceUnavailable', HttpStatus.SERVICE_UNAVAILABLE, {
       sourceId,
       retryAfter,
-    );
+    });
   }
 }
 
 export class SourceBlockedException extends ApiException {
   constructor(sourceId?: string) {
-    super(
-      API_ERROR_CODE.SOURCE_BLOCKED,
-      'Источник вернул антибот-челлендж',
-      HttpStatus.BAD_GATEWAY,
+    super(API_ERROR_CODE.SOURCE_BLOCKED, 'sourceReturnedAntiBotChallenge', HttpStatus.BAD_GATEWAY, {
       sourceId,
-    );
+    });
   }
 }
 
@@ -47,9 +65,9 @@ export class SourceAuthRequiredException extends ApiException {
   constructor(sourceId?: string) {
     super(
       API_ERROR_CODE.SOURCE_AUTH_REQUIRED,
-      'Источник требует авторизации',
+      'sourceRequiresAuthorization',
       HttpStatus.BAD_GATEWAY,
-      sourceId,
+      { sourceId },
     );
   }
 }
@@ -61,30 +79,36 @@ export class SourceAuthRequiredException extends ApiException {
 // human has to redo the reCAPTCHA-gated login" (`pnpm --filter @tanuki/parsers login:libsocial`).
 export class SourceTokenExpiredException extends ApiException {
   constructor(sourceId?: string) {
-    super(
-      API_ERROR_CODE.SOURCE_TOKEN_EXPIRED,
-      'Сохранённая сессия источника истекла, требуется повторный вход',
-      HttpStatus.BAD_GATEWAY,
+    super(API_ERROR_CODE.SOURCE_TOKEN_EXPIRED, 'sourceSessionExpired', HttpStatus.BAD_GATEWAY, {
       sourceId,
+    });
+  }
+}
+
+/** `detail` — сырой текст ParseError: попадает в логи и статус источника, но не клиенту. */
+export class ParserFailedException extends ApiException {
+  constructor(sourceId?: string, detail?: string) {
+    super(
+      API_ERROR_CODE.PARSER_FAILED,
+      'parserFailedToReadSourceResponse',
+      HttpStatus.BAD_GATEWAY,
+      {
+        sourceId,
+        detail,
+      },
     );
   }
 }
 
-export class ParserFailedException extends ApiException {
-  constructor(message = 'Парсер не смог разобрать ответ источника', sourceId?: string) {
-    super(API_ERROR_CODE.PARSER_FAILED, message, HttpStatus.BAD_GATEWAY, sourceId);
-  }
-}
-
 export class NotFoundApiException extends ApiException {
-  constructor(message = 'Не найдено') {
-    super(API_ERROR_CODE.NOT_FOUND, message, HttpStatus.NOT_FOUND);
+  constructor(messageKey: ErrorMessageKey = 'notFound', params?: ErrorMessageParams) {
+    super(API_ERROR_CODE.NOT_FOUND, messageKey, HttpStatus.NOT_FOUND, { params });
   }
 }
 
 export class InvalidSignatureException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.INVALID_SIGNATURE, 'Некорректная подпись у /img', HttpStatus.FORBIDDEN);
+    super(API_ERROR_CODE.INVALID_SIGNATURE, 'invalidImageSignature', HttpStatus.FORBIDDEN);
   }
 }
 
@@ -97,7 +121,7 @@ export class StorageUnavailableException extends ApiException {
   constructor() {
     super(
       API_ERROR_CODE.STORAGE_UNAVAILABLE,
-      'Хранилище недоступно, правка не сохранена',
+      'storageUnavailableChangeNotSaved',
       HttpStatus.SERVICE_UNAVAILABLE,
     );
   }
@@ -105,27 +129,24 @@ export class StorageUnavailableException extends ApiException {
 
 export class RateLimitedException extends ApiException {
   constructor(sourceId?: string, retryAfter = 5) {
-    super(
-      API_ERROR_CODE.RATE_LIMITED,
-      'Слишком много запросов к источнику, попробуйте позже',
-      HttpStatus.TOO_MANY_REQUESTS,
+    super(API_ERROR_CODE.RATE_LIMITED, 'tooManySourceRequests', HttpStatus.TOO_MANY_REQUESTS, {
       sourceId,
       retryAfter,
-    );
+    });
   }
 }
 
 /** Нет валидной сессии — брошено глобальным AuthGuard'ом на непубличном эндпоинте. */
 export class UnauthorizedApiException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.UNAUTHORIZED, 'Требуется вход', HttpStatus.UNAUTHORIZED);
+    super(API_ERROR_CODE.UNAUTHORIZED, 'loginRequired', HttpStatus.UNAUTHORIZED);
   }
 }
 
 /** Сессия есть, но роль не подходит (например, не admin на /invites). */
 export class ForbiddenApiException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.FORBIDDEN, 'Недостаточно прав', HttpStatus.FORBIDDEN);
+    super(API_ERROR_CODE.FORBIDDEN, 'insufficientPermissions', HttpStatus.FORBIDDEN);
   }
 }
 
@@ -133,7 +154,7 @@ export class InvalidCredentialsException extends ApiException {
   constructor() {
     super(
       API_ERROR_CODE.INVALID_CREDENTIALS,
-      'Неверная почта, имя пользователя или пароль',
+      'wrongEmailUsernameOrPassword',
       HttpStatus.UNAUTHORIZED,
     );
   }
@@ -141,57 +162,52 @@ export class InvalidCredentialsException extends ApiException {
 
 export class EmailNotVerifiedException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.EMAIL_NOT_VERIFIED, 'Почта не подтверждена', HttpStatus.FORBIDDEN);
+    super(API_ERROR_CODE.EMAIL_NOT_VERIFIED, 'emailNotVerified', HttpStatus.FORBIDDEN);
   }
 }
 
 export class EmailTakenException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.EMAIL_TAKEN, 'Эта почта уже зарегистрирована', HttpStatus.CONFLICT);
+    super(API_ERROR_CODE.EMAIL_TAKEN, 'emailAlreadyRegistered', HttpStatus.CONFLICT);
   }
 }
 
 export class UsernameTakenException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.USERNAME_TAKEN, 'Это имя пользователя уже занято', HttpStatus.CONFLICT);
+    super(API_ERROR_CODE.USERNAME_TAKEN, 'usernameAlreadyTaken', HttpStatus.CONFLICT);
   }
 }
 
 export class InvalidImageException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.INVALID_IMAGE, 'Не удалось прочитать картинку', HttpStatus.BAD_REQUEST);
+    super(API_ERROR_CODE.INVALID_IMAGE, 'couldNotReadImage', HttpStatus.BAD_REQUEST);
   }
 }
 
 export class InviteInvalidException extends ApiException {
   constructor() {
-    super(
-      API_ERROR_CODE.INVITE_INVALID,
-      'Приглашение недействительно или уже использовано',
-      HttpStatus.BAD_REQUEST,
-    );
+    super(API_ERROR_CODE.INVITE_INVALID, 'inviteInvalidOrUsed', HttpStatus.BAD_REQUEST);
   }
 }
 
 /** Ссылка подтверждения почты или сброса пароля — не найдена, использована или истекла. */
 export class TokenInvalidException extends ApiException {
   constructor() {
-    super(
-      API_ERROR_CODE.TOKEN_INVALID,
-      'Ссылка недействительна или устарела',
-      HttpStatus.BAD_REQUEST,
-    );
+    super(API_ERROR_CODE.TOKEN_INVALID, 'linkInvalidOrExpired', HttpStatus.BAD_REQUEST);
   }
 }
 
 export class TooManyRequestsException extends ApiException {
   constructor(retryAfter: number) {
-    super(
-      API_ERROR_CODE.TOO_MANY_REQUESTS,
-      'Слишком много попыток, попробуйте позже',
-      HttpStatus.TOO_MANY_REQUESTS,
-      undefined,
+    super(API_ERROR_CODE.TOO_MANY_REQUESTS, 'tooManyAttempts', HttpStatus.TOO_MANY_REQUESTS, {
       retryAfter,
-    );
+    });
+  }
+}
+
+/** Прочий 4xx без своего кода — например, не передан обязательный параметр. */
+export class BadRequestApiException extends ApiException {
+  constructor(messageKey: ErrorMessageKey = 'invalidRequest') {
+    super(API_ERROR_CODE.BAD_REQUEST, messageKey, HttpStatus.BAD_REQUEST);
   }
 }

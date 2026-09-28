@@ -1,0 +1,47 @@
+@use '../../../styles/breakpoints';
+
+// Вёрстка по мотивам ui.mantine.dev/component/nothing-found-background: огромный код ошибки
+// фоном, текст поверх его нижней части, кнопки — под всем этим. Код — текстом, а не SVG, чтобы
+// один компонент рисовал любой код. Здесь только то, чего нет в style props Mantine, остальное —
+// пропсами в разметке.
+
+// Блок стоит по центру видимой области: высота экрана за вычетом шапки и нижней панели AppShell
+// (вне каркаса, в RouteError, их переменных нет — остаётся весь экран) и вертикальных отступов
+// PageLayout.Content.
+.root {
+  --status-screen-chrome: calc(
+    var(--app-shell-header-offset, 0rem) + var(--app-shell-footer-offset, 0rem)
+  );
+
+  min-height: calc(100dvh - var(--status-screen-chrome) - 2 * var(--mantine-spacing-md));
+}
+
+// Код и текст — в одной ячейке грида, друг поверх друга: высота блока — по большему из них, так
+// что кнопки после него никогда не наезжают на цифры. Размер цифр — от ширины самого блока
+// (container query), так что код всегда занимает её целиком, как SVG в оригинале, и на телефоне
+// тоже. Отступ текста — от размера цифр: пропорция «текст наезжает на нижнюю часть кода» не
+// зависит от экрана.
+.overlay {
+  --status-code-size: min(58cqi, 520px);
+
+  container-type: inline-size;
+  display: grid;
+
+  > * {
+    grid-area: 1 / 1;
+  }
+}
+
+// Не `gray-0`/`dark-6`, как в оригинале: у нас `gray-0` — это и есть фон страницы в светлой
+// теме, а `dark-6` почти сливается с тёмным `dark-7`, — цифр не было бы видно. Шаг ярче фона,
+// не больше: код — фон, а не содержание.
+.code {
+  letter-spacing: -0.02em;
+  color: var(--mantine-color-dark-5);
+  user-select: none;
+  pointer-events: none;
+
+  :global([data-mantine-color-scheme='light']) & {
+    color: var(--mantine-color-gray-2);
+  }
+}

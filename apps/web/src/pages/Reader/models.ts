@@ -18,6 +18,7 @@ export type ReaderFeedChapter = {
   nextChapterId: string | null;
   isPending: boolean;
   isError: boolean;
+  error: Error | null;
   /** Повторный запрос главы. Нужен там, где уйти с неупавшей главы некому: в горизонтальном режиме
    *  она занимает весь экран, а адрес уже показывает её. */
   refetch: () => void;

@@ -16,6 +16,8 @@ import '@fontsource/unbounded/600.css';
 // JetBrains Mono — данные: номера, даты, счётчики, проценты, бейджи, мелкие капсом-лейблы.
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
+// 800 — только огромный код ошибки фоном в StatusScreen.
+import '@fontsource/jetbrains-mono/800.css';
 
 type Props = {
   children: ReactNode;

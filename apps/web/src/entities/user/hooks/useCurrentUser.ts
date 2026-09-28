@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CurrentUser } from '@tanuki/contracts';
 import { apiFetch, ApiRequestError } from '@/shared/api/client';
+import { SILENT_ERROR_META } from '@/shared/api/errorMeta';
 
 export const CURRENT_USER_QUERY_KEY = ['auth', 'me'] as const;
 
@@ -21,6 +22,8 @@ function useCurrentUser() {
     },
     staleTime: 60_000,
     retry: false,
+    // Фоновая проверка сессии — её сбой человеку сообщать незачем.
+    meta: SILENT_ERROR_META,
   });
 }
 

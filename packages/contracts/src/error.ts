@@ -24,6 +24,12 @@ export const API_ERROR_CODE = {
   TOKEN_INVALID: 'tokenInvalid',
   TOO_MANY_REQUESTS: 'tooManyRequests',
   INVALID_IMAGE: 'invalidImage',
+  // Тело или параметры запроса не прошли zod-схему.
+  VALIDATION_FAILED: 'validationFailed',
+  // Прочий 4xx, у которого нет своего кода.
+  BAD_REQUEST: 'badRequest',
+  // Непредвиденное падение сервера — всё, что не было ApiException/HttpException.
+  INTERNAL: 'internal',
 } as const;
 export type ApiErrorCode = EnumLiteralsOf<typeof API_ERROR_CODE>;
 

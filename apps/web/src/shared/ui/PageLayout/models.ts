@@ -1,7 +1,9 @@
 export type PageLayoutBaseQuery = {
+  data: unknown;
   isPending: boolean;
   isError: boolean;
   error: Error | null;
+  refetch: () => unknown;
 };
 
 export type PageLayoutRefreshableQuery = PageLayoutBaseQuery & {

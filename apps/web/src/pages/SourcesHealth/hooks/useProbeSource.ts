@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
-import { apiFetch, ApiRequestError } from '@/shared/api/client';
+import { apiFetch } from '@/shared/api/client';
 
 type Params = { sourceId: string; sourceTitle: string };
 
@@ -15,12 +15,6 @@ function useProbeSource({ sourceId, sourceTitle }: Params) {
       queryClient.invalidateQueries({ queryKey: ['sources'] });
       notifications.show({ color: 'green', title: t('checkPassed'), message: sourceTitle });
     },
-    onError: (error) =>
-      notifications.show({
-        color: 'red',
-        title: t('error'),
-        message: error instanceof ApiRequestError ? error.message : t('requestFailed'),
-      }),
   });
 }
 

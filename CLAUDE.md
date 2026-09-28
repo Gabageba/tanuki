@@ -10,6 +10,12 @@
   declaration.
 - No `index.ts` barrels that only import a component and re-export it. Import components straight
   from their own file.
+- Mantine first. Layout and text are built from Mantine components (`Box`, `Stack`, `Group`,
+  `Flex`, `Center`, `Text`, `Title`, …) and their style props (`pos`, `w`, `mt`, `ff`, `fw`, `ta`,
+  …), not from raw `div`/`span`/`p` plus a CSS module. Before writing a custom component, check
+  whether Mantine already ships one. A CSS module is only for what style props can't express —
+  pseudo-elements, container queries, color-scheme-dependent values, `z-index`, custom properties
+  — and holds just those declarations.
 - Elements with no children are self-closing — `<ActionIcon />`, never
   `<ActionIcon></ActionIcon>`.
 

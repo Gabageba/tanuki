@@ -27,7 +27,7 @@ export const decodeTitleId = (id: string): TitleRef => {
   try {
     return decode<TitleRef>(id);
   } catch {
-    throw new NotFoundApiException('Некорректный id тайтла');
+    throw new NotFoundApiException('invalidTitleId');
   }
 };
 
@@ -39,7 +39,7 @@ export const decodeChapterId = (id: string): ChapterRef => {
   try {
     return decode<ChapterRef>(id);
   } catch {
-    throw new NotFoundApiException('Некорректный id главы');
+    throw new NotFoundApiException('invalidChapterId');
   }
 };
 
@@ -47,7 +47,7 @@ export const decodeChapterId = (id: string): ChapterRef => {
  *  формат, в котором клиент теперь передаёт id тайтла и главы целиком, без разбора на части. */
 export const splitCompositeId = (id: string): { sourceId: string; opaqueId: string } => {
   const separator = id.indexOf(':');
-  if (separator <= 0) throw new NotFoundApiException(`Некорректный идентификатор ${id}`);
+  if (separator <= 0) throw new NotFoundApiException('invalidIdentifier', { id });
 
   return { sourceId: id.slice(0, separator), opaqueId: id.slice(separator + 1) };
 };

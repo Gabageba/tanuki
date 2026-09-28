@@ -8,6 +8,7 @@ import AuthLayout from '@/app/AuthLayout';
 import RequireAuth from '@/app/RequireAuth';
 import RequireStaff from '@/app/RequireStaff';
 import GuestOnly from '@/app/GuestOnly';
+import RouteError from '@/app/RouteError';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import SearchPage from '@/pages/Search/SearchPage';
 import Sources from '@/pages/Sources';
@@ -30,6 +31,7 @@ import PlaygroundReadingMarks from '@/pages/Playground/ReadingMarks';
 import PlaygroundChartLabels from '@/pages/Playground/ChartLabels';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
+import NotFound from '@/pages/NotFound';
 
 // Песочница с макетами вариантов интерфейса — только для разработки, в прод-сборку не попадает.
 const PLAYGROUND_ROUTES = import.meta.env.DEV
@@ -51,112 +53,123 @@ const PLAYGROUND_ROUTES = import.meta.env.DEV
 
 const router = createBrowserRouter([
   {
-    element: <RequireAuth />,
+    // Упавший рендер любой страницы — свой экран вместо дефолтного экрана react-router.
+    errorElement: <RouteError />,
     children: [
       {
-        element: <Layout />,
+        element: <RequireAuth />,
         children: [
           {
-            path: '/',
-            element: <Navigate to={ROUTE_PATHS.SOURCES} replace />,
-          },
-          {
-            path: ROUTE_PATHS.SOURCES,
-            element: <Sources />,
-          },
-          {
-            path: ROUTE_PATHS.SOURCES_HEALTH,
-            element: <SourcesHealth />,
-          },
-          {
-            path: ROUTE_PATHS.SEARCH,
-            element: <SearchPage />,
-          },
-          {
-            path: ROUTE_PATHS.CATALOG,
-            element: <Catalog />,
-          },
-          {
-            path: ROUTE_PATHS.TITLE,
-            element: <Title />,
-          },
-          {
-            path: ROUTE_PATHS.NOTIFICATIONS,
-            element: <Notifications />,
-          },
-          {
-            path: ROUTE_PATHS.BOOKMARKS,
-            element: <Bookmarks />,
-          },
-          ...PLAYGROUND_ROUTES,
-          {
-            element: <RequireStaff />,
+            element: <Layout />,
             children: [
               {
-                path: ROUTE_PATHS.INVITES,
-                element: <Invites />,
+                path: '/',
+                element: <Navigate to={ROUTE_PATHS.SOURCES} replace />,
+              },
+              {
+                path: ROUTE_PATHS.SOURCES,
+                element: <Sources />,
+              },
+              {
+                path: ROUTE_PATHS.SOURCES_HEALTH,
+                element: <SourcesHealth />,
+              },
+              {
+                path: ROUTE_PATHS.SEARCH,
+                element: <SearchPage />,
+              },
+              {
+                path: ROUTE_PATHS.CATALOG,
+                element: <Catalog />,
+              },
+              {
+                path: ROUTE_PATHS.TITLE,
+                element: <Title />,
+              },
+              {
+                path: ROUTE_PATHS.NOTIFICATIONS,
+                element: <Notifications />,
+              },
+              {
+                path: ROUTE_PATHS.BOOKMARKS,
+                element: <Bookmarks />,
+              },
+              ...PLAYGROUND_ROUTES,
+              {
+                element: <RequireStaff />,
+                children: [
+                  {
+                    path: ROUTE_PATHS.INVITES,
+                    element: <Invites />,
+                  },
+                ],
+              },
+              {
+                path: ROUTE_PATHS.PROFILE,
+                element: <Profile />,
+              },
+              {
+                path: ROUTE_PATHS.SETTINGS,
+                element: <Settings />,
+              },
+              // Несуществующий адрес — внутри каркаса, чтобы с него было куда уйти по меню.
+              {
+                path: '*',
+                element: <NotFound />,
               },
             ],
           },
+          // Читалка живёт вне общего каркаса: она на весь экран и с чёрным фоном, шапка ей мешает.
+          // Внутри RequireAuth всё равно остаётся — без сессии её тоже не открыть.
           {
-            path: ROUTE_PATHS.PROFILE,
-            element: <Profile />,
-          },
-          {
-            path: ROUTE_PATHS.SETTINGS,
-            element: <Settings />,
+            path: ROUTE_PATHS.READER,
+            element: <Reader />,
           },
         ],
       },
-      // Читалка живёт вне общего каркаса: она на весь экран и с чёрным фоном, шапка ей мешает.
-      // Внутри RequireAuth всё равно остаётся — без сессии её тоже не открыть.
       {
-        path: ROUTE_PATHS.READER,
-        element: <Reader />,
+        element: <GuestOnly />,
+        children: [
+          {
+            element: <AuthLayout />,
+            children: [
+              {
+                path: ROUTE_PATHS.LOGIN,
+                element: <Login />,
+              },
+              {
+                path: ROUTE_PATHS.REGISTER,
+                element: <Register />,
+              },
+              {
+                path: ROUTE_PATHS.VERIFY_EMAIL,
+                element: <VerifyEmail />,
+              },
+              {
+                path: ROUTE_PATHS.FORGOT_PASSWORD,
+                element: <ForgotPassword />,
+              },
+              {
+                path: ROUTE_PATHS.RESET_PASSWORD,
+                element: <ResetPassword />,
+              },
+            ],
+          },
+        ],
       },
-    ],
-  },
-  {
-    element: <GuestOnly />,
-    children: [
+      // Документы открываются и гостю (ссылка с регистрации), и уже вошедшему — поэтому вне GuestOnly.
       {
         element: <AuthLayout />,
         children: [
           {
-            path: ROUTE_PATHS.LOGIN,
-            element: <Login />,
+            path: ROUTE_PATHS.TERMS,
+            element: <Terms />,
           },
           {
-            path: ROUTE_PATHS.REGISTER,
-            element: <Register />,
-          },
-          {
-            path: ROUTE_PATHS.VERIFY_EMAIL,
-            element: <VerifyEmail />,
-          },
-          {
-            path: ROUTE_PATHS.FORGOT_PASSWORD,
-            element: <ForgotPassword />,
-          },
-          {
-            path: ROUTE_PATHS.RESET_PASSWORD,
-            element: <ResetPassword />,
+            path: ROUTE_PATHS.PRIVACY_POLICY,
+            element: <PrivacyPolicy />,
           },
         ],
-      },
-    ],
-  },
-  // Документы открываются и гостю (ссылка с регистрации), и уже вошедшему — поэтому вне GuestOnly.
-  {
-    element: <AuthLayout />,
-    children: [
-      {
-        path: ROUTE_PATHS.TERMS,
-        element: <Terms />,
-      },
-      {
-        path: ROUTE_PATHS.PRIVACY_POLICY,
-        element: <PrivacyPolicy />,
       },
     ],
   },

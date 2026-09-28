@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import type { TitleLinkVerdict } from '@tanuki/contracts';
-import { apiFetch, ApiRequestError } from '@/shared/api/client';
+import { apiFetch } from '@/shared/api/client';
+import type { ErrorMeta } from '@/shared/api/errorMeta';
 import { getReadingProgressQueryKey } from '@/entities/title/hooks/useReadingProgress';
 
 type Params = {
@@ -25,6 +25,7 @@ function useSetTitleLink({ titleId }: Params) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { errorTitle: t('failedToSave') } satisfies ErrorMeta,
     mutationFn: ({ targetId, verdict }: Variables) =>
       apiFetch(`/titles/${titleId}/links`, {
         method: 'PUT',
@@ -36,12 +37,6 @@ function useSetTitleLink({ titleId }: Params) {
         queryClient.invalidateQueries({ queryKey: ['title', titleId, 'matches'] }),
         queryClient.invalidateQueries({ queryKey: getReadingProgressQueryKey(titleId) }),
       ]),
-    onError: (error) =>
-      notifications.show({
-        color: 'red',
-        title: t('failedToSave'),
-        message: error instanceof ApiRequestError ? error.message : t('tryAgainLater'),
-      }),
   });
 }
 

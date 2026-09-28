@@ -16,7 +16,6 @@ import TitleCard from '@/entities/title/card/TitleCard';
 import useSearch from './hooks/useSearch';
 import { flattenSources } from '@/entities/source/lib';
 import useSources from '@/entities/source/hooks/useSources';
-import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
 import { getGroupStatusLabel } from './models';
 
@@ -25,7 +24,7 @@ function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query') ?? '';
   const [input, setInput] = useState(query);
-  const { data, error, isPending, isError } = useSearch({ query });
+  const { data, isPending } = useSearch({ query });
   const { data: sourcesData } = useSources();
 
   const sourceTitle = (sourceId: string) =>
@@ -54,7 +53,6 @@ function SearchPage() {
       </form>
 
       {isPending && <Loader />}
-      {isError && <ApiErrorText error={error} />}
 
       <Stack gap="xl">
         {data?.groups.map((group) => (

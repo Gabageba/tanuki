@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { BooksIcon, FireIcon } from '@phosphor-icons/react';
 import useProfileStatistics from '@/entities/user/hooks/useProfileStatistics';
 import useDateFormat from '@/shared/hooks/useDateFormat';
-import ApiErrorText from '@/shared/ui/ApiErrorText';
 import SourcesCard from './cards/SourcesCard';
 import ProfileStatisticMetaCard from './cards/ProfileStatisticMetaCard';
 import ChaptersReadCard from './cards/ChaptersReadCard';
@@ -15,7 +14,7 @@ import { formatSigned, getMonthDeltaPercent, getTodayDelta, getTrendHint } from 
 function ProfileStatistics() {
   const { t } = useTranslation();
   const { getCurrentMonthName } = useDateFormat();
-  const { data: statistics, isPending, error } = useProfileStatistics();
+  const { data: statistics, isPending } = useProfileStatistics();
 
   if (isPending) {
     return (
@@ -25,9 +24,7 @@ function ProfileStatistics() {
     );
   }
 
-  if (!statistics) return <ApiErrorText error={error} />;
-
-  if (!statistics.hasActivity) return <ProfileStatisticsEmpty />;
+  if (!statistics || !statistics.hasActivity) return <ProfileStatisticsEmpty />;
 
   const { today, month, totals, streak } = statistics;
   const todayDelta = getTodayDelta(statistics);

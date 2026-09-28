@@ -1,6 +1,7 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { SearchResponse } from '@tanuki/contracts';
+import { BadRequestApiException } from '../common/errors';
 import { SearchResponseDto } from './search.dto';
 import { SearchService } from './search.service';
 
@@ -27,7 +28,7 @@ export class SearchController {
     @Query('limit') limit: string | undefined,
   ): Promise<SearchResponse> {
     if (!query) {
-      throw new BadRequestException('query is required');
+      throw new BadRequestApiException('searchQueryMissing');
     }
 
     const sourceIds = sources

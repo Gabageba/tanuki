@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import type { Chapter, ReadingProgress, TitleReadingProgressResponse } from '@tanuki/contracts';
-import { apiFetch, ApiRequestError } from '@/shared/api/client';
+import { apiFetch } from '@/shared/api/client';
+import { SILENT_ERROR_META, type ErrorMeta } from '@/shared/api/errorMeta';
 import { toOptimisticProgress } from '../readingProgress';
 import { getReadingProgressQueryKey } from './useReadingProgress';
 
@@ -46,6 +46,9 @@ function useUpdateReadingProgress({ titleId, notifyOnError = true }: Params) {
   const queryKey = getReadingProgressQueryKey(titleId);
 
   return useMutation({
+    meta: notifyOnError
+      ? ({ errorTitle: t('failedToSave') } satisfies ErrorMeta)
+      : SILENT_ERROR_META,
     mutationFn: (variables: Variables) => saveReadingProgress(titleId, variables),
     onMutate: async ({ chapter, pageIndex }) => {
       // Иначе уже летящий GET приземлится поверх и вернёт отметку на прежнее место.
@@ -65,14 +68,8 @@ function useUpdateReadingProgress({ titleId, notifyOnError = true }: Params) {
         linked: current?.linked ?? [],
       }));
     },
-    onError: (error, _variables, context) => {
+    onError: (_error, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
-      if (!notifyOnError) return;
-      notifications.show({
-        color: 'red',
-        title: t('failedToSave'),
-        message: error instanceof ApiRequestError ? error.message : t('tryAgainLater'),
-      });
     },
   });
 }

@@ -56,7 +56,7 @@ export class SourcesService {
   async getSource(sourceId: string): Promise<Source> {
     const source = (await this.listSources()).find((item) => item.id === sourceId);
     if (!source) {
-      throw new NotFoundApiException(`Источник ${sourceId} не найден`);
+      throw new NotFoundApiException('sourceNotFound', { sourceId });
     }
     return source;
   }

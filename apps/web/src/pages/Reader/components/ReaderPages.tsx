@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { generatePath, Link } from 'react-router';
 import type { ReaderSettings } from '@tanuki/contracts';
 import { READER_READING_MODE } from '@tanuki/contracts';
+import { ApiRequestError, isNotFoundError } from '@/shared/api/client';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
+import QueryError from '@/shared/ui/QueryError';
 import ReaderPageImage from './ReaderPageImage';
 import ReaderPagesSkeleton from './ReaderPagesSkeleton';
 import useHorizontalReaderNavigation from '../hooks/useHorizontalReaderNavigation';
@@ -81,6 +83,18 @@ function ReaderPages({
     );
   }
 
+  // Ни одной страницы, и хотя бы одна глава упала — это не пустая глава, а ошибка: показываем её
+  // целиком, как на любой странице (404 — «не найдено», прочее — с повтором).
+  const hasPages = chapters.some((chapter) => chapter.pages.length > 0);
+  const failedChapter = chapters.find((chapter) => chapter.error);
+  if (!hasPages && failedChapter?.error) {
+    return (
+      <AppShell.Main>
+        <QueryError error={failedChapter.error} onRetry={failedChapter.refetch} />
+      </AppShell.Main>
+    );
+  }
+
   // Глава без страниц — это не всегда пустая глава: она может ещё грузиться или не загрузиться
   // вовсе, и то и другое показывает лента ниже. Показывать нечего ровно тогда, когда ни в одной
   // главе страниц нет и ждать больше нечего.
@@ -104,19 +118,32 @@ function ReaderPages({
 
   const lastChapter = chapters[chapters.length - 1];
 
+  /** Текст ошибки API уже переведён сервером; сбой на фронте показываем общим текстом. */
+  const getErrorText = (error: Error | null) => (
+    <Text c="dimmed" ta="center">
+      {error instanceof ApiRequestError ? error.message : t('somethingWentWrong')}
+    </Text>
+  );
+
   // Следующая глава подклеивается сама, так что ручной переход нужен ровно там, где автоматический
   // не сработал: её не удалось загрузить. Настоящий переход пересоберёт ленту и запросит заново.
+  // Главы нет вовсе (404) — переходить некуда, остаётся только сказать об этом.
   const getFeedFooter = () => {
     if (!lastChapter) return null;
 
     if (lastChapter.isError) {
       return (
-        <Button
-          component={Link}
-          to={generatePath(ROUTE_PATHS.READER, { titleId, chapterId: lastChapter.chapterId })}
-        >
-          {t('nextChapter')}
-        </Button>
+        <Stack gap="sm" align="center">
+          {getErrorText(lastChapter.error)}
+          {!isNotFoundError(lastChapter.error) && (
+            <Button
+              component={Link}
+              to={generatePath(ROUTE_PATHS.READER, { titleId, chapterId: lastChapter.chapterId })}
+            >
+              {t('nextChapter')}
+            </Button>
+          )}
+        </Stack>
       );
     }
 
@@ -128,19 +155,25 @@ function ReaderPages({
 
   // В горизонтальном режиме глава занимает весь экран одна, поэтому её загрузка и её ошибка — это
   // и есть весь экран. Уйти с упавшей главы некуда (адрес уже её), так что повтор запроса —
-  // единственный выход; клик по кнопке не должен заодно считаться тапом по зоне листания.
+  // единственный выход, кроме 404: там повтор ответит тем же, и остаётся листать назад. Клик по
+  // кнопке не должен заодно считаться тапом по зоне листания.
   const getActiveChapterPlaceholder = () => {
     if (!activeChapter?.isError) return <Loader size="sm" />;
 
     return (
-      <Button
-        onClick={(event) => {
-          event.stopPropagation();
-          activeChapter.refetch();
-        }}
-      >
-        {t('retry')}
-      </Button>
+      <Stack gap="sm" align="center">
+        {getErrorText(activeChapter.error)}
+        {!isNotFoundError(activeChapter.error) && (
+          <Button
+            onClick={(event) => {
+              event.stopPropagation();
+              activeChapter.refetch();
+            }}
+          >
+            {t('retry')}
+          </Button>
+        )}
+      </Stack>
     );
   };
 

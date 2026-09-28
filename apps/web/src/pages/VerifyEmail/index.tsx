@@ -5,7 +5,6 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { CurrentUser } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
-import ApiErrorText from '@/shared/ui/ApiErrorText';
 import { CURRENT_USER_QUERY_KEY } from '@/entities/user/hooks/useCurrentUser';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 
@@ -46,7 +45,6 @@ function VerifyEmail() {
         <Title order={2} fz={20} ta="center">
           {t('emailNotConfirmedYet')}
         </Title>
-        {mutation.error && <ApiErrorText error={mutation.error} />}
       </Stack>
     );
   }

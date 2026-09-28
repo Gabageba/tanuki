@@ -5,7 +5,6 @@ import { useRef, useState } from 'react';
 import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
 import { PRIMARY_COLOR } from '@/shared/lib/palette';
-import { ApiRequestError } from '@/shared/api/client';
 import useUpdateAvatar from './hooks/useUpdateAvatar';
 import useDeleteAvatar from './hooks/useDeleteAvatar';
 import AvatarCropModal from './AvatarCropModal';
@@ -26,12 +25,9 @@ function ProfileAvatar({ src, name }: Props) {
   const { mutate: deleteAvatar, isPending: isDeleting } = useDeleteAvatar();
   const isPending = isUpdating || isDeleting;
 
-  const showError = (error: unknown) =>
-    notifications.show({
-      color: 'red',
-      title: t('error'),
-      message: error instanceof ApiRequestError ? error.message : t('tryAgainLater'),
-    });
+  // Ошибки запросов показывает глобальный обработчик — здесь только сбой обрезки на клиенте.
+  const showCropError = () =>
+    notifications.show({ color: 'red', title: t('error'), message: t('tryAgainLater') });
 
   const pick = (file: File | null) => {
     if (file) setPickedSrc(URL.createObjectURL(file));
@@ -48,9 +44,9 @@ function ProfileAvatar({ src, name }: Props) {
     if (!pickedSrc) return;
     try {
       const image = await cropImage(pickedSrc, area);
-      updateAvatar(image, { onSuccess: closeCrop, onError: showError });
-    } catch (error) {
-      showError(error);
+      updateAvatar(image, { onSuccess: closeCrop });
+    } catch {
+      showCropError();
     }
   };
 
@@ -82,7 +78,7 @@ function ProfileAvatar({ src, name }: Props) {
           variant="transparent"
           aria-label={t('delete')}
           disabled={isPending}
-          onClick={() => deleteAvatar(undefined, { onError: showError })}
+          onClick={() => deleteAvatar()}
         >
           <TrashIcon size={14} />
         </ActionIcon>

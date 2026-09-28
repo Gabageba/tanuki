@@ -88,14 +88,14 @@ export const findTitleChapter = async (
 ) => {
   const titleRef = decodeTitleId(titleId);
   const { sourceId: chapterSourceId, opaqueId } = splitCompositeId(chapterId);
-  if (chapterSourceId !== sourceId) throw new NotFoundApiException('Глава не из этого тайтла');
+  if (chapterSourceId !== sourceId) throw new NotFoundApiException('chapterNotFromThisTitle');
 
   const chapterRef = decodeChapterId(opaqueId);
   const { data } = await parsersClient.getDetails(sourceId, titleRef.url);
   const chapter = (data.chapters ?? []).find(
     (item) => item.id === chapterRef.id && item.branch === chapterRef.branch,
   );
-  if (!chapter) throw new NotFoundApiException('Глава не найдена');
+  if (!chapter) throw new NotFoundApiException('chapterNotFound');
 
   return { titleRef, details: data, chapter };
 };
