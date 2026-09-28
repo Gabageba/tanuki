@@ -18,9 +18,9 @@ function SourceCard({ source }: Props) {
       className={styles.card}
       withBorder
     >
-      <Group gap="xs">
+      <Group gap="xs" wrap="nowrap">
         <SourceTitle source={source} />
-        <Stack gap={8} justify="end">
+        <Stack gap={8} justify="end" flex="none">
           <Group gap={4} justify="flex-end">
             <Text fz={20} lh={1}>
               {getFlagByLocale(source.locale)}

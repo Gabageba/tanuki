@@ -33,7 +33,7 @@ function CatalogHeader({ source, isPending }: Props) {
   return (
     <PageLayout.Header>
       <Flex justify="space-between" direction={{ base: 'column', sm: 'row' }} gap="sm">
-        <Group gap="xs">
+        <Group gap="xs" wrap="nowrap" miw={0}>
           <GoBackButton path={ROUTE_PATHS.SOURCES} />
           <SourceTitle source={source} showStatus />
         </Group>
