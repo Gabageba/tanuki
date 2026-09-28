@@ -1,4 +1,5 @@
 import { Center, Grid, Group, Skeleton, Stack } from '@mantine/core';
+import TitleReadingActionsSkeleton from './TitleReadingActionsSkeleton';
 import styles from '../../Title.module.scss';
 
 function TitleImageSectionSkeleton() {
@@ -10,11 +11,7 @@ function TitleImageSectionSkeleton() {
         </Center>
 
         <Stack gap={8}>
-          <Skeleton h={36} />
-          <Group gap={8}>
-            <Skeleton h={5} flex={1} />
-            <Skeleton h={18.59} w={45} />
-          </Group>
+          <TitleReadingActionsSkeleton />
           <Group gap={8}>
             <Skeleton h={36} flex={1} />
             <Skeleton h={36} w={36} />

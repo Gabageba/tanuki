@@ -8,15 +8,14 @@ type Props = {
   titleId: string;
   /** Первая глава ветки; пока её нет, кнопка неактивна. */
   firstChapter: Chapter | undefined;
-  loading: boolean;
 };
 
-function ReadFromStartButton({ titleId, firstChapter, loading }: Props) {
+function ReadFromStartButton({ titleId, firstChapter }: Props) {
   const { t } = useTranslation();
 
   if (!firstChapter) {
     return (
-      <Button disabled loading={loading} fullWidth>
+      <Button disabled fullWidth>
         {t('readFromStart')}
       </Button>
     );

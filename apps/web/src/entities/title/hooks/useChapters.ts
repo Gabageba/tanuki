@@ -5,10 +5,12 @@ import { apiFetch } from '@/shared/api/client';
 type Params = {
   titleId: string;
   branch?: string;
+  enabled?: boolean;
 };
 
-function useChapters({ titleId, branch }: Params) {
+function useChapters({ titleId, branch, enabled }: Params) {
   return useQuery({
+    enabled,
     queryKey: ['chapters', titleId, branch ?? null],
     queryFn: () =>
       apiFetch<ChaptersResponse>(

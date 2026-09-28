@@ -10,6 +10,7 @@ import {
 import ContinueReadingButton from './ContinueReadingButton';
 import OtherSourcesSplitButton from './OtherSourcesSplitButton';
 import ReadFromStartButton from './ReadFromStartButton';
+import TitleReadingActionsSkeleton from './TitleReadingActionsSkeleton';
 
 type Props = {
   titleId: string;
@@ -23,10 +24,19 @@ type Props = {
  */
 function TitleReadingActions({ titleId }: Props) {
   const { data: progress, isPending: isProgressPending } = useReadingProgress({ titleId });
+  // Ветка известна только из отметки: без неё запрос ушёл бы в ветку по умолчанию и тут же
+  // повторился бы в нужную.
   const { data: chaptersData, isPending: isChaptersPending } = useChapters({
     titleId,
     branch: progress?.own?.branchId,
+    enabled: !isProgressPending,
   });
+
+  // «Продолжить» или «Читать с начала» решает отметка — до неё любая кнопка была бы догадкой и
+  // сменилась бы на глазах.
+  if (isProgressPending || isChaptersPending) {
+    return <TitleReadingActionsSkeleton />;
+  }
 
   // Главы приходят от новых к старым.
   const chapters = chaptersData?.items ?? [];
@@ -41,11 +51,7 @@ function TitleReadingActions({ titleId }: Props) {
   const mainButton = ownMark ? (
     <ContinueReadingButton titleId={titleId} mark={ownMark} numbering={numbering} />
   ) : (
-    <ReadFromStartButton
-      titleId={titleId}
-      firstChapter={firstChapter}
-      loading={isProgressPending || isChaptersPending}
-    />
+    <ReadFromStartButton titleId={titleId} firstChapter={firstChapter} />
   );
 
   const chapterPosition =
