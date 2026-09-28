@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { SegmentedControl } from '@mantine/core';
+import { SegmentedControl, Stack } from '@mantine/core';
 import { useState } from 'react';
 import type { ChaptersReadPoint } from '@tanuki/contracts';
 import ProfileStatisticCard from '../ProfileStatisticCard';
+import ProfileStatisticHeadline from '../ProfileStatisticHeadline';
 import type { StatisticPeriod } from '../lib';
-import { formatBarDate, formatBarLabel, STATISTIC_PERIOD } from '../lib';
+import { formatBarDate, formatBarLabel, getStatisticPeriodCaption, STATISTIC_PERIOD } from '../lib';
 import BarChart from '@/shared/ui/BarChart';
 import ChaptersReadCardFooter from './ChaptersReadCardFooter';
 
@@ -35,6 +36,7 @@ function ChaptersReadCard({ chaptersByDay, chaptersByMonth }: Props) {
   const [period, setPeriod] = useState<StatisticPeriod>(STATISTIC_PERIOD.WEEK);
 
   const points = getPeriodPoints(period, chaptersByDay, chaptersByMonth);
+  const total = points.reduce((sum, { count }) => sum + count, 0);
 
   const items = points.map(({ date, count }) => ({
     key: date,
@@ -61,14 +63,17 @@ function ChaptersReadCard({ chaptersByDay, chaptersByMonth }: Props) {
           ]}
         />
       }
-      footer={<ChaptersReadCardFooter points={points} period={period} />}
+      footer={<ChaptersReadCardFooter points={points} total={total} period={period} />}
     >
-      <BarChart
-        items={items}
-        highlightedIndex={items.length - 1}
-        // Подписи через неделю — каждая попадает на тот же день недели, что и сегодня.
-        labelStep={WEEK_DAYS}
-      />
+      <Stack gap="md">
+        <ProfileStatisticHeadline value={total} caption={getStatisticPeriodCaption(period, t)} />
+        <BarChart
+          items={items}
+          highlightedIndex={items.length - 1}
+          // Подписи через неделю — каждая попадает на тот же день недели, что и сегодня.
+          labelStep={WEEK_DAYS}
+        />
+      </Stack>
     </ProfileStatisticCard>
   );
 }

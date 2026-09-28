@@ -236,11 +236,16 @@
       "Bash(pnpm --filter @tanuki/api db:migrate)",
       "Bash(npx drizzle-kit *)",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(python3 -)",
+      "Read(//Users/gabageba/shared/locales/**)",
+      "Read(//Users/gabageba/shared/**)",
+      "Bash(sed -n 1,200p src/pages/Profile/components/ProfileStatistics/cards/lib.ts* ; grep -rn \"points\" packages 2>/dev/null | head -0; grep -rn \"ChaptersReadPoint\\\\b\" -A6 ../../packages/contracts/src | head -30)"
     ],
     "additionalDirectories": [
       "/Users/gabageba/Develop/web/tanuki-parsers-redo/src/main/kotlin/org/koitharu/kotatsu/parsers/site/ru/rulib",
-      "/Users/gabageba/Develop/web/tanuki-parsers-redo/src/main/kotlin/org/koitharu/kotatsu/parsers/site/ru"
+      "/Users/gabageba/Develop/web/tanuki-parsers-redo/src/main/kotlin/org/koitharu/kotatsu/parsers/site/ru",
+      "/Users/gabageba/Develop/web/tanuki/apps/web/src/pages/Profile/components/ProfileStatistics/cards/src/pages/Profile/components/ProfileStatistics/cards"
     ]
   }
 }

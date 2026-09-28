@@ -1,6 +1,7 @@
 import type { MantineBreakpoint } from '@mantine/core';
-import { Group, Progress, Stack, Text } from '@mantine/core';
+import { Box, getSpacing, Progress, Text } from '@mantine/core';
 import type { ReactNode } from 'react';
+import { Fragment } from 'react';
 import { NEUTRAL_BAR_COLOR } from '@/shared/lib/palette';
 
 type Props = {
@@ -18,14 +19,22 @@ function ProgressList({ items, highlightedIndex, gap }: Props) {
   const max = Math.max(...items.map(({ value }) => value), 1);
 
   return (
-    <Stack gap={gap}>
+    <Box
+      display="grid"
+      style={{
+        // The bar always keeps its minimum width; the label gets what's left and truncates
+        gridTemplateColumns: 'minmax(0, max-content) minmax(120px, 1fr) max-content',
+        columnGap: 'var(--mantine-spacing-md)',
+        rowGap: getSpacing(gap),
+        alignItems: 'center',
+      }}
+    >
       {items.map(({ key, label, value, text }, index) => (
-        <Group key={key} gap="md" wrap="nowrap">
-          <Text w={150} flex="none" truncate lh={1}>
+        <Fragment key={key}>
+          <Text truncate lh={1}>
             {label}
           </Text>
           <Progress
-            flex={1}
             size="md"
             radius="xl"
             value={(value / max) * 100}
@@ -34,12 +43,12 @@ function ProgressList({ items, highlightedIndex, gap }: Props) {
             }
             bg="var(--tanuki-color-border-subtle)"
           />
-          <Text miw={80} flex="none" ff="monospace" ta="right" lh={1} c="dimmed">
+          <Text ff="monospace" ta="right" lh={1} c="dimmed" style={{ wordSpacing: -6 }}>
             {text}
           </Text>
-        </Group>
+        </Fragment>
       ))}
-    </Stack>
+    </Box>
   );
 }
 

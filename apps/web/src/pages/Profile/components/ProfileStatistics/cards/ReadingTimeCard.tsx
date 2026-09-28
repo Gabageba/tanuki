@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Group, Stack, Text } from '@mantine/core';
+import { Stack, Text } from '@mantine/core';
 import type { ReadingTimeStatistic } from '@tanuki/contracts';
 import ProfileStatisticCard from './ProfileStatisticCard';
+import ProfileStatisticHeadline from './ProfileStatisticHeadline';
 import { formatHour } from './lib';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import ProgressList from '@/shared/ui/ProgressList';
@@ -45,14 +46,10 @@ function ReadingTimeCard({ readingTime }: Props) {
       }
     >
       <Stack gap="md">
-        <Group gap={8} align="baseline">
-          <Text ff="monospace" fz={35} fw={600} lh={1} style={{ wordSpacing: -8 }}>
-            {formatDuration(totalMinutes)}
-          </Text>
-          <Text fz="sm" c="dimmed">
-            {t('forMonth', { month: getCurrentMonthName() })}
-          </Text>
-        </Group>
+        <ProfileStatisticHeadline
+          value={formatDuration(totalMinutes)}
+          caption={t('forMonth', { month: getCurrentMonthName() })}
+        />
         <ProgressList
           gap="sm"
           items={[
@@ -64,21 +61,21 @@ function ReadingTimeCard({ readingTime }: Props) {
             },
             {
               key: 'averagePerDay',
-              label: t('averagePerDay'),
+              label: t('onAverage'),
               value: averagePerDayMinutes,
-              text: formatDuration(averagePerDayMinutes),
+              text: t('valuePerDay', { value: formatDuration(averagePerDayMinutes) }),
             },
             {
               key: 'weekdaysPerDay',
-              label: t('weekdaysPerDay'),
+              label: t('weekdays'),
               value: weekdaysPerDayMinutes,
-              text: formatDuration(weekdaysPerDayMinutes),
+              text: t('valuePerDay', { value: formatDuration(weekdaysPerDayMinutes) }),
             },
             {
               key: 'weekendsPerDay',
-              label: t('weekendsPerDay'),
+              label: t('weekends'),
               value: weekendsPerDayMinutes,
-              text: formatDuration(weekendsPerDayMinutes),
+              text: t('valuePerDay', { value: formatDuration(weekendsPerDayMinutes) }),
             },
           ]}
           highlightedIndex={1}

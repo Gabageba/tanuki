@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { EnumLiteralsOf } from '@tanuki/contracts';
 
 export const STATISTIC_PERIOD = {
@@ -6,6 +7,18 @@ export const STATISTIC_PERIOD = {
   YEAR: 'year',
 } as const;
 export type StatisticPeriod = EnumLiteralsOf<typeof STATISTIC_PERIOD>;
+
+/** «за неделю» / «за месяц» / «за год» — подпись к итогу за выбранный период. */
+export const getStatisticPeriodCaption = (period: StatisticPeriod, t: TFunction) => {
+  switch (period) {
+    case STATISTIC_PERIOD.WEEK:
+      return t('forAWeek');
+    case STATISTIC_PERIOD.MONTH:
+      return t('forAMonth');
+    case STATISTIC_PERIOD.YEAR:
+      return t('forAYear');
+  }
+};
 
 /**
  * Дата столбика — уже календарная дата в поясе пользователя, так что собирается как местная:

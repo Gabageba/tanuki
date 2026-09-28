@@ -32,7 +32,7 @@ function ProfileStatistics() {
 
   return (
     <Stack mt="lg">
-      <SimpleGrid cols={{ base: 2, md: 4 }}>
+      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
         <ProfileStatisticMetaCard
           label={t('forToday')}
           value={today.chapters}

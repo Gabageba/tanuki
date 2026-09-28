@@ -6,26 +6,25 @@ import ChaptersReadCardStat from './ChaptersReadCardStat';
 
 type Props = {
   points: ChaptersReadPoint[];
+  total: number;
   period: StatisticPeriod;
 };
 
-function ChaptersReadCardFooter({ points, period }: Props) {
+function ChaptersReadCardFooter({ points, total, period }: Props) {
   const { t, i18n } = useTranslation();
 
-  const total = points.reduce((sum, { count }) => sum + count, 0);
   const average = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(
     total / points.length,
   );
   const record = Math.max(...points.map(({ count }) => count));
+  const perPeriodKey =
+    period === STATISTIC_PERIOD.YEAR ? 'chaptersPerMonthAbbrev' : 'chaptersPerDayAbbrev';
 
   return (
     <Group gap="md" align="baseline">
-      <ChaptersReadCardStat value={total} label={t('chaptersForPeriod', { count: total })} />
-      <ChaptersReadCardStat value={average} label={t('onAverage')} />
+      <ChaptersReadCardStat value={t(perPeriodKey, { value: average })} label={t('onAverage')} />
       <ChaptersReadCardStat
-        value={t(period === STATISTIC_PERIOD.YEAR ? 'valuePerMonth' : 'valuePerDay', {
-          value: record,
-        })}
+        value={t(perPeriodKey, { value: record })}
         label={t('record')}
         color="var(--mantine-primary-color-filled)"
       />

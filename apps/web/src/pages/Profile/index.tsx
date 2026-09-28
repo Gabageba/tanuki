@@ -1,4 +1,4 @@
-import { Stack, Tabs } from '@mantine/core';
+import { Scroller, Stack, Tabs } from '@mantine/core';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChartBarIcon, KeyIcon, LinkSimpleIcon } from '@phosphor-icons/react';
@@ -46,11 +46,13 @@ function Profile() {
           <ProfileInfo />
           <Tabs defaultValue={PROFILE_TABS.STATISTICS}>
             <Tabs.List>
-              {TABS.map(({ title, id, icon }) => (
-                <Tabs.Tab value={id} key={id} leftSection={icon}>
-                  {title}
-                </Tabs.Tab>
-              ))}
+              <Scroller>
+                {TABS.map(({ title, id, icon }) => (
+                  <Tabs.Tab value={id} key={id} leftSection={icon}>
+                    {title}
+                  </Tabs.Tab>
+                ))}
+              </Scroller>
             </Tabs.List>
 
             {TABS.map(({ id, content }) => (

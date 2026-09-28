@@ -208,6 +208,12 @@
   it's translated. Give the whole phrase its own single key with interpolation instead
   (`downloadedChaptersAbbrev`: «Скачано {{count}} гл.»), even if part of that value duplicates
   another key's text.
+- Abbreviations in `ru.json` follow Russian typography. A shortened **word** takes a period — `гл.`,
+  `стр.`, `т.`, `дн.`, `мес.`; a **unit of measurement** doesn't — `ч`, `мин`, `с` (never `м` for
+  minutes: that's a metre). A number and its abbreviation are always joined by a non-breaking space
+  written as ` ` (`"{{count}} гл."`, `"Гл. {{number}}"`), never glued together
+  (`5мин`) or split by a plain space. A compound unit uses a slash with no spaces and keeps the
+  periods of its words — `гл./дн.`, `гл./мес.`
 
 ## Playground
 
