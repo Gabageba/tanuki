@@ -2,6 +2,7 @@ import { AppShell, Button, Center, EmptyState, Loader, Stack, Text } from '@mant
 import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generatePath, Link } from 'react-router';
+import { ArrowClockwiseIcon } from '@phosphor-icons/react';
 import type { ReaderSettings } from '@tanuki/contracts';
 import { READER_READING_MODE } from '@tanuki/contracts';
 import { ApiRequestError, isNotFoundError } from '@/shared/api/client';
@@ -169,6 +170,7 @@ function ReaderPages({
               event.stopPropagation();
               activeChapter.refetch();
             }}
+            leftSection={<ArrowClockwiseIcon />}
           >
             {t('retry')}
           </Button>

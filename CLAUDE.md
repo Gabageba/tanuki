@@ -18,6 +18,11 @@
   — and holds just those declarations.
 - Elements with no children are self-closing — `<ActionIcon />`, never
   `<ActionIcon></ActionIcon>`.
+- Every button, input, tab and menu item carries an icon in its `leftSection` — `Button`,
+  `TextInput`, `PasswordInput`, `NumberInput`, `Select`, `MultiSelect`, `Autocomplete`,
+  `DateInput`, …, `Tabs.Tab` and `Menu.Item`: `<Button leftSection={<DownloadIcon />}>`,
+  `<Tabs.Tab leftSection={<BookOpenIcon />}>`, `<Menu.Item leftSection={<TrashIcon />}>`. Icons come from `@phosphor-icons/react`.
+  `ActionIcon` is exempt — it is an icon already.
 
 ## Types
 

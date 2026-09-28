@@ -22,9 +22,7 @@ function RouteError() {
           title={t('somethingWentWrong')}
           description={t('pageCrashedTryReloading')}
         >
-          <Button size="md" onClick={() => window.location.reload()}>
-            {t('reloadPage')}
-          </Button>
+          <Button onClick={() => window.location.reload()}>{t('reloadPage')}</Button>
         </StatusScreen>
       </PageLayout.Content>
     </PageLayout>

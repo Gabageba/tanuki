@@ -1,7 +1,7 @@
 import { Box, Button, Center, Image, Paper, Skeleton, Stack } from '@mantine/core';
 import { useEffect, useRef, useState, type Ref } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ImageBrokenIcon } from '@phosphor-icons/react';
+import { ArrowClockwiseIcon, ImageBrokenIcon } from '@phosphor-icons/react';
 import type { Page, ReaderSettings } from '@tanuki/contracts';
 import { DEFAULT_PAGE_RATIO, getReaderImageDimensionProps } from '../lib';
 import styles from '../ReaderPage.module.scss';
@@ -93,6 +93,7 @@ function ReaderPageImage({ page, chapterId, settings, hidden, eager, alt, ref }:
                   setIsLoading(true);
                   setAttempt((value) => value + 1);
                 }}
+                leftSection={<ArrowClockwiseIcon />}
               >
                 {t('retry')}
               </Button>
