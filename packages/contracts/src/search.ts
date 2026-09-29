@@ -7,6 +7,8 @@ export const SEARCH_GROUP_STATUS = {
   OK: 'ok',
   TIMEOUT: 'timeout',
   ERROR: 'error',
+  /** Источник закрыт: у пользователя нет своего аккаунта на нём. */
+  LOCKED: 'locked',
 } as const;
 export type SearchGroupStatus = EnumLiteralsOf<typeof SEARCH_GROUP_STATUS>;
 

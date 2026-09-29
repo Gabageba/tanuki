@@ -71,7 +71,8 @@ function AuthLayout() {
       <Paper
         className={styles.card}
         withBorder
-        p="xl"
+        px={{ base: 'lg', xs: 'xl' }}
+        py="xl"
         radius="md"
         maw={380}
         w="100%"

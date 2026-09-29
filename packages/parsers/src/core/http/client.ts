@@ -1,5 +1,7 @@
 import { Agent, request as undiciRequest } from 'undici';
 import type { CookieJar } from 'tough-cookie';
+import type { SourceAuthFamily } from '@tanuki/contracts';
+import { currentSourceAccount } from '../source-accounts';
 import { decodeBytes, parseHtml, type Doc } from '../html/dom';
 import { decompress } from './decompress';
 import { classifyResponse } from './classify';
@@ -71,6 +73,11 @@ const CONNECTION_RETRY_DELAYS_MS = [300, 900];
 export type HttpClientOptions = {
   sourceId: string;
   jar: CookieJar;
+  /**
+   * Семейство аккаунта источника. Запрос от пользователя с аккаунтом этого семейства ходит
+   * только со своим jar — общий (в нём сессия сервисной учётки) он не видит и не пополняет.
+   */
+  authFamily?: SourceAuthFamily | null;
   defaultHeaders: Record<string, string>;
   timeouts?: Partial<Timeouts>;
 };
@@ -180,7 +187,9 @@ export class HttpClientImpl implements HttpClient {
     // own jar lookup, and every hop's Set-Cookie is saved before we follow the next one. An
     // interceptor-level Set-Cookie would only see the final response and lose antibot cookies
     // set on intermediate hops.
-    const cookieHeader = await this.opts.jar.getCookieString(req.url);
+    const account = currentSourceAccount(this.opts.authFamily);
+    const jar = account?.jar ?? this.opts.jar;
+    const cookieHeader = await jar.getCookieString(req.url);
     const headers: Record<string, string> = { ...req.headers };
     if (cookieHeader) headers['cookie'] = cookieHeader;
 
@@ -210,8 +219,9 @@ export class HttpClientImpl implements HttpClient {
     if (setCookieHeader) {
       const cookieStrings = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
       for (const cookieString of cookieStrings) {
-        await this.opts.jar.setCookie(cookieString, req.url).catch(() => undefined);
+        await jar.setCookie(cookieString, req.url).catch(() => undefined);
       }
+      if (account?.jar) account.onChange?.();
     }
 
     const rawBytes = Buffer.from(await response.body.arrayBuffer());

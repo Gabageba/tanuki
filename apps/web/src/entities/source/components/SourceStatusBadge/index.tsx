@@ -1,4 +1,4 @@
-import type { MantineBreakpoint } from '@mantine/core';
+import type { GroupProps, MantineBreakpoint } from '@mantine/core';
 import { Tooltip } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { Source } from '@tanuki/contracts';
@@ -9,9 +9,10 @@ import SourceStatusBadgeTooltip from './SourceStatusBadgeTooltip';
 type Props = {
   source: Source;
   visibleFrom?: MantineBreakpoint;
+  justify?: GroupProps['justify'];
 };
 
-function SourceStatusBadge({ source, visibleFrom }: Props) {
+function SourceStatusBadge({ source, visibleFrom, justify }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -22,6 +23,7 @@ function SourceStatusBadge({ source, visibleFrom }: Props) {
         dotMt={3}
         coloredText
         visibleFrom={visibleFrom}
+        justify={justify}
       />
     </Tooltip>
   );

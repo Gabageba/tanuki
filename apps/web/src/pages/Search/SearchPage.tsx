@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Badge,
+  Button,
   Container,
   Group,
   Loader,
@@ -10,14 +11,16 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import { SignInIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import { SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
 import TitleCard from '@/entities/title/card/TitleCard';
 import useSearch from './hooks/useSearch';
 import { flattenSources } from '@/entities/source/lib';
 import useSources from '@/entities/source/hooks/useSources';
 import { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
-import { getGroupStatusLabel } from './models';
+import { getGroupStatusColor, getGroupStatusLabel } from './models';
 
 function SearchPage() {
   const { t } = useTranslation();
@@ -60,12 +63,20 @@ function SearchPage() {
             <Group gap="xs" mb="sm">
               <Title order={3}>{sourceTitle(group.sourceId)}</Title>
               {group.status !== SEARCH_GROUP_STATUS.OK && (
-                <Badge
-                  color={group.status === SEARCH_GROUP_STATUS.TIMEOUT ? 'yellow' : 'red'}
-                  variant="light"
-                >
+                <Badge color={getGroupStatusColor(group.status)} variant="light">
                   {getGroupStatusLabel(group.status, t)}
                 </Badge>
+              )}
+              {group.status === SEARCH_GROUP_STATUS.LOCKED && (
+                <Button
+                  component={Link}
+                  to={SOURCE_ACCOUNTS_PATH}
+                  variant="subtle"
+                  size="compact-sm"
+                  leftSection={<SignInIcon />}
+                >
+                  {t('logIn')}
+                </Button>
               )}
             </Group>
             {group.items.length === 0 && group.status === SEARCH_GROUP_STATUS.OK && (

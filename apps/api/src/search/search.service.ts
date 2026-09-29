@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { SEARCH_GROUP_STATUS, type SearchGroup, type SearchResponse } from '@tanuki/contracts';
+import {
+  SEARCH_GROUP_STATUS,
+  SOURCE_ACCESS,
+  type SearchGroup,
+  type SearchResponse,
+} from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { CatalogService } from '../catalog/catalog.service';
@@ -19,9 +24,16 @@ export class SearchService {
     query: string,
     sourceIds: string[] | undefined,
     limit: number,
+    userId: string,
   ): Promise<SearchResponse> {
-    const sources = await this.sourcesService.listSearchableSources();
-    const candidates = sources.filter((source) => !sourceIds || sourceIds.includes(source.id));
+    const sources = (await this.sourcesService.listSearchableSources(userId)).filter(
+      (source) => !sourceIds || sourceIds.includes(source.id),
+    );
+    // Закрытые для пользователя источники не опрашиваются — у него нет на них аккаунта.
+    const candidates = sources.filter((source) => source.access === SOURCE_ACCESS.AVAILABLE);
+    const locked: SearchGroup[] = sources
+      .filter((source) => source.access !== SOURCE_ACCESS.AVAILABLE)
+      .map((source) => ({ sourceId: source.id, status: SEARCH_GROUP_STATUS.LOCKED, items: [] }));
 
     // Один общий дедлайн на весь веер (docs/04-api-contract.md) — источник, не уложившийся
     // в него, помечается timeout, а не получает свой персональный тайм-аут.
@@ -54,7 +66,7 @@ export class SearchService {
         return { sourceId, status, items: [] };
       });
 
-      return { groups };
+      return { groups: [...groups, ...locked] };
     } finally {
       clearTimeout(timer!);
     }

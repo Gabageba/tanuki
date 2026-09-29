@@ -20,6 +20,8 @@ import { ENV } from '../config/env.module';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawTitle } from '../parsers-client/parsers-client.types';
 import { SourcesService } from '../sources/sources.service';
+import { UserSourcesService } from '../sources/user-sources.service';
+import { runAsService } from '../source-accounts/viewer-context';
 import { excludeRejected, linkKeyOf, TitleLinksService, parseLinkKey } from './title-links.service';
 import {
   FALLBACK_WAVE_TIME_SHARE,
@@ -98,24 +100,37 @@ export class MatchesService {
     private readonly parsersClient: ParsersClientService,
     private readonly cache: CacheService,
     private readonly links: TitleLinksService,
+    private readonly userSources: UserSourcesService,
   ) {}
 
-  async findMatches(sourceId: string, titleId: string): Promise<TitleMatchesResponse> {
+  async findMatches(
+    sourceId: string,
+    titleId: string,
+    userId: string,
+  ): Promise<TitleMatchesResponse> {
     const ref = decodeTitleId(titleId);
     const { data: refRaw } = await this.parsersClient.getDetails(sourceId, ref.url);
 
     const key = cacheKey('matches', sourceId, MATCH_ALGO_VERSION, titleId);
+    // Веер и подтверждённые связи кешируются на всех, поэтому идут от сервисной учётки, а не от
+    // аккаунтов того, кто открыл тайтл: иначе состав совпадений зависел бы от первого зрителя.
     const { value, stale } = await this.cache.getOrSet(key, CACHE_TTL.matches, () =>
-      this.fanOut(sourceId, refRaw),
+      runAsService(() => this.fanOut(sourceId, refRaw)),
     );
 
     // Ручные правки накладываются поверх кешированного веера, а не участвуют в нём: правка
     // видна сразу, без ожидания следующего опроса источников.
-    const items = await this.applyLinks(linkKeyOf(sourceId, ref.url), value.items);
+    const items = await runAsService(() =>
+      this.applyLinks(linkKeyOf(sourceId, ref.url), value.items),
+    );
+
+    // Веер общий на всех и кешируется целиком — выключенные пользователем источники
+    // отсеиваются только в его ответе.
+    const disabled = await this.userSources.getDisabled(userId);
 
     return {
-      items,
-      failures: value.failures,
+      items: items.filter((item) => !disabled.has(item.title.sourceId)),
+      failures: value.failures.filter((failure) => !disabled.has(failure.sourceId)),
       stale: stale || undefined,
     };
   }
@@ -210,7 +225,11 @@ export class MatchesService {
 
     const { sourceId: targetSourceId, opaqueId: targetOpaqueId } = splitCompositeId(targetId);
     const targetUrl = decodeTitleId(targetOpaqueId).url;
-    const { data: targetRaw } = await this.parsersClient.getDetails(targetSourceId, targetUrl);
+    // Связь общая для всех — цель проверяется сервисной учёткой, даже если у пользователя нет
+    // аккаунта на её источнике.
+    const { data: targetRaw } = await runAsService(() =>
+      this.parsersClient.getDetails(targetSourceId, targetUrl),
+    );
 
     await this.links.set(
       linkKeyOf(sourceId, ref.url),

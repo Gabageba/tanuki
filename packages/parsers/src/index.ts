@@ -46,5 +46,16 @@ export {
 
 export { runSourceContract, SourceContractError } from './core/source-contract';
 
+export {
+  runWithSourceAccounts,
+  currentSourceAccount,
+  type SourceAccountScope,
+  type SourceAccountSession,
+  type LibSocialTokenState,
+  type TokenStore,
+} from './core/source-accounts';
+export { parseLibSocialAuthValue } from './sources/libsocial/auth';
+export { CookieJar } from 'tough-cookie';
+
 export { decompress } from './core/http/decompress';
 export type { Timeouts } from './core/http/client';

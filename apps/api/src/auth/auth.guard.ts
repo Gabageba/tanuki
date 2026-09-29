@@ -33,12 +33,15 @@ export class AuthGuard implements CanActivate {
     const token = request.cookies[SESSION_COOKIE_NAME] as string | undefined;
     const resolved = token ? await this.sessionService.resolve(token) : null;
 
-    if (!resolved) {
+    // Аккаунт, ждущий удаления, сессий не имеет (их отзывают при запросе удаления) — проверка
+    // на случай, если какая-то всё же пережила запрос.
+    if (!resolved || resolved.user.deletionScheduledAt) {
       if (isPublic) return true;
       throw new UnauthorizedApiException();
     }
 
     request.user = resolved.user;
+    request.session = resolved.session;
 
     // Скользящее продление — до отправки ответа, чтобы cookie ещё можно было переставить.
     // SessionService.touch сам решает, рано ли ещё (не чаще раза в час), и не пишет в БД зря.

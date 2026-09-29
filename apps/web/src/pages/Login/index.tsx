@@ -13,13 +13,14 @@ import {
 import { useForm } from '@mantine/form';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { UserIcon } from '@phosphor-icons/react';
+import { SignInIcon, UserIcon } from '@phosphor-icons/react';
 import { API_ERROR_CODE } from '@tanuki/contracts';
 import { ApiRequestError } from '@/shared/api/client';
 import { validateRequired } from '@/shared/lib/authValidation';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import ResendVerificationButton from '@/entities/user/ResendVerificationButton';
-import useLogin from './hooks/useLogin';
+import useLogin from '@/entities/user/hooks/useLogin';
+import { setPendingLogin } from '@/entities/user/pendingLogin';
 import AuthFormLayout from '@/shared/ui/AuthFormLayout';
 
 type FormValues = {
@@ -48,12 +49,22 @@ function Login() {
     login.mutate(values, {
       onSuccess: () => {
         const redirect = searchParams.get('redirect');
-        navigate(redirect ? decodeURIComponent(redirect) : ROUTE_PATHS.SOURCES, { replace: true });
+        navigate(redirect ? decodeURIComponent(redirect) : ROUTE_PATHS.SOURCES, {
+          replace: true,
+        });
       },
       onError: (error) => {
         if (error instanceof ApiRequestError) {
           if (error.code === API_ERROR_CODE.EMAIL_NOT_VERIFIED) {
             setUnverifiedEmail(values.login);
+            return;
+          }
+          if (error.code === API_ERROR_CODE.ACCOUNT_DELETION_SCHEDULED) {
+            setPendingLogin(values);
+            navigate({
+              pathname: ROUTE_PATHS.ACCOUNT_DELETION_SCHEDULED,
+              search: searchParams.toString(),
+            });
             return;
           }
           if (error.code === API_ERROR_CODE.INVALID_CREDENTIALS) {
@@ -101,7 +112,7 @@ function Login() {
             </Group>
           </Stack>
 
-          <Button type="submit" loading={login.isPending} fullWidth>
+          <Button type="submit" loading={login.isPending} leftSection={<SignInIcon />} fullWidth>
             {t('logIn')}
           </Button>
 

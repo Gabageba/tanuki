@@ -1,6 +1,8 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Put } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import type { TitleMatchesResponse } from '@tanuki/contracts';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { SessionUser } from '../auth/session.service';
 import { splitCompositeId } from '../common/opaque-id';
 import { TitleLinkRequestDto, TitleMatchesResponseDto } from './matches.dto';
 import { MatchesService } from './matches.service';
@@ -19,9 +21,12 @@ export class MatchesController {
   @ApiOperation({ summary: 'Ищет тот же тайтл на других источниках' })
   @ApiOkResponse({ type: TitleMatchesResponseDto })
   @Get('matches')
-  async matches(@Param('titleId') titleId: string): Promise<TitleMatchesResponse> {
+  async matches(
+    @CurrentUser() user: SessionUser,
+    @Param('titleId') titleId: string,
+  ): Promise<TitleMatchesResponse> {
     const { sourceId, opaqueId } = splitCompositeId(titleId);
-    return this.matchesService.findMatches(sourceId, opaqueId);
+    return this.matchesService.findMatches(sourceId, opaqueId, user.id);
   }
 
   /**

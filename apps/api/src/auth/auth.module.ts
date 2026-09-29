@@ -3,6 +3,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { InvitesModule } from '../invites/invites.module';
 import { MailModule } from '../mail/mail.module';
 import { RateLimitModule } from '../rate-limit/rate-limit.module';
+import { AccountController } from './account.controller';
+import { AccountService } from './account.service';
 import { AuthCleanupService } from './auth-cleanup.service';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
@@ -16,9 +18,10 @@ import { SessionService } from './session.service';
  */
 @Module({
   imports: [InvitesModule, MailModule, RateLimitModule],
-  controllers: [AuthController],
+  controllers: [AuthController, AccountController],
   providers: [
     AuthService,
+    AccountService,
     SessionService,
     PasswordService,
     AuthCleanupService,

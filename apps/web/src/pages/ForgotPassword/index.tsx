@@ -57,7 +57,7 @@ function ForgotPassword() {
             w="100%"
           />
           <Button type="submit" loading={forgotPassword.isPending} fullWidth>
-            {t('sendResetLink')}
+            {t('sendLink')}
           </Button>
 
           <Divider w="100%" />

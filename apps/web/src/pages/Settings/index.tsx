@@ -1,48 +1,62 @@
-import { useMemo } from 'react';
-import { Paper, Select } from '@mantine/core';
-import { useQueryClient } from '@tanstack/react-query';
+import { Tabs } from '@mantine/core';
+import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { GearIcon, PlugsIcon } from '@phosphor-icons/react';
+import { useMemo } from 'react';
 import PageLayout from '@/shared/ui/PageLayout';
 import useUserSettings from '@/shared/hooks/useUserSettings';
-import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
-import { PROFILE_STATISTICS_QUERY_KEY } from '@/entities/user/hooks/useProfileStatistics';
+import { SETTINGS_TAB_SEARCH_PARAM, SETTINGS_TABS } from '@/shared/lib/routes';
+import SettingsGeneral from './components/SettingsGeneral';
+import SettingsSources from './components/SettingsSources';
+import { isSettingsTab } from './lib';
 
 function Settings() {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { data: settings } = useUserSettings();
-  const updateUserSettings = useUpdateUserSettings();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const timeZones = useMemo(() => Intl.supportedValuesOf('timeZone'), []);
-  const timeZone = settings?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tabParam = searchParams.get(SETTINGS_TAB_SEARCH_PARAM);
+  const activeTab = isSettingsTab(tabParam) ? tabParam : SETTINGS_TABS.GENERAL;
 
-  const handleTimeZoneChange = (value: string | null) => {
-    if (!value) return;
-    updateUserSettings.mutate(
-      { timeZone: value },
-      // Сутки в статистике режутся по поясу — старые цифры после смены уже неверны.
-      {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: PROFILE_STATISTICS_QUERY_KEY }),
-      },
-    );
+  const handleTabChange = (value: string | null) => {
+    if (!isSettingsTab(value)) return;
+    setSearchParams({ [SETTINGS_TAB_SEARCH_PARAM]: value }, { replace: true });
   };
+
+  const TABS = useMemo(
+    () => [
+      {
+        id: SETTINGS_TABS.GENERAL,
+        title: t('general'),
+        icon: <GearIcon />,
+        content: <SettingsGeneral />,
+      },
+      {
+        id: SETTINGS_TABS.SOURCES,
+        title: t('sources'),
+        icon: <PlugsIcon />,
+        content: <SettingsSources />,
+      },
+    ],
+    [t],
+  );
 
   return (
     <PageLayout useQuery={useUserSettings}>
       <PageLayout.Content title={t('settings')}>
-        <Paper withBorder radius="md" p="lg" maw={480}>
-          <Select
-            label={t('timeZone')}
-            description={t('timeZoneDefinesStatisticsDays')}
-            data={timeZones}
-            value={timeZone}
-            onChange={handleTimeZoneChange}
-            disabled={updateUserSettings.isPending}
-            allowDeselect={false}
-            searchable
-            nothingFoundMessage={t('nothingFound')}
-          />
-        </Paper>
+        <Tabs value={activeTab} onChange={handleTabChange}>
+          <Tabs.List>
+            {TABS.map(({ id, icon, title }) => (
+              <Tabs.Tab key={id} value={id} leftSection={icon}>
+                {title}
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+          {TABS.map(({ id, content }) => (
+            <Tabs.Panel value={id} key={id} mt="lg">
+              {content}
+            </Tabs.Panel>
+          ))}
+        </Tabs>
       </PageLayout.Content>
     </PageLayout>
   );

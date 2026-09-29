@@ -1,12 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import type { LibSocialTokenState, TokenStore } from '../../core/source-accounts';
 
-export type LibSocialTokenState = {
-  accessToken: string;
-  refreshToken: string;
-  /** Epoch ms — derived from the token response's expires_in at the time it was fetched. */
-  expiresAt: number;
-};
+export type { LibSocialTokenState };
 
 export const readTokenStore = async (path: string): Promise<LibSocialTokenState | null> => {
   try {
@@ -22,3 +18,10 @@ export const writeTokenStore = async (path: string, state: LibSocialTokenState):
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, JSON.stringify(state, null, 2), 'utf-8');
 };
+
+/** Токен сервисной учётки — файл, который пишет scripts/libsocial-login.ts. */
+export const fileTokenStore = (path: string): TokenStore => ({
+  key: path,
+  read: () => readTokenStore(path),
+  write: (state) => writeTokenStore(path, state),
+});

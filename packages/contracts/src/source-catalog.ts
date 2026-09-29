@@ -1,4 +1,9 @@
-import { SOURCE_CONTENT_TYPE, type SourceContentType } from './source';
+import {
+  SOURCE_AUTH_FAMILY,
+  SOURCE_CONTENT_TYPE,
+  type SourceAuthFamily,
+  type SourceContentType,
+} from './source';
 import type { EnumLiteralsOf } from './utils';
 
 /**
@@ -28,6 +33,8 @@ export type CatalogEntry = {
   domains: [string, ...string[]];
   /** Source's brand color — used for its ribbon/accent in the web UI. */
   color: string;
+  /** null — источник открыт без входа. */
+  authFamily: SourceAuthFamily | null;
 };
 
 // `satisfies` (not `: Record<string, CatalogEntry>`) keeps the literal key union so `SourceId`
@@ -42,6 +49,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['a.zazaza.me', '3.readmanga.ru'],
     color: '#1847C5',
+    authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
   },
   mintmanga: {
     title: 'MintManga',
@@ -51,6 +59,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['2.mintmanga.one', '24.mintmanga.one', 'mintmanga.live', 'mintmanga.com'],
     color: '#CBF446',
+    authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
   },
   selfmanga: {
     title: 'SelfManga',
@@ -60,6 +69,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['1.selfmanga.live', 'selfmanga.live'],
     color: '#ECD166',
+    authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
   },
   seimanga: {
     title: 'SeiManga',
@@ -69,6 +79,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['1.seimanga.me', 'seimanga.me'],
     color: '#75B9F7',
+    authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
   },
   usagi: {
     title: 'Usagi',
@@ -78,6 +89,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['web.usagi.one'],
     color: '#0872AC',
+    authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
   },
   allhentai: {
     title: 'AllHentai',
@@ -87,6 +99,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['20.allhen.online', 'z.ahen.me', '24.allhen.online', '2023.allhen.online'],
     color: '#CA1717',
+    authFamily: SOURCE_AUTH_FAMILY.ALLHENTAI,
   },
   desume: {
     title: 'Desu',
@@ -96,6 +109,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['desu.uno', 'x.desu.city', 'desu.city', 'desu.work', 'desu.store', 'desu.win'],
     color: '#915806',
+    authFamily: null,
   },
   mangalib: {
     title: 'MangaLib',
@@ -105,6 +119,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['mangalib.org', 'mangalib.me'],
     color: '#FF8C02',
+    authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
   },
   hentailib: {
     title: 'HentaiLib',
@@ -114,6 +129,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['v1.hentailib.org', 'hentailib.me'],
     color: '#FF0048',
+    authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
   },
   yaoilib: {
     title: 'SlashLib',
@@ -123,6 +139,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['v2.slashlib.me'],
     color: '#D91A60',
+    authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
   },
   mangachan: {
     title: 'Манга-тян',
@@ -132,6 +149,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['im.manga-chan.me', 'manga-chan.me'],
     color: '#399DB7',
+    authFamily: null,
   },
   henchan: {
     title: 'Хентай-тян',
@@ -155,6 +173,7 @@ export const SOURCE_CATALOG = {
       'hentaichan.live',
     ],
     color: '#9EBE75',
+    authFamily: null,
   },
   yaoichan: {
     title: 'Яой-тян',
@@ -171,6 +190,7 @@ export const SOURCE_CATALOG = {
       'yaoi-chan.me',
     ],
     color: '#DC60A1',
+    authFamily: null,
   },
   remanga: {
     title: 'Реманга',
@@ -180,6 +200,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['remanga.org'],
     color: '#000000',
+    authFamily: null,
   },
   nudemoon: {
     title: 'Nude-Moon',
@@ -189,6 +210,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['g.nude-moon.fun', 'nude-moon.net', 'nude-moon.org', 'b.nude-moon.fun'],
     color: '#ED0102',
+    authFamily: null,
   },
   acomics: {
     title: 'AComics',
@@ -198,6 +220,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['acomics.ru'],
     color: '#D31434',
+    authFamily: null,
   },
   comx: {
     title: 'Com-X',
@@ -207,6 +230,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['com-x.life', 'comx.life'],
     color: '#FFA331',
+    authFamily: null,
   },
   mangabuff: {
     title: 'MangaBuff',
@@ -216,6 +240,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['mangabuff.ru'],
     color: '#8C00FF',
+    authFamily: null,
   },
   senkuro: {
     title: 'Senkuro',
@@ -227,6 +252,7 @@ export const SOURCE_CATALOG = {
     // some RU users); both hit the same api.senkuro.com backend, see sources/senkuro/config.ts.
     domains: ['senkuro.me', 'ne.senkuro.com', 'senkuro.com'],
     color: '#FE6E00',
+    authFamily: null,
   },
   senkognito: {
     title: 'Senkognito',
@@ -239,6 +265,7 @@ export const SOURCE_CATALOG = {
     // unblocked hostname. See sources/senkuro/config.ts for how the two are split.
     domains: ['ne.senkognito.com', 'senkognito.com'],
     color: '#FE6E00',
+    authFamily: null,
   },
   tomilolib: {
     title: 'TomiloLib',
@@ -248,6 +275,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['tomilo-lib.ru'],
     color: '#DC3933',
+    authFamily: null,
   },
   wamanga: {
     title: 'WaManga',
@@ -257,6 +285,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['wamanga.ru'],
     color: '#5A5EE7',
+    authFamily: null,
   },
   inkstory: {
     title: 'Inkstory',
@@ -266,6 +295,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['inkstory.net'],
     color: '#2B7FFF',
+    authFamily: null,
   },
   hentaichan_cc: {
     title: 'HentaiChan',
@@ -275,6 +305,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['hentaichan.cc'],
     color: '#5CA656',
+    authFamily: null,
   },
   sexkomix2: {
     title: 'SexKomix2',
@@ -284,6 +315,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['super.sexkomix22.com', 'sexkomix2.com'],
     color: '#FF3248',
+    authFamily: null,
   },
   multporn: {
     title: 'MultPorn',
@@ -293,6 +325,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['multporn.net'],
     color: '#A42511',
+    authFamily: null,
   },
   multporn_hentai: {
     title: 'MultPorn Hentai',
@@ -302,6 +335,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['multporn.net'],
     color: '#A42511',
+    authFamily: null,
   },
 } satisfies Record<string, CatalogEntry>;
 

@@ -19,8 +19,11 @@ import Catalog from '@/pages/Catalog';
 import Title from '@/pages/Title';
 import Reader from '@/pages/Reader';
 import Login from '@/pages/Login';
+import AccountDeletionScheduled from '@/pages/AccountDeletionScheduled';
 import Register from '@/pages/Register';
 import VerifyEmail from '@/pages/VerifyEmail';
+import RevertEmailChange from '@/pages/RevertEmailChange';
+import CancelAccountDeletion from '@/pages/CancelAccountDeletion';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 import Invites from '@/pages/Invites';
@@ -29,6 +32,8 @@ import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import Playground from '@/pages/Playground';
 import PlaygroundReadingMarks from '@/pages/Playground/ReadingMarks';
 import PlaygroundChartLabels from '@/pages/Playground/ChartLabels';
+import PlaygroundAccountGroups from '@/pages/Playground/AccountGroups';
+import PlaygroundHeaderBackground from '@/pages/Playground/HeaderBackground';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
@@ -47,6 +52,14 @@ const PLAYGROUND_ROUTES = import.meta.env.DEV
       {
         path: ROUTE_PATHS.PLAYGROUND_CHART_LABELS,
         element: <PlaygroundChartLabels />,
+      },
+      {
+        path: ROUTE_PATHS.PLAYGROUND_ACCOUNT_GROUPS,
+        element: <PlaygroundAccountGroups />,
+      },
+      {
+        path: ROUTE_PATHS.PLAYGROUND_HEADER_BACKGROUND,
+        element: <PlaygroundHeaderBackground />,
       },
     ]
   : [];
@@ -138,6 +151,10 @@ const router = createBrowserRouter([
                 element: <Login />,
               },
               {
+                path: ROUTE_PATHS.ACCOUNT_DELETION_SCHEDULED,
+                element: <AccountDeletionScheduled />,
+              },
+              {
                 path: ROUTE_PATHS.REGISTER,
                 element: <Register />,
               },
@@ -158,9 +175,18 @@ const router = createBrowserRouter([
         ],
       },
       // Документы открываются и гостю (ссылка с регистрации), и уже вошедшему — поэтому вне GuestOnly.
+      // Туда же ссылки из писем об аккаунте: их открывают и в браузере с активной сессией.
       {
         element: <AuthLayout />,
         children: [
+          {
+            path: ROUTE_PATHS.REVERT_EMAIL_CHANGE,
+            element: <RevertEmailChange />,
+          },
+          {
+            path: ROUTE_PATHS.CANCEL_ACCOUNT_DELETION,
+            element: <CancelAccountDeletion />,
+          },
           {
             path: ROUTE_PATHS.TERMS,
             element: <Terms />,

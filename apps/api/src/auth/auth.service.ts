@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, gt, ilike, isNull } from 'drizzle-orm';
 import type { CurrentUser, Language, RegisterRequest } from '@tanuki/contracts';
 import {
+  AccountDeletionScheduledException,
   ApiException,
   EmailNotVerifiedException,
   EmailTakenException,
@@ -19,11 +20,10 @@ import { getUniqueViolation } from '../database/pg-error.util';
 import { emailTokens, invites, users } from '../database/schema';
 import { MailService } from '../mail/mail.service';
 import { toCurrentUser } from '../users/users.util';
+import { normalizeEmail } from './email.util';
 import { EMAIL_TOKEN_PURPOSE, EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from './models';
 import { PasswordService } from './password.service';
 import { SessionService, type SessionMeta } from './session.service';
-
-const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
 export type AuthResult = {
   user: CurrentUser;
@@ -174,6 +174,7 @@ export class AuthService {
     login: string,
     password: string,
     remember: boolean,
+    cancelDeletion: boolean,
     meta: SessionMeta,
   ): Promise<AuthResult> {
     const normalized = normalizeEmail(login);
@@ -198,8 +199,39 @@ export class AuthService {
     }
     if (!user.emailVerifiedAt) throw new EmailNotVerifiedException();
 
+    // Проверяется после пароля: иначе ошибка выдавала бы, что аккаунт с таким логином есть.
+    if (user.deletionScheduledAt) {
+      if (!cancelDeletion) throw new AccountDeletionScheduledException();
+      await this.cancelDeletion(user.id);
+    }
+
     const session = await this.sessionService.create(user.id, remember, meta);
-    return { user: toCurrentUser(user), token: session.token, remember: session.remember };
+    return {
+      user: toCurrentUser({ ...user, deletionScheduledAt: null }),
+      token: session.token,
+      remember: session.remember,
+    };
+  }
+
+  /** Снимает запланированное удаление и гасит ссылку отмены из письма — она больше не нужна. */
+  private async cancelDeletion(userId: string): Promise<void> {
+    try {
+      await this.database.db.transaction(async (tx) => {
+        await tx.update(users).set({ deletionScheduledAt: null }).where(eq(users.id, userId));
+        await tx
+          .update(emailTokens)
+          .set({ usedAt: new Date() })
+          .where(
+            and(
+              eq(emailTokens.userId, userId),
+              eq(emailTokens.purpose, EMAIL_TOKEN_PURPOSE.CANCEL_ACCOUNT_DELETION),
+              isNull(emailTokens.usedAt),
+            ),
+          );
+      });
+    } catch {
+      throw new StorageUnavailableException();
+    }
   }
 
   async logout(token: string): Promise<void> {
@@ -269,7 +301,12 @@ export class AuthService {
           .returning({ id: emailTokens.id });
         if (consumed.length === 0) throw new TokenInvalidException();
 
-        await tx.update(users).set({ passwordHash }).where(eq(users.id, row.userId));
+        // Сброс пароля по ссылке из почты — явное желание вернуться в аккаунт, поэтому
+        // запланированное удаление тоже снимается: иначе новая сессия тут же отвергалась бы.
+        await tx
+          .update(users)
+          .set({ passwordHash, deletionScheduledAt: null })
+          .where(eq(users.id, row.userId));
         return row.userId;
       });
     } catch (error) {

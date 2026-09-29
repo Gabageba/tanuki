@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useMantineColorScheme } from '@mantine/core';
-import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useUserSettings from '@/shared/hooks/useUserSettings';
 import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
@@ -18,6 +18,7 @@ function UserSettingsSync() {
   const { data: user } = useCurrentUser();
   const { data: serverSettings } = useUserSettings();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const { i18n } = useTranslation();
   const updateUserSettings = useUpdateUserSettings();
   const appliedRef = useRef(false);
 
@@ -56,8 +57,8 @@ function UserSettingsSync() {
     if (serverSettings.colorScheme && serverSettings.colorScheme !== colorScheme) {
       setColorScheme(serverSettings.colorScheme);
     }
-    if (serverSettings.language && serverSettings.language !== i18next.language) {
-      i18next.changeLanguage(serverSettings.language);
+    if (serverSettings.language && serverSettings.language !== i18n.language) {
+      i18n.changeLanguage(serverSettings.language);
     }
     writeSettings({
       viewMode: serverSettings.viewMode,

@@ -7,7 +7,9 @@ import {
   SOURCE_LOCALE,
   SOURCE_STATUS,
   SOURCE_STATUS_REASON,
+  SOURCE_ACCESS,
   type Source,
+  type SourceAccess,
   type SourceContentType,
   type SourcesResponse,
   type SourceStatus,
@@ -18,6 +20,30 @@ import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/sha
 /** /sources отдаёт группы по contentType — для поиска источника по id нужен плоский список. */
 export const flattenSources = (data?: SourcesResponse): Source[] => {
   return Object.values(data ?? []).flat();
+};
+
+/**
+ * Только включённые пользователем источники, в тех же группах. Выключенные нужны лишь
+ * настройкам (включить обратно) и странице здоровья — остальным экранам их не показывают.
+ */
+export const getEnabledSources = (data?: SourcesResponse): SourcesResponse | undefined => {
+  if (!data) return data;
+  return Object.fromEntries(
+    Object.entries(data).map(([contentType, sources]) => [
+      contentType,
+      sources.filter((source) => source.isEnabled),
+    ]),
+  ) as SourcesResponse;
+};
+
+/** Подпись замка закрытого источника; у доступного замка нет. */
+export const getSourceAccessLabel = (access: SourceAccess, t: TFunction) => {
+  switch (access) {
+    case SOURCE_ACCESS.LOCKED:
+      return t('loginRequired');
+    case SOURCE_ACCESS.RELOGIN_REQUIRED:
+      return t('reloginRequired');
+  }
 };
 
 export const getSourceStatusColor = (status: SourceStatus) => {

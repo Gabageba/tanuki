@@ -94,6 +94,79 @@ export type SortDirection = EnumLiteralsOf<typeof SORT_DIRECTION>;
 
 export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 
+/**
+ * Аккаунт, которым пользователь открывает источник. Одна учётка обслуживает всё семейство:
+ * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у LibSocial — аккаунт lib.social.
+ * Источник с семейством закрыт для пользователя, пока тот не привяжет свой аккаунт.
+ */
+export const SOURCE_AUTH_FAMILY = {
+  GROUPLE: 'grouple',
+  ALLHENTAI: 'allhentai',
+  LIBSOCIAL: 'libsocial',
+} as const;
+export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
+
+export const SourceAuthFamilySchema = z.enum(SOURCE_AUTH_FAMILY);
+
+/** Может ли пользователь открыть источник прямо сейчас. */
+export const SOURCE_ACCESS = {
+  AVAILABLE: 'available',
+  /** Нужен свой аккаунт на источнике, а он не привязан. */
+  LOCKED: 'locked',
+  /** Аккаунт привязан, но его сессия истекла — нужно войти заново. */
+  RELOGIN_REQUIRED: 'reloginRequired',
+} as const;
+export type SourceAccess = EnumLiteralsOf<typeof SOURCE_ACCESS>;
+export const SourceAccessSchema = z.enum(SOURCE_ACCESS);
+
+export const SOURCE_ACCOUNT_STATUS = {
+  ACTIVE: 'active',
+  RELOGIN_REQUIRED: 'reloginRequired',
+} as const;
+export type SourceAccountStatus = EnumLiteralsOf<typeof SOURCE_ACCOUNT_STATUS>;
+export const SourceAccountStatusSchema = z.enum(SOURCE_ACCOUNT_STATUS);
+
+/**
+ * Привязанный аккаунт источника — один на всё семейство. У LibSocial учётка общая на всю сеть,
+ * но токен каждый сайт выдаёт свой: вход по паролю получает их все разом, а вставка токена —
+ * только для сайта, с которого он взят.
+ */
+export const SourceAccountSchema = z.object({
+  family: SourceAuthFamilySchema,
+  /** LibSocial — сайты сети, для которых у аккаунта есть токен. null — открыто всё семейство. */
+  sourceIds: z.array(z.string()).nullable(),
+  /** Имя аккаунта на источнике — чтобы человек видел, под кем вошёл. */
+  login: z.string().nullable(),
+  status: SourceAccountStatusSchema,
+  /** Пароль сохранён (зашифрованно) — истёкшая сессия восстановится сама. */
+  hasSavedPassword: z.boolean(),
+  /** `YYYY-MM-DDTHH:MM:SSZ`. */
+  linkedAt: z.string(),
+});
+export type SourceAccount = z.infer<typeof SourceAccountSchema>;
+
+export const SourceAccountsResponseSchema = z.object({
+  items: z.array(SourceAccountSchema),
+  /** Сервер умеет хранить аккаунты (задан ключ шифрования). false — привязка недоступна. */
+  isLinkingAvailable: z.boolean(),
+});
+export type SourceAccountsResponse = z.infer<typeof SourceAccountsResponseSchema>;
+
+export const LinkSourceAccountRequestSchema = z.object({
+  login: z.string().min(1),
+  password: z.string().min(1),
+  rememberPassword: z.boolean(),
+});
+export type LinkSourceAccountRequest = z.infer<typeof LinkSourceAccountRequestSchema>;
+
+export const LinkLibSocialTokenRequestSchema = z.object({
+  /** Сайт сети, с которого взят токен: у каждого он свой. */
+  sourceId: z.string().min(1),
+  /** Значение ключа `auth` из localStorage сайта или сам refresh_token. */
+  value: z.string().min(1),
+});
+export type LinkLibSocialTokenRequest = z.infer<typeof LinkLibSocialTokenRequestSchema>;
+
 export const SourceSchema = z.object({
   id: z.string(), // "desume"
   title: z.string(),
@@ -126,6 +199,16 @@ export const SourceSchema = z.object({
   /** True when the source actually reverses order for the chosen SortOrder — most sources ignore
    *  ListParams.direction, so their UI hides the direction toggle entirely. */
   supportsDirection: z.boolean(),
+  /** Семейство аккаунта, без которого источник закрыт; null — источник открыт без входа. */
+  authFamily: SourceAuthFamilySchema.nullable(),
+  /** Пользователь не выключил источник в настройках. У гостя всегда true. */
+  isEnabled: z.boolean(),
+  access: SourceAccessSchema,
 });
 
 export type Source = z.infer<typeof SourceSchema>;
+
+export const UpdateSourceEnabledRequestSchema = z.object({
+  isEnabled: z.boolean(),
+});
+export type UpdateSourceEnabledRequest = z.infer<typeof UpdateSourceEnabledRequestSchema>;

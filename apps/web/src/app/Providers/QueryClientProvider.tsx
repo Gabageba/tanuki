@@ -8,7 +8,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import type { ReactNode } from 'react';
 import { API_ERROR_CODE } from '@tanuki/contracts';
-import { ApiRequestError } from '@/shared/api/client';
+import { ApiRequestError, isSourceAccountRequiredError } from '@/shared/api/client';
 import { readErrorMeta } from '@/shared/api/errorMeta';
 import { I18N } from '@/shared/lib/i18n';
 import { CURRENT_USER_QUERY_KEY } from '@/entities/user/hooks/useCurrentUser';
@@ -51,7 +51,8 @@ const queryClient: QueryClient = new QueryClient({
         return;
       }
       const { silentError, errorTitle } = readErrorMeta(query.meta);
-      if (silentError) return;
+      // Закрытый источник объясняет экран QueryError с кнопкой входа — уведомление лишнее.
+      if (silentError || isSourceAccountRequiredError(error)) return;
       showErrorNotification(error, errorTitle);
     },
   }),

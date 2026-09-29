@@ -1,5 +1,7 @@
-import type { CookieJar } from 'tough-cookie';
-import type { Parser, ParserContext, Credentials, Logger } from './core/parser';
+import { CookieJar } from 'tough-cookie';
+import { SOURCE_AUTH_FAMILY } from '@tanuki/contracts';
+import type { Parser, ParserContext, Credentials, GroupleCredentials, Logger } from './core/parser';
+import type { LibSocialTokenState, TokenStore } from './core/source-accounts';
 import type { RawSourceInfo } from './types';
 import { HttpClientImpl, type Timeouts } from './core/http/client';
 import { UserAgents } from './core/http/user-agents';
@@ -10,8 +12,11 @@ import { SOURCE_CATALOG, SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/
 export { SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/catalog';
 import { GROUPLE_CONFIGS } from './sources/grouple/config';
 import { createGroupleParser } from './sources/grouple/engine';
+import { authenticateAllHentai, authenticateGrouple } from './sources/grouple/auth';
+import { fetchLibSocialAccountName } from './sources/libsocial/auth';
+import { loginLibSocialWithPassword } from './sources/libsocial/login';
 import { createDesuParser } from './sources/desu';
-import { LIBSOCIAL_CONFIGS } from './sources/libsocial/config';
+import { LIBSOCIAL_API_HOST, LIBSOCIAL_CONFIGS } from './sources/libsocial/config';
 import { createLibSocialParser } from './sources/libsocial/engine';
 import { CHAN_CONFIGS } from './sources/chan/config';
 import { createChanParser } from './sources/chan/engine';
@@ -212,6 +217,32 @@ export type ParsersRegistry = {
   decodeImage(sourceId: string, bytes: Buffer, imageUrl: string): Promise<Buffer>;
   init(): Promise<void>;
   /**
+   * Входит в Grouple или AllHentai под учёткой пользователя, в свежий jar — общий и чужие
+   * сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
+   */
+  loginAccount(
+    family: typeof SOURCE_AUTH_FAMILY.GROUPLE | typeof SOURCE_AUTH_FAMILY.ALLHENTAI,
+    credentials: GroupleCredentials,
+  ): Promise<CookieJar | null>;
+  /**
+   * Проверяет токен LibSocial для источника и возвращает имя аккаунта (null — токен не
+   * принят). Истёкший access_token по пути обменивается — новый пишется в store.
+   */
+  fetchLibSocialAccountName(sourceId: string, store: TokenStore): Promise<string | null>;
+  /**
+   * Сайты LibSocial, в которые умеем входить. Учётка на них общая, а токен каждый выдаёт свой —
+   * аккаунт пользователя получает токен на каждом.
+   */
+  libSocialLoginSourceIds(): string[];
+  /**
+   * Входит в LibSocial логином и паролем (форма сайта с ALTCHA, затем OAuth-код) и возвращает
+   * свою пару токенов; null — сайт не принял логин или пароль.
+   */
+  loginLibSocial(
+    sourceId: string,
+    credentials: GroupleCredentials,
+  ): Promise<LibSocialTokenState | null>;
+  /**
    * Resolves once the init() kicked off at boot has settled (immediately if init() was never
    * called). Lets the host start listening right away and make only the calls that actually
    * touch a source wait for warmup — see parsers.provider.ts.
@@ -240,9 +271,11 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
     const descriptor = SOURCES[id];
     const jar = jarFor(descriptor.cookieScope);
     jars.set(id, jar);
+    const authFamily = SOURCE_CATALOG[id].authFamily;
     const http = new HttpClientImpl({
       sourceId: id,
       jar,
+      authFamily,
       defaultHeaders: descriptor.defaultHeaders,
       timeouts: opts.timeouts,
     });
@@ -306,6 +339,49 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
     },
     ready() {
       return initPromise ?? Promise.resolve();
+    },
+    async loginAccount(family, credentials) {
+      const memberId =
+        family === SOURCE_AUTH_FAMILY.ALLHENTAI ? SOURCE_ID.ALLHENTAI : SOURCE_ID.READMANGA_RU;
+      const cfg = GROUPLE_CONFIGS.find((config) => config.id === memberId);
+      if (!cfg) throw new UnknownSourceError(memberId);
+
+      const jar = new CookieJar();
+      const http = new HttpClientImpl({
+        sourceId: memberId,
+        jar,
+        defaultHeaders: SOURCES[memberId].defaultHeaders,
+        timeouts: opts.timeouts,
+      });
+      try {
+        const isLoggedIn =
+          family === SOURCE_AUTH_FAMILY.ALLHENTAI
+            ? await authenticateAllHentai(http, jar, cfg, credentials, opts.logger)
+            : await authenticateGrouple(http, jar, credentials, opts.logger);
+        return isLoggedIn ? jar : null;
+      } finally {
+        await http.close();
+      }
+    },
+    async fetchLibSocialAccountName(sourceId, store) {
+      const cfg = LIBSOCIAL_CONFIGS.find((config) => config.id === sourceId);
+      if (!cfg?.auth) throw new UnknownSourceError(sourceId);
+      return fetchLibSocialAccountName(
+        cfg.auth,
+        cfg.siteId,
+        store,
+        sourceId,
+        opts.logger,
+        LIBSOCIAL_API_HOST,
+      );
+    },
+    libSocialLoginSourceIds() {
+      return LIBSOCIAL_CONFIGS.filter((config) => config.auth).map((config) => config.id);
+    },
+    async loginLibSocial(sourceId, credentials) {
+      const cfg = LIBSOCIAL_CONFIGS.find((config) => config.id === sourceId);
+      if (!cfg?.auth) throw new UnknownSourceError(sourceId);
+      return loginLibSocialWithPassword(cfg.auth, cfg.siteId, credentials, sourceId);
     },
     async close() {
       await Promise.allSettled(

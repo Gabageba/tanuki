@@ -24,6 +24,11 @@
 // active-state tint lives here — it's driven by the `isActive`/`data-active` prop, which a
 // `variantColorResolver` has no access to.
 .button {
+  // Hover-граница `muted` — `variantColorResolver` задаёт только обычную, эту кладёт `Button.vars`.
+  &[data-variant='muted']:hover:not(:disabled, [data-disabled], [data-loading]) {
+    border-color: var(--button-hover-bd);
+  }
+
   &[data-variant='tile'][data-active] {
     background: var(--tanuki-color-primary-light-transparent);
     border-color: var(--mantine-primary-color-filled) !important;
@@ -69,4 +74,24 @@
     color: var(--mantine-color-terracotta-text);
     background-color: var(--tanuki-color-primary-light-transparent);
   }
+}
+
+// Bg, border and icon color of the `muted` variant come from `THEME.variantColorResolver`. Mantine
+// paints the whole alert in `--alert-color`, so the title and message are returned to neutral here —
+// only the icon keeps the accent.
+.alert[data-variant='muted'] {
+  .alertMessage {
+    color: var(--mantine-color-text);
+  }
+
+  .alertTitle {
+    color: var(--mantine-color-red);
+  }
+}
+
+// Default `Text` size. A `fz` default prop would land as an inline style and beat `inherit`, so the
+// default lives here instead: an explicit `size` (`--text-fz`) or `fz` (inline) still wins over it,
+// and `inherit` is left alone.
+.text:not([data-inherit]) {
+  font-size: var(--text-fz, var(--mantine-font-size-sm));
 }

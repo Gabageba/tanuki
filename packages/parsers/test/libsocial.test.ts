@@ -326,6 +326,47 @@ describe('LibSocial parser conformance', () => {
     expect(manga.restriction).toBe(TITLE_RESTRICTION.LEGAL);
   });
 
+  it('getDetails: keeps purchased paid chapters marked isPaid and drops closed ones', async () => {
+    const paidSlug = '789--paid';
+    const paidHttp = new FakeHttpClient();
+    paidHttp.register((url) => url.includes('/chapters'), {
+      status: 200,
+      body: JSON.stringify({
+        data: [
+          { volume: 1, number: 1, name: null, branches: [{ id: 1, restricted_view: null }] },
+          {
+            volume: 1,
+            number: 2,
+            name: null,
+            branches: [{ id: 2, restricted_view: { is_open: true } }],
+          },
+          {
+            volume: 1,
+            number: 3,
+            name: null,
+            branches: [{ id: 3, restricted_view: { is_open: false } }],
+          },
+        ],
+      }),
+      contentType: 'application/json',
+    });
+    paidHttp.register(
+      (url) => url.startsWith(`https://${LIBSOCIAL_API_HOST}/api/manga/${paidSlug}`),
+      {
+        status: 200,
+        body: DETAILS_JSON,
+        contentType: 'application/json',
+      },
+    );
+
+    const manga = await createLibSocialParser(CFG, makeContext(paidHttp)).getDetails(paidSlug);
+    expect(manga.hasPaidChapters).toBe(true);
+    expect(manga.chapters!.map((chapter) => [chapter.number, chapter.isPaid])).toEqual([
+      [1, undefined],
+      [2, true],
+    ]);
+  });
+
   it('getPages: absolute, pre-resolved urls', async () => {
     const manga = await parser.getDetails(SLUG);
     const chapter2 = manga.chapters!.find((c) => c.number === 2)!;

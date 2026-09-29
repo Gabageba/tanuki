@@ -240,7 +240,9 @@
       "Bash(python3 -)",
       "Read(//Users/gabageba/shared/locales/**)",
       "Read(//Users/gabageba/shared/**)",
-      "Bash(sed -n 1,200p src/pages/Profile/components/ProfileStatistics/cards/lib.ts* ; grep -rn \"points\" packages 2>/dev/null | head -0; grep -rn \"ChaptersReadPoint\\\\b\" -A6 ../../packages/contracts/src | head -30)"
+      "Bash(sed -n 1,200p src/pages/Profile/components/ProfileStatistics/cards/lib.ts* ; grep -rn \"points\" packages 2>/dev/null | head -0; grep -rn \"ChaptersReadPoint\\\\b\" -A6 ../../packages/contracts/src | head -30)",
+      "Bash(pnpm --filter @tanuki/contracts build)",
+      "Bash(pnpm db:generate)"
     ],
     "additionalDirectories": [
       "/Users/gabageba/Develop/web/tanuki-parsers-redo/src/main/kotlin/org/koitharu/kotatsu/parsers/site/ru/rulib",

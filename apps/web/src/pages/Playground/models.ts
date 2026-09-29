@@ -14,6 +14,22 @@ export type PlaygroundTask = {
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
   {
+    path: ROUTE_PATHS.PLAYGROUND_HEADER_BACKGROUND,
+    title: 'Фон шапки группы',
+    description:
+      'Серая подложка шапки GroupedList теряется на светлом фоне страницы — чем её выделить вместо этого.',
+    createdAt: '2026-09-30',
+    decision: 'B1',
+  },
+  {
+    path: ROUTE_PATHS.PLAYGROUND_ACCOUNT_GROUPS,
+    title: 'Шапка группы с аккаунтом',
+    description:
+      'Как оформить строку аккаунта над источниками Grouple, чтобы она читалась как шапка и было видно, вошли ли.',
+    createdAt: '2026-09-29',
+    decision: 'H3b',
+  },
+  {
     path: ROUTE_PATHS.PLAYGROUND_CHART_LABELS,
     title: 'Подписи месячного графика',
     description:

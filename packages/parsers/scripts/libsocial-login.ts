@@ -12,13 +12,13 @@
  * the whole network (MANGALIB/HENTAILIB/YAOILIB), not just the source you're logging into.
  * The reCAPTCHA still needs a human regardless, this just saves typing credentials each time.
  */
-import { randomBytes, createHash } from 'node:crypto';
 import { resolve, join } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import { chromium, type Frame } from 'playwright';
 import { catalogEntryFor, SOURCE_ID } from '../src/sources/catalog';
+import { createLibSocialAuthorization } from '../src/sources/libsocial/auth';
 import { LIBSOCIAL_CONFIGS } from '../src/sources/libsocial/config';
-import { writeTokenStore, type LibSocialTokenState } from '../src/sources/libsocial/token-store';
+import { writeTokenStore } from '../src/sources/libsocial/token-store';
 
 // Best-effort — LIB_USERNAME/PASSWORD and LIBSOCIAL_TOKEN_STORE_DIR can live alongside
 // GROUPLE_USERNAME etc. in apps/api/.env rather than needing a separate file. Silently no-ops
@@ -26,17 +26,6 @@ import { writeTokenStore, type LibSocialTokenState } from '../src/sources/libsoc
 loadDotenv({ path: resolve(__dirname, '../../../apps/api/.env'), quiet: true });
 
 const LOGIN_TIMEOUT_MS = 5 * 60_000;
-
-type TokenResponse = {
-  token_type: string;
-  expires_in: number;
-  access_token: string;
-  refresh_token: string;
-};
-
-const base64url = (buf: Buffer): string => {
-  return buf.toString('base64url');
-};
 
 const main = async (): Promise<void> => {
   const sourceId = process.argv[2] ?? SOURCE_ID.HENTAILIB;
@@ -59,20 +48,7 @@ const main = async (): Promise<void> => {
     process.env.LIBSOCIAL_TOKEN_STORE_DIR ?? resolve(process.cwd(), '../../data/libsocial-tokens');
   const tokenStorePath = join(tokenStoreDir, `${cfg.id}.json`);
 
-  const codeVerifier = base64url(randomBytes(64));
-  const codeChallenge = base64url(createHash('sha256').update(codeVerifier).digest());
-  const state = base64url(randomBytes(24));
-
-  const authorizeUrl = new URL(`${auth.authOrigin}/auth/oauth/authorize`);
-  authorizeUrl.searchParams.set('client_id', auth.clientId);
-  authorizeUrl.searchParams.set('code_challenge', codeChallenge);
-  authorizeUrl.searchParams.set('code_challenge_method', 'S256');
-  authorizeUrl.searchParams.set('iframe', 'false');
-  authorizeUrl.searchParams.set('prompt', 'consent');
-  authorizeUrl.searchParams.set('redirect_uri', auth.redirectUri);
-  authorizeUrl.searchParams.set('response_type', 'code');
-  authorizeUrl.searchParams.set('scope', '');
-  authorizeUrl.searchParams.set('state', state);
+  const authorization = createLibSocialAuthorization(auth, cfg.siteId, cfg.id);
 
   // Optional convenience — the login form field itself is named "login" on the wire (captured
   // POST body: `login=...&password=...`); LIB_USERNAME is just this script's env var name for
@@ -88,8 +64,6 @@ const main = async (): Promise<void> => {
       ? 'Логин/пароль подставлены — останется решить капчу и нажать кнопку входа.'
       : 'Войди в аккаунт и реши капчу — окно закроется само, как только это удастся.',
   );
-
-  const redirectOrigin = new URL(auth.redirectUri).origin;
 
   const browser = await chromium.launch({ headless: false });
   let code: string;
@@ -107,32 +81,29 @@ const main = async (): Promise<void> => {
     // single-use code first). An earlier attempt tried to intercept-and-abort the network
     // request instead so that page would never load at all, but that didn't reliably fire in
     // practice — reading the URL off the commit event is simpler and, empirically, works.
-    const captured = new Promise<{ code: string; state: string | null }>(
-      (resolveCapture, rejectCapture) => {
-        const onFrameNavigated = (frame: Frame): void => {
-          console.log(`  → ${frame.url()}`);
-          const url = new URL(frame.url());
-          if (url.origin !== redirectOrigin) return;
-          const returnedCode = url.searchParams.get('code');
-          const oauthError = url.searchParams.get('error');
-          if (oauthError) rejectCapture(new Error(`Сайт вернул ошибку авторизации: ${oauthError}`));
-          else if (returnedCode)
-            resolveCapture({ code: returnedCode, state: url.searchParams.get('state') });
-        };
-        page.on('framenavigated', (frame) => {
-          if (frame === page.mainFrame()) onFrameNavigated(frame);
+    const captured = new Promise<string>((resolveCapture, rejectCapture) => {
+      const onFrameNavigated = (frame: Frame): void => {
+        console.log(`  → ${frame.url()}`);
+        try {
+          const returnedCode = authorization.readCallback(frame.url());
+          if (returnedCode) resolveCapture(returnedCode);
+        } catch (err) {
+          rejectCapture(err instanceof Error ? err : new Error(String(err)));
+        }
+      };
+      page.on('framenavigated', (frame) => {
+        if (frame === page.mainFrame()) onFrameNavigated(frame);
+      });
+      context.on('page', (popup) => {
+        console.log('  (открылась новая вкладка)');
+        popup.on('framenavigated', (frame) => {
+          if (frame === popup.mainFrame()) onFrameNavigated(frame);
         });
-        context.on('page', (popup) => {
-          console.log('  (открылась новая вкладка)');
-          popup.on('framenavigated', (frame) => {
-            if (frame === popup.mainFrame()) onFrameNavigated(frame);
-          });
-        });
-      },
-    );
+      });
+    });
 
     console.log('Навигация:');
-    await page.goto(authorizeUrl.toString());
+    await page.goto(authorization.authorizeUrl);
 
     if (login && password) {
       try {
@@ -149,48 +120,17 @@ const main = async (): Promise<void> => {
         LOGIN_TIMEOUT_MS,
       ),
     );
-    const { code: returnedCode, state: returnedState } = await Promise.race([captured, timeout]);
-    if (returnedState !== state) {
-      throw new Error(
-        'state в ответе не совпадает с отправленным — похоже на устаревшую навигацию, попробуй ещё раз.',
-      );
-    }
-    code = returnedCode;
+    code = await Promise.race([captured, timeout]);
   } finally {
     await browser.close();
   }
 
   console.log('Код получен, обмениваю на токен...');
-  const res = await fetch(auth.tokenUrl, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'site-id': String(cfg.siteId),
-      origin: redirectOrigin,
-      referer: `${redirectOrigin}/`,
-    },
-    body: JSON.stringify({
-      grant_type: 'authorization_code',
-      client_id: auth.clientId,
-      redirect_uri: auth.redirectUri,
-      code_verifier: codeVerifier,
-      code,
-    }),
-  });
-  const bodyText = await res.text();
-  if (!res.ok) {
-    throw new Error(`Обмен code на токен не удался: HTTP ${res.status} — ${bodyText}`);
-  }
-  const json = JSON.parse(bodyText) as TokenResponse;
-  const state_: LibSocialTokenState = {
-    accessToken: json.access_token,
-    refreshToken: json.refresh_token,
-    expiresAt: Date.now() + json.expires_in * 1000,
-  };
-  await writeTokenStore(tokenStorePath, state_);
+  const token = await authorization.exchange(code);
+  await writeTokenStore(tokenStorePath, token);
   console.log(`Готово. Токен сохранён в ${tokenStorePath}`);
   console.log(
-    `Действителен до ${new Date(state_.expiresAt).toISOString()}, дальше обновляется сам.`,
+    `Действителен до ${new Date(token.expiresAt).toISOString()}, дальше обновляется сам.`,
   );
 };
 

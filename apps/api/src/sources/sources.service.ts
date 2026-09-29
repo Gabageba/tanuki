@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  catalogEntryFor,
   SOURCE_CONTENT_TYPE,
   SOURCE_STATUS,
   SOURCE_STATUS_REASON,
   type Source,
+  type SourceAccess,
   type SourceContentType,
   type SourcesResponse,
 } from '@tanuki/contracts';
@@ -13,6 +15,8 @@ import { NotFoundApiException } from '../common/errors';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawSourceInfo } from '../parsers-client/parsers-client.types';
 import { SourceStatusService } from '../resilience/source-status.service';
+import { SourceAccessService } from '../source-accounts/source-access.service';
+import { UserSourcesService } from './user-sources.service';
 
 /** Order of the groups in the response — objects keep insertion order over JSON. */
 const CONTENT_TYPES = Object.values(SOURCE_CONTENT_TYPE) as SourceContentType[];
@@ -28,11 +32,16 @@ export class SourcesService {
     @Inject(ENV) private readonly env: Env,
     private readonly parsersClient: ParsersClientService,
     private readonly sourceStatus: SourceStatusService,
+    private readonly userSources: UserSourcesService,
+    private readonly sourceAccess: SourceAccessService,
   ) {}
 
-  /** Плоский список — им пользуется SearchService, которому группировка только мешает. */
-  async listSources(): Promise<Source[]> {
-    return (await this.enabledSources()).map((source) => this.toSource(source));
+  /**
+   * Плоский список всех источников. userId только размечает isEnabled — выключенные
+   * пользователем источники здесь остаются: их показывают настройки, чтобы включить обратно.
+   */
+  async listSources(userId?: string): Promise<Source[]> {
+    return this.buildSources(userId, () => true);
   }
 
   /**
@@ -45,12 +54,14 @@ export class SourcesService {
    *
    * Залипнуть в down/degraded источник при этом не может: ночной пробник ходит и в них тоже,
    * независимо от того, шлёт ли туда кто-нибудь живые запросы.
+   *
+   * С userId отсеиваются и источники, которые пользователь выключил в настройках. Закрытые для
+   * него источники остаются — поиск показывает их отдельным статусом.
    */
-  async listSearchableSources(): Promise<Source[]> {
-    return (await this.enabledSources())
-      .filter((source) => source.isSearchSupported)
-      .map((source) => this.toSource(source))
-      .filter((source) => source.status === SOURCE_STATUS.OK);
+  async listSearchableSources(userId?: string): Promise<Source[]> {
+    return (await this.buildSources(userId, (raw) => raw.isSearchSupported)).filter(
+      (source) => source.status === SOURCE_STATUS.OK && source.isEnabled,
+    );
   }
 
   async getSource(sourceId: string): Promise<Source> {
@@ -61,14 +72,26 @@ export class SourcesService {
     return source;
   }
 
-  async listGroupedSources(): Promise<SourcesResponse> {
+  async listGroupedSources(userId?: string): Promise<SourcesResponse> {
     const groups = Object.fromEntries(
       CONTENT_TYPES.map((contentType) => [contentType, [] as Source[]]),
     ) as SourcesResponse;
-    for (const source of await this.listSources()) {
+    for (const source of await this.listSources(userId)) {
       groups[source.contentType].push(source);
     }
     return groups;
+  }
+
+  private async buildSources(
+    userId: string | undefined,
+    include: (raw: RawSourceInfo) => boolean,
+  ): Promise<Source[]> {
+    const [raws, disabled, accessOf] = await Promise.all([
+      this.enabledSources(),
+      this.userSources.getDisabled(userId),
+      this.sourceAccess.getAccessResolver(userId),
+    ]);
+    return raws.filter(include).map((raw) => this.toSource(raw, disabled, accessOf));
   }
 
   private async enabledSources(): Promise<RawSourceInfo[]> {
@@ -80,7 +103,11 @@ export class SourcesService {
     );
   }
 
-  private toSource(raw: RawSourceInfo): Source {
+  private toSource(
+    raw: RawSourceInfo,
+    disabled: ReadonlySet<string>,
+    accessOf: (sourceId: string) => SourceAccess,
+  ): Source {
     // isBroken — жёсткий оверрайд, а не стартовое значение: это решение человека о том, что
     // источник не парсится в принципе (JS-челлендж, мёртвый TLS). Автоматика его не трогает, и
     // случайный удачный запрос не должен его снимать — такие источники даже не пробуются.
@@ -103,6 +130,9 @@ export class SourcesService {
       requiresVpn: raw.requiresVpn,
       sortOrders: raw.sortOrders,
       supportsDirection: raw.supportsDirection,
+      authFamily: catalogEntryFor(raw.id).authFamily,
+      isEnabled: !disabled.has(raw.id),
+      access: accessOf(raw.id),
     };
   }
 }

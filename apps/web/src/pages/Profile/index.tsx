@@ -1,17 +1,14 @@
 import { Scroller, Stack, Tabs } from '@mantine/core';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChartBarIcon, KeyIcon, LinkSimpleIcon } from '@phosphor-icons/react';
+import { ChartBarIcon, DatabaseIcon, ShieldCheckIcon } from '@phosphor-icons/react';
 import PageLayout from '@/shared/ui/PageLayout';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import ProfileInfo from './components/ProfileInfo';
 import ProfileStatistics from './components/ProfileStatistics';
-
-const PROFILE_TABS = {
-  STATISTICS: 'statistics',
-  LOGIN_AND_LINKS: 'loginAndLinks',
-  SAFETY: 'safety',
-} as const;
+import ProfileSignInAndSecurity from './components/ProfileSignInAndSecurity';
+import ProfileData from './components/ProfileData';
+import { PROFILE_TABS } from './models';
 
 function Profile() {
   const { t } = useTranslation();
@@ -25,16 +22,16 @@ function Profile() {
         content: <ProfileStatistics />,
       },
       {
-        id: PROFILE_TABS.LOGIN_AND_LINKS,
-        title: t('loginAndLinking'),
-        icon: <LinkSimpleIcon />,
-        content: <></>,
+        id: PROFILE_TABS.SIGN_IN_AND_SECURITY,
+        title: t('signInAndSecurity'),
+        icon: <ShieldCheckIcon />,
+        content: <ProfileSignInAndSecurity />,
       },
       {
-        id: PROFILE_TABS.SAFETY,
-        title: t('security'),
-        icon: <KeyIcon />,
-        content: <></>,
+        id: PROFILE_TABS.DATA,
+        title: t('data'),
+        icon: <DatabaseIcon />,
+        content: <ProfileData />,
       },
     ],
     [t],

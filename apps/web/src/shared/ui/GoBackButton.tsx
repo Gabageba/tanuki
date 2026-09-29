@@ -4,12 +4,16 @@ import { useNavigate } from 'react-router';
 
 type Props = {
   path?: string;
+  onClick?: () => void;
 };
 
-function GoBackButton({ path }: Props) {
+function GoBackButton({ path, onClick }: Props) {
   const navigate = useNavigate();
 
   const handleClick = () => {
+    if (onClick) {
+      return onClick();
+    }
     if (path) {
       navigate(path);
       return;

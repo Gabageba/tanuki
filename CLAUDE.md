@@ -22,7 +22,9 @@
   `TextInput`, `PasswordInput`, `NumberInput`, `Select`, `MultiSelect`, `Autocomplete`,
   `DateInput`, …, `Tabs.Tab` and `Menu.Item`: `<Button leftSection={<DownloadIcon />}>`,
   `<Tabs.Tab leftSection={<BookOpenIcon />}>`, `<Menu.Item leftSection={<TrashIcon />}>`. Icons come from `@phosphor-icons/react`.
-  `ActionIcon` is exempt — it is an icon already.
+  `ActionIcon` is exempt — it is an icon already. A modal's cancel button is exempt too: the
+  «Отмена» `Button` that closes a `Modal` carries no `leftSection` icon. Every other button in
+  the modal — the confirm action included — keeps its icon.
 
 ## Types
 

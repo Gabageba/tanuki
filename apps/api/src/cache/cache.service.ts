@@ -12,6 +12,17 @@ type CacheEnvelope<T> = {
 export type CacheResult<T> = {
   value: T;
   stale: boolean;
+  /** Значение взято из кеша, а не только что получено fetch'ем. */
+  fromCache: boolean;
+};
+
+export type GetOrSetOptions<T> = {
+  force?: boolean;
+  /**
+   * Что из свежего значения можно положить в общий кеш. Вызывающий получает значение целиком,
+   * а в кеш уходит только общая для всех часть — например, без глав, купленных этим аккаунтом.
+   */
+  toShared?: (value: T) => T;
 };
 
 @Injectable()
@@ -42,21 +53,22 @@ export class CacheService implements OnModuleDestroy {
     key: string,
     ttl: CacheTtlSpec,
     fetch: () => Promise<T>,
-    options?: { force?: boolean },
+    options?: GetOrSetOptions<T>,
   ): Promise<CacheResult<T>> {
     const envelope = await this.readEnvelope<T>(key);
 
     if (!options?.force && envelope && Date.now() - envelope.storedAt < ttl.freshSeconds * 1000) {
-      return { value: envelope.value, stale: false };
+      return { value: envelope.value, stale: false, fromCache: true };
     }
 
     try {
       const value = await fetch();
-      await this.writeEnvelope(key, ttl, { value, storedAt: Date.now() });
-      return { value, stale: false };
+      const shared = options?.toShared ? options.toShared(value) : value;
+      await this.writeEnvelope(key, ttl, { value: shared, storedAt: Date.now() });
+      return { value, stale: false, fromCache: false };
     } catch (error) {
       if (envelope) {
-        return { value: envelope.value, stale: true };
+        return { value: envelope.value, stale: true, fromCache: true };
       }
       throw error;
     }

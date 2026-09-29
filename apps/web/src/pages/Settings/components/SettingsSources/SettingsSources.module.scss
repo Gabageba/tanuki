@@ -1,0 +1,7 @@
+// In the dark scheme Mantine's off-track (`dark-5`) is almost the same tone as
+// `--tanuki-color-surface`, so an unchecked switch disappears on the card — lift it one shade.
+// Mantine's styles sit in a cascade layer, so this unlayered rule would beat its checked and
+// disabled states regardless of specificity — hence the explicit state filter on the input.
+[data-mantine-color-scheme='dark'] input:not(:checked, :disabled) + .switchTrack {
+  --switch-bg: var(--mantine-color-dark-4);
+}

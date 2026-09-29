@@ -1,4 +1,4 @@
-import type { MantineColorsTuple } from '@mantine/core';
+import type { MantineColor, MantineColorsTuple } from '@mantine/core';
 
 /**
  * Палитра снята с макета `src/assets/Tanuki-standalone.html` (заход 4 — страница тайтла в
@@ -98,3 +98,14 @@ export const STATUS_DOWN_COLOR_SHADES: MantineColorsTuple = [
 // Нейтральная заливка столбиков и полос — приглушённый текст на полупрозрачности, работает в обеих
 // схемах. Акцентная — `var(--mantine-primary-color-filled)`.
 export const NEUTRAL_BAR_COLOR = 'color-mix(in srgb, var(--mantine-color-dimmed) 40%, transparent)';
+
+/**
+ * Приглушённый тон `color` — фон и граница, лишь слегка подкрашенные этим цветом (опасная зона
+ * в `GroupedList`). Подмешивается к фону и границе темы, поэтому одинаково
+ * тих в обеих схемах. `hovered` — тот же тон чуть ярче, для наведения.
+ */
+export const getMutedBackground = (color: MantineColor, hovered = false) =>
+  `color-mix(in srgb, var(--mantine-color-${color}-filled) ${hovered ? 10 : 4}%, var(--tanuki-color-surface))`;
+
+export const getMutedBorderColor = (color: MantineColor, hovered = false) =>
+  `color-mix(in srgb, var(--mantine-color-${color}-filled) ${hovered ? 45 : 25}%, var(--mantine-color-default-border))`;

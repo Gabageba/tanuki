@@ -53,6 +53,11 @@ export type RawTitle = {
   /** null on list items, populated (possibly []) on getDetails. */
   chapters: RawChapter[] | null;
   source: string;
+  /**
+   * У тайтла есть платные главы — открытые или закрытые этому аккаунту. Значит, список глав
+   * зависит от того, кто спрашивает. Omitted where the source has no paid chapters.
+   */
+  hasPaidChapters?: boolean;
   /** Publication format. Omitted where the source page being parsed doesn't expose it. */
   type?: RawTitleType | null;
   /** Publication year. Omitted where the source page being parsed doesn't expose it. */
@@ -131,6 +136,11 @@ export type RawChapter = {
   uploadDate: number;
   branch: string | null;
   source: string;
+  /**
+   * Платная глава, открытая аккаунту, от имени которого шёл запрос (куплена). Такую главу
+   * нельзя отдавать из общего кеша другим людям. Omitted on free chapters.
+   */
+  isPaid?: boolean;
 };
 
 export type RawPage = {

@@ -1,14 +1,15 @@
 import { Divider, SimpleGrid, Stack, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { SOURCE_CONTENT_TYPE } from '@tanuki/contracts';
-import { getLabelByContentType } from '@/entities/source/lib';
+import { getEnabledSources, getLabelByContentType } from '@/entities/source/lib';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { SourcesQuery } from './models';
 import SourceCard from '@/entities/source/components/SourceCard';
 
 function SourcesList() {
   const { t } = useTranslation();
-  const { data } = PageLayout.useQuery<SourcesQuery>();
+  const { data: allSources } = PageLayout.useQuery<SourcesQuery>();
+  const data = getEnabledSources(allSources);
 
   return (
     <Stack gap="lg">

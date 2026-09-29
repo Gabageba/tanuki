@@ -85,6 +85,37 @@ export class SourceTokenExpiredException extends ApiException {
   }
 }
 
+/**
+ * Источник закрыт для пользователя: своего аккаунта на нём нет или его сессия истекла. Не
+ * сигнал здоровья источника — breaker и статус источника его не видят.
+ */
+export class SourceAccountRequiredException extends ApiException {
+  constructor(sourceId?: string) {
+    super(
+      API_ERROR_CODE.SOURCE_ACCOUNT_REQUIRED,
+      'logInToYourSourceAccount',
+      HttpStatus.FORBIDDEN,
+      { sourceId },
+    );
+  }
+}
+
+export class SourceLoginFailedException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.SOURCE_LOGIN_FAILED, 'sourceRejectedLoginData', HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class SourceLinkingUnavailableException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.SOURCE_LINKING_UNAVAILABLE,
+      'sourceAccountLinkingNotConfigured',
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
+  }
+}
+
 /** `detail` — сырой текст ParseError: попадает в логи и статус источника, но не клиенту. */
 export class ParserFailedException extends ApiException {
   constructor(sourceId?: string, detail?: string) {
@@ -166,6 +197,24 @@ export class EmailNotVerifiedException extends ApiException {
   }
 }
 
+/** Аккаунт ждёт окончательного удаления — войти можно, только отменив его. */
+export class AccountDeletionScheduledException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.ACCOUNT_DELETION_SCHEDULED,
+      'accountScheduledForDeletion',
+      HttpStatus.FORBIDDEN,
+    );
+  }
+}
+
+/** Текущий пароль не подошёл при действии, которое его подтверждает (смена почты, удаление…). */
+export class WrongPasswordException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.WRONG_PASSWORD, 'wrongPassword', HttpStatus.FORBIDDEN);
+  }
+}
+
 export class EmailTakenException extends ApiException {
   constructor() {
     super(API_ERROR_CODE.EMAIL_TAKEN, 'emailAlreadyRegistered', HttpStatus.CONFLICT);
@@ -197,11 +246,23 @@ export class TokenInvalidException extends ApiException {
   }
 }
 
+/** Код подтверждения из письма: неверный (wrongCode) или уже недействителен (codeExpiredRequestNew). */
+export class CodeInvalidException extends ApiException {
+  constructor(messageKey: 'wrongCode' | 'codeExpiredRequestNew') {
+    super(API_ERROR_CODE.CODE_INVALID, messageKey, HttpStatus.BAD_REQUEST);
+  }
+}
+
+/** Текст сразу говорит, сколько ждать: до минуты — в секундах, дольше — в минутах. */
 export class TooManyRequestsException extends ApiException {
   constructor(retryAfter: number) {
-    super(API_ERROR_CODE.TOO_MANY_REQUESTS, 'tooManyAttempts', HttpStatus.TOO_MANY_REQUESTS, {
-      retryAfter,
-    });
+    const inMinutes = retryAfter >= 60;
+    super(
+      API_ERROR_CODE.TOO_MANY_REQUESTS,
+      inMinutes ? 'tooManyAttemptsTryAgainInMinutes' : 'tooManyAttemptsTryAgainInSeconds',
+      HttpStatus.TOO_MANY_REQUESTS,
+      { retryAfter, params: { count: inMinutes ? Math.ceil(retryAfter / 60) : retryAfter } },
+    );
   }
 }
 

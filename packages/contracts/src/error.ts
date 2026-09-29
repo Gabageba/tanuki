@@ -6,6 +6,12 @@ export const API_ERROR_CODE = {
   SOURCE_BLOCKED: 'sourceBlocked',
   SOURCE_AUTH_REQUIRED: 'sourceAuthRequired',
   SOURCE_TOKEN_EXPIRED: 'sourceTokenExpired',
+  // У пользователя нет своего (живого) аккаунта на источнике — без него источник закрыт.
+  SOURCE_ACCOUNT_REQUIRED: 'sourceAccountRequired',
+  // Привязка аккаунта не удалась: источник не принял логин/пароль или токен.
+  SOURCE_LOGIN_FAILED: 'sourceLoginFailed',
+  // На сервере не задан ключ шифрования аккаунтов — привязывать их некуда.
+  SOURCE_LINKING_UNAVAILABLE: 'sourceLinkingUnavailable',
   PARSER_FAILED: 'parserFailed',
   NOT_FOUND: 'notFound',
   RATE_LIMITED: 'rateLimited',
@@ -18,10 +24,15 @@ export const API_ERROR_CODE = {
   FORBIDDEN: 'forbidden',
   INVALID_CREDENTIALS: 'invalidCredentials',
   EMAIL_NOT_VERIFIED: 'emailNotVerified',
+  // Аккаунт ждёт удаления: вход возможен только с отменой удаления (LoginRequest.cancelDeletion).
+  ACCOUNT_DELETION_SCHEDULED: 'accountDeletionScheduled',
+  WRONG_PASSWORD: 'wrongPassword',
   EMAIL_TAKEN: 'emailTaken',
   USERNAME_TAKEN: 'usernameTaken',
   INVITE_INVALID: 'inviteInvalid',
   TOKEN_INVALID: 'tokenInvalid',
+  // Код из письма неверный, истёк или сгорел после лимита попыток.
+  CODE_INVALID: 'codeInvalid',
   TOO_MANY_REQUESTS: 'tooManyRequests',
   INVALID_IMAGE: 'invalidImage',
   // Тело или параметры запроса не прошли zod-схему.

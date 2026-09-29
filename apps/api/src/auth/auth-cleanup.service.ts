@@ -24,6 +24,7 @@ export class AuthCleanupService {
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async cleanup(): Promise<void> {
     await this.releaseExpiredUnverifiedAccounts();
+    await this.deleteScheduledAccounts();
     await this.sessionService.deleteExpired();
     await this.deleteExpiredEmailTokens();
   }
@@ -47,6 +48,25 @@ export class AuthCleanupService {
 
       if (stale.length > 0) {
         this.logger.log(`Удалено неподтверждённых аккаунтов: ${stale.length}`);
+      }
+      return true;
+    }, false);
+  }
+
+  /**
+   * Окончательное удаление аккаунтов, чей срок отмены истёк. Всё, что принадлежит пользователю,
+   * уходит каскадом внешних ключей; инвайты, которые он создал или использовал, остаются, но
+   * теряют ссылку на него (on delete set null).
+   */
+  private async deleteScheduledAccounts(): Promise<void> {
+    await this.database.withFallback(async () => {
+      const deleted = await this.database.db
+        .delete(users)
+        .where(lt(users.deletionScheduledAt, new Date()))
+        .returning({ id: users.id });
+
+      if (deleted.length > 0) {
+        this.logger.log(`Удалено аккаунтов по запросу владельцев: ${deleted.length}`);
       }
       return true;
     }, false);

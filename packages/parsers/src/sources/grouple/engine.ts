@@ -37,6 +37,7 @@ import { ParseError, SourceAuthRequiredError } from '../../errors';
 import type { HttpRequest, HttpResponse } from '../../core/http/client';
 import { UserAgents } from '../../core/http/user-agents';
 import { catalogEntryFor, SOURCE_ID } from '../catalog';
+import { currentSourceAccount } from '../../core/source-accounts';
 import { authenticateGrouple, authenticateAllHentai } from './auth';
 import type { GroupleConfig } from './config';
 import { GROUPLE_ELEMENT_TYPE, GROUPLE_FILTER_GROUP, GROUPLE_TRANSLATION_STATUS } from './models';
@@ -371,13 +372,32 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
   const domain = ctx.domain;
   let cachedPagesServer: string | null = null;
 
-  const login = (): Promise<void> =>
-    cfg.authGateway === 'z.qawa.org'
-      ? authenticateAllHentai(ctx.http, ctx.jar, cfg, ctx.credentials.allhentai, ctx.logger)
-      : authenticateGrouple(ctx.http, ctx.jar, ctx.credentials.grouple, ctx.logger);
+  const authFamily = catalogEntryFor(cfg.id).authFamily;
+
+  /**
+   * Запрос от пользователя идёт с его jar и его паролем (если он разрешил его хранить), фоновый —
+   * с общим jar и сервисной учёткой из env. Смешивать нельзя: иначе пользователь без своей
+   * сессии читал бы через сервисную.
+   */
+  const activeSession = () => {
+    const account = currentSourceAccount(authFamily);
+    if (account) return { jar: account.jar ?? ctx.jar, credentials: account.credentials };
+    return {
+      jar: ctx.jar,
+      credentials:
+        cfg.authGateway === 'z.qawa.org' ? ctx.credentials.allhentai : ctx.credentials.grouple,
+    };
+  };
+
+  const login = (): Promise<boolean> => {
+    const { jar, credentials } = activeSession();
+    return cfg.authGateway === 'z.qawa.org'
+      ? authenticateAllHentai(ctx.http, jar, cfg, credentials, ctx.logger)
+      : authenticateGrouple(ctx.http, jar, credentials, ctx.logger);
+  };
 
   const hasAuthCookie = async (): Promise<boolean> => {
-    const cookies = await ctx.jar.getCookies(`https://${domain}/`);
+    const cookies = await activeSession().jar.getCookies(`https://${domain}/`);
     return cookies.some((c) => c.key === 'gwt' || (cfg.extraAuthCookies ?? []).includes(c.key));
   };
 
@@ -404,6 +424,12 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
 
     const lastSegment = pathname.split('/').filter(Boolean).pop();
     if (lastSegment === 'login') {
+      // Редирект на вход — сессия протухла. С сохранённым паролем входим заново один раз,
+      // без него решать человеку.
+      const { credentials } = activeSession();
+      if (!isRetry && credentials && (await login())) {
+        return handleRequest(req, next, true);
+      }
       throw new SourceAuthRequiredError(`Login required: ${req.url}`, cfg.id);
     }
     if (res.status === 404) {
@@ -419,8 +445,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       // session at all. Retrying the login once (rate-limited in auth.ts, so this doesn't spam
       // the gateway on every gated request) lets the source self-heal without a process restart
       // instead of staying logged out — and every gated page failing — for its whole lifetime.
-      const credentials =
-        cfg.authGateway === 'z.qawa.org' ? ctx.credentials.allhentai : ctx.credentials.grouple;
+      const { credentials } = activeSession();
       if (!isRetry && credentials) {
         await login();
         return handleRequest(req, next, true);
@@ -1181,6 +1206,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     getPages,
     getFilters,
     imageHeaders: () => ({ Referer: `https://${domain}/`, 'User-Agent': UserAgents.GROUPLE_ARORA }),
+    // Прогрев только сервисной учётки: init() зовётся при старте, вне запроса пользователя.
     async init() {
       await login();
     },

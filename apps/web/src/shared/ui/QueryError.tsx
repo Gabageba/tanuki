@@ -1,9 +1,14 @@
 import { Button, Group } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
-import { ArrowClockwiseIcon, CaretLeftIcon } from '@phosphor-icons/react';
-import { ApiRequestError, isNotFoundError, NETWORK_ERROR_STATUS } from '@/shared/api/client';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
+import { ArrowClockwiseIcon, CaretLeftIcon, SignInIcon } from '@phosphor-icons/react';
+import {
+  ApiRequestError,
+  isNotFoundError,
+  isSourceAccountRequiredError,
+  NETWORK_ERROR_STATUS,
+} from '@/shared/api/client';
+import { ROUTE_PATHS, SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
 import StatusScreen from './StatusScreen';
 
 type Props = {
@@ -36,6 +41,22 @@ function QueryError({ error, onRetry }: Props) {
         <Button component={Link} to={ROUTE_PATHS.SOURCES}>
           {t('toMainPage')}
         </Button>
+      </StatusScreen>
+    );
+  }
+
+  // Источник закрыт — не сбой: повтор ничего не даст, нужно войти в свой аккаунт на нём.
+  if (isSourceAccountRequiredError(error)) {
+    return (
+      <StatusScreen code="403" title={t('sourceClosed')} description={error.message}>
+        <Group gap="sm">
+          <Button onClick={() => navigate(-1)} leftSection={<CaretLeftIcon />} variant="default">
+            {t('back')}
+          </Button>
+          <Button component={Link} to={SOURCE_ACCOUNTS_PATH} leftSection={<SignInIcon />}>
+            {t('logIn')}
+          </Button>
+        </Group>
       </StatusScreen>
     );
   }

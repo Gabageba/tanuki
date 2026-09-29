@@ -2,6 +2,7 @@ import { Button, Popover } from '@mantine/core';
 import { CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import useSources from '@/entities/source/hooks/useSources';
+import { getEnabledSources } from '@/entities/source/lib';
 import SourceSelectMenu from '../../components/SourceSelectMenu';
 import useGetActiveSelection from '../../hooks/useGetActiveSelection';
 import styles from './../Header.module.scss';
@@ -47,7 +48,7 @@ function DesktopSourceSelect() {
       <Popover.Dropdown p="xs">
         <SourceSelectMenu
           activeSelection={activeSelection}
-          sources={sources}
+          sources={getEnabledSources(sources)}
           query={query}
           setQuery={setQuery}
           handleOpenedChange={handleOpenedChange}

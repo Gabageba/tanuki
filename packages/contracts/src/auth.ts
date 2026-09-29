@@ -90,6 +90,8 @@ export const LoginRequestSchema = z.object({
   login: z.string().min(1),
   password: z.string().min(1),
   remember: z.boolean(),
+  /** Аккаунт ждёт удаления — вход с этим флагом отменяет удаление. */
+  cancelDeletion: z.boolean().optional(),
 });
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
@@ -115,6 +117,61 @@ export const ResetPasswordRequestSchema = z.object({
   password: PasswordSchema,
 });
 export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>;
+
+export const ChangeEmailRequestSchema = z.object({
+  newEmail: EmailSchema,
+  password: z.string().min(1),
+});
+export type ChangeEmailRequest = z.infer<typeof ChangeEmailRequestSchema>;
+
+/** Сколько цифр в коде, который приходит на новую почту при её смене. */
+export const EMAIL_CHANGE_CODE_LENGTH = 6;
+
+export const ConfirmEmailChangeRequestSchema = z.object({
+  code: z.string().length(EMAIL_CHANGE_CODE_LENGTH).regex(/^\d+$/),
+});
+export type ConfirmEmailChangeRequest = z.infer<typeof ConfirmEmailChangeRequestSchema>;
+
+export const ChangePasswordRequestSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: PasswordSchema,
+  signOutOtherDevices: z.boolean(),
+});
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>;
+
+export const DeleteAccountRequestSchema = z.object({
+  password: z.string().min(1),
+});
+export type DeleteAccountRequest = z.infer<typeof DeleteAccountRequestSchema>;
+
+export const DEVICE_TYPE = {
+  DESKTOP: 'desktop',
+  MOBILE: 'mobile',
+  TABLET: 'tablet',
+  UNKNOWN: 'unknown',
+} as const;
+export type DeviceType = EnumLiteralsOf<typeof DEVICE_TYPE>;
+export const DeviceTypeSchema = z.enum(DEVICE_TYPE);
+
+export const SessionSchema = z.object({
+  id: z.string(),
+  /** Название и версия браузера из User-Agent; null — не распознан. */
+  browser: z.string().nullable(),
+  os: z.string().nullable(),
+  deviceType: DeviceTypeSchema,
+  /** IP, с которого выполнен вход. */
+  ip: z.string().nullable(),
+  /** `YYYY-MM-DDTHH:MM:SSZ`, обновляется не чаще раза в час. */
+  lastSeenAt: z.string(),
+  createdAt: z.string(),
+  isCurrent: z.boolean(),
+});
+export type Session = z.infer<typeof SessionSchema>;
+
+export const SessionsResponseSchema = z.object({
+  items: z.array(SessionSchema),
+});
+export type SessionsResponse = z.infer<typeof SessionsResponseSchema>;
 
 export const InviteSchema = z.object({
   id: z.string(),

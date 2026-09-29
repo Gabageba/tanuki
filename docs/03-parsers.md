@@ -112,6 +112,17 @@ Grouple-сеть (ReadManga/MintManga/SelfManga/SeiManga/Usagi) логинитс
 общими Grouple-кредами не покрывается, но получаемая с `qawa.org` кука раскладывается по
 доменам AllHentai тем же способом.
 
+Эти учётки из env — **сервисные**: ими ходят только фоновые задачи (пробник, веер совпадений).
+Пользователь читает Grouple, AllHentai и LibSocial через свой аккаунт. API кладёт его в
+AsyncLocalStorage (`runWithSourceAccounts`, `core/source-accounts.ts`). `HttpClientImpl`
+семейства с аккаунтом в scope берёт cookie только из jar этого аккаунта, общий jar с сервисной
+сессией не видит и не пополняет. Движок Grouple входит повторно по сохранённому паролю
+пользователя. LibSocial берёт токен своего сайта из `tokenStore` аккаунта вместо файла: учётка у сети одна, а
+токен каждый сайт выдаёт свой (`libSocialLoginSourceIds` — сайты, в которые умеем входить). Реестр отдаёт
+`loginAccount` (вход в свежий jar) и `fetchLibSocialAccountName` (проверка токена) для привязки.
+Платные главы LibSocial: `restricted_view` бывает только у них. Открытые аккаунту остаются с
+`isPaid`, закрытые пропускаются, у тайтла ставится `hasPaidChapters`.
+
 ### Пагинация
 
 `core/paging.ts`: `planWindow`/`fetchPaged`/`fetchOffsetNative` без внутреннего состояния —

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_PIPE } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AuthModule } from './auth/auth.module';
@@ -20,6 +20,8 @@ import { SourceProbeModule } from './source-probe/source-probe.module';
 import { SourcesModule } from './sources/sources.module';
 import { UserSettingsModule } from './user-settings/user-settings.module';
 import { UsersModule } from './users/users.module';
+import { SourceAccountsModule } from './source-accounts/source-accounts.module';
+import { ViewerContextInterceptor } from './source-accounts/viewer-context.interceptor';
 
 @Module({
   imports: [
@@ -43,8 +45,12 @@ import { UsersModule } from './users/users.module';
     ReadingStatisticsModule,
     UserSettingsModule,
     UsersModule,
+    SourceAccountsModule,
   ],
   providers: [
+    // Зритель запроса — в AsyncLocalStorage: по нему ParsersClientService решает, от чьего
+    // аккаунта идти к источнику. Интерсептор выполняется после AuthGuard.
+    { provide: APP_INTERCEPTOR, useClass: ViewerContextInterceptor },
     // До сих пор ни одно тело запроса не валидировалось на входе — DTO объявляли форму, но
     // ничего её не проверяло. Auth — первый модуль, которому это действительно важно.
     { provide: APP_PIPE, useClass: ZodValidationPipe },

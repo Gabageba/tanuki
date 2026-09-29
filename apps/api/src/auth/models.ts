@@ -1,4 +1,5 @@
 import type { EnumLiteralsOf } from '@tanuki/contracts';
+import type { SessionUser } from './session.service';
 
 /**
  * Что за ссылку несёт email_tokens.tokenHash. Не в contracts: это внутренняя деталь хранения,
@@ -7,8 +8,27 @@ import type { EnumLiteralsOf } from '@tanuki/contracts';
 export const EMAIL_TOKEN_PURPOSE = {
   VERIFY_EMAIL: 'verifyEmail',
   RESET_PASSWORD: 'resetPassword',
+  /**
+   * Код на новую почту: payload — новый адрес, tokenHash — хэш кода (см. hashEmailCode). Почта
+   * меняется, только когда код введён в той же модалке, где запрошена смена.
+   */
+  CHANGE_EMAIL: 'changeEmail',
+  /** Ссылка «это был не я» на прежнюю почту: payload — прежний адрес. */
+  REVERT_EMAIL_CHANGE: 'revertEmailChange',
+  CANCEL_ACCOUNT_DELETION: 'cancelAccountDeletion',
 } as const;
 export type EmailTokenPurpose = EnumLiteralsOf<typeof EMAIL_TOKEN_PURPOSE>;
+
+/** Чем кончился ввод кода смены почты — AccountService.confirmEmailChange. */
+export const EMAIL_CODE_RESULT = {
+  APPLIED: 'applied',
+  WRONG: 'wrong',
+  /** Кода нет: истёк, заменён новым или сгорел после лимита попыток. */
+  EXPIRED: 'expired',
+} as const;
+export type EmailCodeResult =
+  | { status: typeof EMAIL_CODE_RESULT.APPLIED; user: SessionUser }
+  | { status: typeof EMAIL_CODE_RESULT.WRONG | typeof EMAIL_CODE_RESULT.EXPIRED };
 
 export const SESSION_COOKIE_NAME = 'tanuki_session';
 
@@ -28,3 +48,11 @@ export const PASSWORD_RESET_TTL_MS = HOUR_MS;
 export const UNVERIFIED_ACCOUNT_TTL_MS = 7 * DAY_MS;
 
 export const RESEND_VERIFICATION_COOLDOWN_S = 60;
+
+/** Код ждут, не закрывая модалку, — дольше четверти часа он не нужен. */
+export const EMAIL_CHANGE_CODE_TTL_MS = 15 * 60 * 1000;
+export const MAX_EMAIL_CODE_ATTEMPTS = 5;
+/** Откатить смену почты можно долго: владелец старого ящика мог быть в отпуске. */
+export const EMAIL_CHANGE_REVERT_TTL_MS = 7 * DAY_MS;
+/** Сколько аккаунт ждёт окончательного удаления — всё это время удаление можно отменить. */
+export const ACCOUNT_DELETION_GRACE_MS = 14 * DAY_MS;

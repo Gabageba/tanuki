@@ -1,5 +1,5 @@
 import { Badge, Box, Group, Text, Title } from '@mantine/core';
-import type { Source } from '@tanuki/contracts';
+import { type Source } from '@tanuki/contracts';
 import SourceStatusBadge from '../SourceStatusBadge';
 import SourceIcon from '../SourceIcon';
 import SourceTitleSkeleton from './SourceTitleSkeleton';

@@ -2,7 +2,6 @@ import { Avatar as MantineAvatar, Group, Menu, useMantineColorScheme } from '@ma
 import {
   FlaskIcon,
   GearSixIcon,
-  GlobeIcon,
   PaletteIcon,
   SignOutIcon,
   TicketIcon,
@@ -12,14 +11,13 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { COLOR_SCHEME, isStaffRole } from '@tanuki/contracts';
 import { getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
-import { LANGUAGE, getLanguageLabel } from '@/shared/lib/language';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
 import styles from './../Header.module.scss';
 
 function Avatar() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const { data: user } = useCurrentUser();
   const logout = useLogout();
@@ -68,25 +66,6 @@ function Avatar() {
                     {getColorSchemeIcon(value)}
                     {getColorSchemeLabel(value, t)}
                   </Group>
-                </Menu.RadioItem>
-              ))}
-            </Menu.RadioGroup>
-          </Menu.Sub.Dropdown>
-        </Menu.Sub>
-        <Menu.Sub>
-          <Menu.Sub.Target>
-            <Menu.Sub.Item leftSection={<GlobeIcon />}>{t('language')}</Menu.Sub.Item>
-          </Menu.Sub.Target>
-
-          <Menu.Sub.Dropdown>
-            <Menu.RadioGroup value={i18n.language}>
-              {Object.values(LANGUAGE).map((value) => (
-                <Menu.RadioItem
-                  key={value}
-                  value={value}
-                  onChange={() => i18n.changeLanguage(value)}
-                >
-                  {getLanguageLabel(value)}
                 </Menu.RadioItem>
               ))}
             </Menu.RadioGroup>

@@ -14,12 +14,17 @@ export const ROUTE_PATHS = {
   VERIFY_EMAIL: '/verify-email',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
+  REVERT_EMAIL_CHANGE: '/revert-email-change',
+  CANCEL_ACCOUNT_DELETION: '/cancel-account-deletion',
+  ACCOUNT_DELETION_SCHEDULED: '/account-deletion-scheduled',
   INVITES: '/invites',
   TERMS: '/terms',
   PRIVACY_POLICY: '/privacy',
   PLAYGROUND: '/playground',
   PLAYGROUND_READING_MARKS: '/playground/reading-marks',
   PLAYGROUND_CHART_LABELS: '/playground/chart-labels',
+  PLAYGROUND_ACCOUNT_GROUPS: '/playground/account-groups',
+  PLAYGROUND_HEADER_BACKGROUND: '/playground/header-background',
   PROFILE: '/profile',
   SETTINGS: '/settings',
 } as const;
@@ -32,6 +37,18 @@ export const READER_PAGE_SEARCH_PARAM = 'page';
 
 /** Вкладка страницы тайтла — в адресе, чтобы возврат из читалки попадал обратно на главы. */
 export const TITLE_TAB_SEARCH_PARAM = 'tab';
+
+/** Вкладка настроек — в адресе, чтобы на «Источники» можно было сослаться из других экранов. */
+export const SETTINGS_TAB_SEARCH_PARAM = 'tab';
+
+export const SETTINGS_TABS = {
+  GENERAL: 'general',
+  SOURCES: 'sources',
+} as const;
+export type SettingsTab = EnumLiteralsOf<typeof SETTINGS_TABS>;
+
+/** Куда вести человека, которому нужно войти в аккаунт источника. */
+export const SOURCE_ACCOUNTS_PATH = `${ROUTE_PATHS.SETTINGS}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.SOURCES}`;
 
 export const TITLE_TABS = {
   INFO: 'info',

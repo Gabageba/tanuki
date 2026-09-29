@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import { ArrowClockwiseIcon } from '@phosphor-icons/react';
 import { API_ERROR_CODE } from '@tanuki/contracts';
 import { apiFetch, ApiRequestError } from '@/shared/api/client';
 import type { Language } from '@/shared/lib/language';
@@ -12,11 +13,14 @@ const RESEND_COOLDOWN_S = 60;
 
 type Props = {
   email: string;
+  /** Своя отправка вместо письма подтверждения регистрации — например, кода смены почты. */
+  onResend?: () => Promise<unknown>;
 };
 
-/** Кнопка повторной отправки письма подтверждения — общая для Login (баннер о неподтверждённой
- *  почте) и Register (экран «Проверьте почту»). Сама считает кулдаун, включая случай 429. */
-function ResendVerificationButton({ email }: Props) {
+/** Кнопка повторной отправки письма — общая для Login (баннер о неподтверждённой почте),
+ *  Register (экран «Проверьте почту») и смены почты в профиле. Сама считает кулдаун, включая
+ *  случай 429. */
+function ResendVerificationButton({ email, onResend }: Props) {
   const { t, i18n } = useTranslation();
   const [cooldownEndsAt, setCooldownEndsAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -29,6 +33,7 @@ function ResendVerificationButton({ email }: Props) {
 
   const mutation = useMutation({
     mutationFn: () =>
+      onResend?.() ??
       apiFetch('/auth/resend-verification', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -47,8 +52,9 @@ function ResendVerificationButton({ email }: Props) {
 
   return (
     <Button
-      variant="subtle"
+      variant="default"
       size="sm"
+      leftSection={<ArrowClockwiseIcon />}
       loading={mutation.isPending}
       disabled={secondsLeft > 0}
       onClick={() => mutation.mutate()}

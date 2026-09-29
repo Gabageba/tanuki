@@ -2,9 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SOURCE_STATUS_REASON } from '@tanuki/contracts';
 import {
   runSourceContract,
+  runWithSourceAccounts,
   type FilterSelection,
   type Parser,
   type ParsersRegistry,
+  type SourceAccountScope,
 } from '@tanuki/parsers';
 import { CacheService } from '../cache/cache.service';
 import { CACHE_TTL, type CacheTtlSpec } from '../cache/cache.constants';
@@ -17,12 +19,26 @@ import {
 } from '../resilience/concurrency-limiter.service';
 import {
   RateLimitedException,
+  SourceAccountRequiredException,
   SourceAuthRequiredException,
+  SourceTokenExpiredException,
   SourceUnavailableException,
 } from '../common/errors';
+import { SourceAccessService } from '../source-accounts/source-access.service';
+import { VIEWER_KIND } from '../source-accounts/models';
+import { getViewer } from '../source-accounts/viewer-context';
 import { toApiException } from './parser-error.mapper';
 import { PARSERS } from './parsers.provider';
 import type { RawFilterGroup, RawTitle, RawPage, RawSourceInfo } from './parsers-client.types';
+
+/**
+ * Общая для всех часть деталей: без глав, купленных тем, от чьего имени шёл запрос. Если после
+ * этого глав не осталось, а платные у тайтла есть, — он для остальных за пейволом.
+ */
+const withoutPaidChapters = (title: RawTitle): RawTitle => {
+  if (!title.chapters?.some((chapter) => chapter.isPaid)) return title;
+  return { ...title, chapters: title.chapters.filter((chapter) => !chapter.isPaid) };
+};
 
 const PAGE_SIZE = 30;
 
@@ -39,6 +55,7 @@ export class ParsersClientService {
     private readonly sourceHealth: SourceHealthService,
     private readonly sourceStatus: SourceStatusService,
     private readonly concurrencyLimiter: ConcurrencyLimiterService,
+    private readonly sourceAccess: SourceAccessService,
   ) {}
 
   // /sources само по себе не бьёт по внешним сайтам (статические метаданные реестра),
@@ -130,19 +147,51 @@ export class ParsersClientService {
     }));
   }
 
+  /**
+   * Список глав у тайтла с платными главами зависит от аккаунта: купленные видит только
+   * купивший. В общий кеш такие главы не попадают, а человеку с аккаунтом детали такого тайтла
+   * всегда достаются живым запросом — со всеми его покупками.
+   */
   async getDetails(sourceId: string, url: string): Promise<CachedResult<RawTitle>> {
     const key = cacheKey('details', sourceId, url);
-    return this.fetchCached(key, CACHE_TTL.details, sourceId, (parser) => parser.getDetails(url));
+    const scope = await this.sourceAccess.resolveScope(sourceId);
+    const fetch = (parser: Parser) => parser.getDetails(url);
+
+    const result = await this.cache.getOrSet(
+      key,
+      CACHE_TTL.details,
+      () => this.guardedFetch(sourceId, fetch, scope),
+      { toShared: withoutPaidChapters },
+    );
+    if (!scope || !result.fromCache || !result.value.hasPaidChapters) {
+      return { data: result.value, stale: result.stale };
+    }
+
+    try {
+      return { data: await this.guardedFetch(sourceId, fetch, scope), stale: false };
+    } catch (error) {
+      if (error instanceof SourceAccountRequiredException) throw error;
+      // Источник не ответил — общая версия без покупок лучше, чем ошибка.
+      return { data: result.value, stale: true };
+    }
   }
 
+  /**
+   * isPaid — глава платная (или её нет в общих деталях): её страницы получает только тот, кто
+   * её открыл, и в общий кеш они не кладутся.
+   */
   async getPages(
     sourceId: string,
     chapterUrl: string,
+    options?: { isPaid?: boolean },
   ): Promise<CachedResult<{ items: RawPage[] }>> {
+    const fetch = async (parser: Parser) => ({ items: await parser.getPages(chapterUrl) });
+    if (options?.isPaid) {
+      const scope = await this.sourceAccess.resolveScope(sourceId);
+      return { data: await this.guardedFetch(sourceId, fetch, scope), stale: false };
+    }
     const key = cacheKey('pages', sourceId, chapterUrl);
-    return this.fetchCached(key, CACHE_TTL.pages, sourceId, async (parser) => ({
-      items: await parser.getPages(chapterUrl),
-    }));
+    return this.fetchCached(key, CACHE_TTL.pages, sourceId, fetch);
   }
 
   private async fetchCached<T>(
@@ -152,10 +201,12 @@ export class ParsersClientService {
     doFetch: (parser: Parser) => Promise<T>,
     options?: { force?: boolean },
   ): Promise<CachedResult<T>> {
+    // До кеша: закрытый для зрителя источник не читается и из общего кеша.
+    const scope = await this.sourceAccess.resolveScope(sourceId);
     const result = await this.cache.getOrSet(
       key,
       ttl,
-      () => this.guardedFetch(sourceId, doFetch),
+      () => this.guardedFetch(sourceId, doFetch, scope),
       options,
     );
     return { data: result.value, stale: result.stale };
@@ -164,6 +215,7 @@ export class ParsersClientService {
   private async guardedFetch<T>(
     sourceId: string,
     doFetch: (parser: Parser) => Promise<T>,
+    scope: SourceAccountScope | undefined,
   ): Promise<T> {
     // Прогрев реестра (SSO-логины) идёт в фоне, чтобы не задерживать старт сервера. Первые
     // запросы к источнику ждут его здесь — иначе они ушли бы анонимными.
@@ -187,7 +239,11 @@ export class ParsersClientService {
     }
 
     try {
-      const value = await this.concurrencyLimiter.run(sourceId, () => doFetch(parser));
+      // Scope входит внутри лимитера: отложенный в очереди вызов выполняется в контексте того,
+      // кто освободил слот, а не того, кто встал в очередь.
+      const value = await this.concurrencyLimiter.run(sourceId, () =>
+        scope ? runWithSourceAccounts(scope, () => doFetch(parser)) : doFetch(parser),
+      );
       this.sourceHealth.recordSuccess(sourceId);
       this.sourceStatus.recordSuccess(sourceId);
       return value;
@@ -199,6 +255,18 @@ export class ParsersClientService {
         throw new RateLimitedException(sourceId);
       }
       const apiError = toApiException(error, sourceId);
+      const viewer = getViewer();
+      if (
+        scope &&
+        viewer.kind === VIEWER_KIND.USER &&
+        (apiError instanceof SourceAuthRequiredException ||
+          apiError instanceof SourceTokenExpiredException)
+      ) {
+        // Источник не принял сессию пользователя — дело в его аккаунте, а не в источнике.
+        this.sourceHealth.releaseProbe(sourceId);
+        await this.sourceAccess.markReloginRequired(viewer.userId, sourceId);
+        throw new SourceAccountRequiredException(sourceId);
+      }
       if (apiError instanceof SourceAuthRequiredException) {
         // Источник ответил, и ответ детерминирован (глава требует авторизации) — это не
         // признак того, что источник "лежит", остальные главы того же источника наверняка

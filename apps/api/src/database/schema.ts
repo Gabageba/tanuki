@@ -14,6 +14,8 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import type {
+  SourceAccountStatus,
+  SourceAuthFamily,
   TitleLinkVerdict,
   SourceStatus,
   SourceStatusReason,
@@ -133,6 +135,13 @@ export const users = pgTable(
      */
     avatarUpdatedAt: timestamp('avatar_updated_at', { withTimezone: true }),
 
+    /**
+     * Когда аккаунт будет удалён окончательно; null — удаление не запрошено. Пока дата не
+     * наступила, вход с отменой удаления возвращает аккаунт (см. AuthService.login), а крон
+     * (AuthCleanupService) по наступлении удаляет строку со всеми каскадами.
+     */
+    deletionScheduledAt: timestamp('deletion_scheduled_at', { withTimezone: true }),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -230,6 +239,48 @@ export const userSettings = pgTable('user_settings', {
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Источники, которые пользователь выключил в настройках: они пропадают из его каталога,
+ * поиска и совпадений. Хранятся выключенные, а не включённые — новый источник у всех сразу виден.
+ */
+export const disabledSources = pgTable(
+  'disabled_sources',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sourceId: text('source_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.sourceId] })],
+);
+
+/**
+ * Личные аккаунты пользователя на источниках. Grouple и AllHentai — одна строка на семейство
+ * (sourceId = ''), у LibSocial — строка на каждый источник сети: токены у них свои.
+ * Всё секретное хранится только зашифрованным (common/secret-box.ts).
+ */
+export const sourceAccounts = pgTable(
+  'source_accounts',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Аккаунт один на семейство — у LibSocial тоже: токены сайтов сети лежат в его state. */
+    family: text('family').$type<SourceAuthFamily>().notNull(),
+    status: text('status').$type<SourceAccountStatus>().notNull(),
+    /** Имя аккаунта на источнике — для показа в настройках. */
+    login: text('login'),
+    /** Только если человек разрешил автоматический повторный вход. */
+    encryptedPassword: text('encrypted_password'),
+    /** Сессия: cookie jar Grouple/AllHentai или токены сайтов LibSocial, в JSON и зашифрованно. */
+    encryptedState: text('encrypted_state').notNull(),
+    linkedAt: timestamp('linked_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.family] })],
+);
 
 const bytea = customType<{ data: Buffer }>({
   dataType: () => 'bytea',
@@ -336,6 +387,16 @@ export const emailTokens = pgTable('email_tokens', {
     .references(() => users.id, { onDelete: 'cascade' }),
   purpose: text('purpose').$type<EmailTokenPurpose>().notNull(),
   tokenHash: text('token_hash').notNull().unique(),
+  /**
+   * Данные, которые ссылка применяет: новая почта у CHANGE_EMAIL, прежняя — у
+   * REVERT_EMAIL_CHANGE. У остальных назначений null.
+   */
+  payload: text('payload'),
+  /**
+   * Неверные вводы кода (CHANGE_EMAIL): после MAX_EMAIL_CODE_ATTEMPTS код гаснет. Счётчик в
+   * базе, а не в Redis — лимитер при упавшем Redis пропускает всё, а шесть цифр перебираются.
+   */
+  attempts: integer('attempts').notNull().default(0),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   usedAt: timestamp('used_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

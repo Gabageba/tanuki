@@ -3,9 +3,13 @@ import { useMemo } from 'react';
 import type {
   ComboboxLikeRenderOptionInput,
   ComboboxItem,
+  ButtonProps,
+  MantineColor,
   MantineColorSchemeManager,
+  MantineTheme,
 } from '@mantine/core';
 import {
+  Alert,
   createTheme,
   defaultVariantColorsResolver,
   MantineProvider as ExternalMantineProvider,
@@ -42,6 +46,13 @@ import styles from './MantineProvider.module.scss';
 
 const DEFAULT_COLOR_SCHEME: ColorScheme = COLOR_SCHEME.AUTO;
 
+// Полупрозрачный тон `color` варианта `muted`; `hovered` — тот же тон чуть плотнее, для наведения.
+const getMutedVariantBackground = (color: MantineColor, hovered = false) =>
+  `color-mix(in srgb, var(--mantine-color-${color}-light) ${hovered ? 70 : 40}%, transparent)`;
+
+const getMutedVariantBorderColor = (color: MantineColor, hovered = false) =>
+  `color-mix(in srgb, var(--mantine-color-${color}-filled) ${hovered ? 55 : 35}%, transparent)`;
+
 const createAppTheme = (t: TFunction) =>
   createTheme({
     fontFamily: FONT_FAMILY_SANS,
@@ -64,14 +75,36 @@ const createAppTheme = (t: TFunction) =>
     autoContrast: true,
     defaultRadius: 'md',
     cursorType: 'pointer',
-    variantColorResolver: (input) =>
-      input.variant === 'tile'
-        ? {
+    variantColorResolver: (input) => {
+      switch (input.variant) {
+        case 'tile':
+          return {
             ...defaultVariantColorsResolver({ ...input, variant: 'subtle', color: 'gray' }),
             border: `${rem(1)} solid var(--mantine-color-default)`,
-          }
-        : defaultVariantColorsResolver(input),
+          };
+        // Полупрозрачный тон `color` с обводкой того же цвета — общий для `Button` и `Alert`.
+        // На hover у кнопки чуть плотнее (граница — через `--button-hover-bd` в `Button.vars`).
+        case 'muted': {
+          const color = input.color || PRIMARY_COLOR;
+          return {
+            background: getMutedVariantBackground(color),
+            hover: getMutedVariantBackground(color, true),
+            color: `var(--mantine-color-${color}-light-color)`,
+            border: `${rem(1)} solid ${getMutedVariantBorderColor(color)}`,
+          };
+        }
+        default:
+          return defaultVariantColorsResolver(input);
+      }
+    },
     components: {
+      Alert: Alert.extend({
+        classNames: {
+          root: styles.alert,
+          title: styles.alertTitle,
+          message: styles.alertMessage,
+        },
+      }),
       Avatar: {
         defaultProps: {
           radius: 'md',
@@ -141,6 +174,14 @@ const createAppTheme = (t: TFunction) =>
         classNames: {
           root: styles.button,
         },
+        // `variantColorResolver` не умеет в hover-границу, поэтому её для `muted` отдаём
+        // переменной, а применяет её `.button` в модуле стилей.
+        vars: (_theme: MantineTheme, { variant, color = PRIMARY_COLOR }: ButtonProps) => ({
+          root:
+            variant === 'muted'
+              ? { '--button-hover-bd': getMutedVariantBorderColor(color, true) }
+              : {},
+        }),
       },
       Card: {
         defaultProps: {
@@ -196,8 +237,8 @@ const createAppTheme = (t: TFunction) =>
         },
       },
       Text: {
-        defaultProps: {
-          fz: 14,
+        classNames: {
+          root: styles.text,
         },
       },
       NavLink: {

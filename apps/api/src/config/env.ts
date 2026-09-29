@@ -17,6 +17,8 @@ const EnvSchema = z.object({
         .filter(Boolean),
     )
     .pipe(z.array(SourceIdSchema)),
+  // Сервисные учётки ниже — только для фоновых задач (пробник, веер совпадений). Пользователи
+  // читают эти источники через свои аккаунты (source_accounts), см. SOURCE_ACCOUNTS_REQUIRED.
   // Optional Grouple network account (ReadManga/MintManga/SelfManga/SeiManga/Usagi share one
   // SSO login) — without these, those sources work anonymously and member-only chapters 401.
   GROUPLE_USERNAME: z.string().optional(),
@@ -37,6 +39,20 @@ const EnvSchema = z.object({
   LIBSOCIAL_TOKEN_STORE_DIR: z
     .string()
     .default(resolve(process.cwd(), '../../data/libsocial-tokens')),
+  // Ключ шифрования личных аккаунтов источников (AES-256-GCM, 32 байта в base64). Без него
+  // привязать аккаунт нельзя. Потеря ключа = все привязки придётся делать заново.
+  SOURCE_SECRETS_KEY: z
+    .string()
+    .optional()
+    .refine((value) => !value || Buffer.from(value, 'base64').length === 32, {
+      message: 'SOURCE_SECRETS_KEY должен быть 32 байтами в base64 (openssl rand -base64 32)',
+    }),
+  // Закрывать источники с серверным входом (Grouple, AllHentai, LibSocial), пока пользователь
+  // не привяжет свой аккаунт. false — прежнее поведение: все ходят через сервисную учётку.
+  SOURCE_ACCOUNTS_REQUIRED: z
+    .string()
+    .default('true')
+    .transform((value) => value !== 'false'),
   SOURCE_HTTP_TIMEOUT_MS: z.coerce.number().default(20_000),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   // Значения по умолчанию совпадают с docker-compose.yml, чтобы локальный запуск не требовал

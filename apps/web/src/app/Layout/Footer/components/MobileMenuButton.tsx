@@ -15,7 +15,6 @@ import {
   CheckIcon,
   FlaskIcon,
   GearSixIcon,
-  GlobeIcon,
   ListIcon,
   PaletteIcon,
   SignOutIcon,
@@ -25,7 +24,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { COLOR_SCHEME, isStaffRole } from '@tanuki/contracts';
 import MobileNavigationButton from './MobileNavigationButton';
-import { LANGUAGE, getLanguageLabel } from '@/shared/lib/language';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
@@ -39,13 +37,12 @@ type Props = {
 };
 
 function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const { data: user } = useCurrentUser();
   const logout = useLogout();
   const [isThemeOpened, setIsThemeOpened] = useState(false);
-  const [isLanguageOpened, setIsLanguageOpened] = useState(false);
 
   return (
     <>
@@ -97,39 +94,6 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
                   }
                 >
                   {getColorSchemeLabel(value, t)}
-                </Button>
-              ))}
-            </Stack>
-          </Collapse>
-          <Button
-            className={styles.switcherOption}
-            onClick={() => setIsLanguageOpened((prev) => !prev)}
-            variant="tile"
-            justify="flex-start"
-            size="md"
-            leftSection={<GlobeIcon />}
-            rightSection={isLanguageOpened ? <CaretUpIcon /> : <CaretDownIcon />}
-          >
-            {t('language')}
-          </Button>
-          <Collapse expanded={isLanguageOpened}>
-            <Stack gap={4} pl="lg">
-              {Object.values(LANGUAGE).map((value) => (
-                <Button
-                  key={value}
-                  data-active={i18n.language === value || undefined}
-                  className={styles.switcherOption}
-                  onClick={() => i18n.changeLanguage(value)}
-                  variant="tile"
-                  justify="flex-start"
-                  size="md"
-                  rightSection={
-                    i18n.language === value && (
-                      <CheckIcon color="var(--mantine-primary-color-filled)" />
-                    )
-                  }
-                >
-                  {getLanguageLabel(value)}
                 </Button>
               ))}
             </Stack>

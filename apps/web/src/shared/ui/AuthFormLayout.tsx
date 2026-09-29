@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 type Props = {
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
 };
 
@@ -14,9 +14,11 @@ function AuthFormLayout({ title, description, children }: Props) {
         <Title order={2} ta="center" fz={20}>
           {title}
         </Title>
-        <Text c="dimmed" ta="center">
-          {description}
-        </Text>
+        {description && (
+          <Text c="dimmed" ta="center">
+            {description}
+          </Text>
+        )}
       </Stack>
       {children}
     </Stack>

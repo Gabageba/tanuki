@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { eq, lt } from 'drizzle-orm';
+import { and, desc, eq, gt, lt, ne } from 'drizzle-orm';
 import { StorageUnavailableException } from '../common/errors';
 import { DatabaseService } from '../database/database.service';
 import { sessions, users } from '../database/schema';
@@ -7,7 +7,7 @@ import { generateToken, hashToken } from '../common/token.util';
 import { SESSION_IDLE_MS, SESSION_REMEMBER_MS, SESSION_TOUCH_INTERVAL_MS } from './models';
 
 export type SessionUser = typeof users.$inferSelect;
-type SessionRow = typeof sessions.$inferSelect;
+export type SessionRow = typeof sessions.$inferSelect;
 
 export type ResolvedSession = {
   session: SessionRow;
@@ -95,7 +95,40 @@ export class SessionService {
     }, false);
   }
 
-  /** Все устройства сразу — используется при сбросе пароля. */
+  /** Живые сессии пользователя, самые свежие первыми. */
+  async listForUser(userId: string): Promise<SessionRow[]> {
+    return this.database.withFallback(
+      () =>
+        this.database.db
+          .select()
+          .from(sessions)
+          .where(and(eq(sessions.userId, userId), gt(sessions.expiresAt, new Date())))
+          .orderBy(desc(sessions.lastSeenAt)),
+      [],
+    );
+  }
+
+  /** userId в условии не даёт завершить чужую сессию, подобрав её id. */
+  async revokeById(userId: string, sessionId: string): Promise<void> {
+    await this.database.withFallback(async () => {
+      await this.database.db
+        .delete(sessions)
+        .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+      return true;
+    }, false);
+  }
+
+  /** «Выйти на других устройствах» — все сессии, кроме той, с которой пришёл запрос. */
+  async revokeAllExcept(userId: string, sessionId: string): Promise<void> {
+    await this.database.withFallback(async () => {
+      await this.database.db
+        .delete(sessions)
+        .where(and(eq(sessions.userId, userId), ne(sessions.id, sessionId)));
+      return true;
+    }, false);
+  }
+
+  /** Все устройства сразу — сброс пароля, откат смены почты, удаление аккаунта. */
   async revokeAllForUser(userId: string): Promise<void> {
     await this.database.withFallback(async () => {
       await this.database.db.delete(sessions).where(eq(sessions.userId, userId));

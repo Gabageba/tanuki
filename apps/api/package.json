@@ -25,6 +25,7 @@
     "@node-rs/argon2": "^2.2.1",
     "@tanuki/contracts": "workspace:*",
     "@tanuki/parsers": "workspace:*",
+    "bowser": "^2.14.1",
     "cron": "^4.4.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.2",

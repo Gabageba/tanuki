@@ -319,7 +319,7 @@ POST /auth/register     { inviteCode, email, username, password, language } → 
 POST /auth/verify-email { token } → CurrentUser, ставит cookie сессии                  @Public()
 POST /auth/resend-verification { email, language } → 204                               @Public()
 
-POST /auth/login  { login, password, remember } → CurrentUser, ставит cookie сессии    @Public()
+POST /auth/login  { login, password, remember, cancelDeletion? } → CurrentUser         @Public()
 POST /auth/logout → 204, снимает cookie
 GET  /auth/me     → CurrentUser
 
@@ -356,6 +356,82 @@ DELETE /invites/:id      → 204                                    только
 - Реализация: `apps/api/src/auth`, `apps/api/src/invites`, `apps/api/src/mail`,
   `apps/api/src/rate-limit`; таблицы — `users`, `sessions`, `invites`, `email_tokens` в
   `apps/api/src/database/schema.ts`.
+
+### Управление аккаунтом
+
+Вкладка профиля «Вход и безопасность». Всё, что меняет способ входа, подтверждается текущим
+паролем (403 `WRONG_PASSWORD`, лимит 10 попыток / 15 мин на пользователя).
+
+```
+POST   /account/email          { newEmail, password } → 204, код ушёл на новый адрес
+POST   /account/email/confirm  { code } → CurrentUser, почта уже новая
+POST   /account/email/revert   { token } → 204, все сессии завершены                  @Public()
+
+POST   /account/password       { currentPassword, newPassword, signOutOtherDevices } → 204
+
+GET    /account/sessions       → { items: Session[] }  (браузер, ОС, тип устройства, IP, isCurrent)
+DELETE /account/sessions/:id   → 204
+DELETE /account/sessions       → 204, все, кроме текущей
+
+POST   /account/deletion        { password } → 204, все сессии завершены
+POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie сессии         @Public()
+```
+
+- **Смена почты** — два шага в одной модалке. Первый шлёт на новый адрес 6-значный код
+  (15 минут); повторный запрос (он же «отправить ещё раз») гасит прежний код. Второй — ввод
+  кода: почта меняется сразу, а на прежний адрес уходит уведомление со ссылкой «это был не я»
+  (7 дней), которая возвращает прежнюю почту и завершает все сессии. У аккаунта всегда одна
+  почта: ожидающий адрес живёт только в `email_tokens.payload` кода, закрытая модалка просто
+  бросает попытку. Неверный код — 400 `CODE_INVALID`; после 5 неверных вводов
+  (`email_tokens.attempts`) код гаснет, и нужен новый.
+- **Удаление** — отложенное на 14 дней (`users.deletion_scheduled_at`). Все сессии
+  завершаются. Вход до этой даты отвечает 403 `ACCOUNT_DELETION_SCHEDULED`, а вход с
+  `cancelDeletion: true` (или ссылка из письма, или сброс пароля) удаление снимает.
+  Окончательно удаляет крон `AuthCleanupService`, данные уходят каскадом.
+- Реализация: `apps/api/src/auth/account.{controller,service}.ts`.
+
+### Личные аккаунты источников
+
+Источники с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial) закрыты для
+пользователя, пока он не привяжет свой аккаунт. Запрос к закрытому источнику — 403
+`SOURCE_ACCOUNT_REQUIRED` с `sourceId`, даже если ответ лежит в общем кеше. `Source.access`
+(`available` / `locked` / `reloginRequired`) показывает это заранее, поиск отдаёт такие
+источники со статусом группы `locked`. Выключается флагом `SOURCE_ACCOUNTS_REQUIRED=false`.
+
+```
+GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }
+POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai)
+POST   /source-accounts/libsocial/login { login, password, rememberPassword } → 204
+POST   /source-accounts/libsocial/token { sourceId, value } → 204
+DELETE /source-accounts/:family → 204
+
+PUT    /sources/:sourceId/enabled      { isEnabled } → 204
+```
+
+- Аккаунт один на семейство. Grouple и AllHentai: сервер сам входит на SSO-шлюз и хранит
+  cookie jar. Пароль хранится, только если человек разрешил: тогда истёкшая сессия
+  восстанавливается сама. LibSocial: учётка общая на всю сеть, но у MangaLib и HentaiLib свои
+  OAuth-шлюзы, и токен каждый выдаёт свой. Аккаунт хранит токены по сайтам
+  (`SourceAccount.sourceIds` — у каких сайтов токен есть), сайт без токена закрыт (`locked`),
+  а отвергнутый сайтом токен забывается только у этого сайта. Вход по паролю проходит
+  все сайты сети разом, вставленный токен добавляется к аккаунту только для своего сайта.
+  Сервер сам проходит вход сайта без браузера (`packages/parsers/src/sources/libsocial/login.ts`): OAuth2 + PKCE,
+  форма `/auth/login` с ALTCHA (proof-of-work, решается перебором SHA-256), страница согласия,
+  если она есть, и код из редиректа на callback сайта — сам callback не открывается. С
+  сохранённым паролем отвергнутый refresh_token заменяется новым входом. Запасной путь для
+  входящих через VK или Яндекс — вставить значение ключа `auth` из localStorage сайта. Такой токен
+  проверяется через `/api/auth/me`.
+- Сессии и пароли шифруются AES-256-GCM ключом `SOURCE_SECRETS_KEY`. Без ключа привязка
+  отвечает 503 `SOURCE_LINKING_UNAVAILABLE`. Источник, не принявший данные, — 400
+  `SOURCE_LOGIN_FAILED`. Отвергнутая источником сессия переводит аккаунт в `reloginRequired`.
+- Кеш ответов общий, доступ проверяется у каждого пользователя. Промах кеша идёт с аккаунтом
+  зрителя. Купленные платные главы LibSocial (`RawChapter.isPaid`) в общий кеш не попадают,
+  а их страницы не кешируются вовсе. Фоновая работа (пробник, веер совпадений) идёт от
+  сервисных учёток из env.
+- Выключенные в настройках источники (`disabled_sources`) скрыты из поиска и совпадений,
+  `Source.isEnabled` размечает их в `/sources`.
+- Реализация: `apps/api/src/source-accounts` (зритель запроса — AsyncLocalStorage,
+  `ViewerContextInterceptor`), `packages/parsers/src/core/source-accounts.ts`.
 
 ### Библиотека (Фаза 5, требует аккаунта)
 
@@ -396,6 +472,7 @@ POST   /sync                            → батч-синхронизация 
 | `USERNAME_TAKEN`      | 409  | Такое имя пользователя уже занято                    |
 | `INVITE_INVALID`      | 400  | Инвайт не найден, использован, отозван или истёк     |
 | `TOKEN_INVALID`       | 400  | Ссылка подтверждения/сброса недействительна          |
+| `CODE_INVALID`        | 400  | Код из письма неверный, истёк или сгорел             |
 | `TOO_MANY_REQUESTS`   | 429  | Rate limit (вход/письма) — см. `retryAfter`          |
 | `RATE_LIMITED`        | 429  | Превышен лимит запросов клиента                      |
 | `INVALID_SIGNATURE`   | 403  | Некорректная подпись у `/img`                        |

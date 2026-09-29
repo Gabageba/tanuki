@@ -144,6 +144,7 @@ export class AuthController {
       body.login,
       body.password,
       body.remember,
+      body.cancelDeletion ?? false,
       this.metaOf(request),
     );
     this.applySession(reply, result);

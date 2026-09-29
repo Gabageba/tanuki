@@ -18,6 +18,10 @@ export class ApiRequestError extends Error {
 export const isNotFoundError = (error: unknown) =>
   error instanceof ApiRequestError && error.code === API_ERROR_CODE.NOT_FOUND;
 
+/** Источник закрыт: у пользователя нет на нём своего аккаунта или сессия аккаунта истекла. */
+export const isSourceAccountRequiredError = (error: unknown) =>
+  error instanceof ApiRequestError && error.code === API_ERROR_CODE.SOURCE_ACCOUNT_REQUIRED;
+
 /**
  * Текст ошибки приходит с сервера уже на языке интерфейса — язык передаётся в Accept-Language.
  * Свой текст у фронта только на случай, когда сервер ответить не смог.

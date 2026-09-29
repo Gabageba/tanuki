@@ -3,7 +3,13 @@ import { createTransport, type Transporter } from 'nodemailer';
 import type { Language } from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
-import { resetPasswordContent, verifyEmailContent } from './templates';
+import {
+  accountDeletionScheduledContent,
+  emailChangeCodeContent,
+  emailChangedContent,
+  resetPasswordContent,
+  verifyEmailContent,
+} from './templates';
 
 /**
  * Без SMTP_HOST в env письмо не отправляется, а ссылка пишется в лог — этого достаточно для
@@ -37,6 +43,28 @@ export class MailService {
 
   async sendResetPassword(to: string, language: Language, url: string): Promise<void> {
     await this.send(to, resetPasswordContent(language, url));
+  }
+
+  async sendEmailChangeCode(to: string, language: Language, code: string): Promise<void> {
+    await this.send(to, emailChangeCodeContent(language, code));
+  }
+
+  async sendEmailChanged(
+    to: string,
+    language: Language,
+    newEmail: string,
+    url: string,
+  ): Promise<void> {
+    await this.send(to, emailChangedContent(language, newEmail, url));
+  }
+
+  async sendAccountDeletionScheduled(
+    to: string,
+    language: Language,
+    date: string,
+    url: string,
+  ): Promise<void> {
+    await this.send(to, accountDeletionScheduledContent(language, date, url));
   }
 
   private async send(to: string, content: { subject: string; text: string; html: string }) {

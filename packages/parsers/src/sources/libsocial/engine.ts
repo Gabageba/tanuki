@@ -12,6 +12,7 @@ import {
   formatCompactNumber,
   type FilterRangePreset,
   type TitleState,
+  SOURCE_AUTH_FAMILY,
   SOURCE_LOCALE,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -41,6 +42,9 @@ import { catalogEntryFor } from '../catalog';
 import type { LibSocialConfig } from './config';
 import { LIBSOCIAL_API_HOST } from './config';
 import { getValidAccessToken } from './auth';
+import { loginLibSocialWithPassword } from './login';
+import { fileTokenStore } from './token-store';
+import { currentSourceAccount } from '../../core/source-accounts';
 
 const PAGE_SIZE = 60;
 
@@ -385,11 +389,25 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
   );
 
   const tokenStoreDir = ctx.credentials.libsocial?.tokenStoreDir;
-  const tokenStorePath = tokenStoreDir ? join(tokenStoreDir, `${cfg.id}.json`) : undefined;
-  if (cfg.auth && tokenStorePath) {
+  const serviceTokenStore = tokenStoreDir
+    ? fileTokenStore(join(tokenStoreDir, `${cfg.id}.json`))
+    : null;
+  if (cfg.auth) {
     const auth = cfg.auth;
     ctx.http.use(async (req, next) => {
-      const token = await getValidAccessToken(auth, cfg.siteId, tokenStorePath, cfg.id, ctx.logger);
+      // Запрос от пользователя идёт только с его токеном — сервисная учётка ему не подменяется,
+      // даже если своего токена на этом источнике у него нет (такой запрос API не пропустит).
+      const account = currentSourceAccount(SOURCE_AUTH_FAMILY.LIBSOCIAL);
+      const store = account ? (account.tokenStore?.(cfg.id) ?? null) : serviceTokenStore;
+      if (!store) return next(req);
+      const token = await getValidAccessToken(
+        auth,
+        cfg.siteId,
+        store,
+        cfg.id,
+        ctx.logger,
+        (creds) => loginLibSocialWithPassword(auth, cfg.siteId, creds, cfg.id),
+      );
       return next({ ...req, headers: { ...req.headers, Authorization: `Bearer ${token}` } });
     });
   }
@@ -536,14 +554,22 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     );
   };
 
-  const fetchChapters = async (mangaUrl: string): Promise<RawChapter[]> => {
+  const fetchChapters = async (
+    mangaUrl: string,
+  ): Promise<{ chapters: RawChapter[]; hasPaidChapters: boolean }> => {
     const url = `https://${LIBSOCIAL_API_HOST}/api/manga/${mangaUrl}/chapters`;
     const json = await ctx.http.getJson<{ data: ChapterJson[] }>(url);
     const chapters: RawChapter[] = [];
+    let hasPaidChapters = false;
     for (const jo of json.data) {
       const volume = toNumber(jo.volume);
       const number = toNumber(jo.number);
       for (const branch of jo.branches) {
+        // restricted_view есть только у платных глав (у бесплатных — null). Закрытые этому
+        // аккаунту пропускаются, открытые (купленные) остаются с пометкой isPaid: такие главы
+        // нельзя класть в общий кеш — их видит только тот, кто купил.
+        const isPaid = Boolean(branch.restricted_view);
+        if (isPaid) hasPaidChapters = true;
         if (branch.restricted_view && branch.restricted_view.is_open === false) continue;
         const branchId = branch.branch_id ?? 0;
         const team = branch.teams?.[0]?.name ?? null;
@@ -561,10 +587,11 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
           uploadDate: parseIsoDate(branch.created_at),
           branch: team,
           source: cfg.id,
+          ...(isPaid ? { isPaid } : {}),
         });
       }
     }
-    return chapters;
+    return { chapters, hasPaidChapters };
   };
 
   const parseTag = (prefix: string, jo: TagJson): RawTag => {
@@ -595,7 +622,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       detailsUrl.searchParams.append('fields[]', field);
     }
 
-    const [detailsRes, chapters] = await Promise.all([
+    const [detailsRes, { chapters, hasPaidChapters }] = await Promise.all([
       ctx.http.getJson<{ data: MangaDetailsJson }>(detailsUrl.toString()),
       fetchChapters(mangaUrl),
     ]);
@@ -673,6 +700,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       description: summaryText(json.summary) || null,
       chapters,
       source: cfg.id,
+      ...(hasPaidChapters ? { hasPaidChapters } : {}),
     };
   };
 
@@ -902,14 +930,14 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     async init() {
       if (!cfg.auth) return;
-      if (!tokenStorePath) {
+      if (!serviceTokenStore) {
         ctx.logger.warn(
           `${cfg.id}: no LIBSOCIAL_TOKEN_STORE_PATH configured — auth-gated pages will fail`,
         );
         return;
       }
       try {
-        await getValidAccessToken(cfg.auth, cfg.siteId, tokenStorePath, cfg.id, ctx.logger);
+        await getValidAccessToken(cfg.auth, cfg.siteId, serviceTokenStore, cfg.id, ctx.logger);
       } catch (err) {
         ctx.logger.warn(
           `${cfg.id}: LibSocial token warmup failed: ${err instanceof Error ? err.message : String(err)}`,

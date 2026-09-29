@@ -6,6 +6,7 @@ import { Drawer } from '@mantine/core';
 import MobileNavigationButton from './MobileNavigationButton';
 import SourceSelectMenu from '../../components/SourceSelectMenu';
 import useSources from '@/entities/source/hooks/useSources';
+import { getEnabledSources } from '@/entities/source/lib';
 import useGetActiveSelection from '../../hooks/useGetActiveSelection';
 
 type Props = {
@@ -40,7 +41,7 @@ function MobileSourceSelect({ isActive, setIsOpened, isOpened }: Props) {
       />
       <Drawer opened={isOpened} onClose={() => setIsOpened(false)} title={t('sources')}>
         <SourceSelectMenu
-          sources={sources}
+          sources={getEnabledSources(sources)}
           activeSelection={activeSelection}
           query={query}
           setQuery={setQuery}

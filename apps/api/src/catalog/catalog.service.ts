@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { SOURCE_AUTH_FAMILY, catalogEntryFor } from '@tanuki/contracts';
 import type {
   CatalogResponse,
   ChaptersResponse,
@@ -93,10 +94,22 @@ export class CatalogService {
     const chapterRef = decodeChapterId(chapterId);
     const titleRef = decodeTitleId(titleId);
 
-    const [pagesResult, detailsResult] = await Promise.all([
-      this.parsersClient.getPages(sourceId, chapterRef.url),
-      this.parsersClient.getDetails(sourceId, titleRef.url),
-    ]);
+    // Где бывают платные главы, сначала нужны детали: по ним видно, платная ли глава, а страницы
+    // платной главы в общий кеш не кладутся. Глава, которой нет в деталях этого зрителя, тоже
+    // считается платной — общий кеш не должен отдавать то, что ему не показали.
+    const hasPaidChapters = catalogEntryFor(sourceId).authFamily === SOURCE_AUTH_FAMILY.LIBSOCIAL;
+    const [pagesResult, detailsResult] = hasPaidChapters
+      ? await this.parsersClient.getDetails(sourceId, titleRef.url).then(async (details) => {
+          const chapter = details.data.chapters?.find((item) => item.id === chapterRef.id);
+          const pages = await this.parsersClient.getPages(sourceId, chapterRef.url, {
+            isPaid: !chapter || chapter.isPaid === true,
+          });
+          return [pages, details] as const;
+        })
+      : await Promise.all([
+          this.parsersClient.getPages(sourceId, chapterRef.url),
+          this.parsersClient.getDetails(sourceId, titleRef.url),
+        ]);
     const details = detailsResult.data;
 
     const siblings = (details.chapters ?? [])

@@ -24,7 +24,7 @@ const FAN_OUT_DOMAINS = [
  */
 const LOGIN_RETRY_COOLDOWN_MS = 5 * 60_000;
 
-type LoginAttempt = { promise: Promise<void>; startedAt: number };
+type LoginAttempt = { promise: Promise<boolean>; startedAt: number };
 
 // All Grouple sources on the main gateway share one jar (see registry.ts cookieScope='grouple')
 // and each calls init() -> authenticateGrouple independently; they converge on one in-flight
@@ -38,8 +38,8 @@ const qawaLoginAttempts = new WeakMap<CookieJar, LoginAttempt>();
 const runWithCooldown = (
   cache: WeakMap<CookieJar, LoginAttempt>,
   jar: CookieJar,
-  attempt: () => Promise<void>,
-): Promise<void> => {
+  attempt: () => Promise<boolean>,
+): Promise<boolean> => {
   const cached = cache.get(jar);
   if (cached && Date.now() - cached.startedAt < LOGIN_RETRY_COOLDOWN_MS) {
     return cached.promise;
@@ -71,7 +71,7 @@ const performGatewayLogin = async (
   params: GatewayLoginParams,
   credentials: GroupleCredentials,
   logger: Logger,
-): Promise<void> => {
+): Promise<boolean> => {
   const { gateway, siteId, fanOutDomains, authCookieNames, label } = params;
   const loginUrl = `https://${gateway}/login/authenticate?ttt=${Date.now()}&siteId=${siteId}`;
 
@@ -106,7 +106,7 @@ const performGatewayLogin = async (
   const authCookie = cookies.find((c) => authCookieNames.includes(c.key));
   if (!authCookie) {
     logger.warn(`${label} login did not yield an auth cookie — credentials likely rejected`);
-    return;
+    return false;
   }
 
   for (const domain of fanOutDomains) {
@@ -116,6 +116,7 @@ const performGatewayLogin = async (
     );
   }
   logger.info(`${label} SSO session established for ${fanOutDomains.length} domains`);
+  return true;
 };
 
 /**
@@ -135,8 +136,8 @@ export const authenticateGrouple = (
   jar: CookieJar,
   credentials: GroupleCredentials | undefined,
   logger: Logger,
-): Promise<void> => {
-  if (!credentials) return Promise.resolve();
+): Promise<boolean> => {
+  if (!credentials) return Promise.resolve(false);
   return runWithCooldown(loginAttempts, jar, () =>
     performGatewayLogin(
       http,
@@ -167,8 +168,8 @@ export const authenticateAllHentai = (
   cfg: GroupleConfig,
   credentials: GroupleCredentials | undefined,
   logger: Logger,
-): Promise<void> => {
-  if (!credentials) return Promise.resolve();
+): Promise<boolean> => {
+  if (!credentials) return Promise.resolve(false);
   return runWithCooldown(qawaLoginAttempts, jar, () =>
     performGatewayLogin(
       http,
