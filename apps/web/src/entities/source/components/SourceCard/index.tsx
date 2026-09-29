@@ -28,7 +28,7 @@ function SourceCard({ source }: Props) {
       {!isSourceAvailable && (
         <Overlay
           color="var(--mantine-color-body)"
-          backgroundOpacity={0.8}
+          backgroundOpacity={0.6}
           blur={4}
           radius="sm"
           center
