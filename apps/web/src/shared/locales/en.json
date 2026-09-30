@@ -426,5 +426,8 @@
   "languageAndRegion": "Language and region",
   "interfaceLanguage": "Interface language",
   "menusButtonsEmails": "menus, buttons, emails",
-  "streakDaysAndReleaseScheduleUseIt": "used to count streak days and the chapter release schedule"
+  "streakDaysAndReleaseScheduleUseIt": "used to count streak days and the chapter release schedule",
+  "daytimeInBrightLight": "daytime, in bright light",
+  "eveningInDimLight": "in the evening, in dim light",
+  "followsOsSetting": "follows the OS setting"
 }
