@@ -5,6 +5,7 @@ import { BroomIcon, DownloadSimpleIcon, TrashIcon, UploadSimpleIcon } from '@pho
 import GroupedList from '@/shared/ui/GroupedList';
 import ClearCacheModal from './ClearCacheModal';
 import ExportModal from './ExportModal';
+import ImportFromSourceRow from './ImportFromSourceRow';
 import ImportModal from './ImportModal';
 import useStorageEstimate from './hooks/useStorageEstimate';
 import { getStorageSizeLabel } from './lib';
@@ -41,6 +42,7 @@ function ProfileData() {
               children: t('import'),
             }}
           />
+          <ImportFromSourceRow />
         </GroupedList>
         <GroupedList label={t('storage')} loading={isStoragePending} skeletonRows={2}>
           <GroupedList.Row

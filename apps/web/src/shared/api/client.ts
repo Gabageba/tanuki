@@ -20,7 +20,17 @@ export const isNotFoundError = (error: unknown) =>
 
 /** Источник закрыт: у пользователя нет на нём своего аккаунта или сессия аккаунта истекла. */
 export const isSourceAccountRequiredError = (error: unknown) =>
-  error instanceof ApiRequestError && error.code === API_ERROR_CODE.SOURCE_ACCOUNT_REQUIRED;
+  error instanceof ApiRequestError &&
+  (error.code === API_ERROR_CODE.SOURCE_ACCOUNT_REQUIRED ||
+    error.code === API_ERROR_CODE.SOURCE_RELOGIN_REQUIRED);
+
+/** Аккаунт на источнике привязан, но его сессия истекла. */
+export const isSourceReloginRequiredError = (error: unknown) =>
+  error instanceof ApiRequestError && error.code === API_ERROR_CODE.SOURCE_RELOGIN_REQUIRED;
+
+/** Источник открыт, но именно это он отдаёт только авторизованным. */
+export const isSourceAuthRequiredError = (error: unknown) =>
+  error instanceof ApiRequestError && error.code === API_ERROR_CODE.SOURCE_AUTH_REQUIRED;
 
 /**
  * Текст ошибки приходит с сервера уже на языке интерфейса — язык передаётся в Accept-Language.

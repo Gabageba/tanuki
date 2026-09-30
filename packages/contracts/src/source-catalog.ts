@@ -1,7 +1,11 @@
 import {
   SOURCE_AUTH_FAMILY,
   SOURCE_CONTENT_TYPE,
+  SOURCE_LOGIN_BENEFIT,
+  SOURCE_LOGIN_REQUIREMENT,
   type SourceAuthFamily,
+  type SourceLoginBenefit,
+  type SourceLoginRequirement,
   type SourceContentType,
 } from './source';
 import type { EnumLiteralsOf } from './utils';
@@ -33,8 +37,15 @@ export type CatalogEntry = {
   domains: [string, ...string[]];
   /** Source's brand color — used for its ribbon/accent in the web UI. */
   color: string;
-  /** null — источник открыт без входа. */
+  /** Чьим аккаунтом входят на источник; null — входа на источнике нет. */
   authFamily: SourceAuthFamily | null;
+  /**
+   * Обязателен ли вход: REQUIRED — без аккаунта пользователя источник у нас не работает,
+   * OPTIONAL — читается и анонимно, как гостем на самом сайте. null — входа на источнике нет.
+   */
+  loginRequirement: SourceLoginRequirement | null;
+  /** Всё, что даёт вход; у REQUIRED-источника список начинается с CATALOG_AND_READING. */
+  loginBenefits: SourceLoginBenefit[];
 };
 
 // `satisfies` (not `: Record<string, CatalogEntry>`) keeps the literal key union so `SourceId`
@@ -50,6 +61,8 @@ export const SOURCE_CATALOG = {
     domains: ['a.zazaza.me', '3.readmanga.ru'],
     color: '#1847C5',
     authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
+    loginBenefits: [SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING],
   },
   mintmanga: {
     title: 'MintManga',
@@ -60,6 +73,8 @@ export const SOURCE_CATALOG = {
     domains: ['2.mintmanga.one', '24.mintmanga.one', 'mintmanga.live', 'mintmanga.com'],
     color: '#CBF446',
     authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
+    loginBenefits: [SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING],
   },
   selfmanga: {
     title: 'SelfManga',
@@ -70,6 +85,8 @@ export const SOURCE_CATALOG = {
     domains: ['1.selfmanga.live', 'selfmanga.live'],
     color: '#ECD166',
     authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
+    loginBenefits: [SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING],
   },
   seimanga: {
     title: 'SeiManga',
@@ -80,6 +97,8 @@ export const SOURCE_CATALOG = {
     domains: ['1.seimanga.me', 'seimanga.me'],
     color: '#75B9F7',
     authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
+    loginBenefits: [SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING],
   },
   usagi: {
     title: 'Usagi',
@@ -90,6 +109,8 @@ export const SOURCE_CATALOG = {
     domains: ['web.usagi.one'],
     color: '#0872AC',
     authFamily: SOURCE_AUTH_FAMILY.GROUPLE,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
+    loginBenefits: [SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING],
   },
   allhentai: {
     title: 'AllHentai',
@@ -100,6 +121,8 @@ export const SOURCE_CATALOG = {
     domains: ['20.allhen.online', 'z.ahen.me', '24.allhen.online', '2023.allhen.online'],
     color: '#CA1717',
     authFamily: SOURCE_AUTH_FAMILY.ALLHENTAI,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
+    loginBenefits: [SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING],
   },
   desume: {
     title: 'Desu',
@@ -110,6 +133,8 @@ export const SOURCE_CATALOG = {
     domains: ['desu.uno', 'x.desu.city', 'desu.city', 'desu.work', 'desu.store', 'desu.win'],
     color: '#915806',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   mangalib: {
     title: 'MangaLib',
@@ -120,6 +145,8 @@ export const SOURCE_CATALOG = {
     domains: ['mangalib.org', 'mangalib.me'],
     color: '#FF8C02',
     authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
+    loginBenefits: [SOURCE_LOGIN_BENEFIT.MEMBER_CHAPTERS, SOURCE_LOGIN_BENEFIT.PURCHASED_CHAPTERS],
   },
   hentailib: {
     title: 'HentaiLib',
@@ -130,6 +157,11 @@ export const SOURCE_CATALOG = {
     domains: ['v1.hentailib.org', 'hentailib.me'],
     color: '#FF0048',
     authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
+    loginBenefits: [
+      SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING,
+      SOURCE_LOGIN_BENEFIT.PURCHASED_CHAPTERS,
+    ],
   },
   yaoilib: {
     title: 'SlashLib',
@@ -140,6 +172,11 @@ export const SOURCE_CATALOG = {
     domains: ['v2.slashlib.me'],
     color: '#D91A60',
     authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
+    loginBenefits: [
+      SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING,
+      SOURCE_LOGIN_BENEFIT.PURCHASED_CHAPTERS,
+    ],
   },
   mangachan: {
     title: 'Манга-тян',
@@ -150,6 +187,8 @@ export const SOURCE_CATALOG = {
     domains: ['im.manga-chan.me', 'manga-chan.me'],
     color: '#399DB7',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   henchan: {
     title: 'Хентай-тян',
@@ -174,6 +213,8 @@ export const SOURCE_CATALOG = {
     ],
     color: '#9EBE75',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   yaoichan: {
     title: 'Яой-тян',
@@ -191,6 +232,8 @@ export const SOURCE_CATALOG = {
     ],
     color: '#DC60A1',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   remanga: {
     title: 'Реманга',
@@ -201,6 +244,8 @@ export const SOURCE_CATALOG = {
     domains: ['remanga.org'],
     color: '#000000',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   nudemoon: {
     title: 'Nude-Moon',
@@ -211,6 +256,8 @@ export const SOURCE_CATALOG = {
     domains: ['g.nude-moon.fun', 'nude-moon.net', 'nude-moon.org', 'b.nude-moon.fun'],
     color: '#ED0102',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   acomics: {
     title: 'AComics',
@@ -221,6 +268,8 @@ export const SOURCE_CATALOG = {
     domains: ['acomics.ru'],
     color: '#D31434',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   comx: {
     title: 'Com-X',
@@ -231,6 +280,8 @@ export const SOURCE_CATALOG = {
     domains: ['com-x.life', 'comx.life'],
     color: '#FFA331',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   mangabuff: {
     title: 'MangaBuff',
@@ -241,6 +292,8 @@ export const SOURCE_CATALOG = {
     domains: ['mangabuff.ru'],
     color: '#8C00FF',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   senkuro: {
     title: 'Senkuro',
@@ -253,6 +306,8 @@ export const SOURCE_CATALOG = {
     domains: ['senkuro.me', 'ne.senkuro.com', 'senkuro.com'],
     color: '#FE6E00',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   senkognito: {
     title: 'Senkognito',
@@ -266,6 +321,8 @@ export const SOURCE_CATALOG = {
     domains: ['ne.senkognito.com', 'senkognito.com'],
     color: '#FE6E00',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   tomilolib: {
     title: 'TomiloLib',
@@ -276,6 +333,8 @@ export const SOURCE_CATALOG = {
     domains: ['tomilo-lib.ru'],
     color: '#DC3933',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   wamanga: {
     title: 'WaManga',
@@ -286,6 +345,8 @@ export const SOURCE_CATALOG = {
     domains: ['wamanga.ru'],
     color: '#5A5EE7',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   inkstory: {
     title: 'Inkstory',
@@ -296,6 +357,8 @@ export const SOURCE_CATALOG = {
     domains: ['inkstory.net'],
     color: '#2B7FFF',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   hentaichan_cc: {
     title: 'HentaiChan',
@@ -306,6 +369,8 @@ export const SOURCE_CATALOG = {
     domains: ['hentaichan.cc'],
     color: '#5CA656',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   sexkomix2: {
     title: 'SexKomix2',
@@ -316,6 +381,8 @@ export const SOURCE_CATALOG = {
     domains: ['super.sexkomix22.com', 'sexkomix2.com'],
     color: '#FF3248',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   multporn: {
     title: 'MultPorn',
@@ -326,6 +393,8 @@ export const SOURCE_CATALOG = {
     domains: ['multporn.net'],
     color: '#A42511',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
   multporn_hentai: {
     title: 'MultPorn Hentai',
@@ -336,6 +405,8 @@ export const SOURCE_CATALOG = {
     domains: ['multporn.net'],
     color: '#A42511',
     authFamily: null,
+    loginRequirement: null,
+    loginBenefits: [],
   },
 } satisfies Record<string, CatalogEntry>;
 

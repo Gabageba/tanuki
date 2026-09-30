@@ -392,11 +392,23 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-Источники с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial) закрыты для
-пользователя, пока он не привяжет свой аккаунт. Запрос к закрытому источнику — 403
-`SOURCE_ACCOUNT_REQUIRED` с `sourceId`, даже если ответ лежит в общем кеше. `Source.access`
-(`available` / `locked` / `reloginRequired`) показывает это заранее, поиск отдаёт такие
-источники со статусом группы `locked`. Выключается флагом `SOURCE_ACCOUNTS_REQUIRED=false`.
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial) в каталоге
+записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
+`optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
+пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
+`sourceId`, даже если ответ лежит в общем кеше. `Source.access` (`available` / `locked` /
+`reloginRequired`) показывает это заранее, поиск отдаёт такие источники со статусом группы
+`locked`. Источник с `optional` без аккаунта читается анонимно, а свой аккаунт используется, если он
+привязан. Сервисные учётки из env пользователю не подставляются — через них ходят только фоновые
+задачи. `Source.loginBenefits` — всё, что вход даёт (`catalogAndReading` — сам источник, у каждого
+`required`; `memberChapters`; `purchasedChapters`),
+`Source.isLoggedIn` — есть ли действующий аккаунт.
+Источник с `optional` всегда `access: available`. Если аккаунт привязан, но источник
+перестал принимать его сессию, закрытый источник отвечает 403 `SOURCE_RELOGIN_REQUIRED`.
+
+Порядок источников пользователя: `PUT /sources/order { sourceIds }` — список целиком, неизвестные и
+повторные id отбрасываются, не названные источники встают в конец в порядке каталога.
+`Source.position` — место источника в этом порядке; в нём же идут `/sources` и группы `/search`.
 
 ```
 GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }

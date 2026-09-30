@@ -4,7 +4,9 @@ import {
   SOURCE_ACCESS,
   SOURCE_ACCOUNT_STATUS,
   SOURCE_AUTH_FAMILY,
+  SOURCE_LOGIN_REQUIREMENT,
   catalogEntryFor,
+  type Source,
   type SourceAccess,
   type SourceAuthFamily,
 } from '@tanuki/contracts';
@@ -36,6 +38,19 @@ export type LibSocialTokens = Partial<Record<string, LibSocialTokenState>>;
 export type SourceAccountState =
   { cookies: NonNullable<ReturnType<CookieJar['serializeSync']>> } | { tokens: LibSocialTokens };
 
+/** Что список источников знает о входе пользователя на источник. */
+export type SourceLogin = Pick<Source, 'access' | 'loginRequirement' | 'isLoggedIn'>;
+
+/**
+ * Сессия зрителя без своего аккаунта на источнике с входом по желанию: запрос идёт анонимно, как
+ * у гостя на самом сайте. Сервисная учётка ему не подставляется — она только для фоновых задач.
+ */
+const ANONYMOUS_SESSION: SourceAccountSession = {};
+
+/** Идёт ли запрос от имени привязанного аккаунта, а не анонимно. */
+export const hasSourceAccount = (scope: SourceAccountScope | undefined) =>
+  Object.values(scope ?? {}).some((session) => session !== ANONYMOUS_SESSION);
+
 type LiveAccount = {
   row: SourceAccountRow;
   session: SourceAccountSession;
@@ -52,8 +67,9 @@ const accountKey = (userId: string, family: SourceAuthFamily) => `${userId}:${fa
 
 /**
  * Личные аккаунты пользователей на источниках: хранение (зашифрованно), живые сессии в памяти
- * и решение, пускать ли запрос к источнику. Запрос пользователя к источнику с входом идёт
- * только через его аккаунт — без аккаунта источник закрыт даже для данных из общего кеша.
+ * и решение, пускать ли запрос к источнику. Источник с обязательным входом (loginRequirement в
+ * каталоге) без своего аккаунта закрыт даже для данных из общего кеша; остальные читаются и без
+ * него — анонимно.
  */
 @Injectable()
 export class SourceAccessService {
@@ -65,7 +81,7 @@ export class SourceAccessService {
 
   constructor(
     private readonly database: DatabaseService,
-    @Inject(ENV) private readonly env: Env,
+    @Inject(ENV) env: Env,
   ) {
     this.key = env.SOURCE_SECRETS_KEY ? Buffer.from(env.SOURCE_SECRETS_KEY, 'base64') : null;
   }
@@ -75,30 +91,41 @@ export class SourceAccessService {
   }
 
   /**
-   * Scope аккаунтов для запроса текущего зрителя к источнику. undefined — запрос идёт как
-   * раньше (источник без входа, фоновая работа или закрытие выключено). Бросает
+   * Scope аккаунтов для запроса текущего зрителя к источнику. undefined — источник без входа или
+   * фоновая работа (она ходит через сервисную учётку). Зритель ходит либо со своим аккаунтом,
+   * либо, если вход по желанию, анонимно — через сервисную учётку никогда. Бросает
    * SourceAccountRequiredException, если источник закрыт, — до чтения кеша, иначе закрытый
    * источник читался бы из общего кеша.
    */
   async resolveScope(sourceId: string): Promise<SourceAccountScope | undefined> {
-    const family = catalogEntryFor(sourceId).authFamily;
-    if (!family || !this.env.SOURCE_ACCOUNTS_REQUIRED) return undefined;
+    const { authFamily: family, loginRequirement } = catalogEntryFor(sourceId);
+    if (!family) return undefined;
 
     const viewer = getViewer();
     if (viewer.kind === VIEWER_KIND.SERVICE) return undefined;
-    if (viewer.kind === VIEWER_KIND.GUEST) throw new SourceAccountRequiredException(sourceId);
+
+    const isRequired = loginRequirement === SOURCE_LOGIN_REQUIREMENT.REQUIRED;
+    if (viewer.kind === VIEWER_KIND.GUEST) {
+      if (isRequired) throw new SourceAccountRequiredException(sourceId);
+      return { [family]: ANONYMOUS_SESSION };
+    }
 
     const account = await this.loadLive(viewer.userId, family);
-    if (!account || this.accessOf(account, sourceId) !== SOURCE_ACCESS.AVAILABLE) {
-      throw new SourceAccountRequiredException(sourceId);
+    if (account && this.accessOf(account, sourceId) === SOURCE_ACCESS.AVAILABLE) {
+      return { [family]: account.session };
     }
-    return { [family]: account.session };
+    if (isRequired) {
+      const isReloginRequired = account?.row.status === SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED;
+      throw new SourceAccountRequiredException(sourceId, isReloginRequired);
+    }
+    return { [family]: ANONYMOUS_SESSION };
   }
 
-  /** Доступ к каждому источнику для списка источников — одним запросом в БД на пользователя. */
-  async getAccessResolver(userId: string | undefined): Promise<(sourceId: string) => SourceAccess> {
-    if (!this.env.SOURCE_ACCOUNTS_REQUIRED) return () => SOURCE_ACCESS.AVAILABLE;
-
+  /**
+   * Состояние входа на каждом источнике для списка источников — одним запросом в БД на
+   * пользователя. Источник с входом по желанию не закрывается никогда.
+   */
+  async getLoginResolver(userId: string | undefined): Promise<(sourceId: string) => SourceLogin> {
     const accounts = new Map<SourceAuthFamily, LiveAccount>();
     if (userId) {
       for (const row of await this.listRows(userId)) {
@@ -108,10 +135,17 @@ export class SourceAccessService {
     }
 
     return (sourceId) => {
-      const family = catalogEntryFor(sourceId).authFamily;
-      if (!family) return SOURCE_ACCESS.AVAILABLE;
+      const { authFamily: family, loginRequirement } = catalogEntryFor(sourceId);
+      if (!family) return { access: SOURCE_ACCESS.AVAILABLE, loginRequirement, isLoggedIn: false };
+
       const account = accounts.get(family);
-      return account ? this.accessOf(account, sourceId) : SOURCE_ACCESS.LOCKED;
+      const access = account ? this.accessOf(account, sourceId) : SOURCE_ACCESS.LOCKED;
+      return {
+        access:
+          loginRequirement === SOURCE_LOGIN_REQUIREMENT.REQUIRED ? access : SOURCE_ACCESS.AVAILABLE,
+        loginRequirement,
+        isLoggedIn: access === SOURCE_ACCESS.AVAILABLE,
+      };
     };
   }
 

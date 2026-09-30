@@ -2,7 +2,6 @@ import type { TFunction } from 'i18next';
 import {
   SOURCE_ACCOUNT_STATUS,
   SOURCE_AUTH_FAMILY,
-  SOURCE_STATUS_REASON,
   type Source,
   type SourceAccount,
   type SourceAuthFamily,
@@ -27,39 +26,20 @@ type AccountGroup = { key: string; title: string; family: SourceAuthFamily; sour
 
 const byTitle = (a: Source, b: Source) => a.title.localeCompare(b.title);
 
-/**
- * Группы источников с аккаунтом в порядке SOURCE_AUTH_FAMILY — по одной на сеть, ведь и аккаунт у
- * сети один. Остальные отдельно.
- */
+/** Группы источников с аккаунтом в порядке SOURCE_AUTH_FAMILY — по одной на сеть, ведь и аккаунт у
+ *  сети один. Источники без входа сюда не попадают. */
 export const groupSourcesByAccount = (data?: SourcesResponse) => {
   const sources = flattenSources(data);
-  return {
-    accountGroups: Object.values(SOURCE_AUTH_FAMILY).flatMap<AccountGroup>((family) => {
-      const members = sources.filter((source) => source.authFamily === family).sort(byTitle);
-      return members.length > 0
-        ? [{ key: family, title: getSourceAuthFamilyTitle(family), family, sources: members }]
-        : [];
-    }),
-    withoutLogin: sources.filter((source) => source.authFamily === null).sort(byTitle),
-  };
-};
-
-/**
- * Сайты LibSocial, для которых у действующего аккаунта нет токена: вход по паролю мог пройти не
- * везде, а вставленный токен подходит только своему сайту. Сломанные источники не в счёт — в них
- * всё равно не войти.
- */
-export const getSourcesWithoutLogin = (account: SourceAccount | undefined, sources: Source[]) => {
-  const { sourceIds } = account ?? {};
-  if (!sourceIds || account?.status !== SOURCE_ACCOUNT_STATUS.ACTIVE) return [];
-  return sources.filter(
-    (source) =>
-      !sourceIds.includes(source.id) && source.statusReason !== SOURCE_STATUS_REASON.BROKEN,
-  );
+  return Object.values(SOURCE_AUTH_FAMILY).flatMap<AccountGroup>((family) => {
+    const members = sources.filter((source) => source.authFamily === family).sort(byTitle);
+    return members.length > 0
+      ? [{ key: family, title: getSourceAuthFamilyTitle(family), family, sources: members }]
+      : [];
+  });
 };
 
 /** Цвет состояния аккаунта в шапке группы: без входа — фирменный, как призыв войти. */
-export const getSourceAccountColor = (account: SourceAccount | undefined) => {
+export const getSourceAccountStatusColor = (account: SourceAccount | undefined) => {
   if (!account) return PRIMARY_COLOR;
   switch (account.status) {
     case SOURCE_ACCOUNT_STATUS.ACTIVE:
@@ -69,7 +49,7 @@ export const getSourceAccountColor = (account: SourceAccount | undefined) => {
   }
 };
 
-export const getSourceAccountLabel = (account: SourceAccount | undefined, t: TFunction) => {
+export const getSourceAccountStatusLabel = (account: SourceAccount | undefined, t: TFunction) => {
   if (!account) return t('accountNotLinked');
   switch (account.status) {
     case SOURCE_ACCOUNT_STATUS.ACTIVE:

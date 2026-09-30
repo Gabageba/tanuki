@@ -236,6 +236,12 @@ export const userSettings = pgTable('user_settings', {
   exclusiveFilterConfirmDismissed: boolean('exclusive_filter_confirm_dismissed'),
   /** IANA-зона («Europe/Moscow»): по ней статистика чтения режет сутки и месяцы. */
   timeZone: text('time_zone'),
+  /**
+   * Порядок источников, заданный в настройках: id по порядку. Источники, которых здесь нет
+   * (новые), встают в конец в порядке каталога. Наружу отдаётся через /sources, не через
+   * /user-settings.
+   */
+  sourceOrder: text('source_order').array(),
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

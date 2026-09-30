@@ -1,17 +1,34 @@
-import { Alert, Center, Loader, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Box, Center, Loader, Stack, Text } from '@mantine/core';
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
-import { InfoIcon } from '@phosphor-icons/react';
 import useSources from '@/entities/source/hooks/useSources';
+import { flattenSources } from '@/entities/source/lib';
 import GroupedList from '@/shared/ui/GroupedList';
-import useSourceAccounts from './hooks/useSourceAccounts';
-import { groupSourcesByAccount } from './lib';
-import SourceFamilySection from './SourceFamilySection';
+import useReorderSources from './hooks/useReorderSources';
 import SourceToggleRow from './SourceToggleRow';
 
 function SettingsSources() {
   const { t } = useTranslation();
   const { data, isPending } = useSources();
-  const { data: accounts } = useSourceAccounts();
+  const reorderSources = useReorderSources();
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   if (isPending) {
     return (
@@ -21,39 +38,33 @@ function SettingsSources() {
     );
   }
 
-  const { accountGroups, withoutLogin } = groupSourcesByAccount(data);
-  const isLinkingAvailable = accounts?.isLinkingAvailable ?? false;
+  const sources = flattenSources(data);
+  const sourceIds = sources.map((source) => source.id);
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = sourceIds.indexOf(String(active.id));
+    const to = sourceIds.indexOf(String(over.id));
+    reorderSources.mutate(arrayMove(sourceIds, from, to));
+  };
 
   return (
     <Stack mt="lg" gap="lg">
       <Stack gap={4}>
-        <Text c="dimmed">{t('sourcesWithLoginOpenViaYourAccount')}</Text>
+        <Text c="dimmed">{t('sourcesOrderIsUsedInListsSearchAndMatches')}</Text>
         <Text c="dimmed">{t('disabledSourcesAreHidden')}</Text>
       </Stack>
-      {accounts && !isLinkingAvailable && (
-        <Alert color="orange" icon={<InfoIcon />} variant="muted">
-          {t('accountLinkingNotConfigured')}
-        </Alert>
-      )}
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-        <Stack gap="lg">
-          {accountGroups.map(({ key, title, family, sources }) => (
-            <SourceFamilySection
-              key={key}
-              title={title}
-              family={family}
-              sources={sources}
-              accounts={accounts?.items ?? []}
-              isLinkingAvailable={isLinkingAvailable}
-            />
-          ))}
-        </Stack>
-        <GroupedList label={t('withoutLogin')}>
-          {withoutLogin.map((source) => (
-            <SourceToggleRow key={source.id} source={source} />
-          ))}
-        </GroupedList>
-      </SimpleGrid>
+      <Box maw={640}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sourceIds} strategy={verticalListSortingStrategy}>
+            <GroupedList label={t('sources')}>
+              {sources.map((source) => (
+                <SourceToggleRow key={source.id} source={source} />
+              ))}
+            </GroupedList>
+          </SortableContext>
+        </DndContext>
+      </Box>
     </Stack>
   );
 }

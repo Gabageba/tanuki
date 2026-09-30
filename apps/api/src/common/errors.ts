@@ -1,5 +1,11 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { API_ERROR_CODE, LANGUAGE, type ApiErrorCode } from '@tanuki/contracts';
+import {
+  API_ERROR_CODE,
+  LANGUAGE,
+  SOURCE_CATALOG,
+  type ApiErrorCode,
+  type CatalogEntry,
+} from '@tanuki/contracts';
 import {
   translateErrorMessage,
   type ErrorMessageKey,
@@ -12,6 +18,12 @@ type ApiExceptionOptions = {
   retryAfter?: number;
   /** Внутренняя подробность для логов и статуса источника — клиенту не уходит. */
   detail?: string;
+};
+
+/** Название источника для текста ошибки; незнакомый id уходит как есть. */
+const sourceNameParams = (sourceId = ''): ErrorMessageParams => {
+  const entry = (SOURCE_CATALOG as Record<string, CatalogEntry | undefined>)[sourceId];
+  return { source: entry?.title ?? sourceId };
 };
 
 /**
@@ -65,9 +77,9 @@ export class SourceAuthRequiredException extends ApiException {
   constructor(sourceId?: string) {
     super(
       API_ERROR_CODE.SOURCE_AUTH_REQUIRED,
-      'sourceRequiresAuthorization',
+      'sourceShowsThisOnlyToLoggedIn',
       HttpStatus.BAD_GATEWAY,
-      { sourceId },
+      { sourceId, params: sourceNameParams(sourceId) },
     );
   }
 }
@@ -90,12 +102,15 @@ export class SourceTokenExpiredException extends ApiException {
  * сигнал здоровья источника — breaker и статус источника его не видят.
  */
 export class SourceAccountRequiredException extends ApiException {
-  constructor(sourceId?: string) {
+  /** isReloginRequired — аккаунт привязан, но источник больше не принимает его сессию. */
+  constructor(sourceId?: string, isReloginRequired = false) {
     super(
-      API_ERROR_CODE.SOURCE_ACCOUNT_REQUIRED,
-      'logInToYourSourceAccount',
+      isReloginRequired
+        ? API_ERROR_CODE.SOURCE_RELOGIN_REQUIRED
+        : API_ERROR_CODE.SOURCE_ACCOUNT_REQUIRED,
+      isReloginRequired ? 'sourceNoLongerAcceptsSavedLogin' : 'sourceOpensOnlyViaYourAccount',
       HttpStatus.FORBIDDEN,
-      { sourceId },
+      { sourceId, params: sourceNameParams(sourceId) },
     );
   }
 }

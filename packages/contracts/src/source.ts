@@ -108,6 +108,29 @@ export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 
 export const SourceAuthFamilySchema = z.enum(SOURCE_AUTH_FAMILY);
 
+/**
+ * Нужен ли вход, чтобы источник открывался: REQUIRED закрыт, пока пользователь не привяжет свой
+ * аккаунт, OPTIONAL читается и без него — анонимно, как гостем на самом сайте.
+ */
+export const SOURCE_LOGIN_REQUIREMENT = {
+  REQUIRED: 'required',
+  OPTIONAL: 'optional',
+} as const;
+export type SourceLoginRequirement = EnumLiteralsOf<typeof SOURCE_LOGIN_REQUIREMENT>;
+export const SourceLoginRequirementSchema = z.enum(SOURCE_LOGIN_REQUIREMENT);
+
+/** Что даёт вход на источнике — всё, чего без своего аккаунта у пользователя нет. */
+export const SOURCE_LOGIN_BENEFIT = {
+  /** Сам источник: без аккаунта он закрыт целиком. Есть у каждого источника с REQUIRED. */
+  CATALOG_AND_READING: 'catalogAndReading',
+  /** Главы, которые сайт не отдаёт гостю, хотя остальное читается и так. */
+  MEMBER_CHAPTERS: 'memberChapters',
+  /** Главы, купленные этим аккаунтом. */
+  PURCHASED_CHAPTERS: 'purchasedChapters',
+} as const;
+export type SourceLoginBenefit = EnumLiteralsOf<typeof SOURCE_LOGIN_BENEFIT>;
+export const SourceLoginBenefitSchema = z.enum(SOURCE_LOGIN_BENEFIT);
+
 /** Может ли пользователь открыть источник прямо сейчас. */
 export const SOURCE_ACCESS = {
   AVAILABLE: 'available',
@@ -199,8 +222,15 @@ export const SourceSchema = z.object({
   /** True when the source actually reverses order for the chosen SortOrder — most sources ignore
    *  ListParams.direction, so their UI hides the direction toggle entirely. */
   supportsDirection: z.boolean(),
-  /** Семейство аккаунта, без которого источник закрыт; null — источник открыт без входа. */
+  /** Семейство аккаунта, которым входят на источник; null — входа на источнике нет. */
   authFamily: SourceAuthFamilySchema.nullable(),
+  /** Обязателен ли вход с учётом настройки сервера; null — входа на источнике нет. */
+  loginRequirement: SourceLoginRequirementSchema.nullable(),
+  loginBenefits: z.array(SourceLoginBenefitSchema),
+  /** У пользователя есть действующий аккаунт для этого источника. */
+  isLoggedIn: z.boolean(),
+  /** Место источника в порядке пользователя, с нуля; у гостя — порядок каталога. */
+  position: z.number(),
   /** Пользователь не выключил источник в настройках. У гостя всегда true. */
   isEnabled: z.boolean(),
   access: SourceAccessSchema,
@@ -212,3 +242,9 @@ export const UpdateSourceEnabledRequestSchema = z.object({
   isEnabled: z.boolean(),
 });
 export type UpdateSourceEnabledRequest = z.infer<typeof UpdateSourceEnabledRequestSchema>;
+
+/** Порядок источников пользователя целиком: не названные в нём источники встают в конец. */
+export const UpdateSourcesOrderRequestSchema = z.object({
+  sourceIds: z.array(z.string()),
+});
+export type UpdateSourcesOrderRequest = z.infer<typeof UpdateSourcesOrderRequestSchema>;

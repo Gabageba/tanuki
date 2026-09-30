@@ -5,14 +5,14 @@ type Props = {
   account: SourceAccount | undefined;
 };
 
-function SourceAccountIcon({ account }: Props) {
+function SourceAccountStatusIcon({ account }: Props) {
   if (!account) return <UserCircleIcon />;
   switch (account.status) {
     case SOURCE_ACCOUNT_STATUS.ACTIVE:
-      return <CheckCircleIcon weight="fill" />;
+      return <CheckCircleIcon />;
     case SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED:
-      return <WarningCircleIcon weight="fill" />;
+      return <WarningCircleIcon />;
   }
 }
 
-export default SourceAccountIcon;
+export default SourceAccountStatusIcon;

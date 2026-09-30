@@ -24,7 +24,7 @@ import {
   SourceTokenExpiredException,
   SourceUnavailableException,
 } from '../common/errors';
-import { SourceAccessService } from '../source-accounts/source-access.service';
+import { SourceAccessService, hasSourceAccount } from '../source-accounts/source-access.service';
 import { VIEWER_KIND } from '../source-accounts/models';
 import { getViewer } from '../source-accounts/viewer-context';
 import { toApiException } from './parser-error.mapper';
@@ -163,7 +163,7 @@ export class ParsersClientService {
       () => this.guardedFetch(sourceId, fetch, scope),
       { toShared: withoutPaidChapters },
     );
-    if (!scope || !result.fromCache || !result.value.hasPaidChapters) {
+    if (!hasSourceAccount(scope) || !result.fromCache || !result.value.hasPaidChapters) {
       return { data: result.value, stale: result.stale };
     }
 
@@ -265,7 +265,7 @@ export class ParsersClientService {
         // Источник не принял сессию пользователя — дело в его аккаунте, а не в источнике.
         this.sourceHealth.releaseProbe(sourceId);
         await this.sourceAccess.markReloginRequired(viewer.userId, sourceId);
-        throw new SourceAccountRequiredException(sourceId);
+        throw new SourceAccountRequiredException(sourceId, true);
       }
       if (apiError instanceof SourceAuthRequiredException) {
         // Источник ответил, и ответ детерминирован (глава требует авторизации) — это не

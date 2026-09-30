@@ -8,6 +8,8 @@ export const API_ERROR_CODE = {
   SOURCE_TOKEN_EXPIRED: 'sourceTokenExpired',
   // У пользователя нет своего (живого) аккаунта на источнике — без него источник закрыт.
   SOURCE_ACCOUNT_REQUIRED: 'sourceAccountRequired',
+  // Аккаунт привязан, но источник больше не принимает его сессию — нужно войти заново.
+  SOURCE_RELOGIN_REQUIRED: 'sourceReloginRequired',
   // Привязка аккаунта не удалась: источник не принял логин/пароль или токен.
   SOURCE_LOGIN_FAILED: 'sourceLoginFailed',
   // На сервере не задан ключ шифрования аккаунтов — привязывать их некуда.
