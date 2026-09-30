@@ -56,7 +56,11 @@ function AuthLayout() {
 
         <Group>
           <StatusIndicator
-            label={<Text c="dimmed">{t('countSources', { count: okSourcesCount })}</Text>}
+            label={
+              <Text span c="dimmed">
+                {t('countSources', { count: okSourcesCount })}
+              </Text>
+            }
             gap={8}
             color={STATUS_OK_COLOR}
           />

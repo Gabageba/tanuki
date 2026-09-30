@@ -446,5 +446,8 @@
   "languageAndRegion": "Язык и регион",
   "interfaceLanguage": "Язык интерфейса",
   "menusButtonsEmails": "меню, кнопки, письма",
-  "streakDaysAndReleaseScheduleUseIt": "по нему считаются дни стрика и расписание выхода глав"
+  "streakDaysAndReleaseScheduleUseIt": "по нему считаются дни стрика и расписание выхода глав",
+  "daytimeInBrightLight": "днём, при ярком свете",
+  "eveningInDimLight": "вечером, при слабом свете",
+  "followsOsSetting": "следует за настройкой ОС"
 }

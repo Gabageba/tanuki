@@ -14,6 +14,14 @@ export type PlaygroundTask = {
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
   {
+    path: ROUTE_PATHS.PLAYGROUND_THEME_PICKER,
+    title: 'Выбор темы',
+    description:
+      'Карточки с превью из макета слишком крупные и на десктопе, и на телефоне — какой размер и раскладку взять, сохранив превью.',
+    createdAt: '2026-09-30',
+    decision: 'T3',
+  },
+  {
     path: ROUTE_PATHS.PLAYGROUND_IMPORT_SOURCE_PICKER,
     title: 'Выбор источника для импорта',
     description:

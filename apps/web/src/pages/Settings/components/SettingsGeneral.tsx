@@ -8,6 +8,7 @@ import useUserSettings from '@/shared/hooks/useUserSettings';
 import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
 import { PROFILE_STATISTICS_QUERY_KEY } from '@/entities/user/hooks/useProfileStatistics';
 import GroupedList from '@/shared/ui/GroupedList';
+import ColorSchemePicker from './ColorSchemePicker';
 
 function SettingsGeneral() {
   const { t, i18n } = useTranslation();
@@ -35,7 +36,8 @@ function SettingsGeneral() {
   };
 
   return (
-    <SimpleGrid cols={2}>
+    <SimpleGrid cols={{ base: 1, md: 2 }}>
+      <ColorSchemePicker />
       <GroupedList label={t('languageAndRegion')}>
         <GroupedList.Row
           icon={<TranslateIcon />}

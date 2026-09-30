@@ -1,16 +1,8 @@
-import { Avatar as MantineAvatar, Group, Menu, useMantineColorScheme } from '@mantine/core';
-import {
-  FlaskIcon,
-  GearSixIcon,
-  PaletteIcon,
-  SignOutIcon,
-  TicketIcon,
-  UserIcon,
-} from '@phosphor-icons/react';
+import { Avatar as MantineAvatar, Menu } from '@mantine/core';
+import { FlaskIcon, GearSixIcon, SignOutIcon, TicketIcon, UserIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import { COLOR_SCHEME, isStaffRole } from '@tanuki/contracts';
-import { getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
+import { isStaffRole } from '@tanuki/contracts';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
@@ -18,7 +10,6 @@ import styles from './../Header.module.scss';
 
 function Avatar() {
   const { t } = useTranslation();
-  const { colorScheme, setColorScheme } = useMantineColorScheme();
   const { data: user } = useCurrentUser();
   const logout = useLogout();
 
@@ -53,24 +44,6 @@ function Avatar() {
         <Menu.Item leftSection={<GearSixIcon />} component={Link} to={ROUTE_PATHS.SETTINGS}>
           {t('settings')}
         </Menu.Item>
-        <Menu.Sub>
-          <Menu.Sub.Target>
-            <Menu.Sub.Item leftSection={<PaletteIcon />}>{t('theme')}</Menu.Sub.Item>
-          </Menu.Sub.Target>
-
-          <Menu.Sub.Dropdown>
-            <Menu.RadioGroup value={colorScheme}>
-              {Object.values(COLOR_SCHEME).map((value) => (
-                <Menu.RadioItem key={value} value={value} onChange={() => setColorScheme(value)}>
-                  <Group>
-                    {getColorSchemeIcon(value)}
-                    {getColorSchemeLabel(value, t)}
-                  </Group>
-                </Menu.RadioItem>
-              ))}
-            </Menu.RadioGroup>
-          </Menu.Sub.Dropdown>
-        </Menu.Sub>
 
         <Menu.Divider />
         <Menu.Item

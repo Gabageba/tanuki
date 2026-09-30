@@ -1,33 +1,13 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { useState } from 'react';
-import {
-  Button,
-  Collapse,
-  Divider,
-  Drawer,
-  Stack,
-  Text,
-  useMantineColorScheme,
-} from '@mantine/core';
-import {
-  CaretDownIcon,
-  CaretUpIcon,
-  CheckIcon,
-  FlaskIcon,
-  GearSixIcon,
-  ListIcon,
-  PaletteIcon,
-  SignOutIcon,
-  TicketIcon,
-} from '@phosphor-icons/react';
+import { Button, Divider, Drawer, Stack, Text } from '@mantine/core';
+import { FlaskIcon, GearSixIcon, ListIcon, SignOutIcon, TicketIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { COLOR_SCHEME, isStaffRole } from '@tanuki/contracts';
+import { isStaffRole } from '@tanuki/contracts';
 import MobileNavigationButton from './MobileNavigationButton';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
-import { getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
 import styles from './../../Layout.module.scss';
 
 type Props = {
@@ -39,10 +19,8 @@ type Props = {
 function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { colorScheme, setColorScheme } = useMantineColorScheme();
   const { data: user } = useCurrentUser();
   const logout = useLogout();
-  const [isThemeOpened, setIsThemeOpened] = useState(false);
 
   return (
     <>
@@ -64,40 +42,6 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
               {user.username}
             </Text>
           )}
-          <Button
-            className={styles.switcherOption}
-            onClick={() => setIsThemeOpened((prev) => !prev)}
-            variant="tile"
-            justify="flex-start"
-            size="md"
-            leftSection={<PaletteIcon />}
-            rightSection={isThemeOpened ? <CaretUpIcon /> : <CaretDownIcon />}
-          >
-            {t('theme')}
-          </Button>
-          <Collapse expanded={isThemeOpened}>
-            <Stack gap={4} pl="lg">
-              {Object.values(COLOR_SCHEME).map((value) => (
-                <Button
-                  key={value}
-                  data-active={colorScheme === value || undefined}
-                  className={styles.switcherOption}
-                  onClick={() => setColorScheme(value)}
-                  variant="tile"
-                  justify="flex-start"
-                  size="md"
-                  leftSection={getColorSchemeIcon(value)}
-                  rightSection={
-                    colorScheme === value && (
-                      <CheckIcon color="var(--mantine-primary-color-filled)" />
-                    )
-                  }
-                >
-                  {getColorSchemeLabel(value, t)}
-                </Button>
-              ))}
-            </Stack>
-          </Collapse>
           <Button
             className={styles.switcherOption}
             onClick={() => {
