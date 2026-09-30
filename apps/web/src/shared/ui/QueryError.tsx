@@ -1,4 +1,5 @@
 import { Button, Group } from '@mantine/core';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { ArrowClockwiseIcon, CaretLeftIcon, SignInIcon } from '@phosphor-icons/react';
@@ -6,6 +7,8 @@ import {
   ApiRequestError,
   isNotFoundError,
   isSourceAccountRequiredError,
+  isSourceAuthRequiredError,
+  isSourceReloginRequiredError,
   NETWORK_ERROR_STATUS,
 } from '@/shared/api/client';
 import { ROUTE_PATHS, SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
@@ -21,6 +24,23 @@ const getStatusCode = (error: Error) => {
   if (!(error instanceof ApiRequestError)) return '500';
   if (error.status === NETWORK_ERROR_STATUS) return '503';
   return String(error.status);
+};
+
+/**
+ * Источник или тайтл закрыт до входа в аккаунт источника — не сбой: повтор ничего не даст.
+ * Возвращает заголовок экрана и подпись кнопки; null — ошибка не про вход.
+ */
+const getSourceLock = (error: Error, t: TFunction) => {
+  if (isSourceReloginRequiredError(error)) {
+    return { title: t('sessionExpired'), action: t('logInAgain') };
+  }
+  if (isSourceAccountRequiredError(error)) {
+    return { title: t('sourceClosed'), action: t('logIn') };
+  }
+  if (isSourceAuthRequiredError(error)) {
+    return { title: t('onlyForLoggedIn'), action: t('logIn') };
+  }
+  return null;
 };
 
 /**
@@ -45,16 +65,16 @@ function QueryError({ error, onRetry }: Props) {
     );
   }
 
-  // Источник закрыт — не сбой: повтор ничего не даст, нужно войти в свой аккаунт на нём.
-  if (isSourceAccountRequiredError(error)) {
+  const sourceLock = getSourceLock(error, t);
+  if (sourceLock) {
     return (
-      <StatusScreen code="403" title={t('sourceClosed')} description={error.message}>
+      <StatusScreen code="403" title={sourceLock.title} description={error.message}>
         <Group gap="sm">
           <Button onClick={() => navigate(-1)} leftSection={<CaretLeftIcon />} variant="default">
             {t('back')}
           </Button>
           <Button component={Link} to={SOURCE_ACCOUNTS_PATH} leftSection={<SignInIcon />}>
-            {t('logIn')}
+            {sourceLock.action}
           </Button>
         </Group>
       </StatusScreen>

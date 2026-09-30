@@ -32,6 +32,7 @@ function SourceCard({ source }: Props) {
           blur={4}
           radius="sm"
           center
+          zIndex={1}
         >
           <Stack gap={4} align="center" c="terracotta">
             <LockSimpleIcon size={24} aria-label={getSourceAccessLabel(source.access, t)} />

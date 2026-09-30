@@ -5,7 +5,12 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import type { SessionUser } from '../auth/session.service';
 import { NotFoundApiException } from '../common/errors';
-import { SourceDto, SourcesResponseDto, UpdateSourceEnabledRequestDto } from './sources.dto';
+import {
+  SourceDto,
+  SourcesResponseDto,
+  UpdateSourceEnabledRequestDto,
+  UpdateSourcesOrderRequestDto,
+} from './sources.dto';
 import { SourcesService } from './sources.service';
 import { UserSourcesService } from './user-sources.service';
 
@@ -32,6 +37,20 @@ export class SourcesController {
   @Get(':sourceId')
   async get(@Param('sourceId') sourceId: string): Promise<Source> {
     return this.sourcesService.getSource(sourceId);
+  }
+
+  @ApiOperation({ summary: 'Сохраняет порядок источников текущего пользователя' })
+  @ApiBody({ type: UpdateSourcesOrderRequestDto })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Put('order')
+  async setOrder(
+    @CurrentUser() user: SessionUser,
+    @Body() body: UpdateSourcesOrderRequestDto,
+  ): Promise<void> {
+    // Чужие и повторные id отбрасываются: порядок хранит только известные источники по разу.
+    const known = new Set<string>(SOURCE_IDS);
+    const sourceIds = [...new Set(body.sourceIds)].filter((id) => known.has(id));
+    await this.userSources.setOrder(user.id, sourceIds);
   }
 
   @ApiOperation({ summary: 'Включает или выключает источник для текущего пользователя' })

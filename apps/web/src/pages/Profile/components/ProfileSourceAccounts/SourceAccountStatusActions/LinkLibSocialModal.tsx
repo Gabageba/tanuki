@@ -4,7 +4,7 @@ import { KeyIcon, PasswordIcon } from '@phosphor-icons/react';
 import { SOURCE_AUTH_FAMILY, type Source } from '@tanuki/contracts';
 import useLinkLibSocialAccount from '../hooks/useLinkLibSocialAccount';
 import { getSourceAuthFamilyTitle } from '../lib';
-import PasswordAccountForm from '../PasswordAccountForm';
+import PasswordAccountForm from './PasswordAccountForm';
 import LibSocialTokenForm from './LibSocialTokenForm';
 
 type Props = {

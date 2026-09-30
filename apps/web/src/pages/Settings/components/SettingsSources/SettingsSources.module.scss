@@ -5,3 +5,20 @@
 [data-mantine-color-scheme='dark'] input:not(:checked, :disabled) + .switchTrack {
   --switch-bg: var(--mantine-color-dark-4);
 }
+
+// A dragged row floats above its neighbours and the dividers between them.
+.sortableRow {
+  position: relative;
+  background: var(--mantine-color-body);
+
+  &[data-dragging] {
+    z-index: 1;
+    box-shadow: var(--mantine-shadow-md);
+  }
+}
+
+// touch-action: without it a touch drag scrolls the page instead of moving the row.
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}

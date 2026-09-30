@@ -8,8 +8,12 @@ import {
   SOURCE_STATUS,
   SOURCE_STATUS_REASON,
   SOURCE_ACCESS,
+  SOURCE_LOGIN_BENEFIT,
+  SOURCE_LOGIN_REQUIREMENT,
   type Source,
   type SourceAccess,
+  type SourceLoginBenefit,
+  type SourceLoginRequirement,
   type SourceContentType,
   type SourcesResponse,
   type SourceStatus,
@@ -17,9 +21,14 @@ import {
 } from '@tanuki/contracts';
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
 
-/** /sources отдаёт группы по contentType — для поиска источника по id нужен плоский список. */
+/**
+ * /sources отдаёт группы по contentType — для поиска источника по id нужен плоский список.
+ * Порядок пользователя верен лишь внутри группы, поэтому сквозной восстанавливается по position.
+ */
 export const flattenSources = (data?: SourcesResponse): Source[] => {
-  return Object.values(data ?? []).flat();
+  return Object.values(data ?? [])
+    .flat()
+    .sort((a, b) => a.position - b.position);
 };
 
 /**
@@ -43,6 +52,29 @@ export const getSourceAccessLabel = (access: SourceAccess, t: TFunction) => {
       return t('loginRequired');
     case SOURCE_ACCESS.RELOGIN_REQUIRED:
       return t('reloginRequired');
+  }
+};
+
+export const getSourceLoginRequirementLabel = (
+  requirement: SourceLoginRequirement,
+  t: TFunction,
+) => {
+  switch (requirement) {
+    case SOURCE_LOGIN_REQUIREMENT.REQUIRED:
+      return t('loginIsMandatory');
+    case SOURCE_LOGIN_REQUIREMENT.OPTIONAL:
+      return t('loginIsOptional');
+  }
+};
+
+export const getSourceLoginBenefitLabel = (benefit: SourceLoginBenefit, t: TFunction) => {
+  switch (benefit) {
+    case SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING:
+      return t('catalogAndChapterReading');
+    case SOURCE_LOGIN_BENEFIT.MEMBER_CHAPTERS:
+      return t('chaptersForRegisteredOnly');
+    case SOURCE_LOGIN_BENEFIT.PURCHASED_CHAPTERS:
+      return t('purchasedChapters');
   }
 };
 

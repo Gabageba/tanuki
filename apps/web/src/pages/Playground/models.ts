@@ -14,6 +14,22 @@ export type PlaygroundTask = {
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
   {
+    path: ROUTE_PATHS.PLAYGROUND_IMPORT_SOURCE_PICKER,
+    title: 'Выбор источника для импорта',
+    description:
+      'На первом шаге импорта выбираем конкретный источник, а не сеть — как показать список, чтобы было видно и источник, и чей аккаунт.',
+    createdAt: '2026-09-30',
+    decision: 'C1c',
+  },
+  {
+    path: ROUTE_PATHS.PLAYGROUND_SOURCES_SETUP,
+    title: 'Настройка источников',
+    description:
+      'Порядок и включение остаются в настройках, аккаунты уходят в профиль — как пометить, где нужен вход, обязателен ли он и что даёт.',
+    createdAt: '2026-09-30',
+    decision: 'S1 + P1 + T1–T3 + I1',
+  },
+  {
     path: ROUTE_PATHS.PLAYGROUND_HEADER_BACKGROUND,
     title: 'Фон шапки группы',
     description:

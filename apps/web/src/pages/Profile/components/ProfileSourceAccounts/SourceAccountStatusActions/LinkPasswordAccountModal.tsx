@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { SourceAuthFamily } from '@tanuki/contracts';
 import useLinkSourceAccount from '../hooks/useLinkSourceAccount';
 import { getSourceAuthFamilyTitle } from '../lib';
-import PasswordAccountForm from '../PasswordAccountForm';
+import PasswordAccountForm from './PasswordAccountForm';
 
 type Props = {
   family: SourceAuthFamily;

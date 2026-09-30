@@ -34,6 +34,8 @@ import PlaygroundReadingMarks from '@/pages/Playground/ReadingMarks';
 import PlaygroundChartLabels from '@/pages/Playground/ChartLabels';
 import PlaygroundAccountGroups from '@/pages/Playground/AccountGroups';
 import PlaygroundHeaderBackground from '@/pages/Playground/HeaderBackground';
+import PlaygroundSourcesSetup from '@/pages/Playground/SourcesSetup';
+import PlaygroundImportSourcePicker from '@/pages/Playground/ImportSourcePicker';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
@@ -60,6 +62,14 @@ const PLAYGROUND_ROUTES = import.meta.env.DEV
       {
         path: ROUTE_PATHS.PLAYGROUND_HEADER_BACKGROUND,
         element: <PlaygroundHeaderBackground />,
+      },
+      {
+        path: ROUTE_PATHS.PLAYGROUND_SOURCES_SETUP,
+        element: <PlaygroundSourcesSetup />,
+      },
+      {
+        path: ROUTE_PATHS.PLAYGROUND_IMPORT_SOURCE_PICKER,
+        element: <PlaygroundImportSourcePicker />,
       },
     ]
   : [];

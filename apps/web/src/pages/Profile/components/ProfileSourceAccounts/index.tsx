@@ -1,0 +1,49 @@
+import { Alert, Center, Loader, SimpleGrid, Stack, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
+import { InfoIcon } from '@phosphor-icons/react';
+import useSources from '@/entities/source/hooks/useSources';
+import useSourceAccounts from './hooks/useSourceAccounts';
+import { groupSourcesByAccount } from './lib';
+import SourceFamilySection from './SourceFamilySection';
+
+function ProfileSourceAccounts() {
+  const { t } = useTranslation();
+  const { data: sources, isPending: isSourcesPending } = useSources();
+  const { data: accounts, isPending: isAccountsPending } = useSourceAccounts();
+
+  if (isSourcesPending) {
+    return (
+      <Center mt="lg">
+        <Loader />
+      </Center>
+    );
+  }
+
+  const isLinkingAvailable = accounts?.isLinkingAvailable ?? false;
+
+  return (
+    <Stack mt="lg" gap="lg">
+      <Text c="dimmed">{t('sourcesWithLoginOpenViaYourAccount')}</Text>
+      {accounts && !isLinkingAvailable && (
+        <Alert color="orange" icon={<InfoIcon />} variant="muted">
+          {t('accountLinkingNotConfigured')}
+        </Alert>
+      )}
+      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+        {groupSourcesByAccount(sources).map(({ key, title, family, sources }) => (
+          <SourceFamilySection
+            key={key}
+            title={title}
+            family={family}
+            sources={sources}
+            accounts={accounts?.items ?? []}
+            isLinkingAvailable={isLinkingAvailable}
+            isAccountsPending={isAccountsPending}
+          />
+        ))}
+      </SimpleGrid>
+    </Stack>
+  );
+}
+
+export default ProfileSourceAccounts;

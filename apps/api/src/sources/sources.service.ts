@@ -5,7 +5,6 @@ import {
   SOURCE_STATUS,
   SOURCE_STATUS_REASON,
   type Source,
-  type SourceAccess,
   type SourceContentType,
   type SourcesResponse,
 } from '@tanuki/contracts';
@@ -15,7 +14,7 @@ import { NotFoundApiException } from '../common/errors';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawSourceInfo } from '../parsers-client/parsers-client.types';
 import { SourceStatusService } from '../resilience/source-status.service';
-import { SourceAccessService } from '../source-accounts/source-access.service';
+import { SourceAccessService, type SourceLogin } from '../source-accounts/source-access.service';
 import { UserSourcesService } from './user-sources.service';
 
 /** Order of the groups in the response — objects keep insertion order over JSON. */
@@ -24,6 +23,18 @@ const CONTENT_TYPES = Object.values(SOURCE_CONTENT_TYPE) as SourceContentType[];
 /** Контракт требует строку — Date отдаётся в серверном формате YYYY-MM-DDTHH:MM:SSZ. */
 const toIsoSeconds = (value: Date | null): string | null => {
   return value ? `${value.toISOString().slice(0, 19)}Z` : null;
+};
+
+/**
+ * Источники в порядке пользователя. Те, которых в его порядке нет (новые или порядок не задан),
+ * идут следом, как в каталоге, — сортировка устойчивая.
+ */
+const sortByUserOrder = (raws: RawSourceInfo[], order: string[]): RawSourceInfo[] => {
+  const rankOf = (raw: RawSourceInfo) => {
+    const index = order.indexOf(raw.id);
+    return index === -1 ? order.length : index;
+  };
+  return [...raws].sort((a, b) => rankOf(a) - rankOf(b));
 };
 
 @Injectable()
@@ -86,12 +97,17 @@ export class SourcesService {
     userId: string | undefined,
     include: (raw: RawSourceInfo) => boolean,
   ): Promise<Source[]> {
-    const [raws, disabled, accessOf] = await Promise.all([
+    const [raws, disabled, loginOf, order] = await Promise.all([
       this.enabledSources(),
       this.userSources.getDisabled(userId),
-      this.sourceAccess.getAccessResolver(userId),
+      this.sourceAccess.getLoginResolver(userId),
+      this.userSources.getOrder(userId),
     ]);
-    return raws.filter(include).map((raw) => this.toSource(raw, disabled, accessOf));
+    // Место считается по всем источникам, до отбора: оно одно и то же в любом списке.
+    return sortByUserOrder(raws, order)
+      .map((raw, position) => ({ raw, position }))
+      .filter(({ raw }) => include(raw))
+      .map(({ raw, position }) => this.toSource(raw, disabled, loginOf, position));
   }
 
   private async enabledSources(): Promise<RawSourceInfo[]> {
@@ -106,8 +122,10 @@ export class SourcesService {
   private toSource(
     raw: RawSourceInfo,
     disabled: ReadonlySet<string>,
-    accessOf: (sourceId: string) => SourceAccess,
+    loginOf: (sourceId: string) => SourceLogin,
+    position: number,
   ): Source {
+    const catalogEntry = catalogEntryFor(raw.id);
     // isBroken — жёсткий оверрайд, а не стартовое значение: это решение человека о том, что
     // источник не парсится в принципе (JS-челлендж, мёртвый TLS). Автоматика его не трогает, и
     // случайный удачный запрос не должен его снимать — такие источники даже не пробуются.
@@ -130,9 +148,11 @@ export class SourcesService {
       requiresVpn: raw.requiresVpn,
       sortOrders: raw.sortOrders,
       supportsDirection: raw.supportsDirection,
-      authFamily: catalogEntryFor(raw.id).authFamily,
+      authFamily: catalogEntry.authFamily,
+      loginBenefits: catalogEntry.loginBenefits,
       isEnabled: !disabled.has(raw.id),
-      access: accessOf(raw.id),
+      position,
+      ...loginOf(raw.id),
     };
   }
 }

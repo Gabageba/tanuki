@@ -22,7 +22,7 @@ type Props = {
   isLinkingAvailable: boolean;
 };
 
-function SourceAccountActions({
+function SourceAccountStatusActions({
   account,
   sources,
   family,
@@ -95,4 +95,4 @@ function SourceAccountActions({
   );
 }
 
-export default SourceAccountActions;
+export default SourceAccountStatusActions;

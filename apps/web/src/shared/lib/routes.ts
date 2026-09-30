@@ -25,6 +25,8 @@ export const ROUTE_PATHS = {
   PLAYGROUND_CHART_LABELS: '/playground/chart-labels',
   PLAYGROUND_ACCOUNT_GROUPS: '/playground/account-groups',
   PLAYGROUND_HEADER_BACKGROUND: '/playground/header-background',
+  PLAYGROUND_SOURCES_SETUP: '/playground/sources-setup',
+  PLAYGROUND_IMPORT_SOURCE_PICKER: '/playground/import-source-picker',
   PROFILE: '/profile',
   SETTINGS: '/settings',
 } as const;
@@ -38,7 +40,7 @@ export const READER_PAGE_SEARCH_PARAM = 'page';
 /** Вкладка страницы тайтла — в адресе, чтобы возврат из читалки попадал обратно на главы. */
 export const TITLE_TAB_SEARCH_PARAM = 'tab';
 
-/** Вкладка настроек — в адресе, чтобы на «Источники» можно было сослаться из других экранов. */
+/** Вкладка настроек — в адресе, чтобы на вкладку можно было сослаться из других экранов. */
 export const SETTINGS_TAB_SEARCH_PARAM = 'tab';
 
 export const SETTINGS_TABS = {
@@ -47,8 +49,20 @@ export const SETTINGS_TABS = {
 } as const;
 export type SettingsTab = EnumLiteralsOf<typeof SETTINGS_TABS>;
 
+/** Вкладка профиля — в адресе, чтобы на «Аккаунты источников» можно было сослаться из других
+ *  экранов. */
+export const PROFILE_TAB_SEARCH_PARAM = 'tab';
+
+export const PROFILE_TABS = {
+  STATISTICS: 'statistics',
+  SIGN_IN_AND_SECURITY: 'signInAndSecurity',
+  SOURCE_ACCOUNTS: 'sourceAccounts',
+  DATA: 'data',
+} as const;
+export type ProfileTab = EnumLiteralsOf<typeof PROFILE_TABS>;
+
 /** Куда вести человека, которому нужно войти в аккаунт источника. */
-export const SOURCE_ACCOUNTS_PATH = `${ROUTE_PATHS.SETTINGS}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.SOURCES}`;
+export const SOURCE_ACCOUNTS_PATH = `${ROUTE_PATHS.PROFILE}?${PROFILE_TAB_SEARCH_PARAM}=${PROFILE_TABS.SOURCE_ACCOUNTS}`;
 
 export const TITLE_TABS = {
   INFO: 'info',

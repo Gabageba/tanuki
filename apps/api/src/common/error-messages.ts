@@ -7,10 +7,12 @@ import { LANGUAGE, LanguageSchema, type Language } from '@tanuki/contracts';
 const ERROR_MESSAGES_RU = {
   sourceUnavailable: 'Источник недоступен',
   sourceReturnedAntiBotChallenge: 'Источник вернул антибот-челлендж',
-  sourceRequiresAuthorization: 'Источник требует авторизации',
+  sourceShowsThisOnlyToLoggedIn: '{{source}} показывает это только авторизованным',
   sourceSessionExpired: 'Сохранённая сессия источника истекла, требуется повторный вход',
   parserFailedToReadSourceResponse: 'Парсер не смог разобрать ответ источника',
-  logInToYourSourceAccount: 'Чтобы читать этот источник, войдите в свой аккаунт на нём',
+  sourceOpensOnlyViaYourAccount: '{{source}} открывается только через ваш аккаунт на нём',
+  sourceNoLongerAcceptsSavedLogin:
+    '{{source}} больше не принимает сохранённый вход — войдите заново',
   sourceRejectedLoginData: 'Источник не принял данные для входа',
   sourceAccountLinkingNotConfigured: 'Привязка аккаунтов источников не настроена на сервере',
   notFound: 'Не найдено',
@@ -49,10 +51,11 @@ export type ErrorMessageKey = keyof typeof ERROR_MESSAGES_RU;
 const ERROR_MESSAGES_EN: Record<ErrorMessageKey, string> = {
   sourceUnavailable: 'Source is unavailable',
   sourceReturnedAntiBotChallenge: 'Source returned an anti-bot challenge',
-  sourceRequiresAuthorization: 'Source requires authorization',
+  sourceShowsThisOnlyToLoggedIn: '{{source}} shows this only to logged-in users',
   sourceSessionExpired: 'Saved source session has expired, a new login is required',
   parserFailedToReadSourceResponse: "Parser couldn't read the source response",
-  logInToYourSourceAccount: 'Log in to your own account on this source to read it',
+  sourceOpensOnlyViaYourAccount: '{{source}} opens only via your own account on it',
+  sourceNoLongerAcceptsSavedLogin: '{{source}} no longer accepts the saved login — log in again',
   sourceRejectedLoginData: 'The source rejected the login data',
   sourceAccountLinkingNotConfigured: 'Source account linking is not configured on the server',
   notFound: 'Not found',

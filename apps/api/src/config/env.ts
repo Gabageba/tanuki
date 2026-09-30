@@ -18,9 +18,9 @@ const EnvSchema = z.object({
     )
     .pipe(z.array(SourceIdSchema)),
   // Сервисные учётки ниже — только для фоновых задач (пробник, веер совпадений). Пользователи
-  // читают эти источники через свои аккаунты (source_accounts), см. SOURCE_ACCOUNTS_REQUIRED.
+  // читают источники с обязательным входом через свои аккаунты (source_accounts).
   // Optional Grouple network account (ReadManga/MintManga/SelfManga/SeiManga/Usagi share one
-  // SSO login) — without these, those sources work anonymously and member-only chapters 401.
+  // SSO login) — without these, background requests to those sources fail with auth required.
   GROUPLE_USERNAME: z.string().optional(),
   GROUPLE_PASSWORD: z.string().optional(),
   // AllHentai uses its own qawa.org SSO gateway and account system, separate from the main
@@ -47,12 +47,6 @@ const EnvSchema = z.object({
     .refine((value) => !value || Buffer.from(value, 'base64').length === 32, {
       message: 'SOURCE_SECRETS_KEY должен быть 32 байтами в base64 (openssl rand -base64 32)',
     }),
-  // Закрывать источники с серверным входом (Grouple, AllHentai, LibSocial), пока пользователь
-  // не привяжет свой аккаунт. false — прежнее поведение: все ходят через сервисную учётку.
-  SOURCE_ACCOUNTS_REQUIRED: z
-    .string()
-    .default('true')
-    .transform((value) => value !== 'false'),
   SOURCE_HTTP_TIMEOUT_MS: z.coerce.number().default(20_000),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   // Значения по умолчанию совпадают с docker-compose.yml, чтобы локальный запуск не требовал

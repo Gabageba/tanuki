@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import type { Source, SourceAccount, SourceAuthFamily } from '@tanuki/contracts';
 import GroupedList from '@/shared/ui/GroupedList';
-import { getSourceAccountColor, getSourceAccountLabel, getSourcesWithoutLogin } from '../lib';
-import SourceAccountIcon from '../SourceAccountIcon';
-import SourceToggleRow from '../SourceToggleRow';
-import SourceAccountActions from './SourceAccountActions';
+import { getSourceAccountStatusColor, getSourceAccountStatusLabel } from '../lib';
+import { getSourcesWithoutLogin } from './lib';
+import SourceAccountRow from './SourceAccountRow';
+import SourceAccountStatusIcon from './SourceAccountStatusIcon';
+import SourceAccountStatusActions from '../SourceAccountStatusActions';
 
 type Props = {
   title: string;
@@ -12,9 +13,17 @@ type Props = {
   sources: Source[];
   accounts: SourceAccount[];
   isLinkingAvailable: boolean;
+  isAccountsPending: boolean;
 };
 
-function SourceFamilySection({ title, family, sources, accounts, isLinkingAvailable }: Props) {
+function SourceFamilySection({
+  title,
+  family,
+  sources,
+  accounts,
+  isLinkingAvailable,
+  isAccountsPending,
+}: Props) {
   const { t } = useTranslation();
 
   const account = accounts.find((item) => item.family === family);
@@ -33,15 +42,15 @@ function SourceFamilySection({ title, family, sources, accounts, isLinkingAvaila
   };
 
   return (
-    <GroupedList label={title}>
+    <GroupedList label={title} loading={isAccountsPending} skeletonRows={sources.length}>
       {sources.length > 0 && (
         <GroupedList.Header
-          color={getSourceAccountColor(account)}
-          icon={<SourceAccountIcon account={account} />}
-          title={getSourceAccountLabel(account, t)}
+          color={getSourceAccountStatusColor(account)}
+          icon={<SourceAccountStatusIcon account={account} />}
+          title={getSourceAccountStatusLabel(account, t)}
           description={getDescription()}
           action={
-            <SourceAccountActions
+            <SourceAccountStatusActions
               family={family}
               sources={sources}
               sourcesWithoutLogin={sourcesWithoutLogin}
@@ -52,7 +61,7 @@ function SourceFamilySection({ title, family, sources, accounts, isLinkingAvaila
         />
       )}
       {sources.map((source) => (
-        <SourceToggleRow key={source.id} source={source} />
+        <SourceAccountRow key={source.id} source={source} />
       ))}
     </GroupedList>
   );
