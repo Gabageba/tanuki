@@ -15,7 +15,7 @@ function Playground() {
       </Title>
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
         {PLAYGROUND_TASKS.map((task) => (
-          <Card key={task.path} component={Link} to={task.path} withBorder>
+          <Card key={task.slug} component={Link} to={task.slug} withBorder>
             <Stack gap={6}>
               <Group justify="space-between" wrap="nowrap">
                 <Text fw={600}>{task.title}</Text>

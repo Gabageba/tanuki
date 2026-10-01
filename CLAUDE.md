@@ -226,5 +226,8 @@
   playground page never calls `t()`, and an i18n audit of `apps/web` skips `pages/Playground/`.
 - Once a variant is chosen, the page is **kept** as a record of the decision, not deleted: fill in
   the task's `decision` and describe the chosen variant in `docs/11-ui-decisions.md`.
-- Playground routes are registered only under `import.meta.env.DEV` (`RouterProvider.tsx`), so the
-  pages never reach the production build. Keep it that way for every new page.
+- A task is registered by its entry in `PLAYGROUND_TASKS` alone (`slug` + `Component`) — no
+  per-task paths in `ROUTE_PATHS`, no per-task routes in `RouterProvider.tsx`. The routes are built
+  from that list by `app/PlaygroundRouter`, which `RouterProvider.tsx` mounts at `/playground/*`
+  lazily and only under `import.meta.env.DEV`, so neither the pages nor their paths reach the
+  production build. Keep it that way.

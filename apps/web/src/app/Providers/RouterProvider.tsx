@@ -29,62 +29,19 @@ import ResetPassword from '@/pages/ResetPassword';
 import Invites from '@/pages/Invites';
 import Terms from '@/pages/Terms';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
-import Playground from '@/pages/Playground';
-import PlaygroundReadingMarks from '@/pages/Playground/ReadingMarks';
-import PlaygroundChartLabels from '@/pages/Playground/ChartLabels';
-import PlaygroundAccountGroups from '@/pages/Playground/AccountGroups';
-import PlaygroundHeaderBackground from '@/pages/Playground/HeaderBackground';
-import PlaygroundSourcesSetup from '@/pages/Playground/SourcesSetup';
-import PlaygroundImportSourcePicker from '@/pages/Playground/ImportSourcePicker';
-import PlaygroundThemePicker from '@/pages/Playground/ThemePicker';
-import PlaygroundAdultContent from '@/pages/Playground/AdultContent';
-import PlaygroundLoginBadge from '@/pages/Playground/LoginBadge';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
 
-// Песочница с макетами вариантов интерфейса — только для разработки, в прод-сборку не попадает.
+// Песочница с макетами вариантов интерфейса — только для разработки. Грузится лениво: в прод-сборке
+// ветка DEV выпадает вместе с import(), и от песочницы не остаётся ни кода, ни адресов.
 const PLAYGROUND_ROUTES = import.meta.env.DEV
   ? [
       {
-        path: ROUTE_PATHS.PLAYGROUND,
-        element: <Playground />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_READING_MARKS,
-        element: <PlaygroundReadingMarks />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_CHART_LABELS,
-        element: <PlaygroundChartLabels />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_ACCOUNT_GROUPS,
-        element: <PlaygroundAccountGroups />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_HEADER_BACKGROUND,
-        element: <PlaygroundHeaderBackground />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_SOURCES_SETUP,
-        element: <PlaygroundSourcesSetup />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_IMPORT_SOURCE_PICKER,
-        element: <PlaygroundImportSourcePicker />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_THEME_PICKER,
-        element: <PlaygroundThemePicker />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_ADULT_CONTENT,
-        element: <PlaygroundAdultContent />,
-      },
-      {
-        path: ROUTE_PATHS.PLAYGROUND_LOGIN_BADGE,
-        element: <PlaygroundLoginBadge />,
+        path: `${ROUTE_PATHS.PLAYGROUND}/*`,
+        lazy: async () => ({
+          Component: (await import('@/app/PlaygroundRouter')).default,
+        }),
       },
     ]
   : [];

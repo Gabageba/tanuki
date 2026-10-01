@@ -131,13 +131,12 @@ default` в конце, `type Props`, иконки Phosphor в `leftSection`, ц
 
 ## 5. Регистрация
 
-1. `apps/web/src/shared/lib/routes.ts` — `PLAYGROUND_<TASK>: '/playground/<task-kebab>'` в конец
-   блока playground-путей.
-2. `apps/web/src/app/Providers/RouterProvider.tsx` — импорт страницы рядом с другими
-   `Playground*` и маршрут в `PLAYGROUND_ROUTES` (он под `import.meta.env.DEV` — только туда).
-3. `apps/web/src/pages/Playground/models.ts` — запись **в начало** `PLAYGROUND_TASKS`: `path`,
-   `title`, `description` (одна-две фразы: в чём вопрос), `createdAt` — сегодняшняя дата
-   `YYYY-MM-DD`, без `decision`.
+Одна запись **в начало** `PLAYGROUND_TASKS` (`apps/web/src/pages/Playground/models.ts`): импорт
+страницы рядом с другими, `slug` (`'<task-kebab>'` — из него адрес `/playground/<task-kebab>`),
+`Component`, `title`, `description` (одна-две фразы: в чём вопрос), `createdAt` — сегодняшняя
+дата `YYYY-MM-DD`, без `decision`. `routes.ts` и `RouterProvider.tsx` не трогай: маршруты
+песочницы строит из этого списка `app/PlaygroundRouter`, а приложение подключает его лениво и
+только под `import.meta.env.DEV`.
 
 ## 6. Сдача
 
