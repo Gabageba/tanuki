@@ -26,6 +26,8 @@ export class ReaderSettingsService {
         tapZoneWidth: row.tapZoneWidth,
         pageGap: row.pageGap,
         chapterGap: row.chapterGap,
+        autoNextChapter: row.autoNextChapter,
+        hidePanelsOnScroll: row.hidePanelsOnScroll,
       };
     }, DEFAULT_READER_SETTINGS);
   }

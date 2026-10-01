@@ -68,6 +68,12 @@ export const ReaderSettingsSchema = z.object({
   tapZoneWidth: z.number().int().min(READER_TAP_ZONE_WIDTH.MIN).max(READER_TAP_ZONE_WIDTH.MAX),
   pageGap: z.number().int().min(READER_PAGE_GAP.MIN).max(READER_PAGE_GAP.MAX),
   chapterGap: z.number().int().min(READER_CHAPTER_GAP.MIN).max(READER_CHAPTER_GAP.MAX),
+  /** Дочитанная глава сразу продолжается следующей. Выключено — в конце главы читатель видит
+   *  экран с переходом и идёт дальше сам. */
+  autoNextChapter: z.boolean(),
+  /** Шапка и панель глав уезжают при прокрутке вниз. Выключено — их прячет и возвращает только
+   *  тап по странице. */
+  hidePanelsOnScroll: z.boolean(),
 });
 export type ReaderSettings = z.infer<typeof ReaderSettingsSchema>;
 
@@ -80,6 +86,8 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   tapZoneWidth: READER_TAP_ZONE_WIDTH.MEDIUM,
   pageGap: READER_PAGE_GAP.NARROW,
   chapterGap: READER_CHAPTER_GAP.MEDIUM,
+  autoNextChapter: true,
+  hidePanelsOnScroll: true,
 };
 
 export const UpdateReaderSettingsRequestSchema = ReaderSettingsSchema;

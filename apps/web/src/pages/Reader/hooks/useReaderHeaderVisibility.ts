@@ -6,9 +6,11 @@ type Params = {
   /** Прокрутка идёт не от читателя: лента подгоняет удерживаемую страницу, пока грузятся
    *  картинки над ней. Иначе каждая подгонка вниз прятала бы шапку — даже открытую тапом. */
   ignoreScroll: boolean;
+  /** Настройка «Скрывать панели при прокрутке». Выключена — шапку прячет и возвращает только тап. */
+  hideOnScroll: boolean;
 };
 
-function useReaderHeaderVisibility({ ignoreScroll }: Params) {
+function useReaderHeaderVisibility({ ignoreScroll, hideOnScroll }: Params) {
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
 
@@ -19,7 +21,7 @@ function useReaderHeaderVisibility({ ignoreScroll }: Params) {
     // бы с позицией до прыжка.
     lastScrollY.current = scrollY;
 
-    if (ignoreScroll) return;
+    if (ignoreScroll || !hideOnScroll) return;
 
     if (scrollY <= 0) {
       setVisible(true);
