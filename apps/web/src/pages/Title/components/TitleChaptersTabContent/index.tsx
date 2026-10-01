@@ -1,10 +1,10 @@
-import { Button, EmptyState, Group, Scroller, Stack, Tabs, Text } from '@mantine/core';
-import { EmptyIcon } from '@phosphor-icons/react';
+import { EmptyState, Group, Scroller, Stack, Tabs, Text } from '@mantine/core';
+import { EmptyIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import type { Branch } from '@tanuki/contracts';
+import { PRIMARY_COLOR } from '@/shared/lib/palette';
 import TitleChaptersList from './TitleChaptersList';
-import TitleChaptersSettings from './TitleChaptersSettings';
 
 type Props = {
   branches: Branch[];
@@ -37,23 +37,20 @@ function TitleChaptersTabContent({ branches, titleId }: Props) {
                   <Tabs.Tab
                     value={branch.id}
                     key={branch.id}
+                    leftSection={<UsersThreeIcon />}
                     rightSection={
-                      <Text c={activeTab === branch.id ? 'terracotta' : 'dimmed'} fz={12}>
+                      <Text c={activeTab === branch.id ? PRIMARY_COLOR : 'dimmed'} fz={12}>
                         {t('countChaptersAbbrev', { count: branch.chaptersCount })}
                       </Text>
                     }
                   >
-                    {branch.name}
+                    {branch.name ?? t('untitled')}
                   </Tabs.Tab>
                 ))}
               </Group>
             </Scroller>
           </Tabs.List>
         )}
-        <Group justify="space-between" gap="sm">
-          <TitleChaptersSettings />
-          <Button>{t('downloadAll')}</Button>
-        </Group>
         {branches.map((branch) => (
           <TitleChaptersList branch={branch} key={branch.id} titleId={titleId} />
         ))}
