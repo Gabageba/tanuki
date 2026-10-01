@@ -7,6 +7,12 @@ export type RowProps = {
   icon?: ReactNode;
   actionProps?: Omit<ButtonProps, 'size'> & ElementProps<'button', keyof ButtonProps>;
   action?: ReactNode;
+  /** Действие узкое (число, значок): на телефоне остаётся справа, а не уходит под текст. */
+  isActionCompact?: boolean;
+  /** Под заголовком, с отступом по тексту: ползунок, схема, пресеты. */
+  children?: ReactNode;
+  /** Строка сейчас не действует и гаснет; почему — должно говорить её описание. */
+  disabled?: boolean;
   color?: MantineColor;
 };
 

@@ -23,14 +23,16 @@ import {
   type ReaderReadingMode,
   type ReaderSettings,
 } from '@tanuki/contracts';
-import useReaderSettings, { READER_SETTINGS_QUERY_KEY } from '../../hooks/useReaderSettings';
-import useUpdateReaderSettings from '../../hooks/useUpdateReaderSettings';
+import useReaderSettings, {
+  READER_SETTINGS_QUERY_KEY,
+} from '@/entities/reader/hooks/useReaderSettings';
+import useUpdateReaderSettings from '@/entities/reader/hooks/useUpdateReaderSettings';
 import useTapZonesHint from './hooks/useTapZonesHint';
 import ReaderSetting from './ReaderSetting';
 import ReaderSettingRadioGroup from './ReaderSettingRadioGroup';
 import ReaderSettingSwitch from './ReaderSettingSwitch';
 import ReaderSliderSetting from './ReaderSliderSetting';
-import ReaderTapZonePreview from './ReaderTapZonePreview';
+import ReaderTapZonePreview from '@/entities/reader/ReaderTapZonePreview';
 import ReaderTapZonesOverlay from './ReaderTapZonesOverlay';
 
 function ReaderSettingsButton() {

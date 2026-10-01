@@ -40,6 +40,7 @@ export const SETTINGS_TAB_SEARCH_PARAM = 'tab';
 export const SETTINGS_TABS = {
   GENERAL: 'general',
   SOURCES: 'sources',
+  READER: 'reader',
 } as const;
 export type SettingsTab = EnumLiteralsOf<typeof SETTINGS_TABS>;
 

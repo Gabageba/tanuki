@@ -7,7 +7,7 @@ import ReaderPages from './components/ReaderPages';
 import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 import useReaderFeed from './hooks/useReaderFeed';
 import useReaderHeaderVisibility from './hooks/useReaderHeaderVisibility';
-import useReaderSettings from './hooks/useReaderSettings';
+import useReaderSettings from '@/entities/reader/hooks/useReaderSettings';
 import useRecordChapterRead from './hooks/useRecordChapterRead';
 import useSaveReadingProgress from './hooks/useSaveReadingProgress';
 import useTrackReadingTime from './hooks/useTrackReadingTime';
