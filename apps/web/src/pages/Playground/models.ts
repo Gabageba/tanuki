@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import AccountGroups from './AccountGroups';
 import AdultContent from './AdultContent';
+import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
 import HeaderBackground from './HeaderBackground';
 import ImportSourcePicker from './ImportSourcePicker';
@@ -25,6 +26,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'branch-controls',
+    Component: BranchControls,
+    title: 'Ветки и сортировка глав',
+    description:
+      'Табы веток и кнопка сортировки над списком глав выглядят одинаково и сливаются в кашу — как развести выбор списка и действия над ним.',
+    createdAt: '2026-10-01',
+    decision: 'B3',
+  },
   {
     slug: 'reading-settings',
     Component: ReadingSettings,
