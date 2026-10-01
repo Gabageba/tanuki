@@ -49,13 +49,13 @@ function TitleListCard({ title }: Props) {
             <Text
               className={styles.title}
               lineClamp={title.description ? 1 : 2}
-              lh={1}
+              lh="tight"
               fz={{ base: 16, xs: 18 }}
             >
               {title.name}
             </Text>
             {!!title.description && (
-              <Text lh={1} lineClamp={4} c="dimmed">
+              <Text lh="tight" lineClamp={4} c="dimmed">
                 {title.description}
               </Text>
             )}

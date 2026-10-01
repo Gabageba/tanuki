@@ -62,7 +62,7 @@ function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restPr
         component="button"
         type="button"
         fw={500}
-        lh={1}
+        lh="tight"
         w="fit-content"
         aria-hidden
         tabIndex={-1}
@@ -73,7 +73,14 @@ function CollapsibleGroup({ maxRows = DEFAULT_MAX_ROWS, children, gap, ...restPr
       <Group {...restProps} gap={gap}>
         {visibleChildren}
         {isClamped && !expanded && (
-          <Anchor component="button" type="button" onClick={expand} fw={500} lh={1} w="fit-content">
+          <Anchor
+            component="button"
+            type="button"
+            onClick={expand}
+            fw={500}
+            lh="tight"
+            w="fit-content"
+          >
             {moreLabel}
           </Anchor>
         )}

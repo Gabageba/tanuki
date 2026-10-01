@@ -1,14 +1,16 @@
-import { Skeleton, Stack } from '@mantine/core';
+import { Stack } from '@mantine/core';
+import TextSkeleton from '../TextSkeleton';
 
 type Props = {
-  textHeight: number;
+  /** То же значение, что `lineClamp` у `CollapsibleText`. */
+  lines: number;
 };
 
-function CollapsibleTextSkeleton({ textHeight }: Props) {
+function CollapsibleTextSkeleton({ lines }: Props) {
   return (
     <Stack gap={4}>
-      <Skeleton h={textHeight} />
-      <Skeleton h={14} w={125} />
+      <TextSkeleton lines={lines} lastLineWidth="100%" />
+      <TextSkeleton lh="tight" w={125} />
     </Stack>
   );
 }

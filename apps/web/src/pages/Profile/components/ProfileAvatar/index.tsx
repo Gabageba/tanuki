@@ -63,7 +63,7 @@ function ProfileAvatar({ src, name }: Props) {
             <Avatar src={src} variant="outline" color={PRIMARY_COLOR} name={name} size="xl" />
             <Box component="span" className={styles.change}>
               {isPending ? <Loader size={12} color="white" /> : <CameraIcon size={12} />}
-              <Text span fz={11} lh={1} tt="lowercase">
+              <Text span fz={11} lh="tight" tt="lowercase">
                 {t('change')}
               </Text>
             </Box>

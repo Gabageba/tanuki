@@ -13,7 +13,7 @@ function TitleInfoItems({ items }: Props) {
     <DataList orientation="vertical">
       {filteredItems.map((item, index) => (
         <DataList.Item key={index}>
-          <DataList.ItemLabel fz={12} lh={1}>
+          <DataList.ItemLabel fz={12} lh="tight">
             {item.label}
           </DataList.ItemLabel>
           <Space h={8} />

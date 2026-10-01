@@ -1,4 +1,5 @@
 import { Card, Group, Skeleton, Stack } from '@mantine/core';
+import TextSkeleton from '@/shared/ui/TextSkeleton';
 import TitleCardTagsSkeleton from '../TitleCardTags/TitleCardTagsSkeleton';
 
 function TitleListCardSkeleton() {
@@ -8,9 +9,9 @@ function TitleListCardSkeleton() {
         <Skeleton h={160} w={120} />
         <Stack p="sm" h="100%" flex={1} miw={0} gap={8}>
           <Stack gap={8} flex={1}>
-            <Skeleton h={12} />
-            <Skeleton h={18} />
-            <Skeleton h={56} />
+            <TextSkeleton fz={12} lh="tight" w="40%" />
+            <TextSkeleton fz={{ base: 16, xs: 18 }} lh="tight" w="80%" />
+            <TextSkeleton lh="tight" lines={4} />
           </Stack>
           <Group gap={8}>
             <TitleCardTagsSkeleton />

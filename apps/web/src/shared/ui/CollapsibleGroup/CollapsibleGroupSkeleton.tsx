@@ -1,5 +1,6 @@
 import type { StackProps } from '@mantine/core';
 import { Skeleton, Stack } from '@mantine/core';
+import TextSkeleton from '../TextSkeleton';
 
 type Props = {
   groupHeight: number;
@@ -10,7 +11,7 @@ function CollapsibleGroupSkeleton({ gap, groupHeight }: Props) {
   return (
     <Stack gap={gap}>
       <Skeleton h={groupHeight} />
-      <Skeleton w={91} h={14} />
+      <TextSkeleton lh="tight" w={91} />
     </Stack>
   );
 }

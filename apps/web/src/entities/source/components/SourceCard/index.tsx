@@ -36,7 +36,7 @@ function SourceCard({ source }: Props) {
         >
           <Stack gap={4} align="center" c="terracotta">
             <LockSimpleIcon size={24} aria-label={getSourceAccessLabel(source.access, t)} />
-            <Text lh={1}>{getSourceAccessLabel(source.access, t)}</Text>
+            <Text lh="tight">{getSourceAccessLabel(source.access, t)}</Text>
           </Stack>
         </Overlay>
       )}
@@ -44,7 +44,7 @@ function SourceCard({ source }: Props) {
         <SourceTitle source={source} />
         <Stack gap={8} justify="end" flex="none">
           <Group gap={4} justify="flex-end">
-            <Text fz={20} lh={1}>
+            <Text fz={20} lh="tight">
               {getFlagByLocale(source.locale)}
             </Text>
             <Text ff="monospace" tt="uppercase" lts={1}>

@@ -23,6 +23,7 @@ import {
   CSS_VARIABLES_RESOLVER,
   FONT_FAMILY_MONOSPACE,
   FONT_FAMILY_SANS,
+  LINE_HEIGHT_TIGHT,
   NEUTRAL_DARK_SHADES,
   NEUTRAL_LIGHT_SHADES,
 } from '../models';
@@ -57,6 +58,9 @@ const createAppTheme = (t: TFunction) =>
   createTheme({
     fontFamily: FONT_FAMILY_SANS,
     fontFamilyMonospace: FONT_FAMILY_MONOSPACE,
+    lineHeights: {
+      tight: LINE_HEIGHT_TIGHT,
+    },
     // `xxs` — промежуточный брейкпоинт между `base` и стандартным `xs` (36em) Mantine.
     breakpoints: {
       xxs: XXS_BREAKPOINT,

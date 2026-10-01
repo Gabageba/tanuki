@@ -30,7 +30,7 @@ function ColorSchemeRow({ colorScheme, isSelected, onSelect }: Props) {
         <Group gap="md" wrap="nowrap" flex={1} miw={0}>
           <ColorSchemePreview colorScheme={colorScheme} />
           <Stack gap={4} miw={0}>
-            <Text lh={1} fz={14}>
+            <Text lh="tight" fz={14}>
               {getColorSchemeLabel(colorScheme, t)}
             </Text>
             <Text fz={12} c="dimmed" lh={1.2}>

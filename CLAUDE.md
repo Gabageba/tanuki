@@ -225,6 +225,6 @@
   `shared/locales/{ru,en}.json` — those dictionaries only hold text of the real app. Likewise, a
   playground page never calls `t()`, and an i18n audit of `apps/web` skips `pages/Playground/`.
 - Once a variant is chosen, the page is **kept** as a record of the decision, not deleted: fill in
-  the task's `decision` and describe the chosen variant in the relevant `docs/` file.
+  the task's `decision` and describe the chosen variant in `docs/11-ui-decisions.md`.
 - Playground routes are registered only under `import.meta.env.DEV` (`RouterProvider.tsx`), so the
   pages never reach the production build. Keep it that way for every new page.

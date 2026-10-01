@@ -39,7 +39,10 @@ function MidDotGroup({
     return null;
   }
 
-  const fz = typeof text === 'object' ? text.fz : undefined;
+  const textProps = typeof text === 'object' ? text : {};
+  const fz = textProps.fz;
+  // `lh` группы, а без него — `text.lh`: иначе пустой `lh` перетёр бы заданный у текста.
+  const lineHeight = lh ?? textProps.lh;
 
   const renderItem = (item: ReactNode) => {
     const content =
@@ -52,7 +55,7 @@ function MidDotGroup({
       );
 
     return text ? (
-      <Text span display="inline-block" {...(typeof text === 'object' ? text : {})} lh={lh}>
+      <Text span display="inline-block" {...textProps} lh={lineHeight}>
         {content}
       </Text>
     ) : (
@@ -69,14 +72,14 @@ function MidDotGroup({
     ));
 
     return (
-      <CollapsibleGroup gap={gap} mt={mt} maxRows={maxRows} lh={lh} fz={fz}>
+      <CollapsibleGroup gap={gap} mt={mt} maxRows={maxRows} lh={lineHeight} fz={fz}>
         {children}
       </CollapsibleGroup>
     );
   }
 
   return (
-    <Box mt={mt} lh={lh} fz={fz} style={truncate ? TRUNCATE_STYLE : undefined}>
+    <Box mt={mt} lh={lineHeight} fz={fz} style={truncate ? TRUNCATE_STYLE : undefined}>
       {visibleItems.map((item, index) => (
         <Fragment key={index}>
           {renderItem(item)}

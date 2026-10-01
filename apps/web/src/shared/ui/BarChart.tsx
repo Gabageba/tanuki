@@ -98,11 +98,11 @@ function BarChart({ items, highlightedIndex, labelStep = DEFAULT_LABEL_STEP }: P
             label={
               <Stack gap={4}>
                 {!isSparse && (
-                  <Text fz="xs" lh={1}>
+                  <Text fz="xs" lh="tight">
                     {tooltip.title}
                   </Text>
                 )}
-                <Text fz="xs" fw={600} lh={1}>
+                <Text fz="xs" fw={600} lh="tight">
                   {tooltip.value}
                 </Text>
               </Stack>

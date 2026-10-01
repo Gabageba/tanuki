@@ -618,7 +618,8 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     // The seed manga apps/api sends only ever has `coverUrl: null` — re-derive it here or the
     // cover disappears on the details page (a regression the Kotlin fork hit once already
     // when this parser was rewritten for XenForo HTML).
-    const coverUrl = attrOrNull(doc.$('.c-poster img[itemprop=image]').first(), 'src');
+    const $poster = doc.$('.c-poster').first();
+    const coverUrl = attrOrNull($poster.find('img[itemprop=image]').first(), 'src');
 
     return {
       id: generateUid(SOURCE_ID, mangaUrl),
@@ -627,7 +628,9 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       url: mangaUrl,
       publicUrl: absoluteUrl,
       rating: ratingValue !== null ? Math.min(Math.max(ratingValue / 10, 0), 1) : RATING_UNKNOWN,
-      contentRating: null,
+      // Same age_18_plus marker the catalog card carries — on the details page it sits on the
+      // poster block. Without it a title blurred in the catalog would open as a regular one.
+      contentRating: $poster.hasClass('age_18_plus') ? CONTENT_RATING.ADULT : null,
       coverUrl,
       largeCoverUrl: coverUrl ? toLargeCoverUrl(coverUrl) : null,
       tags,

@@ -115,6 +115,22 @@ export class SourceAccountRequiredException extends ApiException {
   }
 }
 
+/**
+ * Источник или тайтл 18+ скрыт настройками самого пользователя. Как и закрытый источник, не
+ * сигнал здоровья: бросается до обращения к источнику и к общему кешу.
+ */
+export class AdultContentHiddenException extends ApiException {
+  /** isTitle — скрыт тайтл 18+ в обычном источнике, а не источник 18+ целиком. */
+  constructor(sourceId: string, isTitle = false) {
+    super(
+      API_ERROR_CODE.ADULT_CONTENT_HIDDEN,
+      isTitle ? 'adultTitlesOnRegularSourcesHiddenInSettings' : 'adultSourcesHiddenInSettings',
+      HttpStatus.FORBIDDEN,
+      { sourceId, params: sourceNameParams(sourceId) },
+    );
+  }
+}
+
 export class SourceLoginFailedException extends ApiException {
   constructor() {
     super(API_ERROR_CODE.SOURCE_LOGIN_FAILED, 'sourceRejectedLoginData', HttpStatus.BAD_REQUEST);

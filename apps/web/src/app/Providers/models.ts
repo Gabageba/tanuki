@@ -11,6 +11,14 @@ const FONT_FAMILY_BRAND = 'Unbounded, sans-serif';
 export const FONT_FAMILY_MONOSPACE = 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace';
 
 /**
+ * Плотный межстрочный интервал (`lh="tight"`) для однострочных подписей, строк списков и
+ * заголовков. `1` экономит высоту, но режет нижние выносные (g, y, р) у текста с `truncate` и
+ * `lineClamp`; 1.25 — минимум, при котором они целиком влезают в строку. Скелетоны текста
+ * (`TextSkeleton`) берут тот же `lh`, поэтому совпадают с текстом по высоте.
+ */
+export const LINE_HEIGHT_TIGHT = '1.25';
+
+/**
  * Нейтрали светлой темы. Шаги подобраны так, чтобы стандартные роли Mantine попали в цвета
  * макета без переопределения: `gray-0` — фон страницы и hover, `gray-5` — placeholder,
  * `gray-6` — приглушённый текст.

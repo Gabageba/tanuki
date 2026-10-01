@@ -31,7 +31,7 @@ function ProgressList({ items, highlightedIndex, gap }: Props) {
     >
       {items.map(({ key, label, value, text }, index) => (
         <Fragment key={key}>
-          <Text truncate lh={1}>
+          <Text truncate lh="tight">
             {label}
           </Text>
           <Progress
@@ -43,7 +43,7 @@ function ProgressList({ items, highlightedIndex, gap }: Props) {
             }
             bg="var(--tanuki-color-border-subtle)"
           />
-          <Text ff="monospace" ta="right" lh={1} c="dimmed" style={{ wordSpacing: -6 }}>
+          <Text ff="monospace" ta="right" lh="tight" c="dimmed" style={{ wordSpacing: -6 }}>
             {text}
           </Text>
         </Fragment>

@@ -2,9 +2,10 @@ import { Button, Group } from '@mantine/core';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
-import { ArrowClockwiseIcon, CaretLeftIcon, SignInIcon } from '@phosphor-icons/react';
+import { ArrowClockwiseIcon, CaretLeftIcon, GearIcon, SignInIcon } from '@phosphor-icons/react';
 import {
   ApiRequestError,
+  isAdultContentHiddenError,
   isNotFoundError,
   isSourceAccountRequiredError,
   isSourceAuthRequiredError,
@@ -75,6 +76,22 @@ function QueryError({ error, onRetry }: Props) {
           </Button>
           <Button component={Link} to={SOURCE_ACCOUNTS_PATH} leftSection={<SignInIcon />}>
             {sourceLock.action}
+          </Button>
+        </Group>
+      </StatusScreen>
+    );
+  }
+
+  // Контент 18+ скрыт настройками — повтор ничего не даст, открыть его можно только там.
+  if (isAdultContentHiddenError(error)) {
+    return (
+      <StatusScreen code="403" title={t('adultContentHidden')} description={error.message}>
+        <Group gap="sm">
+          <Button onClick={() => navigate(-1)} leftSection={<CaretLeftIcon />} variant="default">
+            {t('back')}
+          </Button>
+          <Button component={Link} to={ROUTE_PATHS.SETTINGS} leftSection={<GearIcon />}>
+            {t('settings')}
           </Button>
         </Group>
       </StatusScreen>

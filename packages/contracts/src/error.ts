@@ -14,6 +14,9 @@ export const API_ERROR_CODE = {
   SOURCE_LOGIN_FAILED: 'sourceLoginFailed',
   // На сервере не задан ключ шифрования аккаунтов — привязывать их некуда.
   SOURCE_LINKING_UNAVAILABLE: 'sourceLinkingUnavailable',
+  // Источник или тайтл 18+ скрыт настройками пользователя (UserSettings.showAdultSources /
+  // hideAdultTitles).
+  ADULT_CONTENT_HIDDEN: 'adultContentHidden',
   PARSER_FAILED: 'parserFailed',
   NOT_FOUND: 'notFound',
   RATE_LIMITED: 'rateLimited',

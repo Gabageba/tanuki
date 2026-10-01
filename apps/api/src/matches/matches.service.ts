@@ -22,6 +22,7 @@ import type { RawTitle } from '../parsers-client/parsers-client.types';
 import { SourcesService } from '../sources/sources.service';
 import { UserSourcesService } from '../sources/user-sources.service';
 import { runAsService } from '../source-accounts/viewer-context';
+import { AdultContentService, isAdultSourceHidden } from '../adult-content/adult-content.service';
 import { excludeRejected, linkKeyOf, TitleLinksService, parseLinkKey } from './title-links.service';
 import {
   FALLBACK_WAVE_TIME_SHARE,
@@ -101,6 +102,7 @@ export class MatchesService {
     private readonly cache: CacheService,
     private readonly links: TitleLinksService,
     private readonly userSources: UserSourcesService,
+    private readonly adultContent: AdultContentService,
   ) {}
 
   async findMatches(
@@ -124,13 +126,18 @@ export class MatchesService {
       this.applyLinks(linkKeyOf(sourceId, ref.url), value.items),
     );
 
-    // Веер общий на всех и кешируется целиком — выключенные пользователем источники
-    // отсеиваются только в его ответе.
-    const disabled = await this.userSources.getDisabled(userId);
+    // Веер общий на всех и кешируется целиком — выключенные пользователем источники и скрытые
+    // им источники 18+ отсеиваются только в его ответе.
+    const [disabled, adultAccess] = await Promise.all([
+      this.userSources.getDisabled(userId),
+      this.adultContent.getAccess(),
+    ]);
+    const isShown = (matchSourceId: string) =>
+      !disabled.has(matchSourceId) && !isAdultSourceHidden(adultAccess, matchSourceId);
 
     return {
-      items: items.filter((item) => !disabled.has(item.title.sourceId)),
-      failures: value.failures.filter((failure) => !disabled.has(failure.sourceId)),
+      items: items.filter((item) => isShown(item.title.sourceId)),
+      failures: value.failures.filter((failure) => isShown(failure.sourceId)),
       stale: stale || undefined,
     };
   }

@@ -31,9 +31,15 @@ function StatusIndicator({
   justify = 'flex-start',
 }: Props) {
   return (
-    <Group gap={gap} align="center" wrap="nowrap" lh={1} justify={justify}>
+    <Group gap={gap} align="center" wrap="nowrap" lh="tight" justify={justify}>
       <Box bg={color} bdrs="50%" w={fz / 2} h={fz / 2} flex="none" mt={dotMt} />
-      <Text c={coloredText ? color : undefined} fz={fz} fw={fw} lh={1} visibleFrom={visibleFrom}>
+      <Text
+        c={coloredText ? color : undefined}
+        fz={fz}
+        fw={fw}
+        lh="tight"
+        visibleFrom={visibleFrom}
+      >
         {label}
       </Text>
     </Group>

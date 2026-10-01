@@ -28,6 +28,7 @@ export const ROUTE_PATHS = {
   PLAYGROUND_SOURCES_SETUP: '/playground/sources-setup',
   PLAYGROUND_IMPORT_SOURCE_PICKER: '/playground/import-source-picker',
   PLAYGROUND_THEME_PICKER: '/playground/theme-picker',
+  PLAYGROUND_ADULT_CONTENT: '/playground/adult-content',
   PROFILE: '/profile',
   SETTINGS: '/settings',
 } as const;

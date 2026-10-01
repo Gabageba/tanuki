@@ -9,13 +9,12 @@ import {
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router';
-import { COLOR_SCHEME, SOURCE_STATUS, type ColorScheme } from '@tanuki/contracts';
+import { COLOR_SCHEME, type ColorScheme } from '@tanuki/contracts';
 import LogoHorizontal from '../Layout/Header/LogoHorizontal';
 import StatusIndicator from '@/shared/ui/StatusIndicator';
 import { STATUS_OK_COLOR } from '@/shared/lib/palette';
 import { getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
-import useSources from '@/entities/source/hooks/useSources';
-import { flattenSources } from '@/entities/source/lib';
+import useSourcesCount from './hooks/useSourcesCount';
 import styles from './AuthLayout.module.scss';
 
 const getNextColorScheme = (colorScheme: ColorScheme): ColorScheme => {
@@ -31,12 +30,8 @@ const getNextColorScheme = (colorScheme: ColorScheme): ColorScheme => {
 
 function AuthLayout() {
   const { t } = useTranslation();
-  const { data } = useSources();
+  const { data: sourcesCount } = useSourcesCount();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
-
-  const okSourcesCount = flattenSources(data).filter(
-    (source) => source.status === SOURCE_STATUS.OK,
-  ).length;
 
   const handleColorSchemeToggle = () => {
     setColorScheme(getNextColorScheme(colorScheme));
@@ -58,7 +53,7 @@ function AuthLayout() {
           <StatusIndicator
             label={
               <Text span c="dimmed">
-                {t('countSources', { count: okSourcesCount })}
+                {t('countSources', { count: sourcesCount?.count ?? 0 })}
               </Text>
             }
             gap={8}

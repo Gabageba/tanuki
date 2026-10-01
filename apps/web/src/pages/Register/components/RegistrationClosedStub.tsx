@@ -12,7 +12,7 @@ function RegistrationClosedStub() {
     <AuthFormLayout title={t('registrationUnavailable')} description={t('contactAdminForInvite')}>
       <Stack w="100%" align="center">
         <Divider w="100%" />
-        <Anchor component={Link} to={ROUTE_PATHS.LOGIN} fz={12} lh={1} w="fit-content">
+        <Anchor component={Link} to={ROUTE_PATHS.LOGIN} fz={12} lh="tight" w="fit-content">
           {t('logIn')}
         </Anchor>
       </Stack>

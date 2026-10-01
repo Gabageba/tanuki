@@ -173,6 +173,8 @@ export {
 export {
   SourcesResponseSchema,
   type SourcesResponse,
+  SourcesCountResponseSchema,
+  type SourcesCountResponse,
   CatalogResponseSchema,
   type CatalogResponse,
   TitleDetailsResponseSchema,
@@ -237,6 +239,8 @@ export {
   type UpdateUserSettingsRequest,
   TimeZoneSchema,
   isValidTimeZone,
+  DEFAULT_SHOW_ADULT_SOURCES,
+  DEFAULT_HIDE_ADULT_TITLES,
 } from './user-settings';
 export {
   ReadingProgressSchema,

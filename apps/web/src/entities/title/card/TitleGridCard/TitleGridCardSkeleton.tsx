@@ -1,4 +1,5 @@
 import { AspectRatio, Skeleton, Stack } from '@mantine/core';
+import TextSkeleton from '@/shared/ui/TextSkeleton';
 
 function TitleGridCardSkeleton() {
   return (
@@ -6,9 +7,9 @@ function TitleGridCardSkeleton() {
       <AspectRatio ratio={3 / 4}>
         <Skeleton h="100%" />
       </AspectRatio>
-      <Stack gap={6}>
-        <Skeleton h={12} />
-        <Skeleton h={28} />
+      <Stack gap={4}>
+        <TextSkeleton fz={12} lh="tight" w="70%" />
+        <TextSkeleton lh="tight" lines={2} />
       </Stack>
     </Stack>
   );

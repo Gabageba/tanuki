@@ -1,4 +1,5 @@
 import { Divider, Flex, SimpleGrid, Skeleton, Stack } from '@mantine/core';
+import TextSkeleton from '@/shared/ui/TextSkeleton';
 
 function TitleMetaSkeleton() {
   return (
@@ -8,7 +9,7 @@ function TitleMetaSkeleton() {
       direction={{ base: 'column', xs: 'row' }}
     >
       <Stack gap={4}>
-        <Skeleton h={12} w="70%" />
+        <TextSkeleton fz={12} lh="tight" w="70%" />
         <Skeleton h={64} w={90} />
       </Stack>
       <Divider orientation="vertical" visibleFrom="xs" />
@@ -16,8 +17,8 @@ function TitleMetaSkeleton() {
       <SimpleGrid cols={{ base: 2, sm: 3 }} flex={1} w="100%">
         {Array.from({ length: 6 }).map((_, index) => (
           <Stack gap={8} key={index}>
-            <Skeleton h={12} w="70%" />
-            <Skeleton w="100%" h={14} />
+            <TextSkeleton fz={11} lh="tight" w="70%" />
+            <TextSkeleton lh="tight" />
           </Stack>
         ))}
       </SimpleGrid>

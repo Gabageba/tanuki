@@ -19,7 +19,7 @@ function TitleName({ title }: Props) {
       <TitleBreadcrumbs title={title} />
       <Stack gap={8}>
         <Group justify="space-between" gap={8} wrap="nowrap" align="flex-start">
-          <Heading lh={1} size={30} style={{ flex: 1, minWidth: 0 }}>
+          <Heading lh="tight" size={30} style={{ flex: 1, minWidth: 0 }}>
             {title.name}
           </Heading>
           <Group gap={8} wrap="nowrap">
@@ -35,10 +35,10 @@ function TitleName({ title }: Props) {
         <MidDotGroup
           gap={8}
           maxRows={1}
-          separatorProps={{ c: 'dimmed', lh: 1 }}
-          lh={1}
+          separatorProps={{ c: 'dimmed', lh: 'tight' }}
+          lh="tight"
           text={{
-            lh: 1,
+            lh: 'tight',
             c: 'dimmed',
           }}
           items={[...title.originalNames, ...title.altNames]}

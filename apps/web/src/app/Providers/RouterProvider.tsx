@@ -37,6 +37,7 @@ import PlaygroundHeaderBackground from '@/pages/Playground/HeaderBackground';
 import PlaygroundSourcesSetup from '@/pages/Playground/SourcesSetup';
 import PlaygroundImportSourcePicker from '@/pages/Playground/ImportSourcePicker';
 import PlaygroundThemePicker from '@/pages/Playground/ThemePicker';
+import PlaygroundAdultContent from '@/pages/Playground/AdultContent';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
@@ -75,6 +76,10 @@ const PLAYGROUND_ROUTES = import.meta.env.DEV
       {
         path: ROUTE_PATHS.PLAYGROUND_THEME_PICKER,
         element: <PlaygroundThemePicker />,
+      },
+      {
+        path: ROUTE_PATHS.PLAYGROUND_ADULT_CONTENT,
+        element: <PlaygroundAdultContent />,
       },
     ]
   : [];

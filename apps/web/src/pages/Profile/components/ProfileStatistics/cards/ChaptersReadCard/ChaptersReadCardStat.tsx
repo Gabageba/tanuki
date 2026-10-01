@@ -10,11 +10,11 @@ type Props = {
 function ChaptersReadCardStat({ value, label, color = 'var(--mantine-color-text)' }: Props) {
   return (
     <Group gap={6} align="baseline" wrap="nowrap">
-      <Text ff="monospace" lh={1} lts={-1} style={{ wordSpacing: -5 }} c={color}>
+      <Text ff="monospace" lh="tight" lts={-1} style={{ wordSpacing: -5 }} c={color}>
         {value}
       </Text>
       {label && (
-        <Text fz={12} lh={1} c="dimmed">
+        <Text fz={12} lh="tight" c="dimmed">
           {label}
         </Text>
       )}

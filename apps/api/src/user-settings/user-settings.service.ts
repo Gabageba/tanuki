@@ -25,6 +25,9 @@ export class UserSettingsService {
         language: row.language ?? undefined,
         exclusiveFilterConfirmDismissed: row.exclusiveFilterConfirmDismissed ?? undefined,
         timeZone: row.timeZone ?? undefined,
+        showAdultSources: row.showAdultSources ?? undefined,
+        hideAdultTitles: row.hideAdultTitles ?? undefined,
+        ageConfirmed: row.ageConfirmed ?? undefined,
       };
     }, {});
   }

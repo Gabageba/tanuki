@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   catalogEntryFor,
   SOURCE_CONTENT_TYPE,
+  SOURCE_IDS,
   SOURCE_STATUS,
   SOURCE_STATUS_REASON,
   type Source,
@@ -11,6 +12,7 @@ import {
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { NotFoundApiException } from '../common/errors';
+import { AdultContentService } from '../adult-content/adult-content.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawSourceInfo } from '../parsers-client/parsers-client.types';
 import { SourceStatusService } from '../resilience/source-status.service';
@@ -45,11 +47,13 @@ export class SourcesService {
     private readonly sourceStatus: SourceStatusService,
     private readonly userSources: UserSourcesService,
     private readonly sourceAccess: SourceAccessService,
+    private readonly adultContent: AdultContentService,
   ) {}
 
   /**
    * Плоский список всех источников. userId только размечает isEnabled — выключенные
    * пользователем источники здесь остаются: их показывают настройки, чтобы включить обратно.
+   * Источников 18+, скрытых настройками зрителя, нет ни в одном списке — и в настройках тоже.
    */
   async listSources(userId?: string): Promise<Source[]> {
     return this.buildSources(userId, () => true);
@@ -75,9 +79,26 @@ export class SourcesService {
     );
   }
 
+  /**
+   * Сколько источников сейчас в строю — для экрана входа и регистрации. Настройки зрителя здесь
+   * не участвуют: источники 18+ и выключенные пользователем тоже в счёте, число одно для всех.
+   * isBroken — тот же жёсткий оверрайд в down, что и в toSource.
+   */
+  async countOkSources(): Promise<number> {
+    const raws = await this.enabledSources();
+    return raws.filter(
+      (raw) => !raw.isBroken && this.sourceStatus.get(raw.id).status === SOURCE_STATUS.OK,
+    ).length;
+  }
+
   async getSource(sourceId: string): Promise<Source> {
     const source = (await this.listSources()).find((item) => item.id === sourceId);
     if (!source) {
+      // Скрытого источника 18+ в списке нет, но он существует: отвечаем тем же 403, что и его
+      // каталог с тайтлами, — иначе страница источника получит 404 вперемешку с 403.
+      if (SOURCE_IDS.some((id) => id === sourceId)) {
+        await this.adultContent.assertSourceVisible(sourceId);
+      }
       throw new NotFoundApiException('sourceNotFound', { sourceId });
     }
     return source;
@@ -97,16 +118,17 @@ export class SourcesService {
     userId: string | undefined,
     include: (raw: RawSourceInfo) => boolean,
   ): Promise<Source[]> {
-    const [raws, disabled, loginOf, order] = await Promise.all([
+    const [raws, disabled, loginOf, order, adultAccess] = await Promise.all([
       this.enabledSources(),
       this.userSources.getDisabled(userId),
       this.sourceAccess.getLoginResolver(userId),
       this.userSources.getOrder(userId),
+      this.adultContent.getAccess(),
     ]);
     // Место считается по всем источникам, до отбора: оно одно и то же в любом списке.
     return sortByUserOrder(raws, order)
       .map((raw, position) => ({ raw, position }))
-      .filter(({ raw }) => include(raw))
+      .filter(({ raw }) => include(raw) && (adultAccess.showAdultSources || !raw.isAdult))
       .map(({ raw, position }) => this.toSource(raw, disabled, loginOf, position));
   }
 

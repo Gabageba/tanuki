@@ -429,5 +429,19 @@
   "streakDaysAndReleaseScheduleUseIt": "used to count streak days and the chapter release schedule",
   "daytimeInBrightLight": "daytime, in bright light",
   "eveningInDimLight": "in the evening, in dim light",
-  "followsOsSetting": "follows the OS setting"
+  "followsOsSetting": "follows the OS setting",
+  "adultContent": "18+ content",
+  "allAdultContent": "All 18+ content",
+  "adultContentHidden": "18+ content is hidden",
+  "adultTitlesOnRegularSources": "18+ titles on regular sources",
+  "coversBlurredPagesDontOpen": "Covers are blurred, pages don't open",
+  "shownAsUsual": "Shown as usual",
+  "adultSourcesHiddenFromListAndSearch": "18+ sources are hidden from the list and search",
+  "adultSourcesAndTitlesOnRegularSources": "18+ sources and 18+ titles on regular sources",
+  "howAdultCoversLook": "This is how 18+ covers look in the catalog with the current settings",
+  "areYou18": "Are you 18?",
+  "adultTitlesWillBecomeVisible": "18+ titles on regular sources will become visible without blur. Confirm that you are 18 or older.",
+  "adultSourcesAndTitlesWillBecomeVisible": "18+ sources and 18+ titles on regular sources will become visible without blur. Confirm that you are 18 or older.",
+  "enabledTogetherWithAdultContent": "Enabled together with 18+ content",
+  "iAm18": "I'm 18"
 }
