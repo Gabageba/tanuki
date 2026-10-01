@@ -1,0 +1,35 @@
+@use '../../../../styles/breakpoints';
+
+// Две колонки без пустот: «Отступы и зона клика» занимают всю правую колонку, а «Поведение»
+// встаёт вплотную под «Отображение». Последний ряд `1fr` забирает лишнюю высоту, иначе она
+// растянула бы ряды слева и между блоками появился бы зазор. В одну колонку блоки идут в порядке
+// разметки: отображение, отступы, поведение.
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto 1fr;
+  gap: var(--mantine-spacing-md);
+  align-items: start;
+}
+
+.spacing {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+
+.behavior {
+  grid-column: 1;
+}
+
+@include breakpoints.smaller-than(md) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .spacing,
+  .behavior {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}

@@ -1,12 +1,13 @@
-import { Tabs } from '@mantine/core';
+import { Scroller, Tabs } from '@mantine/core';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { GearIcon, PlugsIcon } from '@phosphor-icons/react';
+import { BookOpenTextIcon, GearIcon, PlugsIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import PageLayout from '@/shared/ui/PageLayout';
 import useUserSettings from '@/shared/hooks/useUserSettings';
 import { SETTINGS_TAB_SEARCH_PARAM, SETTINGS_TABS } from '@/shared/lib/routes';
 import SettingsGeneral from './components/SettingsGeneral';
+import SettingsReader from './components/SettingsReader';
 import SettingsSources from './components/SettingsSources';
 import { isSettingsTab } from './lib';
 
@@ -36,6 +37,12 @@ function Settings() {
         icon: <PlugsIcon />,
         content: <SettingsSources />,
       },
+      {
+        id: SETTINGS_TABS.READER,
+        title: t('reader'),
+        icon: <BookOpenTextIcon />,
+        content: <SettingsReader />,
+      },
     ],
     [t],
   );
@@ -45,11 +52,13 @@ function Settings() {
       <PageLayout.Content title={t('settings')}>
         <Tabs value={activeTab} onChange={handleTabChange}>
           <Tabs.List>
-            {TABS.map(({ id, icon, title }) => (
-              <Tabs.Tab key={id} value={id} leftSection={icon}>
-                {title}
-              </Tabs.Tab>
-            ))}
+            <Scroller>
+              {TABS.map(({ id, icon, title }) => (
+                <Tabs.Tab key={id} value={id} leftSection={icon}>
+                  {title}
+                </Tabs.Tab>
+              ))}
+            </Scroller>
           </Tabs.List>
           {TABS.map(({ id, content }) => (
             <Tabs.Panel value={id} key={id} mt="lg">

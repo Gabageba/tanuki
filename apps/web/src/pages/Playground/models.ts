@@ -6,6 +6,7 @@ import HeaderBackground from './HeaderBackground';
 import ImportSourcePicker from './ImportSourcePicker';
 import LoginBadge from './LoginBadge';
 import ReadingMarks from './ReadingMarks';
+import ReadingSettings from './ReadingSettings';
 import SourcesSetup from './SourcesSetup';
 import ThemePicker from './ThemePicker';
 
@@ -24,6 +25,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'reading-settings',
+    Component: ReadingSettings,
+    title: 'Вкладка «Чтение» в настройках',
+    description:
+      'Новая вкладка с категориями закладок и настройками читалки — как её назвать и как переложить настройки из drawer читалки в строки GroupedList.',
+    createdAt: '2026-10-01',
+    decision: 'N4 + L2 + C2 + S0 + D1',
+  },
   {
     slug: 'login-badge',
     Component: LoginBadge,
