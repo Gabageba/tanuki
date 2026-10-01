@@ -14,6 +14,14 @@ export type PlaygroundTask = {
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
   {
+    path: ROUTE_PATHS.PLAYGROUND_LOGIN_BADGE,
+    title: 'Пометка о входе',
+    description:
+      'На телефоне бейдж обязательности входа за названием источника съедает само название — чем его заменить в настройках и в профиле.',
+    createdAt: '2026-10-01',
+    decision: 'L2b + I2',
+  },
+  {
     path: ROUTE_PATHS.PLAYGROUND_ADULT_CONTENT,
     title: 'Контент 18+',
     description:

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Switch } from '@mantine/core';
-import { useQueryClient } from '@tanstack/react-query';
+import { type Query, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ImagesIcon, StackIcon } from '@phosphor-icons/react';
 import {
@@ -34,17 +34,20 @@ function SettingsAdultContent() {
   const isAgeConfirmed = settings?.ageConfirmed ?? false;
 
   // От этих настроек зависят почти все ответы сервера — источники, каталог, поиск, тайтлы.
-  // Кеш сбрасывается, а не помечается устаревшим: иначе скрытое осталось бы на экране из кеша.
+  // Неактивный кеш удаляется, а не помечается устаревшим: иначе на других страницах скрытое
+  // мелькнуло бы из кеша. Активные запросы этой страницы (пользователь, источники) только
+  // перезапрашиваются фоном — сброс увёл бы всю страницу в загрузку.
   const handleChange = (patch: UserSettings) => {
     queryClient.setQueryData<UserSettings>(USER_SETTINGS_QUERY_KEY, (current) => ({
       ...current,
       ...patch,
     }));
     updateUserSettings.mutate(patch, {
-      onSuccess: () =>
-        queryClient.resetQueries({
-          predicate: (query) => query.queryKey[0] !== USER_SETTINGS_QUERY_KEY[0],
-        }),
+      onSuccess: () => {
+        const predicate = (query: Query) => query.queryKey[0] !== USER_SETTINGS_QUERY_KEY[0];
+        queryClient.removeQueries({ type: 'inactive', predicate });
+        queryClient.invalidateQueries({ type: 'active', predicate });
+      },
       onError: () => queryClient.invalidateQueries({ queryKey: USER_SETTINGS_QUERY_KEY }),
     });
   };

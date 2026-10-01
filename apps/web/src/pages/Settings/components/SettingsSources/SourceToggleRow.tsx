@@ -3,12 +3,13 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DotsSixVerticalIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { SOURCE_ACCESS, type Source } from '@tanuki/contracts';
+import type { Source } from '@tanuki/contracts';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import SourceLoginBadge from '@/entities/source/components/SourceLoginBadge';
 import { SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
 import GroupedList from '@/shared/ui/GroupedList';
 import useToggleSource from './hooks/useToggleSource';
+import { isSourceLoginOffered } from './lib';
 import styles from './SettingsSources.module.scss';
 
 type Props = {
@@ -21,8 +22,6 @@ function SourceToggleRow({ source }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: source.id,
   });
-
-  const isLoginOffered = source.access === SOURCE_ACCESS.RELOGIN_REQUIRED || !source.isLoggedIn;
 
   return (
     <Box
@@ -54,7 +53,9 @@ function SourceToggleRow({ source }: Props) {
               {source.title}
             </Text>
             {/* Войти можно только в профиле — пометка ведёт на вкладку аккаунтов. */}
-            {isLoginOffered && <SourceLoginBadge source={source} to={SOURCE_ACCOUNTS_PATH} />}
+            {isSourceLoginOffered(source) && (
+              <SourceLoginBadge source={source} to={SOURCE_ACCOUNTS_PATH} />
+            )}
           </Group>
         }
         description={

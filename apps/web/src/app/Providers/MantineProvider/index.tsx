@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import type {
+  ActionIconProps,
   ComboboxLikeRenderOptionInput,
   ComboboxItem,
   ButtonProps,
@@ -86,8 +87,9 @@ const createAppTheme = (t: TFunction) =>
             ...defaultVariantColorsResolver({ ...input, variant: 'subtle', color: 'gray' }),
             border: `${rem(1)} solid var(--mantine-color-default)`,
           };
-        // Полупрозрачный тон `color` с обводкой того же цвета — общий для `Button` и `Alert`.
-        // На hover у кнопки чуть плотнее (граница — через `--button-hover-bd` в `Button.vars`).
+        // Полупрозрачный тон `color` с обводкой того же цвета — общий для `Button`, `ActionIcon`,
+        // `ThemeIcon` и `Alert`. На hover у кнопки чуть плотнее (граница — через `--button-hover-bd`
+        // в `Button.vars` и `--ai-hover-bd` в `ActionIcon.vars`).
         case 'muted': {
           const color = input.color || PRIMARY_COLOR;
           return {
@@ -102,6 +104,17 @@ const createAppTheme = (t: TFunction) =>
       }
     },
     components: {
+      // Hover-граница `muted` — так же, как у `Button`: переменную кладут `vars`, применяет её
+      // `.actionIcon` в модуле стилей.
+      ActionIcon: {
+        classNames: {
+          root: styles.actionIcon,
+        },
+        vars: (_theme: MantineTheme, { variant, color = PRIMARY_COLOR }: ActionIconProps) => ({
+          root:
+            variant === 'muted' ? { '--ai-hover-bd': getMutedVariantBorderColor(color, true) } : {},
+        }),
+      },
       Alert: Alert.extend({
         classNames: {
           root: styles.alert,

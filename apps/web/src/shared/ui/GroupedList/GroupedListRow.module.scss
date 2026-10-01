@@ -1,0 +1,13 @@
+@use '../../../styles/breakpoints';
+
+.row {
+  container-type: inline-size;
+}
+
+// В узкой строке действие не жмётся сбоку к столбику текста, а уходит под него на всю ширину.
+// Переключатель компактный — он остаётся справа.
+@include breakpoints.container-smaller-than(xs) {
+  .action:not(:has([role='switch'])) {
+    flex-basis: 100%;
+  }
+}

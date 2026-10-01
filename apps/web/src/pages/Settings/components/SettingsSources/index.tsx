@@ -1,4 +1,4 @@
-import { Box, Center, Loader, Stack, Text } from '@mantine/core';
+import { Center, Loader, Stack, Text } from '@mantine/core';
 import {
   closestCenter,
   DndContext,
@@ -15,10 +15,12 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
+import SourceLoginBadgeLegend from '@/entities/source/components/SourceLoginBadge/SourceLoginBadgeLegend';
 import useSources from '@/entities/source/hooks/useSources';
-import { flattenSources } from '@/entities/source/lib';
+import { flattenSources, getPresentSourceLoginMarks } from '@/entities/source/lib';
 import GroupedList from '@/shared/ui/GroupedList';
 import useReorderSources from './hooks/useReorderSources';
+import { isSourceLoginOffered } from './lib';
 import SourceToggleRow from './SourceToggleRow';
 
 function SettingsSources() {
@@ -54,7 +56,7 @@ function SettingsSources() {
         <Text c="dimmed">{t('sourcesOrderIsUsedInListsSearchAndMatches')}</Text>
         <Text c="dimmed">{t('disabledSourcesAreHidden')}</Text>
       </Stack>
-      <Box maw={640}>
+      <Stack maw={640} gap={4}>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sourceIds} strategy={verticalListSortingStrategy}>
             <GroupedList label={t('sources')}>
@@ -64,7 +66,10 @@ function SettingsSources() {
             </GroupedList>
           </SortableContext>
         </DndContext>
-      </Box>
+        <SourceLoginBadgeLegend
+          marks={getPresentSourceLoginMarks(sources.filter(isSourceLoginOffered))}
+        />
+      </Stack>
     </Stack>
   );
 }

@@ -17,3 +17,10 @@ $breakpoints: (
     @content;
   }
 }
+
+// То же по ширине ближайшего контейнера (`container-type`), а не окна.
+@mixin container-smaller-than($breakpoint) {
+  @container (width < #{map.get($breakpoints, $breakpoint)}) {
+    @content;
+  }
+}
