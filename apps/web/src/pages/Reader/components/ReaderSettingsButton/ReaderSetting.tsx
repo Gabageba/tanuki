@@ -11,7 +11,7 @@ function ReaderSetting({ label, right, children }: Props) {
   return (
     <Stack gap={8}>
       <Group justify="space-between" gap="xs" wrap="nowrap">
-        <Text lh={1} c="dimmed">
+        <Text lh="tight" c="dimmed">
           {label}
         </Text>
         {right}

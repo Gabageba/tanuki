@@ -40,7 +40,7 @@ function TitleGridCard({ title, showSource = false }: Props) {
         <TitleCardImage title={title} showBadges showSource={showSource} />
         <Stack gap={4}>
           <TitleMetaItems items={metaItems} gap={metaGap} />
-          <Text className={styles.title} lineClamp={2} lh={1}>
+          <Text className={styles.title} lineClamp={2} lh="tight">
             {title.name}
           </Text>
         </Stack>

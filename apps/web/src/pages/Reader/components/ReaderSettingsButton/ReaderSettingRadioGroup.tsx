@@ -18,10 +18,10 @@ function ReaderSettingRadioGroup({ value, onChange, items, direction = 'column' 
             <Group align="flex-start" gap="xs">
               {icon}
               <Stack flex={1} gap={4}>
-                <Title order={6} lh={1}>
+                <Title order={6} lh="tight">
                   {title}
                 </Title>
-                <Text fz={12} c="dimmed" lh={1}>
+                <Text fz={12} c="dimmed" lh="tight">
                   {description}
                 </Text>
               </Stack>

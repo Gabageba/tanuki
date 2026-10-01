@@ -66,7 +66,7 @@ function AccountDeletionScheduled() {
           {t('cancelDeletionAndLogIn')}
         </Button>
         <Divider w="100%" />
-        <Anchor component={Link} to={loginPath} replace fz={12} lh={1}>
+        <Anchor component={Link} to={loginPath} replace fz={12} lh="tight">
           {t('backToLogin')}
         </Anchor>
       </Stack>

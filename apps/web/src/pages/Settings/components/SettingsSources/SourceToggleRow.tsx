@@ -50,7 +50,7 @@ function SourceToggleRow({ source }: Props) {
         }
         title={
           <Group gap="xs" wrap="nowrap">
-            <Text fz={14} lh={1} truncate>
+            <Text fz={14} lh="tight" truncate>
               {source.title}
             </Text>
             {/* Войти можно только в профиле — пометка ведёт на вкладку аккаунтов. */}
@@ -58,7 +58,7 @@ function SourceToggleRow({ source }: Props) {
           </Group>
         }
         description={
-          <Text fz={12} c="dimmed" ff="monospace" truncate>
+          <Text fz={12} lh="tight" c="dimmed" ff="monospace" truncate>
             {source.domain}
           </Text>
         }

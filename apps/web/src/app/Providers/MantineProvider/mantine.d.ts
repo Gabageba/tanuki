@@ -1,4 +1,4 @@
-import type { AlertVariant, ButtonVariant, TabsVariant } from '@mantine/core';
+import type { AlertVariant, ButtonVariant, MantineSize, TabsVariant } from '@mantine/core';
 
 /**
  * Adds the `tile` variant registered in `THEME.components.Button` to Mantine's own
@@ -23,6 +23,11 @@ type ExtendedTabsVariant = TabsVariant | 'tile';
 type ExtendedAlertVariant = AlertVariant | 'muted';
 
 declare module '@mantine/core' {
+  /** `tight` — плотный межстрочный интервал из `theme.lineHeights` (см. `LINE_HEIGHT_TIGHT`). */
+  export interface MantineThemeSizesOverride {
+    lineHeights: Record<MantineSize | 'tight', string>;
+  }
+
   export interface AlertProps {
     variant?: ExtendedAlertVariant;
   }

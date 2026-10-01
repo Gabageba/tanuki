@@ -834,6 +834,10 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       .find('.alert-warning')
       .toArray()
       .some((el) => ownText(doc.$(el)).includes(NSFW_ALERT));
+    // The same per-title age badge the catalog API returns as the "limitation" element — the hero
+    // block links it as /list/limitation/<code>. Without it an NC-17 title, ADULT in the catalog,
+    // would open as SAFE/SUGGESTIVE here.
+    const limitation = textOrNull(doc.$("a[href*='/list/limitation/']").first()) ?? undefined;
 
     // `data-rating-status="none"` is the site's own marker for "0 votes" — its value text is a
     // literal "0", which would otherwise be indistinguishable from a genuine bottom score.
@@ -1062,13 +1066,15 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       url: mangaUrl,
       publicUrl: finalUrl,
       rating,
-      contentRating: isRestricted
-        ? null
-        : hasNsfwAlert
-          ? CONTENT_RATING.SUGGESTIVE
-          : cfg.isNsfw
-            ? CONTENT_RATING.ADULT
-            : CONTENT_RATING.SAFE,
+      contentRating:
+        contentRatingByLimitation(limitation) ??
+        (isRestricted
+          ? null
+          : hasNsfwAlert
+            ? CONTENT_RATING.SUGGESTIVE
+            : cfg.isNsfw
+              ? CONTENT_RATING.ADULT
+              : CONTENT_RATING.SAFE),
       coverUrl:
         (posterSlide.length ? attrOrNull(posterSlide, 'href') : null) ??
         attrOrNull(coverImg, 'src') ??

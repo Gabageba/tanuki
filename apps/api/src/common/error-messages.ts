@@ -15,6 +15,9 @@ const ERROR_MESSAGES_RU = {
     '{{source}} больше не принимает сохранённый вход — войдите заново',
   sourceRejectedLoginData: 'Источник не принял данные для входа',
   sourceAccountLinkingNotConfigured: 'Привязка аккаунтов источников не настроена на сервере',
+  adultSourcesHiddenInSettings: '{{source}} — источник 18+, такие источники скрыты в настройках',
+  adultTitlesOnRegularSourcesHiddenInSettings:
+    'Тайтлы 18+ на обычных источниках скрыты в настройках',
   notFound: 'Не найдено',
   chapterNotFromThisTitle: 'Глава не из этого тайтла',
   chapterNotFound: 'Глава не найдена',
@@ -58,6 +61,9 @@ const ERROR_MESSAGES_EN: Record<ErrorMessageKey, string> = {
   sourceNoLongerAcceptsSavedLogin: '{{source}} no longer accepts the saved login — log in again',
   sourceRejectedLoginData: 'The source rejected the login data',
   sourceAccountLinkingNotConfigured: 'Source account linking is not configured on the server',
+  adultSourcesHiddenInSettings: '{{source}} is an 18+ source, such sources are hidden in settings',
+  adultTitlesOnRegularSourcesHiddenInSettings:
+    '18+ titles on regular sources are hidden in settings',
   notFound: 'Not found',
   chapterNotFromThisTitle: "Chapter doesn't belong to this title",
   chapterNotFound: 'Chapter not found',

@@ -29,7 +29,7 @@ function ForgotPassword() {
       <AuthFormLayout title={t('checkYourEmail')} description={t('weSentLinkIfExists')}>
         <Stack w="100%" align="center">
           <Divider w="100%" />
-          <Anchor component={Link} to={ROUTE_PATHS.LOGIN} lh={1} fz={12}>
+          <Anchor component={Link} to={ROUTE_PATHS.LOGIN} lh="tight" fz={12}>
             {t('backToLogin')}
           </Anchor>
         </Stack>
@@ -65,7 +65,7 @@ function ForgotPassword() {
             component={Link}
             to={ROUTE_PATHS.LOGIN}
             fz={12}
-            lh={1}
+            lh="tight"
             ta="center"
             display="block"
             w="fit-content"

@@ -22,7 +22,7 @@ function TitleSourceRibbon({ sourceId }: Props) {
       tt="uppercase"
       ff="monospace"
       truncate
-      lh={1}
+      lh="tight"
     >
       {label}
     </Text>

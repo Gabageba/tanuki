@@ -53,7 +53,7 @@ function ReaderChapterName({ chapters, numbering, currentChapter, titleId }: Pro
         title={
           <Group gap={8} align="flex-end">
             {t('chapters')}
-            <Text fz={13} lh={1} c="dimmed">
+            <Text fz={13} lh="tight" c="dimmed">
               {chapters.length}
             </Text>
           </Group>

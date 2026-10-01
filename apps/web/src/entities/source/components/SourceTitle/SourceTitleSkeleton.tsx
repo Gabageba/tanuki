@@ -1,13 +1,14 @@
-import { Group, Skeleton, Stack } from '@mantine/core';
+import { Box, Group, Skeleton } from '@mantine/core';
+import TextSkeleton from '@/shared/ui/TextSkeleton';
 
 function SourceTitleSkeleton() {
   return (
-    <Group flex={1}>
-      <Skeleton width={40} height={40} />
-      <Stack gap={8}>
-        <Skeleton width={250} height={16} />
-        <Skeleton width={100} height={10} />
-      </Stack>
+    <Group flex={1} wrap="nowrap">
+      <Skeleton w={40} h={40} flex="none" />
+      <Box>
+        <TextSkeleton fz="h5" lh="h5" w={250} />
+        <TextSkeleton size="sm" w={100} />
+      </Box>
     </Group>
   );
 }

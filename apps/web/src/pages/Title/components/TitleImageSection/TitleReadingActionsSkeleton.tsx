@@ -1,4 +1,5 @@
 import { Group, Skeleton, Stack } from '@mantine/core';
+import TextSkeleton from '@/shared/ui/TextSkeleton';
 
 function TitleReadingActionsSkeleton() {
   return (
@@ -6,7 +7,7 @@ function TitleReadingActionsSkeleton() {
       <Skeleton h={36} />
       <Group gap={8}>
         <Skeleton h={5} flex={1} />
-        <Skeleton h={18.59} w={45} />
+        <TextSkeleton fz={12} w={45} />
       </Group>
     </Stack>
   );

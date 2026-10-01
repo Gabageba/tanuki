@@ -36,7 +36,7 @@ function TitleBreadcrumbs({ title }: Props) {
       <Anchor component={Link} to={catalogPath} c="dimmed" hiddenFrom="md" style={{ minWidth: 0 }}>
         <Group gap={4} wrap="nowrap">
           <CaretLeftIcon size={12} />
-          <Text lh={1} fz={12} truncate>
+          <Text lh="tight" fz={12} truncate>
             {source.title}
           </Text>
         </Group>
@@ -59,11 +59,11 @@ function TitleBreadcrumbs({ title }: Props) {
       >
         {items.map((item, index) =>
           index < items.length - 1 ? (
-            <Anchor key={index} component={Link} to={item.href} c="dimmed" lh={1} fz={12}>
+            <Anchor key={index} component={Link} to={item.href} c="dimmed" lh="tight" fz={12}>
               {item.title}
             </Anchor>
           ) : (
-            <Text key={index} c="dimmed" lh={1} fz={12} truncate>
+            <Text key={index} c="dimmed" lh="tight" fz={12} truncate>
               {item.title}
             </Text>
           ),
@@ -79,7 +79,7 @@ function TitleBreadcrumbs({ title }: Props) {
       >
         <Group gap={4} c="dimmed">
           <ArrowSquareOutIcon />
-          <Text lh={1} c="dimmed" fz={12}>
+          <Text lh="tight" c="dimmed" fz={12}>
             {t('openOnSite')}
           </Text>
         </Group>

@@ -24,7 +24,7 @@ function GroupedListHeader({ icon, title, description, actionProps, action, colo
           </Box>
         )}
         <Stack gap={4} miw={0}>
-          <Text component="div" lh={1} fz={14} c={color}>
+          <Text component="div" lh="tight" fz={14} c={color}>
             {title}
           </Text>
           {description && (

@@ -22,6 +22,7 @@ import {
   StorageUnavailableException,
 } from '../common/errors';
 import { decryptSecret, encryptSecret } from '../common/secret-box';
+import { AdultContentService } from '../adult-content/adult-content.service';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { DatabaseService } from '../database/database.service';
@@ -81,6 +82,7 @@ export class SourceAccessService {
 
   constructor(
     private readonly database: DatabaseService,
+    private readonly adultContent: AdultContentService,
     @Inject(ENV) env: Env,
   ) {
     this.key = env.SOURCE_SECRETS_KEY ? Buffer.from(env.SOURCE_SECRETS_KEY, 'base64') : null;
@@ -95,9 +97,12 @@ export class SourceAccessService {
    * фоновая работа (она ходит через сервисную учётку). Зритель ходит либо со своим аккаунтом,
    * либо, если вход по желанию, анонимно — через сервисную учётку никогда. Бросает
    * SourceAccountRequiredException, если источник закрыт, — до чтения кеша, иначе закрытый
-   * источник читался бы из общего кеша.
+   * источник читался бы из общего кеша. По той же причине здесь же отсекается источник 18+,
+   * скрытый настройками зрителя.
    */
   async resolveScope(sourceId: string): Promise<SourceAccountScope | undefined> {
+    await this.adultContent.assertSourceVisible(sourceId);
+
     const { authFamily: family, loginRequirement } = catalogEntryFor(sourceId);
     if (!family) return undefined;
 

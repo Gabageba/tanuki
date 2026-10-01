@@ -61,7 +61,7 @@ function ReaderHeader({
           <Stack gap={4} miw={0}>
             {titleData && (
               <Title
-                lh={1}
+                lh="tight"
                 order={5}
                 textWrap="nowrap"
                 style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}
@@ -71,7 +71,7 @@ function ReaderHeader({
             )}
             <MidDotGroup
               truncate
-              lh={1}
+              lh="tight"
               gap={8}
               text={{
                 fz: 12,

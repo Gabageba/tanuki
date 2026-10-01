@@ -18,7 +18,7 @@ function ImportSourceRow({ source, isSelected }: Props) {
         size={28}
         opacity={source.isLoggedIn ? 1 : 0.5}
       />
-      <Text fz="sm" lh={1} c={source.isLoggedIn ? undefined : 'dimmed'} truncate>
+      <Text fz="sm" lh="tight" c={source.isLoggedIn ? undefined : 'dimmed'} truncate>
         {source.title}
       </Text>
     </Group>

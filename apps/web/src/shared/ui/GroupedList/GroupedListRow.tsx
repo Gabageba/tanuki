@@ -14,11 +14,11 @@ function GroupedListRow({ title, description, icon, actionProps, action }: Props
           </Box>
         )}
         <Stack gap={4} miw={0}>
-          <Text component="div" lh={1} fz={14}>
+          <Text component="div" lh="tight" fz={14}>
             {title}
           </Text>
           {description && (
-            <Text component="div" fz={12} c="dimmed" lh={1.2}>
+            <Text component="div" fz={12} c="dimmed" lh="tight">
               {description}
             </Text>
           )}

@@ -1,28 +1,28 @@
 import { Box, Group, Scroller, Skeleton, Stack } from '@mantine/core';
 import TitleCardSkeleton from '@/entities/title/card/TitleCardSkeleton';
 import { VIEW_MODE } from '@/shared/lib/viewMode';
+import TextSkeleton from '@/shared/ui/TextSkeleton';
 
 function TitleMatchesSkeleton() {
   return (
     <Stack gap={8}>
       <Group gap={8} justify="space-between">
-        <Skeleton h={16} w={250} />
+        <TextSkeleton fz="h5" lh="h5" w={250} />
         <Skeleton w={157.13} h={30} />
       </Group>
 
       <Scroller flex={1} styles={{ control: { zIndex: 2 } }}>
         <Group wrap="nowrap" align="stretch" gap="xs">
           <Stack gap={6}>
-            <Group wrap="nowrap" gap="xs">
-              <Skeleton
-                w={168.2}
-                h={14}
-                my={5.4}
-                pos="sticky"
-                left={0}
-                bg="var(--mantine-color-body)"
-                style={{ zIndex: 3 }}
-              />
+            <Group
+              wrap="nowrap"
+              gap="xs"
+              pos="sticky"
+              left={0}
+              bg="var(--mantine-color-body)"
+              style={{ zIndex: 3 }}
+            >
+              <TextSkeleton w={168.2} />
             </Group>
             <Group wrap="nowrap" h="100%" align="stretch" gap="xs">
               {Array.from({ length: 6 }).map((_, index) => (

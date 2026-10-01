@@ -16,7 +16,7 @@ function ProfileStatisticMetaCard({ label, value, unit, hint }: Props) {
   return (
     <Paper withBorder radius="md" p="md">
       <Stack gap="sm">
-        <Text ff="monospace" fz={12} c="dimmed" tt="uppercase" lts={1} lh={1}>
+        <Text ff="monospace" fz={12} c="dimmed" tt="uppercase" lts={1} lh="tight">
           {label}
         </Text>
         <Stack gap={8}>
@@ -24,14 +24,14 @@ function ProfileStatisticMetaCard({ label, value, unit, hint }: Props) {
             <Text ff="monospace" fz={35} fw={600} lh={1}>
               <NumberFormatter value={value} thousandSeparator=" " />
             </Text>
-            <Text c="dimmed" lh={1} tt="lowercase">
+            <Text c="dimmed" lh="tight" tt="lowercase">
               {unit}
             </Text>
           </Group>
           {hint && (
             <Group gap={6} wrap="nowrap" c={hint.color ?? 'dimmed'}>
               {hint.icon}
-              <Text fz="sm" c="inherit" lh={1}>
+              <Text fz="sm" c="inherit" lh="tight">
                 {hint.text}
               </Text>
             </Group>

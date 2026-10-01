@@ -20,7 +20,14 @@ function CollapsibleText({ children, lineClamp = DEFAULT_LINE_CLAMP }: Props) {
         {children}
       </Text>
       {(isClamped || expanded) && (
-        <Anchor component="button" type="button" onClick={toggle} fw={500} lh={1} w="fit-content">
+        <Anchor
+          component="button"
+          type="button"
+          onClick={toggle}
+          fw={500}
+          lh="tight"
+          w="fit-content"
+        >
           {expanded ? t('collapse') : t('readInFull')}
         </Anchor>
       )}

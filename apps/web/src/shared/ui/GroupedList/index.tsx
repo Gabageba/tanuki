@@ -62,7 +62,7 @@ function GroupedList({
 
   return (
     <Stack gap="xs">
-      <Text ff="monospace" tt="uppercase" fz={12} c="dimmed" lts={1} lh={1}>
+      <Text ff="monospace" tt="uppercase" fz={12} c="dimmed" lts={1} lh="tight">
         {label}
       </Text>
       {/* overflow обрезает фон шапки по скруглённым углам рамки. */}

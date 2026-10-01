@@ -236,6 +236,11 @@ export const userSettings = pgTable('user_settings', {
   exclusiveFilterConfirmDismissed: boolean('exclusive_filter_confirm_dismissed'),
   /** IANA-зона («Europe/Moscow»): по ней статистика чтения режет сутки и месяцы. */
   timeZone: text('time_zone'),
+  /** Контент 18+: null — действует умолчание из контрактов (DEFAULT_SHOW_ADULT_SOURCES и т.д.). */
+  showAdultSources: boolean('show_adult_sources'),
+  hideAdultTitles: boolean('hide_adult_titles'),
+  /** Пользователь однажды подтвердил, что ему есть 18, — больше не спрашиваем. */
+  ageConfirmed: boolean('age_confirmed'),
   /**
    * Порядок источников, заданный в настройках: id по порядку. Источники, которых здесь нет
    * (новые), встают в конец в порядке каталога. Наружу отдаётся через /sources, не через

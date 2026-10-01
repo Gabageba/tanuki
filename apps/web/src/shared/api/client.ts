@@ -32,6 +32,10 @@ export const isSourceReloginRequiredError = (error: unknown) =>
 export const isSourceAuthRequiredError = (error: unknown) =>
   error instanceof ApiRequestError && error.code === API_ERROR_CODE.SOURCE_AUTH_REQUIRED;
 
+/** Источник или тайтл 18+ скрыт настройками самого пользователя. */
+export const isAdultContentHiddenError = (error: unknown) =>
+  error instanceof ApiRequestError && error.code === API_ERROR_CODE.ADULT_CONTENT_HIDDEN;
+
 /**
  * Текст ошибки приходит с сервера уже на языке интерфейса — язык передаётся в Accept-Language.
  * Свой текст у фронта только на случай, когда сервер ответить не смог.

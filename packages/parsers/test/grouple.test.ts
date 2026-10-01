@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { FILTER_TYPE, TITLE_STATE, TITLE_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, TITLE_STATE, TITLE_TYPE } from '@tanuki/contracts';
 import { createGroupleParser } from '../src/sources/grouple/engine';
 import { GROUPLE_FILTER_GROUP } from '../src/sources/grouple/models';
 import type { GroupleConfig } from '../src/sources/grouple/config';
@@ -163,6 +163,9 @@ const HERO_INFO_DETAILS_HTML = `<!doctype html><html><head>
         <strong class="cr-hero-rating__value" data-rating-status="positive">9.5</strong>
         <div class="cr-hero-rating__text">7152 оценки</div>
       </div>
+    </div>
+    <div class="cr-hero-short-details">
+      <a class="cr-hero-short-details__item text-danger font-weight-bolder" href="/list/limitation/nc_17">NC-17</a>
     </div>
     <div class="cr-info-details">
       <div class="cr-info-details-item">
@@ -469,6 +472,13 @@ describe('Grouple parser conformance', () => {
     const manga = await parser.getDetails('/One-Piece');
     const branches = new Set(manga.chapters!.map((c) => c.branch));
     expect(branches).toEqual(new Set(['Team Alpha', 'Team Beta']));
+  });
+
+  it('getDetails: contentRating follows the hero age badge, same as the catalog limitation', async () => {
+    const adult = await parser.getDetails('/Hero-Layout');
+    expect(adult.contentRating).toBe(CONTENT_RATING.ADULT);
+    const regular = await parser.getDetails('/One-Piece');
+    expect(regular.contentRating).toBe(CONTENT_RATING.SAFE);
   });
 
   it('getDetails: data-rating-status="none" (0 votes) reports rating as unknown, not 0', async () => {

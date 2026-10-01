@@ -9,6 +9,7 @@ import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
 import { PROFILE_STATISTICS_QUERY_KEY } from '@/entities/user/hooks/useProfileStatistics';
 import GroupedList from '@/shared/ui/GroupedList';
 import ColorSchemePicker from './ColorSchemePicker';
+import SettingsAdultContent from './SettingsAdultContent';
 
 function SettingsGeneral() {
   const { t, i18n } = useTranslation();
@@ -72,11 +73,8 @@ function SettingsGeneral() {
           }
         />
       </GroupedList>
+      <SettingsAdultContent />
     </SimpleGrid>
-
-    // <Paper withBorder radius="md" p="lg" maw={480} mt="lg">
-
-    // </Paper>
   );
 }
 

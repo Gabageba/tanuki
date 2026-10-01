@@ -449,5 +449,19 @@
   "streakDaysAndReleaseScheduleUseIt": "по нему считаются дни стрика и расписание выхода глав",
   "daytimeInBrightLight": "днём, при ярком свете",
   "eveningInDimLight": "вечером, при слабом свете",
-  "followsOsSetting": "следует за настройкой ОС"
+  "followsOsSetting": "следует за настройкой ОС",
+  "adultContent": "Контент 18+",
+  "allAdultContent": "Весь контент 18+",
+  "adultContentHidden": "Контент 18+ скрыт",
+  "adultTitlesOnRegularSources": "Тайтлы 18+ на обычных источниках",
+  "coversBlurredPagesDontOpen": "Обложки размыты, страницы не открываются",
+  "shownAsUsual": "Показываются как обычно",
+  "adultSourcesHiddenFromListAndSearch": "Источники 18+ скрыты из списка и поиска",
+  "adultSourcesAndTitlesOnRegularSources": "Источники 18+ и тайтлы 18+ на обычных источниках",
+  "howAdultCoversLook": "Так обложки 18+ выглядят в каталоге при текущих настройках",
+  "areYou18": "Вам есть 18?",
+  "adultTitlesWillBecomeVisible": "Станут видны тайтлы 18+ на обычных источниках без размытия. Подтвердите, что вам исполнилось 18 лет.",
+  "adultSourcesAndTitlesWillBecomeVisible": "Станут видны источники 18+ и тайтлы 18+ на обычных источниках без размытия. Подтвердите, что вам исполнилось 18 лет.",
+  "enabledTogetherWithAdultContent": "Включены вместе с контентом 18+",
+  "iAm18": "Мне есть 18"
 }

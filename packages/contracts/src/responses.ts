@@ -15,6 +15,16 @@ export const SourcesResponseSchema = z.record(SourceContentTypeSchema, z.array(S
 
 export type SourcesResponse = z.infer<typeof SourcesResponseSchema>;
 
+/**
+ * Сколько источников сейчас работает — без настроек зрителя: в счёт идут и источники 18+, и
+ * выключенные кем-то, поэтому число одно и то же для гостя и для любого пользователя.
+ */
+export const SourcesCountResponseSchema = z.object({
+  count: z.number(),
+});
+
+export type SourcesCountResponse = z.infer<typeof SourcesCountResponseSchema>;
+
 export const CatalogResponseSchema = z.object({
   items: z.array(TitleSchema),
   page: z.number(),

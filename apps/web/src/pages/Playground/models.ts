@@ -14,6 +14,14 @@ export type PlaygroundTask = {
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
   {
+    path: ROUTE_PATHS.PLAYGROUND_ADULT_CONTENT,
+    title: 'Контент 18+',
+    description:
+      'Две настройки 18+ живут независимо и пересказывают друг друга — как связать их в одну с вложенной, назвать и показать, как выглядят размытые обложки и закрытая страница.',
+    createdAt: '2026-10-01',
+    decision: 'R3 + P3 + F1b + B1 + M1 + S0',
+  },
+  {
     path: ROUTE_PATHS.PLAYGROUND_THEME_PICKER,
     title: 'Выбор темы',
     description:

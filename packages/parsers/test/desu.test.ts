@@ -1,6 +1,6 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { FILTER_TYPE, TITLE_STATE, TITLE_TYPE } from '@tanuki/contracts';
+import { CONTENT_RATING, FILTER_TYPE, TITLE_STATE, TITLE_TYPE } from '@tanuki/contracts';
 import { createDesuParser, DESU_FILTER_GROUP } from '../src/sources/desu';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -153,6 +153,10 @@ const setUpFixtures = (): FakeHttpClient => {
     (url) => url.startsWith(`https://${DOMAIN}/manga/solo-leveling.123`) && !url.includes('/vol'),
     { status: 200, body: DETAILS_HTML },
   );
+  http.register((url) => url.startsWith(`https://${DOMAIN}/manga/adult-title.456`), {
+    status: 200,
+    body: DETAILS_HTML.replace('class="c-poster"', 'class="c-poster age_18_plus"'),
+  });
   http.register((url) => url.includes('/vol1/ch1/'), { status: 200, body: PAGES_HTML });
   http.register((url) => url === `https://${DOMAIN}/api/manga/123/chapters/9001`, {
     status: 200,
@@ -185,6 +189,13 @@ describe('Desu parser conformance', () => {
     expect(item!.tags.map((t) => t.title).sort()).toEqual(['Боевик', 'Фэнтези']);
     expect(item!.type).toBe(TITLE_TYPE.MANHWA);
     expect(item!.year).toBe(2018);
+  });
+
+  it('getDetails: contentRating comes off the poster age_18_plus marker, same as the catalog card', async () => {
+    const adult = await parser.getDetails('/manga/adult-title.456');
+    expect(adult.contentRating).toBe(CONTENT_RATING.ADULT);
+    const regular = await parser.getDetails('/manga/solo-leveling.123');
+    expect(regular.contentRating).toBeNull();
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {

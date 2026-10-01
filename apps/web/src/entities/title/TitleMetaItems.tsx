@@ -11,11 +11,11 @@ function TitleMetaItems({ items, gap }: Props) {
   return (
     <MidDotGroup
       gap={gap}
-      separatorProps={{ c: 'dimmed', fz: 12, lh: 1 }}
+      separatorProps={{ c: 'dimmed', fz: 12, lh: 'tight' }}
       text={{
         c: 'dimmed',
         fz: 12,
-        lh: 1,
+        lh: 'tight',
       }}
       items={items}
     />

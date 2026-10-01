@@ -8,7 +8,11 @@ import {
 import { notifications } from '@mantine/notifications';
 import type { ReactNode } from 'react';
 import { API_ERROR_CODE } from '@tanuki/contracts';
-import { ApiRequestError, isSourceAccountRequiredError } from '@/shared/api/client';
+import {
+  ApiRequestError,
+  isAdultContentHiddenError,
+  isSourceAccountRequiredError,
+} from '@/shared/api/client';
 import { readErrorMeta } from '@/shared/api/errorMeta';
 import { I18N } from '@/shared/lib/i18n';
 import { CURRENT_USER_QUERY_KEY } from '@/entities/user/hooks/useCurrentUser';
@@ -51,8 +55,11 @@ const queryClient: QueryClient = new QueryClient({
         return;
       }
       const { silentError, errorTitle } = readErrorMeta(query.meta);
-      // Закрытый источник объясняет экран QueryError с кнопкой входа — уведомление лишнее.
-      if (silentError || isSourceAccountRequiredError(error)) return;
+      // Закрытый источник и скрытый контент 18+ объясняет экран QueryError со своей кнопкой —
+      // уведомление лишнее.
+      if (silentError || isSourceAccountRequiredError(error) || isAdultContentHiddenError(error)) {
+        return;
+      }
       showErrorNotification(error, errorTitle);
     },
   }),

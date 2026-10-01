@@ -1,12 +1,18 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Put } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { SOURCE_IDS, type Source, type SourcesResponse } from '@tanuki/contracts';
+import {
+  SOURCE_IDS,
+  type Source,
+  type SourcesCountResponse,
+  type SourcesResponse,
+} from '@tanuki/contracts';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import type { SessionUser } from '../auth/session.service';
 import { NotFoundApiException } from '../common/errors';
 import {
   SourceDto,
+  SourcesCountResponseDto,
   SourcesResponseDto,
   UpdateSourceEnabledRequestDto,
   UpdateSourcesOrderRequestDto,
@@ -30,6 +36,15 @@ export class SourcesController {
   @Get()
   async list(@CurrentUser() user: SessionUser | undefined): Promise<SourcesResponse> {
     return this.sourcesService.listGroupedSources(user?.id);
+  }
+
+  // Объявлен раньше ':sourceId' — иначе «count» уйдёт туда как идентификатор источника.
+  @ApiOperation({ summary: 'Число работающих источников, включая 18+, без настроек зрителя' })
+  @ApiOkResponse({ type: SourcesCountResponseDto })
+  @Public()
+  @Get('count')
+  async count(): Promise<SourcesCountResponse> {
+    return { count: await this.sourcesService.countOkSources() };
   }
 
   @ApiParam({ name: 'sourceId', description: 'Идентификатор источника, напр. READMANGA' })

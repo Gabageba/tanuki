@@ -8,6 +8,7 @@ import {
   type TitleReadingProgressResponse,
   type UpdateReadingProgressRequest,
 } from '@tanuki/contracts';
+import { AdultContentService, isAdultSourceHidden } from '../adult-content/adult-content.service';
 import { toServerDateTime } from '../common/dates';
 import { NotFoundApiException, StorageUnavailableException } from '../common/errors';
 import { groupByBranch, normalizeChapter, titleIdOf } from '../common/normalize';
@@ -106,6 +107,7 @@ export class ReadingProgressService {
     private readonly database: DatabaseService,
     private readonly links: TitleLinksService,
     private readonly parsersClient: ParsersClientService,
+    private readonly adultContent: AdultContentService,
   ) {}
 
   /**
@@ -137,7 +139,10 @@ export class ReadingProgressService {
           .orderBy(desc(readingProgress.updatedAt)),
       [],
     );
-    const { own, linked } = splitProgressRows(rows, titleKey);
+    const { own, linked: allLinked } = splitProgressRows(rows, titleKey);
+    // Отметка с источника 18+, скрытого настройками, вела бы на источник, которого у зрителя нет.
+    const adultAccess = await this.adultContent.getAccess();
+    const linked = allLinked.filter((row) => !isAdultSourceHidden(adultAccess, row.sourceId));
 
     return {
       own: own && toReadingProgress(own),

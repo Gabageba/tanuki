@@ -21,7 +21,7 @@ function TitleScore({ rating, likes }: Props) {
   return (
     <>
       <Stack gap={4}>
-        <Text fz={12} c="terracotta" lh={1}>
+        <Text fz={12} c="terracotta" lh="tight">
           {t('score')}
         </Text>
         <Group align={isRatingEmpty ? 'center' : 'flex-end'} gap={isRatingEmpty ? 8 : 2}>
@@ -33,10 +33,10 @@ function TitleScore({ rating, likes }: Props) {
           </Text>
           {!isRatingEmpty && (
             <>
-              <Text lh={1} mb={4} fz={12} c="dimmed" ff="monospace">
+              <Text lh="tight" mb={4} fz={12} c="dimmed" ff="monospace">
                 /
               </Text>
-              <Text mb={2} c="dimmed" lh={1} ff="monospace">
+              <Text mb={2} c="dimmed" lh="tight" ff="monospace">
                 10
               </Text>
             </>

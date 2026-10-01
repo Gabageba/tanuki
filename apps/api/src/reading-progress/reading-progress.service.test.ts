@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { READING_MARK_CONFIDENCE } from '@tanuki/contracts';
+import type { AdultContentService } from '../adult-content/adult-content.service';
 import { encodeChapterId, encodeTitleId } from '../common/opaque-id';
 import type { DatabaseService } from '../database/database.service';
 import type { TitleLinksService } from '../matches/title-links.service';
@@ -119,7 +120,11 @@ describe('ReadingProgressService при недоступной базе', () => 
       }),
   } as unknown as ParsersClientService;
 
-  const service = new ReadingProgressService(unavailable, links, parsersClient);
+  const adultContent = {
+    getAccess: () => Promise.resolve({ showAdultSources: true, hideAdultTitles: false }),
+  } as unknown as AdultContentService;
+
+  const service = new ReadingProgressService(unavailable, links, parsersClient, adultContent);
   const titleId = encodeTitleId({ id: 1, url: '/title' });
 
   it('чтение отдаёт пустой прогресс, а не роняет страницу тайтла', async () => {

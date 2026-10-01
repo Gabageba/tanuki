@@ -36,7 +36,7 @@ function ProfileInfo() {
             lh={1.3}
           />
           <MidDotGroup
-            lh={1}
+            lh="tight"
             text={{ fz: 12, c: 'dimmed' }}
             items={[
               createdAt && t('inTanukiSince', { date: formatMonthYear(createdAt) }),

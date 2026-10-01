@@ -23,6 +23,7 @@ import {
   pickDefaultBranch,
   toBranchKey,
 } from '../common/normalize';
+import { AdultContentService } from '../adult-content/adult-content.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawChapter } from '../parsers-client/parsers-client.types';
 
@@ -33,6 +34,7 @@ export class CatalogService {
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly parsersClient: ParsersClientService,
+    private readonly adultContent: AdultContentService,
   ) {}
 
   async listCatalog(
@@ -63,6 +65,7 @@ export class CatalogService {
   async getTitleDetails(sourceId: string, titleId: string): Promise<TitleDetailsResponse> {
     const ref = decodeTitleId(titleId);
     const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
+    await this.adultContent.assertTitleVisible(sourceId, raw.contentRating);
     return {
       title: normalizeTitle(this.env, sourceId, raw),
       branches: computeBranches(raw.chapters ?? []),
@@ -77,6 +80,7 @@ export class CatalogService {
   ): Promise<ChaptersResponse> {
     const ref = decodeTitleId(titleId);
     const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
+    await this.adultContent.assertTitleVisible(sourceId, raw.contentRating);
     const chapters = raw.chapters ?? [];
     const targetBranch = branch === undefined ? pickDefaultBranch(chapters) : toBranchKey(branch);
     const filtered = chapters
@@ -111,6 +115,7 @@ export class CatalogService {
           this.parsersClient.getDetails(sourceId, titleRef.url),
         ]);
     const details = detailsResult.data;
+    await this.adultContent.assertTitleVisible(sourceId, details.contentRating);
 
     const siblings = (details.chapters ?? [])
       .filter((chapter) => chapter.branch === chapterRef.branch)

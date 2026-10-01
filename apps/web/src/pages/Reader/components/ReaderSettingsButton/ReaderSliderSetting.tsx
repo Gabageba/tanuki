@@ -61,7 +61,7 @@ function ReaderSliderSetting({
     <ReaderSetting
       label={label}
       right={
-        <Text lh={1} ff="monospace" c="var(--mantine-primary-color-filled)">
+        <Text lh="tight" ff="monospace" c="var(--mantine-primary-color-filled)">
           {current} {unit}
         </Text>
       }
