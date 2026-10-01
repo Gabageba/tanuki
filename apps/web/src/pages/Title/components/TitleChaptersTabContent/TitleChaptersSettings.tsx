@@ -1,7 +1,7 @@
 import { Button, Group } from '@mantine/core';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { SortAscendingIcon, SortDescendingIcon } from '@phosphor-icons/react';
+import { DownloadSimpleIcon, SortAscendingIcon, SortDescendingIcon } from '@phosphor-icons/react';
 import { SORT_DIRECTION, SortDirectionSchema, type SortDirection } from '@tanuki/contracts';
 
 function TitleChaptersSettings() {
@@ -26,15 +26,19 @@ function TitleChaptersSettings() {
   };
 
   return (
-    <Group gap="sm">
+    <Group justify="space-between" gap="sm">
       <Button
         variant="default"
+        size="xs"
         leftSection={
           direction === SORT_DIRECTION.DESC ? <SortDescendingIcon /> : <SortAscendingIcon />
         }
         onClick={handleDirectionToggle}
       >
         {direction === SORT_DIRECTION.DESC ? t('newestFirst') : t('oldestFirst')}
+      </Button>
+      <Button size="xs" leftSection={<DownloadSimpleIcon />}>
+        {t('downloadAll')}
       </Button>
     </Group>
   );

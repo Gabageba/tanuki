@@ -24,6 +24,7 @@ function SourceCard({ source }: Props) {
       className={isSourceAvailable ? styles.card : undefined}
       withBorder
       pos="relative"
+      py={6}
     >
       {!isSourceAvailable && (
         <Overlay

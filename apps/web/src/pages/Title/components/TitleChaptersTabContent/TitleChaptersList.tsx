@@ -16,6 +16,7 @@ import {
   resolveOwnMark,
 } from '@/entities/title/readingProgress';
 import ChaptersList from '@/shared/ui/ChaptersList';
+import TitleChaptersSettings from './TitleChaptersSettings';
 
 type Props = {
   titleId: string;
@@ -58,7 +59,10 @@ function TitleChaptersList({ titleId, branch }: Props) {
           ))}
         </Group>
 
-        <Card withBorder p={0} bg="transparent">
+        <Card withBorder padding={0} bg="transparent">
+          <Card.Section withBorder px="sm" py="xs">
+            <TitleChaptersSettings />
+          </Card.Section>
           <ChaptersList
             chapters={chapters}
             numbering={numbering}
