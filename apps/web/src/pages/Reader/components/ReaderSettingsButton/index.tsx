@@ -1,20 +1,12 @@
-import {
-  ActionIcon,
-  Drawer,
-  Group,
-  Paper,
-  ScrollArea,
-  Stack,
-  Text,
-  ThemeIcon,
-} from '@mantine/core';
+import { ActionIcon, Drawer, ScrollArea, Stack } from '@mantine/core';
 import {
   ArrowsHorizontalIcon,
   ArrowsOutLineHorizontalIcon,
   ArrowsOutLineVerticalIcon,
   ArrowsVerticalIcon,
   FadersHorizontalIcon,
-  InfoIcon,
+  EyeClosedIcon,
+  SkipForwardIcon,
 } from '@phosphor-icons/react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +28,7 @@ import useUpdateReaderSettings from '../../hooks/useUpdateReaderSettings';
 import useTapZonesHint from './hooks/useTapZonesHint';
 import ReaderSetting from './ReaderSetting';
 import ReaderSettingRadioGroup from './ReaderSettingRadioGroup';
+import ReaderSettingSwitch from './ReaderSettingSwitch';
 import ReaderSliderSetting from './ReaderSliderSetting';
 import ReaderTapZonePreview from './ReaderTapZonePreview';
 import ReaderTapZonesOverlay from './ReaderTapZonesOverlay';
@@ -228,16 +221,26 @@ function ReaderSettingsButton() {
               </>
             )}
 
-            <Paper withBorder p="sm" radius="md">
-              <Group gap="xs" align="flex-start" wrap="nowrap">
-                <ThemeIcon variant="light" color="gray" radius="xl">
-                  <InfoIcon />
-                </ThemeIcon>
-                <Text fz={12} c="dimmed" lh={1.3}>
-                  {t('menuHidesOnScrollTap')}
-                </Text>
-              </Group>
-            </Paper>
+            <ReaderSetting label={t('behavior')}>
+              <ReaderSettingSwitch
+                title={t('openNextChapterImmediately')}
+                description={t('withoutIntermediateScreenAtEnd')}
+                icon={<SkipForwardIcon />}
+                checked={settings.autoNextChapter}
+                onChange={(autoNextChapter) =>
+                  updateSettings.mutate({ ...settings, autoNextChapter })
+                }
+              />
+              <ReaderSettingSwitch
+                title={t('hidePanelsOnScroll')}
+                description={t('headerAndChapterBarSlideAwayWhileReading')}
+                icon={<EyeClosedIcon />}
+                checked={settings.hidePanelsOnScroll}
+                onChange={(hidePanelsOnScroll) =>
+                  updateSettings.mutate({ ...settings, hidePanelsOnScroll })
+                }
+              />
+            </ReaderSetting>
           </Stack>
         </ScrollArea>
       </Drawer>

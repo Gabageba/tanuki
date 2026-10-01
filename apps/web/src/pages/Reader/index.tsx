@@ -25,8 +25,16 @@ function Reader() {
     registerPage,
     isPinned,
     isPending,
-  } = useReaderFeed({ titleId, chapterId, readingMode: settings.readingMode });
-  const { visible, toggle } = useReaderHeaderVisibility({ ignoreScroll: isPinned });
+  } = useReaderFeed({
+    titleId,
+    chapterId,
+    readingMode: settings.readingMode,
+    autoNextChapter: settings.autoNextChapter,
+  });
+  const { visible, toggle } = useReaderHeaderVisibility({
+    ignoreScroll: isPinned,
+    hideOnScroll: settings.hidePanelsOnScroll,
+  });
   useSaveReadingProgress({ titleId, position });
 
   // Шапка и контролы говорят о главе, которую читают прямо сейчас, а не о той, с которой чтение

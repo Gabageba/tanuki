@@ -212,6 +212,8 @@ export const readerSettings = pgTable('reader_settings', {
   pageGap: integer('page_gap').notNull(),
   /** Отступ между главами в вертикальной ленте, в пикселях. */
   chapterGap: integer('chapter_gap').notNull(),
+  autoNextChapter: boolean('auto_next_chapter').notNull(),
+  hidePanelsOnScroll: boolean('hide_panels_on_scroll').notNull(),
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

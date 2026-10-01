@@ -1,13 +1,13 @@
 import { AppShell, Button, Center, EmptyState, Loader, Stack, Text } from '@mantine/core';
 import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { generatePath, Link } from 'react-router';
 import { ArrowClockwiseIcon } from '@phosphor-icons/react';
 import type { ReaderSettings } from '@tanuki/contracts';
 import { READER_READING_MODE } from '@tanuki/contracts';
 import { ApiRequestError, isNotFoundError } from '@/shared/api/client';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
 import QueryError from '@/shared/ui/QueryError';
+import ReaderChapterEnd from './ReaderChapterEnd';
+import ReaderNextChapterButton from './ReaderNextChapterButton';
 import ReaderPageImage from './ReaderPageImage';
 import ReaderPagesSkeleton from './ReaderPagesSkeleton';
 import useHorizontalReaderNavigation from '../hooks/useHorizontalReaderNavigation';
@@ -47,13 +47,14 @@ function ReaderPages({
 }: Props) {
   const { t } = useTranslation();
   const isHorizontal = settings.readingMode === READER_READING_MODE.HORIZONTAL;
-  const { goNext, goPrev } = useHorizontalReaderNavigation({
+  const { goNext, goPrev, isChapterEndShown } = useHorizontalReaderNavigation({
     enabled: isHorizontal,
     titleId,
     chapters,
     position,
     setPosition,
     prependChapter,
+    autoNextChapter: settings.autoNextChapter,
   });
 
   // В горизонтальном режиме экран делится на три зоны: края листают страницы, середина — тот же
@@ -127,8 +128,9 @@ function ReaderPages({
   );
 
   // Следующая глава подклеивается сама, так что ручной переход нужен ровно там, где автоматический
-  // не сработал: её не удалось загрузить. Настоящий переход пересоберёт ленту и запросит заново.
-  // Главы нет вовсе (404) — переходить некуда, остаётся только сказать об этом.
+  // не сработал: её не удалось загрузить. Главы нет вовсе (404) — переходить некуда, остаётся
+  // только сказать об этом. Автоматический переход выключен — подклеивать нечего, лента кончается
+  // экраном конца главы.
   const getFeedFooter = () => {
     if (!lastChapter) return null;
 
@@ -137,18 +139,16 @@ function ReaderPages({
         <Stack gap="sm" align="center">
           {getErrorText(lastChapter.error)}
           {!isNotFoundError(lastChapter.error) && (
-            <Button
-              component={Link}
-              to={generatePath(ROUTE_PATHS.READER, { titleId, chapterId: lastChapter.chapterId })}
-            >
-              {t('nextChapter')}
-            </Button>
+            <ReaderNextChapterButton titleId={titleId} chapterId={lastChapter.chapterId} />
           )}
         </Stack>
       );
     }
 
     if (lastChapter.isPending) return <Loader size="sm" />;
+    if (!settings.autoNextChapter) {
+      return <ReaderChapterEnd titleId={titleId} nextChapterId={lastChapter.nextChapterId} />;
+    }
     if (!lastChapter.nextChapterId) return <Text c="dimmed">{t('thisIsLastChapter')}</Text>;
 
     return null;
@@ -206,7 +206,10 @@ function ReaderPages({
                 settings={settings}
                 hidden={
                   isHorizontal &&
-                  !(chapter.chapterId === position.chapterId && page.index === position.pageIndex)
+                  (isChapterEndShown ||
+                    !(
+                      chapter.chapterId === position.chapterId && page.index === position.pageIndex
+                    ))
                 }
                 eager={
                   chapter.chapterId === position.chapterId ||
@@ -222,6 +225,12 @@ function ReaderPages({
           пустым экран оставлять нельзя. */}
         {isHorizontal && activeChapter?.pages.length === 0 && (
           <Center py="xl">{getActiveChapterPlaceholder()}</Center>
+        )}
+
+        {isHorizontal && isChapterEndShown && activeChapter && (
+          <Center py="xl">
+            <ReaderChapterEnd titleId={titleId} nextChapterId={activeChapter.nextChapterId} />
+          </Center>
         )}
 
         {!isHorizontal && <Center py="xl">{getFeedFooter()}</Center>}

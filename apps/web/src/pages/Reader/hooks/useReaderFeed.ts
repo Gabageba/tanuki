@@ -17,6 +17,9 @@ type Params = {
    *  переписываем мы сами. */
   chapterId: string;
   readingMode: ReaderReadingMode;
+  /** Настройка «Сразу открывать следующую главу». Выключена — лента следующую главу не
+   *  подклеивает: в конце главы читатель видит экран с переходом и уходит на неё сам. */
+  autoNextChapter: boolean;
 };
 
 /**
@@ -24,7 +27,7 @@ type Params = {
  * подклеивается снизу заранее. Поэтому и вертикальный скролл, и клик на последней странице в
  * горизонтальном режиме продолжают чтение без перезагрузки и скелетона.
  */
-function useReaderFeed({ titleId, chapterId, readingMode }: Params) {
+function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Params) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [chapterIds, setChapterIds] = useState([chapterId]);
@@ -106,6 +109,7 @@ function useReaderFeed({ titleId, chapterId, readingMode }: Params) {
   // трафик уходил бы и на тех, кто закрыл тайтл на второй странице.
   const lastChapter = chapters.at(-1);
   const isNearFeedEnd = Boolean(
+    autoNextChapter &&
     lastChapter &&
     lastChapter.chapterId === position.chapterId &&
     lastChapter.pages.length > 0 &&
