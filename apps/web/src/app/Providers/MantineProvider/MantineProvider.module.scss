@@ -39,6 +39,13 @@
   }
 }
 
+// Same hover border for `muted` as `.button`; the variable comes from `ActionIcon.vars`.
+.actionIcon {
+  &[data-variant='muted']:hover:not(:disabled, [data-disabled], [data-loading]) {
+    border-color: var(--ai-hover-bd);
+  }
+}
+
 // Unlike `Button`, `Tabs` doesn't run its colors through `variantColorResolver`, so the base
 // (non-active) look for this variant lives here too, not just the active-state tint.
 .tabsTab {

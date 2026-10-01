@@ -1,0 +1,17 @@
+// L4: the mark follows the width of its own row, not the window — so the phone frame shows the
+// compact form honestly.
+.row {
+  container-type: inline-size;
+}
+
+@container (max-width: 30rem) {
+  .full {
+    display: none;
+  }
+}
+
+@container (min-width: 30.0001rem) {
+  .compact {
+    display: none;
+  }
+}

@@ -13,13 +13,13 @@ import {
   type Source,
   type SourceAccess,
   type SourceLoginBenefit,
-  type SourceLoginRequirement,
   type SourceContentType,
   type SourcesResponse,
   type SourceStatus,
   type SourceStatusReason,
 } from '@tanuki/contracts';
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
+import { SOURCE_LOGIN_MARK, type SourceLoginMark } from './models';
 
 /**
  * /sources отдаёт группы по contentType — для поиска источника по id нужен плоский список.
@@ -55,15 +55,47 @@ export const getSourceAccessLabel = (access: SourceAccess, t: TFunction) => {
   }
 };
 
-export const getSourceLoginRequirementLabel = (
-  requirement: SourceLoginRequirement,
-  t: TFunction,
-) => {
-  switch (requirement) {
+/** Истёкшая сессия важнее требования: войти заново нужно при любом из них. */
+export const getSourceLoginMark = ({
+  access,
+  loginRequirement,
+}: Source): SourceLoginMark | null => {
+  if (access === SOURCE_ACCESS.RELOGIN_REQUIRED) return SOURCE_LOGIN_MARK.RELOGIN;
+  switch (loginRequirement) {
     case SOURCE_LOGIN_REQUIREMENT.REQUIRED:
-      return t('loginIsMandatory');
+      return SOURCE_LOGIN_MARK.REQUIRED;
     case SOURCE_LOGIN_REQUIREMENT.OPTIONAL:
+      return SOURCE_LOGIN_MARK.OPTIONAL;
+    case null:
+      return null;
+  }
+};
+
+/** Пометки, которые есть у источников, — в порядке `SOURCE_LOGIN_MARK`, для легенды. */
+export const getPresentSourceLoginMarks = (sources: Source[]) => {
+  const marks = sources.map(getSourceLoginMark);
+  return Object.values(SOURCE_LOGIN_MARK).filter((mark) => marks.includes(mark));
+};
+
+export const getSourceLoginMarkColor = (mark: SourceLoginMark) => {
+  switch (mark) {
+    case SOURCE_LOGIN_MARK.REQUIRED:
+      return 'red';
+    case SOURCE_LOGIN_MARK.OPTIONAL:
+      return 'gray';
+    case SOURCE_LOGIN_MARK.RELOGIN:
+      return STATUS_DEGRADED_COLOR;
+  }
+};
+
+export const getSourceLoginMarkLabel = (mark: SourceLoginMark, t: TFunction) => {
+  switch (mark) {
+    case SOURCE_LOGIN_MARK.REQUIRED:
+      return t('loginIsMandatory');
+    case SOURCE_LOGIN_MARK.OPTIONAL:
       return t('loginIsOptional');
+    case SOURCE_LOGIN_MARK.RELOGIN:
+      return t('reloginRequired');
   }
 };
 

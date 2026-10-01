@@ -1,7 +1,9 @@
 import { Alert, Center, Loader, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { InfoIcon } from '@phosphor-icons/react';
+import SourceLoginBadgeLegend from '@/entities/source/components/SourceLoginBadge/SourceLoginBadgeLegend';
 import useSources from '@/entities/source/hooks/useSources';
+import { getPresentSourceLoginMarks } from '@/entities/source/lib';
 import useSourceAccounts from './hooks/useSourceAccounts';
 import { groupSourcesByAccount } from './lib';
 import SourceFamilySection from './SourceFamilySection';
@@ -20,6 +22,7 @@ function ProfileSourceAccounts() {
   }
 
   const isLinkingAvailable = accounts?.isLinkingAvailable ?? false;
+  const accountGroups = groupSourcesByAccount(sources);
 
   return (
     <Stack mt="lg" gap="lg">
@@ -29,19 +32,27 @@ function ProfileSourceAccounts() {
           {t('accountLinkingNotConfigured')}
         </Alert>
       )}
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-        {groupSourcesByAccount(sources).map(({ key, title, family, sources }) => (
-          <SourceFamilySection
-            key={key}
-            title={title}
-            family={family}
-            sources={sources}
-            accounts={accounts?.items ?? []}
-            isLinkingAvailable={isLinkingAvailable}
-            isAccountsPending={isAccountsPending}
+      <Stack gap={6}>
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+          {accountGroups.map(({ key, title, family, sources }) => (
+            <SourceFamilySection
+              key={key}
+              title={title}
+              family={family}
+              sources={sources}
+              accounts={accounts?.items ?? []}
+              isLinkingAvailable={isLinkingAvailable}
+              isAccountsPending={isAccountsPending}
+            />
+          ))}
+        </SimpleGrid>
+        {/* Пока семейства в скелетоне, пояснять нечего. */}
+        {!isAccountsPending && (
+          <SourceLoginBadgeLegend
+            marks={getPresentSourceLoginMarks(accountGroups.flatMap((group) => group.sources))}
           />
-        ))}
-      </SimpleGrid>
+        )}
+      </Stack>
     </Stack>
   );
 }

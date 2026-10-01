@@ -1,4 +1,4 @@
-import { Text } from '@mantine/core';
+import { Group, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { Source } from '@tanuki/contracts';
 import SourceIcon from '@/entities/source/components/SourceIcon';
@@ -17,7 +17,14 @@ function SourceAccountRow({ source }: Props) {
   return (
     <GroupedList.Row
       icon={<SourceIcon id={source.id} title={source.title} size={32} />}
-      title={source.title}
+      title={
+        <Group gap="xs" wrap="nowrap">
+          <Text inherit truncate>
+            {source.title}
+          </Text>
+          <SourceLoginBadge source={source} />
+        </Group>
+      }
       description={
         loginBenefits.length > 0 ? (
           t('loginGives', {
@@ -31,7 +38,6 @@ function SourceAccountRow({ source }: Props) {
           </Text>
         )
       }
-      action={<SourceLoginBadge source={source} />}
     />
   );
 }
