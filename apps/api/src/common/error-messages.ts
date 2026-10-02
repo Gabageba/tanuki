@@ -33,6 +33,11 @@ const ERROR_MESSAGES_RU = {
   wrongEmailUsernameOrPassword: 'Неверная почта, имя пользователя или пароль',
   emailNotVerified: 'Почта не подтверждена',
   accountScheduledForDeletion: 'Аккаунт ожидает удаления',
+  accountBlockedUntilDate: 'Аккаунт заблокирован до {{date}}',
+  // Не точкой: дата кончается на «г.», и вышло бы «г..».
+  accountBlockedUntilDateReason: 'Аккаунт заблокирован до {{date}}, причина: {{reason}}',
+  accountBlockedForever: 'Аккаунт заблокирован навсегда',
+  accountBlockedForeverReason: 'Аккаунт заблокирован навсегда, причина: {{reason}}',
   wrongPassword: 'Неверный пароль',
   emailAlreadyRegistered: 'Эта почта уже зарегистрирована',
   usernameAlreadyTaken: 'Это имя пользователя уже занято',
@@ -79,6 +84,10 @@ const ERROR_MESSAGES_EN: Record<ErrorMessageKey, string> = {
   wrongEmailUsernameOrPassword: 'Wrong email, username or password',
   emailNotVerified: 'Email is not verified',
   accountScheduledForDeletion: 'The account is scheduled for deletion',
+  accountBlockedUntilDate: 'The account is blocked until {{date}}',
+  accountBlockedUntilDateReason: 'The account is blocked until {{date}}. Reason: {{reason}}',
+  accountBlockedForever: 'The account is blocked permanently',
+  accountBlockedForeverReason: 'The account is blocked permanently. Reason: {{reason}}',
   wrongPassword: 'Wrong password',
   emailAlreadyRegistered: 'This email is already registered',
   usernameAlreadyTaken: 'This username is already taken',
@@ -95,7 +104,18 @@ const ERROR_MESSAGES_EN: Record<ErrorMessageKey, string> = {
   internalServerError: 'Internal server error',
 };
 
-export type ErrorMessageParams = Record<string, string | number>;
+/**
+ * Дата в параметре форматируется под язык ответа: «12 октября 2026 г.», «October 12, 2026». Пробелы
+ * внутри неё неразрывные — строка не переносится между «2026» и «г.».
+ */
+export type ErrorMessageParams = Record<string, string | number | Date>;
+
+const formatParam = (value: string | number | Date, language: Language): string =>
+  value instanceof Date
+    ? new Intl.DateTimeFormat(language, { day: 'numeric', month: 'long', year: 'numeric' })
+        .format(value)
+        .replace(/\s/g, '\u00a0')
+    : String(value);
 
 const getDictionary = (language: Language): Record<ErrorMessageKey, string> => {
   switch (language) {
@@ -112,7 +132,7 @@ export const translateErrorMessage = (
   params?: ErrorMessageParams,
 ): string =>
   getDictionary(language)[key].replace(/\{\{(\w+)\}\}/g, (placeholder, name: string) =>
-    params?.[name] === undefined ? placeholder : String(params[name]),
+    params?.[name] === undefined ? placeholder : formatParam(params[name], language),
   );
 
 /**

@@ -31,6 +31,8 @@ export const API_ERROR_CODE = {
   EMAIL_NOT_VERIFIED: 'emailNotVerified',
   // Аккаунт ждёт удаления: вход возможен только с отменой удаления (LoginRequest.cancelDeletion).
   ACCOUNT_DELETION_SCHEDULED: 'accountDeletionScheduled',
+  // Аккаунт заблокирован персоналом — текст ошибки несёт срок и причину.
+  ACCOUNT_BLOCKED: 'accountBlocked',
   WRONG_PASSWORD: 'wrongPassword',
   EMAIL_TAKEN: 'emailTaken',
   USERNAME_TAKEN: 'usernameTaken',

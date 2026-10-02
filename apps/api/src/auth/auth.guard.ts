@@ -8,6 +8,7 @@ import { ENV } from '../config/env.module';
 import { setSessionCookie } from './cookie.util';
 import { SESSION_COOKIE_NAME } from './models';
 import { IS_PUBLIC_KEY } from './public.decorator';
+import { isUserBlocked } from '../users/users.util';
 import { ROLES_KEY } from './roles.decorator';
 import { SessionService } from './session.service';
 
@@ -33,9 +34,9 @@ export class AuthGuard implements CanActivate {
     const token = request.cookies[SESSION_COOKIE_NAME] as string | undefined;
     const resolved = token ? await this.sessionService.resolve(token) : null;
 
-    // Аккаунт, ждущий удаления, сессий не имеет (их отзывают при запросе удаления) — проверка
-    // на случай, если какая-то всё же пережила запрос.
-    if (!resolved || resolved.user.deletionScheduledAt) {
+    // Аккаунт, ждущий удаления или заблокированный, сессий не имеет (их отзывают тем же
+    // запросом) — проверка на случай, если какая-то всё же пережила его.
+    if (!resolved || resolved.user.deletionScheduledAt || isUserBlocked(resolved.user)) {
       if (isPublic) return true;
       throw new UnauthorizedApiException();
     }

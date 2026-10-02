@@ -148,6 +148,13 @@
       "when": 1790859634690,
       "tag": "0020_lively_paibok",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790922674287,
+      "tag": "0021_worthless_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

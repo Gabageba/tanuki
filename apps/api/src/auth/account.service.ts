@@ -20,7 +20,7 @@ import { emailTokens, users } from '../database/schema';
 import { MailService } from '../mail/mail.service';
 import { RATE_LIMIT } from '../rate-limit/models';
 import { RateLimitService } from '../rate-limit/rate-limit.service';
-import { toCurrentUser } from '../users/users.util';
+import { assertNotBlocked, toCurrentUser } from '../users/users.util';
 import type { AuthResult } from './auth.service';
 import { hashEmailCode, maskEmail, normalizeEmail } from './email.util';
 import {
@@ -287,6 +287,8 @@ export class AccountService {
       throw new StorageUnavailableException();
     }
 
+    // Удаление отменено в любом случае, но войти заблокированный всё равно не может.
+    assertNotBlocked(user);
     const session = await this.sessionService.create(user.id, false, meta);
     return { user: toCurrentUser(user), token: session.token, remember: session.remember };
   }
