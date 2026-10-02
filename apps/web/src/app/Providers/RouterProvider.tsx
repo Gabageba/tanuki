@@ -9,7 +9,7 @@ import RequireAuth from '@/app/RequireAuth';
 import RequireStaff from '@/app/RequireStaff';
 import GuestOnly from '@/app/GuestOnly';
 import RouteError from '@/app/RouteError';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
+import { MANAGEMENT_INVITES_PATH, ROUTE_PATHS } from '@/shared/lib/routes';
 import SearchPage from '@/pages/Search/SearchPage';
 import Sources from '@/pages/Sources';
 import SourcesHealth from '@/pages/SourcesHealth';
@@ -26,7 +26,7 @@ import RevertEmailChange from '@/pages/RevertEmailChange';
 import CancelAccountDeletion from '@/pages/CancelAccountDeletion';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
-import Invites from '@/pages/Invites';
+import Management from '@/pages/Management';
 import Terms from '@/pages/Terms';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import Profile from '@/pages/Profile';
@@ -94,8 +94,12 @@ const router = createBrowserRouter([
                 element: <RequireStaff />,
                 children: [
                   {
+                    path: ROUTE_PATHS.MANAGEMENT,
+                    element: <Management />,
+                  },
+                  {
                     path: ROUTE_PATHS.INVITES,
-                    element: <Invites />,
+                    element: <Navigate to={MANAGEMENT_INVITES_PATH} replace />,
                   },
                 ],
               },

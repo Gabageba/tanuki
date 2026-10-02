@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { Button, Divider, Drawer, Stack, Text } from '@mantine/core';
-import { FlaskIcon, GearSixIcon, ListIcon, SignOutIcon, TicketIcon } from '@phosphor-icons/react';
+import { FlaskIcon, GearSixIcon, ListIcon, SignOutIcon, UserGearIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { isStaffRole } from '@tanuki/contracts';
@@ -62,14 +62,14 @@ function MobileMenuButton({ isOpened, isActive, setIsOpened }: Props) {
                 className={styles.switcherOption}
                 onClick={() => {
                   setIsOpened(false);
-                  navigate(ROUTE_PATHS.INVITES);
+                  navigate(ROUTE_PATHS.MANAGEMENT);
                 }}
                 variant="tile"
                 justify="flex-start"
                 size="md"
-                leftSection={<TicketIcon />}
+                leftSection={<UserGearIcon />}
               >
-                {t('invites')}
+                {t('management')}
               </Button>
             </>
           )}

@@ -1,5 +1,5 @@
 import { Avatar as MantineAvatar, Menu } from '@mantine/core';
-import { FlaskIcon, GearSixIcon, SignOutIcon, TicketIcon, UserIcon } from '@phosphor-icons/react';
+import { FlaskIcon, GearSixIcon, SignOutIcon, UserGearIcon, UserIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { isStaffRole } from '@tanuki/contracts';
@@ -32,8 +32,8 @@ function Avatar() {
           {t('profile')}
         </Menu.Item>
         {isStaffRole(user?.role) && (
-          <Menu.Item component={Link} to={ROUTE_PATHS.INVITES} leftSection={<TicketIcon />}>
-            {t('invites')}
+          <Menu.Item component={Link} to={ROUTE_PATHS.MANAGEMENT} leftSection={<UserGearIcon />}>
+            {t('management')}
           </Menu.Item>
         )}
         {import.meta.env.DEV && (

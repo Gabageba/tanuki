@@ -22,6 +22,7 @@ import ResendVerificationButton from '@/entities/user/ResendVerificationButton';
 import useLogin from '@/entities/user/hooks/useLogin';
 import { setPendingLogin } from '@/entities/user/pendingLogin';
 import AuthFormLayout from '@/shared/ui/AuthFormLayout';
+import FormErrorAlert from '@/shared/ui/FormErrorAlert';
 
 type FormValues = {
   login: string;
@@ -35,6 +36,8 @@ function Login() {
   const [searchParams] = useSearchParams();
   const login = useLogin();
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  // Срок и причина блокировки — текст с сервера уже на языке интерфейса.
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     initialValues: { login: '', password: '', remember: false },
@@ -46,6 +49,7 @@ function Login() {
 
   const handleSubmit = form.onSubmit((values) => {
     setUnverifiedEmail(null);
+    setBlockedMessage(null);
     login.mutate(values, {
       onSuccess: () => {
         const redirect = searchParams.get('redirect');
@@ -57,6 +61,10 @@ function Login() {
         if (error instanceof ApiRequestError) {
           if (error.code === API_ERROR_CODE.EMAIL_NOT_VERIFIED) {
             setUnverifiedEmail(values.login);
+            return;
+          }
+          if (error.code === API_ERROR_CODE.ACCOUNT_BLOCKED) {
+            setBlockedMessage(error.message);
             return;
           }
           if (error.code === API_ERROR_CODE.ACCOUNT_DELETION_SCHEDULED) {
@@ -94,6 +102,7 @@ function Login() {
 
         <Stack w="100%" align="center">
           <Stack gap="sm" w="100%">
+            <FormErrorAlert error={blockedMessage} />
             <TextInput
               autoComplete="username"
               {...form.getInputProps('login')}
