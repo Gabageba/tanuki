@@ -10,6 +10,7 @@ import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
 import SourcesSetup from './SourcesSetup';
 import ThemePicker from './ThemePicker';
+import UsersAdmin from './UsersAdmin';
 
 export type PlaygroundTask = {
   /** Адрес страницы внутри песочницы: `/playground/<slug>`. */
@@ -26,6 +27,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'users-admin',
+    Component: UsersAdmin,
+    title: 'Управление пользователями',
+    description:
+      'Пагинированная таблица всех пользователей для админа и модераторов — где ей жить, какие столбцы, как подать смену роли, блокировку на срок и удаление с разными правами.',
+    createdAt: '2026-10-02',
+    decision: 'P3 + T3 + A3 + B2 + D3 + F1 + M1',
+  },
   {
     slug: 'branch-controls',
     Component: BranchControls,
