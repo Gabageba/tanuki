@@ -25,6 +25,50 @@
   `ActionIcon` is exempt — it is an icon already. A modal's cancel button is exempt too: the
   «Отмена» `Button` that closes a `Modal` carries no `leftSection` icon. Every other button in
   the modal — the confirm action included — keeps its icon.
+- No `renderXxx()` helpers inside a component that switch between whole branches of markup
+  (skeleton / empty / list). Such a branch is its own component in its own file
+  (`renderList()` → `UsersList`).
+- Icons are always taken from `@phosphor-icons/react` as components, never copied in as raw SVG
+  paths. When an icon has to be tinted in parts, layer library icons (e.g. two `CaretUpDownIcon`s,
+  each cut to its half with `clip-path`) instead of redrawing it.
+
+## UI patterns
+
+- **Tabs** are built from a `TABS` array in `useMemo` — `{ id, title, icon, content }` — that is
+  mapped once into `Tabs.Tab` and once into `Tabs.Panel` (see `pages/Settings/index.tsx`). No
+  hand-written `Tabs.Tab`/`Tabs.Panel` pairs.
+- **Loading** of a block or tab is a skeleton that repeats the block's layout (a sibling
+  `XxxSkeleton.tsx`, built from `Skeleton` and `TextSkeleton`), never a centered `Loader`.
+- **Errors** of a query inside a page block or tab are not rendered: the global handler in
+  `QueryClientProvider` already shows a notification. `QueryError` is only for the page's main
+  query and is rendered by `PageLayout.Content`, not by blocks. A block whose query failed shows
+  its empty state.
+- **Empty state** is Mantine `EmptyState` (`title`, `description`, `icon`; buttons go into
+  `EmptyState.Actions`), never a hand-made `Stack` of `ThemeIcon` + `Text`.
+- **Tags** — `Badge` and `Pill` — use `variant="muted"` (registered in the theme: tint, border and
+  text in one color), not `light`/`filled`.
+- **User avatars** look the same everywhere as in the header: `color={PRIMARY_COLOR}`,
+  `variant="outline"`, never `color="initials"`.
+- **Pagination** of a list is the shared `ListPagination` (`shared/ui/ListPagination.tsx`): the
+  «11–20 из 23» counter plus pages, and nothing at all when everything fits on one page.
+- **Multi-choice filters** use the shared `CompactMultiSelect` — the first chosen item plus a
+  `+N` pill, so the field never grows in height. Empty selection means "no restriction"; there is
+  no fake «Все» option inside the list. Options look the same as in `Select` (theme
+  `renderOption` + `selectableOption`).
+
+## Forms
+
+- Every form — modal ones included — is `useForm` from `@mantine/form` plus `<form onSubmit>`,
+  with the confirm button `type="submit"`. No `useState` per field. Invalid input is reported by
+  the form's `validate` under the field, not by a disabled submit button. The one exception is a
+  type-to-confirm field (typing the username before deleting): there the button stays disabled
+  until the text matches.
+- Fields carry no `label`: the caption goes into `placeholder`, the field's meaning into its
+  `leftSection` icon. Where the placeholder can't be seen (a `Select` that always has a value, a
+  native date input), keep the caption in `aria-label`.
+- Optionality is never shown with a placeholder like «Необязательно». Say it in the modal's text
+  instead («Причину, если укажете, увидят…»).
+- Explanatory text in a modal is `<Text c="dimmed" fz={13}>`.
 
 ## Types
 
@@ -165,6 +209,10 @@
 
 - Always send dates and times in the standard server format: `YYYY-MM-DD`, or
   `YYYY-MM-DDTHH:MM:SSZ` when the time is needed.
+- A worded date inside a sentence never breaks across lines: the spaces inside it are
+  non-breaking (`12 октября 2026 г.` — the server's `formatParam` does it for error messages).
+- A Russian date ends with «г.», so the text right after it never starts with a period — that
+  would give «г..». Join with a comma instead («до 3 октября 2026 г., причина: …»).
 
 ## Localization
 
