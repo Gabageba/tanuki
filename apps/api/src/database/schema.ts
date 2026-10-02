@@ -142,6 +142,22 @@ export const users = pgTable(
      */
     deletionScheduledAt: timestamp('deletion_scheduled_at', { withTimezone: true }),
 
+    /**
+     * Блокировка персоналом: blockedAt — когда заблокировали, null — не заблокирован. blockedUntil
+     * null при стоящем blockedAt — навсегда; прошедший blockedUntil значит, что блокировка
+     * кончилась сама, поля при этом не чистятся (см. users/managed-users.mapper.ts).
+     */
+    blockedAt: timestamp('blocked_at', { withTimezone: true }),
+    blockedUntil: timestamp('blocked_until', { withTimezone: true }),
+    blockReason: text('block_reason'),
+
+    /**
+     * Последний вход или активность — пишется при создании сессии и при её продлении (не чаще
+     * раза в час). Живёт здесь, а не только в sessions: сессии удаляются при выходе и блокировке,
+     * а давность входа должна это пережить. null — ни разу не входил.
+     */
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

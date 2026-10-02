@@ -10,8 +10,8 @@ import {
 } from '@tanuki/contracts';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
-import { getUserRoleLabel } from '../models';
-import useCreateInvite from '../hooks/useCreateInvite';
+import { getUserRoleLabel } from '../../models';
+import useCreateInvite from './hooks/useCreateInvite';
 
 const inviteLinkOf = (code: string) =>
   `${window.location.origin}${ROUTE_PATHS.REGISTER}?invite=${code}`;
@@ -79,7 +79,11 @@ function CreateInviteButton() {
                 },
               }}
             />
-            <Button onClick={handleCreate} loading={createInvite.isPending}>
+            <Button
+              leftSection={<PlusIcon size={16} />}
+              onClick={handleCreate}
+              loading={createInvite.isPending}
+            >
               {t('createInvite')}
             </Button>
           </Stack>

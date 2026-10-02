@@ -44,6 +44,10 @@ export class SessionService {
         userAgent: meta.userAgent,
         ip: meta.ip,
       });
+      await this.database.db
+        .update(users)
+        .set({ lastSeenAt: new Date() })
+        .where(eq(users.id, userId));
       return true;
     }, false);
 
@@ -82,6 +86,11 @@ export class SessionService {
         .update(sessions)
         .set({ expiresAt, lastSeenAt: new Date(now) })
         .where(eq(sessions.id, session.id));
+      // Давность входа в «Управлении» — переживает выход и блокировку, в отличие от сессий.
+      await this.database.db
+        .update(users)
+        .set({ lastSeenAt: new Date(now) })
+        .where(eq(users.id, session.userId));
       return true;
     }, false);
 

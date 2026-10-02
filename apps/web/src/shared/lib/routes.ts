@@ -17,7 +17,9 @@ export const ROUTE_PATHS = {
   REVERT_EMAIL_CHANGE: '/revert-email-change',
   CANCEL_ACCOUNT_DELETION: '/cancel-account-deletion',
   ACCOUNT_DELETION_SCHEDULED: '/account-deletion-scheduled',
+  /** Прежний адрес приглашений — перенаправляет на вкладку «Управления». */
   INVITES: '/invites',
+  MANAGEMENT: '/management',
   TERMS: '/terms',
   PRIVACY_POLICY: '/privacy',
   PLAYGROUND: '/playground',
@@ -43,6 +45,17 @@ export const SETTINGS_TABS = {
   READER: 'reader',
 } as const;
 export type SettingsTab = EnumLiteralsOf<typeof SETTINGS_TABS>;
+
+/** Вкладка «Управления» — в адресе, чтобы прежний /invites вёл сразу на приглашения. */
+export const MANAGEMENT_TAB_SEARCH_PARAM = 'tab';
+
+export const MANAGEMENT_TABS = {
+  USERS: 'users',
+  INVITES: 'invites',
+} as const;
+export type ManagementTab = EnumLiteralsOf<typeof MANAGEMENT_TABS>;
+
+export const MANAGEMENT_INVITES_PATH = `${ROUTE_PATHS.MANAGEMENT}?${MANAGEMENT_TAB_SEARCH_PARAM}=${MANAGEMENT_TABS.INVITES}`;
 
 /** Вкладка профиля — в адресе, чтобы на «Аккаунты источников» можно было сослаться из других
  *  экранов. */

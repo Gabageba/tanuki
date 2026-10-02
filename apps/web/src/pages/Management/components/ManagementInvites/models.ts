@@ -1,9 +1,6 @@
 import type { TFunction } from 'i18next';
-import { INVITE_STATUS, USER_ROLE, type InviteStatus, type UserRole } from '@tanuki/contracts';
+import { INVITE_STATUS, type InviteStatus } from '@tanuki/contracts';
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
-import type useInvites from './hooks/useInvites';
-
-export type InvitesQuery = ReturnType<typeof useInvites>;
 
 export const getInviteStatusLabel = (status: InviteStatus, t: TFunction) => {
   switch (status) {
@@ -28,16 +25,5 @@ export const getInviteStatusColor = (status: InviteStatus) => {
       return STATUS_DEGRADED_COLOR;
     case INVITE_STATUS.REVOKED:
       return STATUS_DOWN_COLOR;
-  }
-};
-
-export const getUserRoleLabel = (role: UserRole, t: TFunction) => {
-  switch (role) {
-    case USER_ROLE.ADMIN:
-      return t('admin');
-    case USER_ROLE.MODERATOR:
-      return t('moderator');
-    case USER_ROLE.USER:
-      return t('user');
   }
 };

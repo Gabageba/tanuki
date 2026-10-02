@@ -329,9 +329,15 @@ GET  /auth/me     → CurrentUser
 POST /auth/forgot-password { email, language } → 204, ответ не выдаёт, есть ли аккаунт  @Public()
 POST /auth/reset-password  { token, password } → CurrentUser, отзывает старые сессии   @Public()
 
-GET    /invites          → { items: Invite[] }                    только role=admin
-POST   /invites  { role } → Invite & { code }, код виден только тут   только role=admin
-DELETE /invites/:id      → 204                                    только role=admin
+GET    /invites          → { items: Invite[] }                    admin, moderator
+POST   /invites  { role } → Invite & { code }, код виден только тут   admin, moderator (moderator — только role=user)
+DELETE /invites/:id      → 204                                    admin, moderator
+
+GET    /users?page&query&role&status → { items: ManagedUser[], total }   admin, moderator
+PATCH  /users/:id/role  { role }     → ManagedUser                       только admin
+POST   /users/:id/block { until, reason } → ManagedUser                  admin; moderator — только role=user
+DELETE /users/:id/block              → ManagedUser                       admin; moderator — только role=user
+DELETE /users/:id                    → 204, удаляет сразу               только admin
 ```
 
 Детали:
@@ -356,7 +362,18 @@ DELETE /invites/:id      → 204                                    только
 - Письма уходят через SMTP (`nodemailer`); без `SMTP_HOST` в env ссылка вместо отправки
   пишется в лог API — этого достаточно для локальной разработки. В dev-докере поднят Mailpit
   (UI на `:8025`).
-- Реализация: `apps/api/src/auth`, `apps/api/src/invites`, `apps/api/src/mail`,
+- **Управление пользователями** (страница «Управление» → «Пользователи»): по 10 строк,
+  новые сверху; `query` ищет подстроку в имени и почте, `status` — один из `USER_STATUS`.
+  Статус не хранится, а выводится по приоритету: действующая блокировка → удаление ждёт →
+  почта не подтверждена → активен. Права — `getUserManagementPermissions` из контрактов: себя
+  и админа не меняет никто, роль `admin` не выдаётся (`role` — только `user`/`moderator`); на
+  чужое действие — 403 `FORBIDDEN`. `until` блокировки — `YYYY-MM-DDTHH:MM:SSZ` в будущем или
+  `null` (навсегда); блокировка сразу отзывает все сессии. Заблокированному вход отвечает 403
+  `ACCOUNT_BLOCKED` — текст называет срок и причину; то же при подтверждении почты, сбросе
+  пароля и отмене удаления по ссылке, а уцелевшую сессию отвергает `AuthGuard`. Блокировка со
+  сроком кончается сама, без крона. «Вход» в таблице — `users.lastSeenAt`, пишется при
+  создании сессии и её продлении.
+- Реализация: `apps/api/src/auth`, `apps/api/src/invites`, `apps/api/src/users`, `apps/api/src/mail`,
   `apps/api/src/rate-limit`; таблицы — `users`, `sessions`, `invites`, `email_tokens` в
   `apps/api/src/database/schema.ts`.
 

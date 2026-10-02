@@ -8,6 +8,7 @@ import type {
   MantineColor,
   MantineColorSchemeManager,
   MantineTheme,
+  PillProps,
 } from '@mantine/core';
 import {
   Alert,
@@ -88,7 +89,7 @@ const createAppTheme = (t: TFunction) =>
             border: `${rem(1)} solid var(--mantine-color-default)`,
           };
         // Полупрозрачный тон `color` с обводкой того же цвета — общий для `Button`, `ActionIcon`,
-        // `ThemeIcon` и `Alert`. На hover у кнопки чуть плотнее (граница — через `--button-hover-bd`
+        // `ThemeIcon`, `Alert` и `Badge`. На hover у кнопки чуть плотнее (граница — через `--button-hover-bd`
         // в `Button.vars` и `--ai-hover-bd` в `ActionIcon.vars`).
         case 'muted': {
           const color = input.color || PRIMARY_COLOR;
@@ -211,10 +212,22 @@ const createAppTheme = (t: TFunction) =>
           color: PRIMARY_COLOR,
         },
       },
+      // `muted` — тот же тон, что у `Badge`/`Button`: у Pill нет `color` и `variantColorResolver`,
+      // поэтому цвета задаются стилями и всегда акцентные.
       Pill: {
         defaultProps: {
           radius: 'md',
         },
+        styles: (_theme: MantineTheme, { variant }: PillProps) =>
+          variant === 'muted'
+            ? {
+                root: {
+                  backgroundColor: getMutedVariantBackground(PRIMARY_COLOR),
+                  color: `var(--mantine-color-${PRIMARY_COLOR}-light-color)`,
+                  border: `${rem(1)} solid ${getMutedVariantBorderColor(PRIMARY_COLOR)}`,
+                },
+              }
+            : {},
       },
       SegmentedControl: {
         defaultProps: {
@@ -241,6 +254,17 @@ const createAppTheme = (t: TFunction) =>
           innerLabel: {
             display: 'flex',
           },
+        },
+      },
+      // Тот же вид пунктов, что у Select: галочка справа и подсветка выбранных.
+      MultiSelect: {
+        defaultProps: {
+          renderOption: (data: ComboboxLikeRenderOptionInput<ComboboxItem>) => (
+            <SelectOption {...data} />
+          ),
+        },
+        classNames: {
+          option: 'selectableOption',
         },
       },
       Select: {

@@ -239,6 +239,28 @@ export class AccountDeletionScheduledException extends ApiException {
   }
 }
 
+/** Аккаунт заблокирован персоналом — текст называет срок и причину, если она указана. */
+export class AccountBlockedException extends ApiException {
+  constructor(until: Date | null, reason: string | null) {
+    super(
+      API_ERROR_CODE.ACCOUNT_BLOCKED,
+      getAccountBlockedMessageKey(until, reason),
+      HttpStatus.FORBIDDEN,
+      {
+        params: { ...(until ? { date: until } : {}), ...(reason ? { reason } : {}) },
+      },
+    );
+  }
+}
+
+const getAccountBlockedMessageKey = (
+  until: Date | null,
+  reason: string | null,
+): ErrorMessageKey => {
+  if (until) return reason ? 'accountBlockedUntilDateReason' : 'accountBlockedUntilDate';
+  return reason ? 'accountBlockedForeverReason' : 'accountBlockedForever';
+};
+
 /** Текущий пароль не подошёл при действии, которое его подтверждает (смена почты, удаление…). */
 export class WrongPasswordException extends ApiException {
   constructor() {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LanguageSchema } from './language';
+import { SORT_DIRECTION, SortDirectionSchema } from './source';
 import type { EnumLiteralsOf } from './utils';
 
 export const USER_ROLE = {
@@ -11,14 +12,15 @@ export type UserRole = EnumLiteralsOf<typeof USER_ROLE>;
 
 export const UserRoleSchema = z.enum(USER_ROLE);
 
-/** admin и moderator — единственный админ (создаётся CLI-скриптом) отличается от модератора
- *  только правом управлять ролями, которое ещё не реализовано. */
+/** admin и moderator — персонал, им открыта страница «Управление». Что именно каждый может сделать
+ *  с другим аккаунтом, решает getUserManagementPermissions. */
 export const isStaffRole = (role: UserRole | undefined): boolean =>
   role === USER_ROLE.ADMIN || role === USER_ROLE.MODERATOR;
 
 /**
- * Роли, которые можно выдать инвайтом через /invites. ADMIN сюда не входит — единственный админ
- * заводится CLI-скриптом (см. apps/api/scripts/create-invite.ts), через API его выпустить нельзя.
+ * Роли, которые можно выдать инвайтом через /invites или сменой роли в «Управлении». ADMIN сюда
+ * не входит — единственный админ заводится CLI-скриптом (см. apps/api/scripts/create-invite.ts),
+ * через API его выпустить нельзя.
  */
 export const INVITABLE_ROLE = {
   MODERATOR: USER_ROLE.MODERATOR,
@@ -206,3 +208,126 @@ export const InviteCheckResponseSchema = z.object({
   valid: z.boolean(),
 });
 export type InviteCheckResponse = z.infer<typeof InviteCheckResponseSchema>;
+
+/**
+ * Состояние аккаунта в «Управлении». Не хранится колонкой — выводится из полей users, причём по
+ * приоритету: действующая блокировка перекрывает запрошенное удаление, то — неподтверждённую почту.
+ */
+export const USER_STATUS = {
+  ACTIVE: 'active',
+  UNVERIFIED: 'unverified',
+  BLOCKED: 'blocked',
+  DELETION_SCHEDULED: 'deletionScheduled',
+} as const;
+export type UserStatus = EnumLiteralsOf<typeof USER_STATUS>;
+export const UserStatusSchema = z.enum(USER_STATUS);
+
+/** Сколько строк на странице таблицы пользователей. */
+export const MANAGED_USERS_PAGE_SIZE = 10;
+
+/** Длина причины блокировки — её показывают в таблице и на экране входа. */
+export const BLOCK_REASON_MAX_LENGTH = 500;
+
+export const ManagedUserSchema = z.object({
+  id: z.string(),
+  username: UsernameSchema,
+  email: EmailSchema,
+  role: UserRoleSchema,
+  status: UserStatusSchema,
+  avatarUrl: z.string().nullable(),
+  /** До какого момента блокировка — `YYYY-MM-DDTHH:MM:SSZ`; null у бессрочной и у незаблокированных. */
+  blockedUntil: z.string().nullable(),
+  blockReason: z.string().nullable(),
+  /** Когда аккаунт удалится, если человек сам запросил удаление. */
+  deletionScheduledAt: z.string().nullable(),
+  /** null — приглашение выпустил CLI-скрипт или пригласивший уже удалён. */
+  invitedByUsername: z.string().nullable(),
+  createdAt: z.string(),
+  /** Последний вход или активность; null — ни разу не входил. */
+  lastSeenAt: z.string().nullable(),
+});
+export type ManagedUser = z.infer<typeof ManagedUserSchema>;
+
+/** Столбец, по которому сортируется таблица пользователей. */
+export const MANAGED_USERS_SORT = {
+  USERNAME: 'username',
+  STATUS: 'status',
+  INVITED_BY: 'invitedBy',
+  CREATED_AT: 'createdAt',
+} as const;
+export type ManagedUsersSort = EnumLiteralsOf<typeof MANAGED_USERS_SORT>;
+
+export const ManagedUsersSortSchema = z.enum(MANAGED_USERS_SORT);
+
+/** Повторённый `?role=a&role=b` приходит массивом, одиночный `?role=a` — строкой: приводим к массиву. */
+const queryArray = <T extends z.ZodType>(schema: T) =>
+  z
+    .preprocess((value) => (value === undefined ? undefined : [value].flat()), z.array(schema))
+    .optional();
+
+export const ManagedUsersQuerySchema = z.object({
+  /** С единицы. */
+  page: z.coerce.number().int().min(1).default(1),
+  /** Подстрока имени или почты. */
+  query: z.string().trim().max(100).optional(),
+  /** Любая из ролей; пусто — все. */
+  role: queryArray(UserRoleSchema),
+  /** Любой из статусов; пусто — все. */
+  status: queryArray(UserStatusSchema),
+  /** По умолчанию — сначала новые. */
+  sort: ManagedUsersSortSchema.default(MANAGED_USERS_SORT.CREATED_AT),
+  direction: SortDirectionSchema.default(SORT_DIRECTION.DESC),
+});
+export type ManagedUsersQuery = z.infer<typeof ManagedUsersQuerySchema>;
+
+export const ManagedUsersResponseSchema = z.object({
+  items: z.array(ManagedUserSchema),
+  /** Сколько всего подходит под фильтры — для счётчика и пагинации. */
+  total: z.number(),
+});
+export type ManagedUsersResponse = z.infer<typeof ManagedUsersResponseSchema>;
+
+export const ChangeUserRoleRequestSchema = z.object({
+  role: InvitableRoleSchema,
+});
+export type ChangeUserRoleRequest = z.infer<typeof ChangeUserRoleRequestSchema>;
+
+export const BlockUserRequestSchema = z.object({
+  /** `YYYY-MM-DDTHH:MM:SSZ`; null — навсегда. */
+  until: z.string().datetime().nullable(),
+  reason: z.string().trim().max(BLOCK_REASON_MAX_LENGTH).nullable(),
+});
+export type BlockUserRequest = z.infer<typeof BlockUserRequestSchema>;
+
+export type UserManagementPermissions = {
+  canChangeRole: boolean;
+  canBlock: boolean;
+  canDelete: boolean;
+};
+
+type UserManagementSide = {
+  id: string;
+  role: UserRole;
+};
+
+/**
+ * Что `actor` может сделать с аккаунтом `target`. Одна функция на API (проверка) и интерфейс
+ * (какие кнопки показать): себя и админа не меняет никто; админ назначает и снимает модераторов,
+ * блокирует и удаляет; модератор только блокирует и разблокирует обычных пользователей.
+ */
+export const getUserManagementPermissions = (
+  actor: UserManagementSide,
+  target: UserManagementSide,
+): UserManagementPermissions => {
+  if (target.id === actor.id || target.role === USER_ROLE.ADMIN) {
+    return { canChangeRole: false, canBlock: false, canDelete: false };
+  }
+  switch (actor.role) {
+    case USER_ROLE.ADMIN:
+      return { canChangeRole: true, canBlock: true, canDelete: true };
+    case USER_ROLE.MODERATOR:
+      return { canChangeRole: false, canBlock: target.role === USER_ROLE.USER, canDelete: false };
+    case USER_ROLE.USER:
+      return { canChangeRole: false, canBlock: false, canDelete: false };
+  }
+};

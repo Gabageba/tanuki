@@ -1,23 +1,35 @@
-import { Badge, Button, Table } from '@mantine/core';
+import { Badge, Button, EmptyState, Table } from '@mantine/core';
+import { TicketIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { INVITE_STATUS } from '@tanuki/contracts';
 import Mdash from '@/shared/ui/Mdash';
-import PageLayout from '@/shared/ui/PageLayout';
 import useDateFormat from '@/shared/hooks/useDateFormat';
-import {
-  getInviteStatusColor,
-  getInviteStatusLabel,
-  getUserRoleLabel,
-  type InvitesQuery,
-} from '../models';
-import useRevokeInvite from '../hooks/useRevokeInvite';
+import { getUserRoleLabel } from '../../models';
+import { getInviteStatusColor, getInviteStatusLabel } from './models';
+import InvitesTableSkeleton from './InvitesTableSkeleton';
+import useInvites from './hooks/useInvites';
+import useRevokeInvite from './hooks/useRevokeInvite';
 
-function InvitesTable() {
+/** Вкладка «Приглашения» — прежняя страница /invites как есть. */
+function ManagementInvites() {
   const { t } = useTranslation();
   const { formatDateNumeric } = useDateFormat();
+  const invites = useInvites();
   const revokeInvite = useRevokeInvite();
-  const { data } = PageLayout.useQuery<InvitesQuery>();
-  const items = data?.items ?? [];
+
+  if (invites.isPending) {
+    return <InvitesTableSkeleton />;
+  }
+
+  if (!invites.data?.items.length) {
+    return (
+      <EmptyState
+        title={t('noInvitesYet')}
+        description={t('createInviteToInviteSomeone')}
+        icon={<TicketIcon />}
+      />
+    );
+  }
 
   return (
     <Table.ScrollContainer minWidth={720}>
@@ -33,11 +45,11 @@ function InvitesTable() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {items.map((invite) => (
+          {invites.data.items.map((invite) => (
             <Table.Tr key={invite.id}>
               <Table.Td>{getUserRoleLabel(invite.role, t)}</Table.Td>
               <Table.Td>
-                <Badge color={getInviteStatusColor(invite.status)} variant="light">
+                <Badge color={getInviteStatusColor(invite.status)} variant="muted">
                   {getInviteStatusLabel(invite.status, t)}
                 </Badge>
               </Table.Td>
@@ -50,6 +62,7 @@ function InvitesTable() {
                     variant="subtle"
                     color="red"
                     size="xs"
+                    leftSection={<XIcon />}
                     loading={revokeInvite.isPending}
                     onClick={() => revokeInvite.mutate(invite.id)}
                   >
@@ -65,4 +78,4 @@ function InvitesTable() {
   );
 }
 
-export default InvitesTable;
+export default ManagementInvites;

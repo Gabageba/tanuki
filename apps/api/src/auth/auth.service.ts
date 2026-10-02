@@ -19,7 +19,7 @@ import { DatabaseService } from '../database/database.service';
 import { getUniqueViolation } from '../database/pg-error.util';
 import { emailTokens, invites, users } from '../database/schema';
 import { MailService } from '../mail/mail.service';
-import { toCurrentUser } from '../users/users.util';
+import { assertNotBlocked, toCurrentUser } from '../users/users.util';
 import { normalizeEmail } from './email.util';
 import { EMAIL_TOKEN_PURPOSE, EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from './models';
 import { PasswordService } from './password.service';
@@ -198,6 +198,8 @@ export class AuthService {
       throw new InvalidCredentialsException();
     }
     if (!user.emailVerifiedAt) throw new EmailNotVerifiedException();
+    // Тоже после пароля — иначе срок и причина блокировки уходили бы любому, кто знает логин.
+    assertNotBlocked(user);
 
     // Проверяется после пароля: иначе ошибка выдавала бы, что аккаунт с таким логином есть.
     if (user.deletionScheduledAt) {
@@ -334,6 +336,8 @@ export class AuthService {
       return row ?? null;
     }, null);
     if (!user) throw new StorageUnavailableException();
+    // Подтверждение почты и сброс пароля по ссылке не должны впускать заблокированного.
+    assertNotBlocked(user);
 
     const session = await this.sessionService.create(user.id, remember, meta);
     return { user: toCurrentUser(user), token: session.token, remember: session.remember };
