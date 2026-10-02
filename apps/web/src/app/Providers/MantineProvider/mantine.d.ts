@@ -1,4 +1,11 @@
-import type { AlertVariant, ButtonVariant, MantineSize, TabsVariant } from '@mantine/core';
+import type {
+  AlertVariant,
+  BadgeVariant,
+  ButtonVariant,
+  PillVariant,
+  MantineSize,
+  TabsVariant,
+} from '@mantine/core';
 
 /**
  * Adds the `tile` variant registered in `THEME.components.Button` to Mantine's own
@@ -22,6 +29,12 @@ type ExtendedTabsVariant = TabsVariant | 'tile';
  */
 type ExtendedAlertVariant = AlertVariant | 'muted';
 
+/** Same `muted` for `Badge` — tint, border and text all in `color`. */
+type ExtendedBadgeVariant = BadgeVariant | 'muted';
+
+/** Same `muted` for `Pill`, set in `THEME.components.Pill.styles` — always in the primary color. */
+type ExtendedPillVariant = PillVariant | 'muted';
+
 declare module '@mantine/core' {
   /** `tight` — плотный межстрочный интервал из `theme.lineHeights` (см. `LINE_HEIGHT_TIGHT`). */
   export interface MantineThemeSizesOverride {
@@ -32,8 +45,16 @@ declare module '@mantine/core' {
     variant?: ExtendedAlertVariant;
   }
 
+  export interface BadgeProps {
+    variant?: ExtendedBadgeVariant;
+  }
+
   export interface ButtonProps {
     variant?: ExtendedButtonVariant;
+  }
+
+  export interface PillProps {
+    variant?: ExtendedPillVariant;
   }
 
   export interface TabsProps {

@@ -1,5 +1,5 @@
 import type { AlertProps } from '@mantine/core';
-import { Alert, Group } from '@mantine/core';
+import { Alert, Box, Flex, Group } from '@mantine/core';
 import { WarningCircleIcon } from '@phosphor-icons/react';
 
 type Props = {
@@ -24,9 +24,12 @@ function FormErrorAlert({ error, ...restProps }: Props) {
         },
       }}
     >
-      <Group gap={8}>
-        <WarningCircleIcon />
-        {error}
+      {/* Иконка не уходит на отдельную строку и стоит по центру первой строки текста. */}
+      <Group gap={8} wrap="nowrap" align="flex-start">
+        <Flex h="1lh" align="center" flex="none">
+          <WarningCircleIcon />
+        </Flex>
+        <Box>{error}</Box>
       </Group>
     </Alert>
   );
