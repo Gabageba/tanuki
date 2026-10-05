@@ -9,6 +9,7 @@ import InvitesTable from './InvitesTable';
 import LoginBadge from './LoginBadge';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
+import SortKeys from './SortKeys';
 import SourcesSetup from './SourcesSetup';
 import ThemePicker from './ThemePicker';
 import UsersAdmin from './UsersAdmin';
@@ -28,6 +29,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'sort-keys',
+    Component: SortKeys,
+    title: 'Сортировка составных столбцов',
+    description:
+      'В таблицах «Управления» в ячейке по два значения, а заголовок сортирует по одному — и не видно, по какому. Как выбрать ключ в заголовке и как показать его в строках.',
+    createdAt: '2026-10-05',
+    decision: 'K2c + H0',
+  },
   {
     slug: 'invites-table',
     Component: InvitesTable,
