@@ -2,7 +2,7 @@ import { Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { INVITE_STATUS, type Invite } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
-import DrawerField from '../DrawerField';
+import DrawerField from '@/shared/ui/DrawerField';
 import RoleBadge from '../RoleBadge';
 import InvitePerson from './InvitePerson';
 import InviteStatusBadge from './InviteStatusBadge';

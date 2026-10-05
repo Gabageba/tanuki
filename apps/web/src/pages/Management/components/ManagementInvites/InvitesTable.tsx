@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { INVITES_SORT, type Invite, type InvitesSort, type SortDirection } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import RoleBadge from '../RoleBadge';
-import SortableTh from '../SortableTh';
-import SortMenuTh from '../SortMenuTh';
+import SortableTh from '@/shared/ui/SortableTh';
+import SortMenuTh from '@/shared/ui/SortMenuTh';
 import InvitePerson from './InvitePerson';
 import InviteResultCell from './InviteResultCell';
 import InviteStatusBadge from './InviteStatusBadge';
@@ -69,7 +69,7 @@ function InvitesTable({ invites, sort, direction, onSortChange, onOpen }: Props)
               <Table.Td>
                 <Stack gap={2}>
                   <InvitePerson username={invite.createdByUsername} />
-                  <Text fz="xs" c="dimmed" ff="monospace">
+                  <Text lh="tight" fz="xs" c="dimmed" ff="monospace">
                     {formatDateNumeric(invite.createdAt)}
                   </Text>
                 </Stack>

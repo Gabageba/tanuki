@@ -16,8 +16,8 @@ import {
 } from '@tanuki/contracts';
 import Mdash from '@/shared/ui/Mdash';
 import { USERS_COLUMN_WIDTH, type UserHandlers } from './models';
-import SortableTh from '../SortableTh';
-import SortMenuTh from '../SortMenuTh';
+import SortableTh from '@/shared/ui/SortableTh';
+import SortMenuTh from '@/shared/ui/SortMenuTh';
 import UserCell from './UserCell';
 import UserDatesCell from './UserDatesCell';
 import UserStatusCell from './UserStatusCell';
@@ -120,9 +120,11 @@ function UsersTable({ users, selfId, sort, direction, onSortChange, onOpen }: Pr
               </Table.Td>
               <Table.Td>
                 {user.invitedByUsername ? (
-                  <Text fz="sm">{user.invitedByUsername}</Text>
+                  <Text lh="tight" fz="sm">
+                    {user.invitedByUsername}
+                  </Text>
                 ) : (
-                  <Mdash c="dimmed" />
+                  <Mdash lh="tight" c="dimmed" />
                 )}
               </Table.Td>
               <Table.Td>

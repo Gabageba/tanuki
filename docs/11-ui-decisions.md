@@ -501,7 +501,9 @@
 `InvitesList`, `InvitesTable`, `InviteResultCell`, `InviteDrawer` + `InviteFields`,
 `RevokeInviteModal`, `CreateInviteButton` + `RoleRadioCards`, `InviteCreatedModal`, хуки запросов);
 `SortableTh`, `SortCaretsIcon`, `DrawerField` и `RoleBadge` переехали из «Пользователей» в
-`pages/Management/components`, общие для обеих вкладок. Паттерн модалок — `shared/ui/ToneModal`
+`pages/Management/components`, общие для обеих вкладок (_позже `SortableTh`, `SortCaretsIcon` и
+`DrawerField` переехали в `shared/ui` — см. [Таблица здоровья источников](#таблица-здоровья-источников)_).
+Паттерн модалок — `shared/ui/ToneModal`
 (`tone`, `icon`, `onBack` для внутренних шагов; `MODAL_TONE` и цвета — в `ToneModal/models.ts`), на
 него переведены все модалки приложения по карте выше. API — `GET /invites` с пагинацией, фильтрами и
 сортировкой, `DELETE /invites/:id` возвращает обновлённое приглашение (карточка остаётся открытой с
@@ -563,7 +565,8 @@
 пункты меню — в `ru.json`/`en.json`.
 
 Реализовано 2026-10-05: составной заголовок — `pages/Management/components/SortMenuTh` (рядом с
-`SortableTh`, ключи столбца — список `SortKeyOption` из `pages/Management/models.ts`), в
+`SortableTh`, ключи столбца — список `SortKeyOption` из `pages/Management/models.ts`; _позже оба
+переехали в `shared/ui`, `SortKeyOption` — в `shared/ui/SortMenuTh/models.ts`_), в
 `ManagementUsers/UsersTable` им стали «Пользователь», «Статус» и «Даты», в
 `ManagementInvites/InvitesTable` — «Создал». Серый ключ — те же тексты, что и в остальном
 интерфейсе («Регистрация», «Почта»…), строчными через `tt="lowercase"`, без отдельных ключей i18n.
@@ -628,3 +631,17 @@
 кнопки проверки только у персонала; `SortableTh`, `SortMenuTh`, `SortCaretsIcon`, `DrawerField` и
 `SortKeyOption` получают второго потребителя и переезжают из `pages/Management/components` в
 `shared/ui`; новые подписи — в `ru.json`/`en.json`.
+
+Реализовано 2026-10-05: страница — `pages/SourcesHealth` (`SourcesHealthTable` с фильтрами
+`HealthFilters`, `HealthList` → `HealthTable` / `HealthTableSkeleton` / `HealthEmptyResult`, ячейки
+`SourceHealthCell`, `HealthStatusCell`, `ProbeCell`, `ReasonCell`; карточка `SourceDrawer` +
+`SourceFields`, `ReasonBlock`, `ErrorBlock`, `ProbeSourceButton`); ключи сортировки `HEALTH_SORT`,
+фильтрация и сортировка на клиенте — в `pages/SourcesHealth/models.ts`. `SortableTh`,
+`SortCaretsIcon`, `DrawerField` и `SortMenuTh` (с `SortKeyOption` в `SortMenuTh/models.ts`)
+переехали в `shared/ui`. Загрузку показывает скелетон: у `PageLayout.Content` выключен общий
+`Loader`, ошибку основного запроса по-прежнему рисует `QueryError`. Карточка держит id источника и
+берёт его из свежих данных — после «Проверить сейчас» и опроса раз в 10 с она показывает новый
+статус, не закрываясь. API — `@Roles(ADMIN, MODERATOR)` на `SourceProbeController`, тест — в
+`source-probe.controller.test.ts`. Отличие от макета: уведомление после проверки одного источника —
+«Проверка закончена», а не «Проверка прошла»: ручка отвечает источником и тогда, когда он остался
+лежать.

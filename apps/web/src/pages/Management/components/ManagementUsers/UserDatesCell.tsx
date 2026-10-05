@@ -16,15 +16,15 @@ function UserDatesCell({ user }: Props) {
   return (
     <Stack gap={2}>
       <Group gap={4} wrap="nowrap">
-        <Text fz="xs" c="dimmed">
+        <Text lh="tight" fz="xs" c="dimmed">
           {t('registration')}
         </Text>
-        <Text fz="xs" ff="monospace">
+        <Text lh="tight" fz="xs" ff="monospace">
           {formatDateNumeric(user.createdAt)}
         </Text>
       </Group>
       <Group gap={4} wrap="nowrap">
-        <Text fz="xs" c="dimmed">
+        <Text lh="tight" fz="xs" c="dimmed">
           {t('login')}
         </Text>
         <LastSeen lastSeenAt={user.lastSeenAt} fz="xs" />

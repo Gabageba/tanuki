@@ -1,8 +1,8 @@
 import { Group, type MantineStyleProps, Menu, Table, Text, UnstyledButton } from '@mantine/core';
 import { SORT_DIRECTION, type SortDirection } from '@tanuki/contracts';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
-import type { SortKeyOption } from '../models';
-import SortCaretsIcon from './SortCaretsIcon';
+import type { SortKeyOption } from './models';
+import SortCaretsIcon from '@/shared/ui/SortCaretsIcon';
 
 type Props<Sort extends string> = {
   title: string;

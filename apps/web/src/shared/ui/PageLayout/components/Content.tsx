@@ -1,4 +1,4 @@
-import { Center, Container, Group, Loader, Title } from '@mantine/core';
+import { Center, Container, Flex, Group, Loader, Title } from '@mantine/core';
 import { useContext, useMemo, type ReactNode } from 'react';
 import QueryError from '../../QueryError';
 import GoBackButton from '../../GoBackButton';
@@ -39,7 +39,12 @@ function Content({ children, title, actions, showLoading = true, goBack }: Props
   return (
     <Container py="md" size="xl">
       {(title || actions || !!goBack) && (
-        <Group justify={title ? 'space-between' : 'flex-end'} mb="md">
+        <Flex
+          justify={title ? 'space-between' : 'flex-end'}
+          mb="md"
+          gap="sm"
+          direction={{ base: 'column', xs: 'row' }}
+        >
           {(!!goBack || title) && (
             <Group gap="xs">
               {!!goBack && (
@@ -49,7 +54,7 @@ function Content({ children, title, actions, showLoading = true, goBack }: Props
             </Group>
           )}
           {actions}
-        </Group>
+        </Flex>
       )}
       {renderContent}
     </Container>
