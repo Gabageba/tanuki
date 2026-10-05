@@ -1,6 +1,7 @@
 import { Group, Skeleton, Stack, Table } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import TextSkeleton from '@/shared/ui/TextSkeleton';
+import { USERS_COLUMN_WIDTH } from './models';
 
 const ROWS_COUNT = 5;
 
@@ -10,13 +11,13 @@ function UsersTableSkeleton() {
 
   return (
     <Table.ScrollContainer minWidth={760}>
-      <Table verticalSpacing="sm">
+      <Table layout="fixed" verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>{t('user')}</Table.Th>
-            <Table.Th>{t('status')}</Table.Th>
-            <Table.Th>{t('invitedBy')}</Table.Th>
-            <Table.Th>{t('dates')}</Table.Th>
+            <Table.Th w={USERS_COLUMN_WIDTH.USER}>{t('user')}</Table.Th>
+            <Table.Th w={USERS_COLUMN_WIDTH.STATUS}>{t('status')}</Table.Th>
+            <Table.Th w={USERS_COLUMN_WIDTH.INVITED_BY}>{t('invitedBy')}</Table.Th>
+            <Table.Th w={USERS_COLUMN_WIDTH.DATES}>{t('dates')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>

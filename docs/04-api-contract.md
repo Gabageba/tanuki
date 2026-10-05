@@ -334,7 +334,7 @@ POST   /invites  { role }   → Invite & { code }, код виден тольк�
 DELETE /invites/:id         → Invite, отзывает активное                 admin; moderator — только своё
 POST   /invites/:id/reissue → Invite & { code }, отзыв + новое с той же ролью   admin; moderator — только своё; не для role=admin
 
-GET    /users?page&query&role&status → { items: ManagedUser[], total }   admin, moderator
+GET    /users?page&query&role&status&sort&direction → { items: ManagedUser[], total }   admin, moderator
 PATCH  /users/:id/role  { role }     → ManagedUser                       только admin
 POST   /users/:id/block { until, reason } → ManagedUser                  admin; moderator — только role=user
 DELETE /users/:id/block              → ManagedUser                       admin; moderator — только role=user
@@ -350,9 +350,15 @@ DELETE /users/:id                    → 204, удаляет сразу         
   старое и выпускает новое с той же ролью. Приглашение в роль `admin` (из CLI-скрипта) не
   перевыпускается — только отзывается.
 - **Список приглашений** — по 10 (`INVITES_PAGE_SIZE`), фильтры `status` и `role` повторяемые
-  (`?status=active&status=used`), `sort` — `status` (по умолчанию, активные первыми) / `role` /
-  `createdBy`, внутри — новые сверху. `Invite` несёт `createdById` (по нему интерфейс узнаёт свои),
+  (`?status=active&status=used`), `sort` (`INVITES_SORT`) — `createdAt` (по умолчанию, новые
+  сверху) / `status` (активные первыми) / `role` / `createdBy` (из консоли — в конце), при
+  равенстве — новые сверху. `Invite` несёт `createdById` (по нему интерфейс узнаёт свои),
   `revokedAt` и `revokedByUsername`.
+- **Список пользователей** — `sort` (`MANAGED_USERS_SORT`) — `createdAt` (по умолчанию) /
+  `lastSeenAt` / `username` / `email` / `status` / `statusUntil` (срок блокировки или удаления,
+  бессрочная блокировка — самый дальний) / `invitedBy`. Пустые значения — не входил, без срока,
+  без пригласившего — в конце при любом `direction`. Какой ключ в каком столбце — [11 — Сортировка
+  составных столбцов](11-ui-decisions.md#сортировка-составных-столбцов).
 - **Права на приглашения** — `getInvitePermissions` в `@tanuki/contracts`, общие для API и
   интерфейса: только активное; админ — любое, модератор — только своё; иначе 403.
 - **`username`** — `^[a-zA-Z0-9_.]{3,24}$`, хранится как введён, уникален без учёта регистра;

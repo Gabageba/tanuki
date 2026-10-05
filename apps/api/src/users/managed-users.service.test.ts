@@ -1,8 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
-import { API_ERROR_CODE, USER_ROLE, type UserRole } from '@tanuki/contracts';
+import { PgDialect } from 'drizzle-orm/pg-core';
+import {
+  API_ERROR_CODE,
+  MANAGED_USERS_SORT,
+  SORT_DIRECTION,
+  USER_ROLE,
+  type ManagedUsersSort,
+  type SortDirection,
+  type UserRole,
+} from '@tanuki/contracts';
 import type { SessionService, SessionUser } from '../auth/session.service';
 import type { DatabaseService } from '../database/database.service';
-import { ManagedUsersService } from './managed-users.service';
+import { ManagedUsersService, sortExpression } from './managed-users.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -94,5 +103,32 @@ describe('ManagedUsersService — права', () => {
     const { service, remove } = makeService(USER_TARGET);
     expect(await rejectionCode(service.delete(ADMIN, USER_TARGET.id))).toBeNull();
     expect(remove).toHaveBeenCalledOnce();
+  });
+});
+
+const DIALECT = new PgDialect();
+
+const orderBy = (sort: ManagedUsersSort, direction: SortDirection) =>
+  DIALECT.sqlToQuery(sortExpression(sort, direction, new Date())).sql.toLowerCase();
+
+describe('ManagedUsersService — сортировка', () => {
+  it('почта — без учёта регистра', () => {
+    expect(orderBy(MANAGED_USERS_SORT.EMAIL, SORT_DIRECTION.ASC)).toContain(
+      'lower("users"."email")',
+    );
+  });
+
+  it.each([MANAGED_USERS_SORT.STATUS_UNTIL, MANAGED_USERS_SORT.LAST_SEEN_AT])(
+    '%s — пустые в конце при любом направлении',
+    (sort) => {
+      expect(orderBy(sort, SORT_DIRECTION.ASC)).toMatch(/ asc nulls last$/);
+      expect(orderBy(sort, SORT_DIRECTION.DESC)).toMatch(/ desc nulls last$/);
+    },
+  );
+
+  it('срок: бессрочная блокировка — самая дальняя, удаление — своей датой', () => {
+    const query = orderBy(MANAGED_USERS_SORT.STATUS_UNTIL, SORT_DIRECTION.ASC);
+    expect(query).toContain(`coalesce("users"."blocked_until", 'infinity'::timestamptz)`);
+    expect(query).toContain('then "users"."deletion_scheduled_at"');
   });
 });

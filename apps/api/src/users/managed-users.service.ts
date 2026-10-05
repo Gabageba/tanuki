@@ -78,18 +78,34 @@ const statusRank = (now: Date) =>
     sql` `,
   )} end`;
 
-/** Ключ сортировки; без пригласившего — в конце при любом направлении. */
-const sortExpression = (sort: ManagedUsersSort, direction: SortDirection, now: Date): SQL => {
+/** До какого числа действует статус — тот же приоритет, что в computeUserStatus: сначала
+ *  блокировка (бессрочная — самый дальний срок), потом запрошенное удаление; у прочих срока нет. */
+const statusUntil = (now: Date) =>
+  sql`case when ${blockedCondition(now)} then coalesce(${users.blockedUntil}, 'infinity'::timestamptz) when ${isNotNull(users.deletionScheduledAt)} then ${users.deletionScheduledAt} end`;
+
+/** Ключ сортировки; пустые значения — без пригласившего, без срока, ни разу не входившие — в
+ *  конце при любом направлении. */
+export const sortExpression = (
+  sort: ManagedUsersSort,
+  direction: SortDirection,
+  now: Date,
+): SQL => {
   const order = direction === SORT_DIRECTION.ASC ? asc : desc;
   switch (sort) {
     case MANAGED_USERS_SORT.USERNAME:
       return order(sql`lower(${users.username})`);
+    case MANAGED_USERS_SORT.EMAIL:
+      return order(sql`lower(${users.email})`);
     case MANAGED_USERS_SORT.STATUS:
       return order(statusRank(now));
+    case MANAGED_USERS_SORT.STATUS_UNTIL:
+      return sql`${order(statusUntil(now))} nulls last`;
     case MANAGED_USERS_SORT.INVITED_BY:
       return sql`${order(sql`lower(${inviters.username})`)} nulls last`;
     case MANAGED_USERS_SORT.CREATED_AT:
       return order(users.createdAt);
+    case MANAGED_USERS_SORT.LAST_SEEN_AT:
+      return sql`${order(users.lastSeenAt)} nulls last`;
   }
 };
 

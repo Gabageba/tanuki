@@ -1,6 +1,7 @@
 import { Skeleton, Stack, Table } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import TextSkeleton from '@/shared/ui/TextSkeleton';
+import { INVITES_COLUMN_WIDTH } from './models';
 
 const ROWS_COUNT = 5;
 
@@ -10,13 +11,13 @@ function InvitesTableSkeleton() {
 
   return (
     <Table.ScrollContainer minWidth={720}>
-      <Table verticalSpacing="sm">
+      <Table layout="fixed" verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>{t('role')}</Table.Th>
-            <Table.Th>{t('createdBy')}</Table.Th>
-            <Table.Th>{t('status')}</Table.Th>
-            <Table.Th>{t('result')}</Table.Th>
+            <Table.Th w={INVITES_COLUMN_WIDTH.ROLE}>{t('role')}</Table.Th>
+            <Table.Th w={INVITES_COLUMN_WIDTH.CREATED_BY}>{t('createdBy')}</Table.Th>
+            <Table.Th w={INVITES_COLUMN_WIDTH.STATUS}>{t('status')}</Table.Th>
+            <Table.Th w={INVITES_COLUMN_WIDTH.RESULT}>{t('result')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>

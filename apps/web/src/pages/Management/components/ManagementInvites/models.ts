@@ -12,6 +12,15 @@ import {
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 
+/** Ширины столбцов: таблица раскладывается по ним, а не по содержимому, — иначе при сортировке
+ *  и смене страницы столбцы скачут вслед за новыми строками и подписью ключа в шапке. */
+export const INVITES_COLUMN_WIDTH = {
+  ROLE: '18%',
+  CREATED_BY: '28%',
+  STATUS: '22%',
+  RESULT: '32%',
+} as const;
+
 /** Сколько живёт приглашение — как `INVITE_TTL_MS` в API. */
 export const INVITE_TTL_DAYS = 7;
 

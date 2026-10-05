@@ -11,16 +11,29 @@ import {
 } from '@tanuki/contracts';
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
 
+/** Ширины столбцов: таблица раскладывается по ним, а не по содержимому, — иначе при сортировке
+ *  и смене страницы столбцы скачут вслед за новыми строками и подписью ключа в шапке. */
+export const USERS_COLUMN_WIDTH = {
+  USER: '32%',
+  STATUS: '24%',
+  INVITED_BY: '16%',
+  DATES: '28%',
+} as const;
+
 /** Сколько ждать, пока в поиске перестанут печатать, прежде чем спросить сервер. */
 export const SEARCH_DEBOUNCE_MS = 300;
 
-/** С какого направления начинается сортировка по столбцу: даты — сначала новые, прочее — по алфавиту. */
+/** С какого направления начинается сортировка по ключу: даты — сначала новые, срок — ближайший
+ *  сверху, прочее — по алфавиту. */
 export const getDefaultSortDirection = (sort: ManagedUsersSort) => {
   switch (sort) {
     case MANAGED_USERS_SORT.CREATED_AT:
+    case MANAGED_USERS_SORT.LAST_SEEN_AT:
       return SORT_DIRECTION.DESC;
     case MANAGED_USERS_SORT.USERNAME:
+    case MANAGED_USERS_SORT.EMAIL:
     case MANAGED_USERS_SORT.STATUS:
+    case MANAGED_USERS_SORT.STATUS_UNTIL:
     case MANAGED_USERS_SORT.INVITED_BY:
       return SORT_DIRECTION.ASC;
   }

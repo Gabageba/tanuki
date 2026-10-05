@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Group, Table, UnstyledButton } from '@mantine/core';
+import { Group, type MantineStyleProps, Table, UnstyledButton } from '@mantine/core';
 import { SORT_DIRECTION, type SortDirection } from '@tanuki/contracts';
 import SortCaretsIcon from './SortCaretsIcon';
 
@@ -8,6 +8,7 @@ type Props<Sort extends string> = {
   activeSort: Sort;
   direction: SortDirection;
   onSortChange: (sort: Sort) => void;
+  w?: MantineStyleProps['w'];
   children: ReactNode;
 };
 
@@ -17,13 +18,14 @@ function SortableTh<Sort extends string>({
   activeSort,
   direction,
   onSortChange,
+  w,
   children,
 }: Props<Sort>) {
   const isActive = sort === activeSort;
   const isAscending = direction === SORT_DIRECTION.ASC;
 
   return (
-    <Table.Th aria-sort={isActive ? (isAscending ? 'ascending' : 'descending') : undefined}>
+    <Table.Th w={w} aria-sort={isActive ? (isAscending ? 'ascending' : 'descending') : undefined}>
       <UnstyledButton fz="inherit" fw="inherit" onClick={() => onSortChange(sort)}>
         <Group gap={4} wrap="nowrap">
           {children}
