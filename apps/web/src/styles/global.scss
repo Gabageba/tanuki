@@ -37,4 +37,11 @@ html {
     background-color: var(--tanuki-color-primary-light-transparent);
     border-color: var(--mantine-primary-color-filled);
   }
+
+  // Зазор 4px между пунктами, как между плитками выбора источника в шапке: без него выбранные
+  // подряд пункты MultiSelect слипаются рамками в стопку. Через соседа, а не gap списка — Select и
+  // MultiSelect кладут пункты не прямо в Combobox.Options, а в обёртку ScrollArea.
+  & + & {
+    margin-top: 4px;
+  }
 }

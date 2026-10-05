@@ -1,0 +1,101 @@
+// Глобальный .selectableOption из темы висит и на живых полях, поэтому базовый селектор удвоен —
+// стили варианта перебивают его при любом порядке подключения стилей.
+.option.option {
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: inherit;
+
+  &:hover,
+  &[data-hover] {
+    background-color: var(--mantine-color-gray-light-hover);
+  }
+
+  &[data-checked] {
+    color: var(--option-checked-c);
+    background-color: var(--option-checked-bg);
+    border-color: var(--option-checked-bd);
+  }
+}
+
+// Тема даёт соседним пунктам живых полей зазор (.selectableOption + .selectableOption) — варианты
+// без зазора его снимают.
+.option.option:is(.lookCurrent, .lookMerged, .lookFlat, .lookCheck) {
+  margin-top: 0;
+}
+
+// Цвета выбранного пункта задаёт вид (ось O), а применяют их .option и классы фокуса (ось K).
+// Акцентный текст — тот же, что в global.scss.
+.lookCurrent,
+.lookGap,
+.lookMerged {
+  --option-checked-c: var(--mantine-color-terracotta-text);
+  --option-checked-bg: var(--tanuki-color-primary-light-transparent);
+  --option-checked-bd: var(--mantine-primary-color-filled);
+  --option-checked-focus-bg: color-mix(
+    in srgb,
+    var(--mantine-primary-color-light) 70%,
+    transparent
+  );
+}
+
+.lookFlat {
+  --option-checked-c: var(--mantine-color-terracotta-text);
+  --option-checked-bg: var(--tanuki-color-primary-light-transparent);
+  --option-checked-bd: transparent;
+  --option-checked-focus-bg: color-mix(
+    in srgb,
+    var(--mantine-primary-color-light) 70%,
+    transparent
+  );
+}
+
+.lookCheck {
+  --option-checked-c: var(--mantine-color-terracotta-text);
+  --option-checked-bg: transparent;
+  --option-checked-bd: transparent;
+  --option-checked-focus-bg: var(--mantine-color-gray-light-hover);
+}
+
+.optionsGap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// O2: у выбранного, за которым идёт выбранный, нижняя рамка становится разделителем, а у
+// следующего пропадает верхняя — соседи срастаются в одну плашку.
+.option.lookMerged[data-checked]:has(+ [data-checked]) {
+  border-bottom-color: color-mix(in srgb, var(--mantine-primary-color-filled) 30%, transparent);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+[data-checked] + .option.lookMerged[data-checked] {
+  border-top-width: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+// K0: фокус выглядит как выбор — как сейчас в global.scss.
+.option.focusCurrent[data-combobox-selected] {
+  color: var(--option-checked-c);
+  background-color: var(--option-checked-bg);
+  border-color: var(--option-checked-bd);
+}
+
+// K1: фокус — та же подсветка, что при наведении мышью; у выбранного заливка плотнее.
+.option.focusHover[data-combobox-selected] {
+  background-color: var(--mantine-color-gray-light-hover);
+}
+
+.option.focusHover[data-checked]:hover,
+.option.focusHover[data-checked][data-combobox-selected] {
+  background-color: var(--option-checked-focus-bg);
+}
+
+// K2: фокус — кольцо внутри пункта, с зазором от рамки выбора. Внутрь — чтобы его не обрезал
+// скролл списка и не перекрывали соседи.
+.option.focusRing[data-combobox-selected] {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -4px;
+}
