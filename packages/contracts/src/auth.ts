@@ -250,12 +250,18 @@ export const ManagedUserSchema = z.object({
 });
 export type ManagedUser = z.infer<typeof ManagedUserSchema>;
 
-/** Столбец, по которому сортируется таблица пользователей. */
+/** По чему сортируется таблица пользователей. У составных столбцов по два ключа: «Пользователь» —
+ *  имя и почта, «Статус» — статус и срок, «Даты» — регистрация и вход. */
 export const MANAGED_USERS_SORT = {
   USERNAME: 'username',
+  EMAIL: 'email',
   STATUS: 'status',
+  /** Срок блокировки или удаления; бессрочная блокировка — самый дальний, без срока — в конце. */
+  STATUS_UNTIL: 'statusUntil',
   INVITED_BY: 'invitedBy',
   CREATED_AT: 'createdAt',
+  /** Ни разу не входившие — в конце. */
+  LAST_SEEN_AT: 'lastSeenAt',
 } as const;
 export type ManagedUsersSort = EnumLiteralsOf<typeof MANAGED_USERS_SORT>;
 
@@ -293,7 +299,7 @@ export type ManagedUsersResponse = z.infer<typeof ManagedUsersResponseSchema>;
 export const INVITES_PAGE_SIZE = 10;
 
 /** По чему сортируется таблица приглашений. «Результат» не сортируется — в нём данные разного
- *  смысла; по дате создания — только по умолчанию, своего заголовка у неё нет. */
+ *  смысла; автор и дата создания — два ключа столбца «Создал», по дате — по умолчанию. */
 export const INVITES_SORT = {
   CREATED_AT: 'createdAt',
   ROLE: 'role',
