@@ -7,6 +7,7 @@ import HeaderBackground from './HeaderBackground';
 import ImportSourcePicker from './ImportSourcePicker';
 import InvitesTable from './InvitesTable';
 import LoginBadge from './LoginBadge';
+import MultiselectOptions from './MultiselectOptions';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
 import SortKeys from './SortKeys';
@@ -30,6 +31,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'multiselect-options',
+    Component: MultiselectOptions,
+    title: 'Пункты мультиселекта',
+    description:
+      'Выбранные подряд пункты MultiSelect слипаются рамками в стопку, а курсор клавиатуры выглядит как выбор — как оформить выбранный пункт и фокус в общем виде списков.',
+    createdAt: '2026-10-05',
+    decision: 'O1 + K0',
+  },
   {
     slug: 'sources-health-table',
     Component: SourcesHealthTable,
