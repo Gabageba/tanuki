@@ -26,7 +26,7 @@ function UserCell({ user, isSelf, withRole = false }: Props) {
       />
       <Stack gap={0} miw={0}>
         <Group gap={6} wrap="nowrap" miw={0}>
-          <Text fz="sm" fw={500} truncate>
+          <Text lh="tight" fz="sm" fw={500} truncate>
             {user.username}
           </Text>
           {withRole && user.role !== USER_ROLE.USER && <RoleBadge role={user.role} size="xs" />}
@@ -36,7 +36,7 @@ function UserCell({ user, isSelf, withRole = false }: Props) {
             </Badge>
           )}
         </Group>
-        <Text fz="xs" c="dimmed" ff="monospace" truncate>
+        <Text lh="tight" fz="xs" c="dimmed" ff="monospace" truncate>
           {user.email}
         </Text>
       </Stack>

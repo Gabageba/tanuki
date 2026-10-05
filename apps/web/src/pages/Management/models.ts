@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import type { TFunction } from 'i18next';
 import { USER_ROLE, type UserRole } from '@tanuki/contracts';
 import { PRIMARY_COLOR } from '@/shared/lib/palette';
@@ -23,13 +22,4 @@ export const getUserRoleColor = (role: UserRole) => {
     case USER_ROLE.USER:
       return 'gray';
   }
-};
-
-/** Ключ составного столбца: подпись после названия у активного столбца («Даты · регистрация»),
- *  пункт меню («По регистрации») и его иконка. */
-export type SortKeyOption<Sort extends string> = {
-  sort: Sort;
-  label: string;
-  menuLabel: string;
-  icon: ReactNode;
 };

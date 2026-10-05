@@ -17,7 +17,7 @@ function UserStatusTerm({ user }: Props) {
 
   if (user.status === USER_STATUS.BLOCKED) {
     return (
-      <Text fz="xs" c="dimmed">
+      <Text lh="tight" fz="xs" c="dimmed">
         {user.blockedUntil ? (
           <Trans
             i18nKey="untilDate"
@@ -33,7 +33,7 @@ function UserStatusTerm({ user }: Props) {
 
   if (user.status === USER_STATUS.DELETION_SCHEDULED && user.deletionScheduledAt) {
     return (
-      <Text fz="xs" c="dimmed">
+      <Text lh="tight" fz="xs" c="dimmed">
         <Trans
           i18nKey="deletesOnDate"
           values={{ date: formatDateNumeric(user.deletionScheduledAt) }}

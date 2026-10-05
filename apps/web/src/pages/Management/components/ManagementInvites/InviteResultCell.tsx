@@ -17,7 +17,7 @@ function InviteResultCell({ invite }: Props) {
 
   const dateLine = (date: string | null) =>
     date && (
-      <Text fz="xs" c="dimmed" ff="monospace">
+      <Text lh="tight" fz="xs" c="dimmed" ff="monospace">
         {formatDateNumeric(date)}
       </Text>
     );
@@ -27,7 +27,7 @@ function InviteResultCell({ invite }: Props) {
       const daysLeft = getDaysLeft(invite.expiresAt);
       return (
         <Stack gap={2}>
-          <Text fz="sm" c={daysLeft === 0 ? `${STATUS_DEGRADED_COLOR}.7` : undefined}>
+          <Text lh="tight" fz="sm" c={daysLeft === 0 ? `${STATUS_DEGRADED_COLOR}.7` : undefined}>
             {daysLeft === 0 ? t('expiresToday') : t('expiresInCountDays', { count: daysLeft })}
           </Text>
           {dateLine(invite.expiresAt)}
@@ -48,7 +48,7 @@ function InviteResultCell({ invite }: Props) {
     case INVITE_STATUS.EXPIRED:
       return (
         <Stack gap={2}>
-          <Text fz="sm" c="dimmed">
+          <Text lh="tight" fz="sm" c="dimmed">
             {t('nobodyRegistered')}
           </Text>
           {dateLine(invite.expiresAt)}
@@ -58,7 +58,7 @@ function InviteResultCell({ invite }: Props) {
       return (
         <Stack gap={2}>
           {invite.revokedByUsername ? (
-            <Text fz="sm" truncate maw={220} title={invite.revokedByUsername}>
+            <Text lh="tight" fz="sm" truncate maw={220} title={invite.revokedByUsername}>
               {t('revokedByUsername', { username: invite.revokedByUsername })}
             </Text>
           ) : (

@@ -14,7 +14,7 @@ function UserStatusCell({ user }: Props) {
       <UserStatusBadge status={user.status} />
       <UserStatusTerm user={user} />
       {user.blockReason && (
-        <Text fz="xs" c="dimmed" maw={220} truncate title={user.blockReason}>
+        <Text lh="tight" fz="xs" c="dimmed" maw={220} truncate title={user.blockReason}>
           {user.blockReason}
         </Text>
       )}

@@ -12,10 +12,14 @@ function LastSeen({ lastSeenAt, fz = 'sm' }: Props) {
   const { formatRelative } = useDateFormat();
 
   if (!lastSeenAt) {
-    return <Mdash fz={fz} c="dimmed" />;
+    return <Mdash lh="tight" fz={fz} c="dimmed" />;
   }
 
-  return <Text fz={fz}>{formatRelative(lastSeenAt)}</Text>;
+  return (
+    <Text lh="tight" fz={fz}>
+      {formatRelative(lastSeenAt)}
+    </Text>
+  );
 }
 
 export default LastSeen;

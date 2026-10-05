@@ -1,146 +1,78 @@
-import { Anchor, CopyButton, Group, Stack, Table, Text, Tooltip } from '@mantine/core';
-import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
-import { generatePath, Link } from 'react-router';
-import { useTranslation } from 'react-i18next';
-import { SOURCE_STATUS, type Source } from '@tanuki/contracts';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
+import { useState } from 'react';
+import { Stack } from '@mantine/core';
+import {
+  SORT_DIRECTION,
+  type SortDirection,
+  type SourceContentType,
+  type SourceStatus,
+} from '@tanuki/contracts';
 import PageLayout from '@/shared/ui/PageLayout';
-import SourceIcon from '@/entities/source/components/SourceIcon';
-import { flattenSources, getSourceStatusReasonLabel } from '@/entities/source/lib';
-import useDateFormat from '@/shared/hooks/useDateFormat';
-import Mdash from '@/shared/ui/Mdash';
-import type { SourcesHealthQuery } from './models';
-import SourceHealthRowActions from './SourceHealthRowActions';
-import SourceStatusBadge from '@/entities/source/components/SourceStatusBadge';
+import { flattenSources } from '@/entities/source/lib';
+import HealthFilters from './HealthFilters';
+import HealthList from './HealthList';
+import SourceDrawer from './SourceDrawer';
+import {
+  HEALTH_SORT,
+  filterSources,
+  getDefaultSortDirection,
+  sortSources,
+  type HealthSort,
+  type SourcesHealthQuery,
+} from './models';
 
-const getStatusWeight = (status: Source['status']) => {
-  switch (status) {
-    case SOURCE_STATUS.DOWN:
-      return 0;
-    case SOURCE_STATUS.DEGRADED:
-      return 1;
-    case SOURCE_STATUS.OK:
-      return 2;
-  }
+type Props = {
+  isStaff: boolean;
 };
 
-function SourcesHealthTable() {
-  const { t } = useTranslation();
-  const { formatDate, formatDateTime, formatRelative } = useDateFormat();
-  const { data } = PageLayout.useQuery<SourcesHealthQuery>();
-  const sources = flattenSources(data).sort(
-    (left, right) =>
-      getStatusWeight(left.status) - getStatusWeight(right.status) ||
-      left.title.localeCompare(right.title),
-  );
+/** Фильтры, таблица и карточка источника. Источников два десятка и все приходят одним запросом,
+ *  поэтому фильтрует и сортирует клиент, без поиска и страниц. По умолчанию лежащие сверху. */
+function SourcesHealthTable({ isStaff }: Props) {
+  const { data, isPending } = PageLayout.useQuery<SourcesHealthQuery>();
+  const [status, setStatus] = useState<SourceStatus[]>([]);
+  const [contentType, setContentType] = useState<SourceContentType[]>([]);
+  const [sort, setSort] = useState<HealthSort>(HEALTH_SORT.STATUS);
+  const [direction, setDirection] = useState<SortDirection>(SORT_DIRECTION.ASC);
+  // id, а не снимок: после проверки и опроса карточка сразу показывает свежий статус.
+  const [openedId, setOpenedId] = useState<string | null>(null);
+
+  const all = flattenSources(data);
+  const sources = sortSources(filterSources(all, { status, contentType }), sort, direction);
+  const opened = all.find((source) => source.id === openedId) ?? null;
+
+  /** Повторный клик по тому же ключу разворачивает направление. */
+  const handleSortChange = (next: HealthSort) => {
+    if (next === sort) {
+      setDirection(direction === SORT_DIRECTION.ASC ? SORT_DIRECTION.DESC : SORT_DIRECTION.ASC);
+    } else {
+      setSort(next);
+      setDirection(getDefaultSortDirection(next));
+    }
+  };
+
+  const handleReset = () => {
+    setStatus([]);
+    setContentType([]);
+  };
 
   return (
-    <Table.ScrollContainer minWidth={860}>
-      <Table verticalSpacing="sm" highlightOnHover>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>{t('source')}</Table.Th>
-            <Table.Th>{t('status')}</Table.Th>
-            <Table.Th>{t('reason')}</Table.Th>
-            <Table.Th>{t('checked')}</Table.Th>
-            <Table.Th>{t('consecutiveNights')}</Table.Th>
-            <Table.Th>{t('lastError')}</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {sources.map((source) => (
-            <Table.Tr key={source.id}>
-              <Table.Td>
-                <Group gap="xs" wrap="nowrap">
-                  <SourceIcon id={source.id} title={source.title} />
-                  <Anchor
-                    component={Link}
-                    to={generatePath(ROUTE_PATHS.CATALOG, { sourceId: source.id })}
-                  >
-                    {source.title}
-                  </Anchor>
-                </Group>
-              </Table.Td>
-              <Table.Td>
-                <SourceStatusBadge source={source} />
-                {source.statusChangedAt && (
-                  <Text fz={11} c="dimmed">
-                    {t('sinceDate', { date: formatDate(source.statusChangedAt) })}
-                  </Text>
-                )}
-              </Table.Td>
-              <Table.Td>
-                <Text fz={13}>
-                  {source.statusReason ? (
-                    getSourceStatusReasonLabel(source.statusReason, t)
-                  ) : (
-                    <Mdash />
-                  )}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Text fz={13} c="dimmed">
-                  {formatRelative(source.checkedAt) ?? <Mdash />}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Text fz={13} ff="monospace">
-                  {source.failedProbeStreak}
-                </Text>
-              </Table.Td>
-              <Table.Td maw={280}>
-                {source.lastError ? (
-                  <CopyButton value={source.lastError} timeout={1200}>
-                    {({ copied, copy }) => (
-                      <Tooltip
-                        label={
-                          <Stack gap={2}>
-                            {source.checkedAt && (
-                              <Text fz={11} c="dimmed" ff="monospace">
-                                {formatDateTime(source.checkedAt)}
-                              </Text>
-                            )}
-                            <Text fz={12} style={{ whiteSpace: 'pre-wrap' }}>
-                              {source.lastError}
-                            </Text>
-                          </Stack>
-                        }
-                        multiline
-                        maw={400}
-                        events={{ hover: true, focus: true, touch: true }}
-                      >
-                        <Group gap={4} wrap="nowrap" onClick={copy} style={{ cursor: 'pointer' }}>
-                          <Text fz={12} c="dimmed" lineClamp={2} style={{ flex: 1, minWidth: 0 }}>
-                            {source.lastError}
-                          </Text>
-                          {copied ? (
-                            <CheckIcon
-                              size={14}
-                              color="var(--mantine-color-green-6)"
-                              style={{ flexShrink: 0 }}
-                            />
-                          ) : (
-                            <CopyIcon size={14} style={{ flexShrink: 0, opacity: 0.5 }} />
-                          )}
-                        </Group>
-                      </Tooltip>
-                    )}
-                  </CopyButton>
-                ) : (
-                  <Text fz={12} c="dimmed">
-                    <Mdash />
-                  </Text>
-                )}
-              </Table.Td>
-              <Table.Td>
-                <SourceHealthRowActions source={source} />
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <Stack gap="md">
+      <HealthFilters
+        status={status}
+        contentType={contentType}
+        onStatusChange={setStatus}
+        onContentTypeChange={setContentType}
+      />
+      <HealthList
+        sources={sources}
+        isPending={isPending}
+        sort={sort}
+        direction={direction}
+        onSortChange={handleSortChange}
+        onOpen={(source) => setOpenedId(source.id)}
+        onReset={handleReset}
+      />
+      <SourceDrawer source={opened} isStaff={isStaff} onClose={() => setOpenedId(null)} />
+    </Stack>
   );
 }
 

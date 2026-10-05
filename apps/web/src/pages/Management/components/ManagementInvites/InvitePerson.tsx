@@ -14,7 +14,7 @@ type Props = {
 /** Имя человека в ячейке и карточке; нет имени — прочерк. */
 function InvitePerson({ username, withAvatar = false, avatarUrl = null }: Props) {
   if (!username) {
-    return <Mdash fz="sm" c="dimmed" />;
+    return <Mdash lh="tight" fz="sm" c="dimmed" />;
   }
 
   return (
@@ -29,7 +29,7 @@ function InvitePerson({ username, withAvatar = false, avatarUrl = null }: Props)
           flex="none"
         />
       )}
-      <Text fz="sm" truncate maw={200} title={username}>
+      <Text lh="tight" fz="sm" truncate maw={200} title={username}>
         {username}
       </Text>
     </Group>

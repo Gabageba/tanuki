@@ -26,7 +26,7 @@ import {
 import { PRIMARY_COLOR } from '@/shared/lib/palette';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import Mdash from '@/shared/ui/Mdash';
-import DrawerField from '../DrawerField';
+import DrawerField from '@/shared/ui/DrawerField';
 import LastSeen from './LastSeen';
 import RoleBadge from '../RoleBadge';
 import UserStatusBadge from './UserStatusBadge';

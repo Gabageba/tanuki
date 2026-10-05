@@ -6,7 +6,7 @@ type Props = {
   children: ReactNode;
 };
 
-/** Строка «подпись — значение» в карточках пользователя и приглашения. */
+/** Копия `DrawerField` из «Управления». Строка «подпись — значение» в карточках пользователя и приглашения. */
 function DrawerField({ label, children }: Props) {
   return (
     <Group justify="space-between" align="flex-start" wrap="nowrap" gap="md">

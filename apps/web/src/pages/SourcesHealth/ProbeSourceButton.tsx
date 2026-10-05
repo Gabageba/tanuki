@@ -1,4 +1,4 @@
-import { ActionIcon, Tooltip } from '@mantine/core';
+import { Button } from '@mantine/core';
 import { StethoscopeIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import type { Source } from '@tanuki/contracts';
@@ -8,17 +8,20 @@ type Props = {
   source: Source;
 };
 
-function SourceHealthRowActions({ source }: Props) {
+function ProbeSourceButton({ source }: Props) {
   const { t } = useTranslation();
   const { isPending, mutate } = useProbeSource({ sourceId: source.id, sourceTitle: source.title });
 
   return (
-    <Tooltip label={t('runCheckNow')}>
-      <ActionIcon variant="subtle" color="gray" loading={isPending} onClick={() => mutate()}>
-        <StethoscopeIcon size={16} />
-      </ActionIcon>
-    </Tooltip>
+    <Button
+      variant="default"
+      leftSection={<StethoscopeIcon size={16} />}
+      loading={isPending}
+      onClick={() => mutate()}
+    >
+      {t('checkNow')}
+    </Button>
   );
 }
 
-export default SourceHealthRowActions;
+export default ProbeSourceButton;
