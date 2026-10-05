@@ -1,4 +1,12 @@
 import { Table, Text } from '@mantine/core';
+import {
+  CalendarPlusIcon,
+  EnvelopeSimpleIcon,
+  HourglassIcon,
+  SignInIcon,
+  TagIcon,
+  UserIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import {
   MANAGED_USERS_SORT,
@@ -7,8 +15,9 @@ import {
   type SortDirection,
 } from '@tanuki/contracts';
 import Mdash from '@/shared/ui/Mdash';
-import type { UserHandlers } from './models';
+import { USERS_COLUMN_WIDTH, type UserHandlers } from './models';
 import SortableTh from '../SortableTh';
+import SortMenuTh from '../SortMenuTh';
 import UserCell from './UserCell';
 import UserDatesCell from './UserDatesCell';
 import UserStatusCell from './UserStatusCell';
@@ -31,22 +40,73 @@ function UsersTable({ users, selfId, sort, direction, onSortChange, onOpen }: Pr
 
   return (
     <Table.ScrollContainer minWidth={760}>
-      <Table verticalSpacing="sm" highlightOnHover>
+      <Table layout="fixed" verticalSpacing="sm" highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <SortableTh sort={MANAGED_USERS_SORT.USERNAME} {...sortProps}>
-              {t('user')}
-            </SortableTh>
-            <SortableTh sort={MANAGED_USERS_SORT.STATUS} {...sortProps}>
-              {t('status')}
-            </SortableTh>
-            <SortableTh sort={MANAGED_USERS_SORT.INVITED_BY} {...sortProps}>
+            <SortMenuTh
+              title={t('user')}
+              w={USERS_COLUMN_WIDTH.USER}
+              options={[
+                {
+                  sort: MANAGED_USERS_SORT.USERNAME,
+                  label: t('name'),
+                  menuLabel: t('byName'),
+                  icon: <UserIcon />,
+                },
+                {
+                  sort: MANAGED_USERS_SORT.EMAIL,
+                  label: t('email'),
+                  menuLabel: t('byEmail'),
+                  icon: <EnvelopeSimpleIcon />,
+                },
+              ]}
+              {...sortProps}
+            />
+            <SortMenuTh
+              title={t('status')}
+              w={USERS_COLUMN_WIDTH.STATUS}
+              options={[
+                {
+                  sort: MANAGED_USERS_SORT.STATUS,
+                  label: t('status'),
+                  menuLabel: t('byStatus'),
+                  icon: <TagIcon />,
+                },
+                {
+                  sort: MANAGED_USERS_SORT.STATUS_UNTIL,
+                  label: t('period'),
+                  menuLabel: t('byPeriod'),
+                  icon: <HourglassIcon />,
+                },
+              ]}
+              {...sortProps}
+            />
+            <SortableTh
+              sort={MANAGED_USERS_SORT.INVITED_BY}
+              w={USERS_COLUMN_WIDTH.INVITED_BY}
+              {...sortProps}
+            >
               {t('invitedBy')}
             </SortableTh>
-            {/* По дате регистрации: последний вход в том же столбце не сортируется. */}
-            <SortableTh sort={MANAGED_USERS_SORT.CREATED_AT} {...sortProps}>
-              {t('dates')}
-            </SortableTh>
+            <SortMenuTh
+              title={t('dates')}
+              w={USERS_COLUMN_WIDTH.DATES}
+              options={[
+                {
+                  sort: MANAGED_USERS_SORT.CREATED_AT,
+                  label: t('registration'),
+                  menuLabel: t('byRegistration'),
+                  icon: <CalendarPlusIcon />,
+                },
+                {
+                  sort: MANAGED_USERS_SORT.LAST_SEEN_AT,
+                  label: t('login'),
+                  menuLabel: t('byLogin'),
+                  icon: <SignInIcon />,
+                },
+              ]}
+              {...sortProps}
+            />
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>

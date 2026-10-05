@@ -1,12 +1,15 @@
 import { Stack, Table, Text } from '@mantine/core';
+import { CalendarPlusIcon, UserIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { INVITES_SORT, type Invite, type InvitesSort, type SortDirection } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import RoleBadge from '../RoleBadge';
 import SortableTh from '../SortableTh';
+import SortMenuTh from '../SortMenuTh';
 import InvitePerson from './InvitePerson';
 import InviteResultCell from './InviteResultCell';
 import InviteStatusBadge from './InviteStatusBadge';
+import { INVITES_COLUMN_WIDTH } from './models';
 
 type Props = {
   invites: Invite[];
@@ -25,20 +28,36 @@ function InvitesTable({ invites, sort, direction, onSortChange, onOpen }: Props)
 
   return (
     <Table.ScrollContainer minWidth={720}>
-      <Table verticalSpacing="sm" highlightOnHover>
+      <Table layout="fixed" verticalSpacing="sm" highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <SortableTh sort={INVITES_SORT.ROLE} {...sortProps}>
+            <SortableTh sort={INVITES_SORT.ROLE} w={INVITES_COLUMN_WIDTH.ROLE} {...sortProps}>
               {t('role')}
             </SortableTh>
-            <SortableTh sort={INVITES_SORT.CREATED_BY} {...sortProps}>
-              {t('createdBy')}
-            </SortableTh>
-            <SortableTh sort={INVITES_SORT.STATUS} {...sortProps}>
+            <SortMenuTh
+              title={t('createdBy')}
+              w={INVITES_COLUMN_WIDTH.CREATED_BY}
+              options={[
+                {
+                  sort: INVITES_SORT.CREATED_BY,
+                  label: t('author'),
+                  menuLabel: t('byAuthor'),
+                  icon: <UserIcon />,
+                },
+                {
+                  sort: INVITES_SORT.CREATED_AT,
+                  label: t('date'),
+                  menuLabel: t('byCreationDate'),
+                  icon: <CalendarPlusIcon />,
+                },
+              ]}
+              {...sortProps}
+            />
+            <SortableTh sort={INVITES_SORT.STATUS} w={INVITES_COLUMN_WIDTH.STATUS} {...sortProps}>
               {t('status')}
             </SortableTh>
             {/* В «Результате» имена и даты разного смысла — сортировать нечем. */}
-            <Table.Th>{t('result')}</Table.Th>
+            <Table.Th w={INVITES_COLUMN_WIDTH.RESULT}>{t('result')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>

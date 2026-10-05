@@ -561,3 +561,14 @@
 `INVITES_SORT.CREATED_AT` — поправить комментарий, заголовок у него теперь есть. На фронте —
 заголовок-меню рядом с `SortableTh`, столбцы таблиц описываются списком ключей; подписи ключей и
 пункты меню — в `ru.json`/`en.json`.
+
+Реализовано 2026-10-05: составной заголовок — `pages/Management/components/SortMenuTh` (рядом с
+`SortableTh`, ключи столбца — список `SortKeyOption` из `pages/Management/models.ts`), в
+`ManagementUsers/UsersTable` им стали «Пользователь», «Статус» и «Даты», в
+`ManagementInvites/InvitesTable` — «Создал». Серый ключ — те же тексты, что и в остальном
+интерфейсе («Регистрация», «Почта»…), строчными через `tt="lowercase"`, без отдельных ключей i18n.
+Сервер — новые `MANAGED_USERS_SORT.EMAIL` / `STATUS_UNTIL` / `LAST_SEEN_AT` в `sortExpression`
+`managed-users.service.ts`, тест на SQL — в `managed-users.service.test.ts`. Отличие от
+макета: обе таблицы (и их скелетоны) — `layout="fixed"` с ширинами столбцов в процентах
+(`USERS_COLUMN_WIDTH`, `INVITES_COLUMN_WIDTH`), иначе при сортировке столбцы скакали вслед за
+новыми строками и подписью ключа в шапке.
