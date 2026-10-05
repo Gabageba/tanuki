@@ -10,6 +10,7 @@ import LoginBadge from './LoginBadge';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
 import SortKeys from './SortKeys';
+import SourcesHealthTable from './SourcesHealthTable';
 import SourcesSetup from './SourcesSetup';
 import ThemePicker from './ThemePicker';
 import UsersAdmin from './UsersAdmin';
@@ -29,6 +30,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'sources-health-table',
+    Component: SourcesHealthTable,
+    title: 'Таблица здоровья источников',
+    description:
+      'Семь столбцов /sources/health не похожи на таблицы «Управления» — что объединить в составные ячейки, куда деть текст ошибки и кнопку проверки, нужны ли фильтры, сортировка и карточка источника.',
+    createdAt: '2026-10-05',
+    decision: 'T5 + D3',
+  },
   {
     slug: 'sort-keys',
     Component: SortKeys,
