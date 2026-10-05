@@ -673,3 +673,13 @@
 Что придётся сделать при переносе: правило зазора для списка рядом с `.selectableOption` в
 `global.scss`, подключить его в теме к `Select` и `MultiSelect` через `classNames.options` и
 вручную к `Combobox.Options` в `CatalogSort`.
+
+Реализовано 2026-10-05: зазор — не `gap` списка, как предполагалось, а `margin-top: 4px` у
+соседних пунктов (`.selectableOption + .selectableOption` в `styles/global.scss`): `Select` и
+`MultiSelect` кладут пункты не прямо в `Combobox.Options`, а в обёртку `ScrollArea`, и `gap` списка до
+них не доходит. Поэтому подключать ничего не пришлось — зазор действует везде, где уже стоит
+`.selectableOption`: тема `Select` и `MultiSelect` (`app/Providers/MantineProvider`), отсюда и
+`CompactMultiSelect`, и `ComboboxOption` в `CatalogSort`. Отличие от макета: зазор получили и два
+пункта направления в `Combobox.Footer` сортировки — решение говорит о зазоре между всеми пунктами
+списка. Песочница: класс темы висит и на её живых полях, поэтому варианты без зазора снимают
+`margin-top` в своём модуле — вид вариантов прежний.

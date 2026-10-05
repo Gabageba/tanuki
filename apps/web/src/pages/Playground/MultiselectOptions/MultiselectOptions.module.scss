@@ -17,6 +17,12 @@
   }
 }
 
+// Тема даёт соседним пунктам живых полей зазор (.selectableOption + .selectableOption) — варианты
+// без зазора его снимают.
+.option.option:is(.lookCurrent, .lookMerged, .lookFlat, .lookCheck) {
+  margin-top: 0;
+}
+
 // Цвета выбранного пункта задаёт вид (ось O), а применяют их .option и классы фокуса (ось K).
 // Акцентный текст — тот же, что в global.scss.
 .lookCurrent,
