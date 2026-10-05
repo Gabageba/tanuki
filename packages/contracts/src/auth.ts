@@ -179,19 +179,21 @@ export const InviteSchema = z.object({
   id: z.string(),
   role: UserRoleSchema,
   status: InviteStatusSchema,
-  /** null для инвайта, созданного CLI-скриптом до первого пользователя (см. apps/api). */
+  /** null для инвайта, созданного CLI-скриптом до первого пользователя (см. apps/api), и если
+   *  автор уже удалён. По id интерфейс узнаёт свои приглашения. */
+  createdById: z.string().nullable(),
   createdByUsername: z.string().nullable(),
   usedByUsername: z.string().nullable(),
+  /** null — у зарегистрировавшегося нет своей картинки или его уже нет. */
+  usedByAvatarUrl: z.string().nullable(),
+  /** null у отозванных до появления этого поля и если отозвавший уже удалён. */
+  revokedByUsername: z.string().nullable(),
   createdAt: z.string(),
   expiresAt: z.string(),
   usedAt: z.string().nullable(),
+  revokedAt: z.string().nullable(),
 });
 export type Invite = z.infer<typeof InviteSchema>;
-
-export const InvitesResponseSchema = z.object({
-  items: z.array(InviteSchema),
-});
-export type InvitesResponse = z.infer<typeof InvitesResponseSchema>;
 
 export const CreateInviteRequestSchema = z.object({
   role: InvitableRoleSchema,
@@ -287,6 +289,41 @@ export const ManagedUsersResponseSchema = z.object({
 });
 export type ManagedUsersResponse = z.infer<typeof ManagedUsersResponseSchema>;
 
+/** Сколько строк на странице таблицы приглашений. */
+export const INVITES_PAGE_SIZE = 10;
+
+/** По чему сортируется таблица приглашений. «Результат» не сортируется — в нём данные разного
+ *  смысла; по дате создания — только по умолчанию, своего заголовка у неё нет. */
+export const INVITES_SORT = {
+  CREATED_AT: 'createdAt',
+  ROLE: 'role',
+  CREATED_BY: 'createdBy',
+  STATUS: 'status',
+} as const;
+export type InvitesSort = EnumLiteralsOf<typeof INVITES_SORT>;
+
+export const InvitesSortSchema = z.enum(INVITES_SORT);
+
+export const InvitesQuerySchema = z.object({
+  /** С единицы. */
+  page: z.coerce.number().int().min(1).default(1),
+  /** Любой из статусов; пусто — все. */
+  status: queryArray(InviteStatusSchema),
+  /** Любая из ролей; пусто — все. */
+  role: queryArray(UserRoleSchema),
+  /** По умолчанию — сначала активные, внутри статуса новые сверху. */
+  sort: InvitesSortSchema.default(INVITES_SORT.CREATED_AT),
+  direction: SortDirectionSchema.default(SORT_DIRECTION.DESC),
+});
+export type InvitesQuery = z.infer<typeof InvitesQuerySchema>;
+
+export const InvitesResponseSchema = z.object({
+  items: z.array(InviteSchema),
+  /** Сколько всего подходит под фильтры — для счётчика и пагинации. */
+  total: z.number(),
+});
+export type InvitesResponse = z.infer<typeof InvitesResponseSchema>;
+
 export const ChangeUserRoleRequestSchema = z.object({
   role: InvitableRoleSchema,
 });
@@ -330,4 +367,29 @@ export const getUserManagementPermissions = (
     case USER_ROLE.USER:
       return { canChangeRole: false, canBlock: false, canDelete: false };
   }
+};
+
+export type InvitePermissions = {
+  canRevoke: boolean;
+  canReissue: boolean;
+};
+
+type InviteManagementSide = Pick<Invite, 'status' | 'role' | 'createdById'>;
+
+/**
+ * Что `actor` может сделать с приглашением. Одна функция на API (проверка) и интерфейс (какие
+ * кнопки показать): только с активным; админ — с любым, модератор — только со своим.
+ * Перевыпуск сохраняет роль, а приглашение в админы через API не выпускается — его только отзывают.
+ */
+export const getInvitePermissions = (
+  actor: UserManagementSide,
+  invite: InviteManagementSide,
+): InvitePermissions => {
+  if (invite.status !== INVITE_STATUS.ACTIVE) {
+    return { canRevoke: false, canReissue: false };
+  }
+  const isAllowed =
+    actor.role === USER_ROLE.ADMIN ||
+    (actor.role === USER_ROLE.MODERATOR && invite.createdById === actor.id);
+  return { canRevoke: isAllowed, canReissue: isAllowed && invite.role !== USER_ROLE.ADMIN };
 };

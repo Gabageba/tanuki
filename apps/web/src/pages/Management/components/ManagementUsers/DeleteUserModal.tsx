@@ -1,4 +1,4 @@
-import { Button, Group, Modal, Paper, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Group, Paper, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { TrashIcon, UserIcon } from '@phosphor-icons/react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -6,6 +6,8 @@ import type { ManagedUser } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
 import UserCell from './UserCell';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type FormValues = {
   username: string;
@@ -33,7 +35,13 @@ function DeleteUserModal({ user, isPending, onClose, onConfirm }: Props) {
   });
 
   return (
-    <Modal opened={user !== null} onClose={onClose} title={t('accountDeletion')} centered>
+    <ToneModal
+      tone={MODAL_TONE.DANGER}
+      icon={TrashIcon}
+      opened={user !== null}
+      onClose={onClose}
+      title={t('accountDeletion')}
+    >
       {user && (
         <form onSubmit={handleSubmit}>
           <Stack gap="md">
@@ -51,13 +59,18 @@ function DeleteUserModal({ user, isPending, onClose, onConfirm }: Props) {
               </Stack>
             </Paper>
 
-            <Text c="dimmed" fz={13}>
-              <Trans
-                i18nKey="accountDeletedImmediately"
-                values={{ username: user.username }}
-                components={{ b: <Text span inherit fw={600} /> }}
-              />
-            </Text>
+            <Stack gap={6}>
+              <Text fz="sm">
+                <Trans
+                  i18nKey="accountDeletedImmediately"
+                  values={{ username: user.username }}
+                  components={{ b: <Text span inherit fw={600} /> }}
+                />
+              </Text>
+              <Text c="dimmed" fz={13}>
+                {t('cantBeRestored')}
+              </Text>
+            </Stack>
 
             <TextInput
               placeholder={t('enterUsernameToConfirm')}
@@ -82,7 +95,7 @@ function DeleteUserModal({ user, isPending, onClose, onConfirm }: Props) {
           </Stack>
         </form>
       )}
-    </Modal>
+    </ToneModal>
   );
 }
 

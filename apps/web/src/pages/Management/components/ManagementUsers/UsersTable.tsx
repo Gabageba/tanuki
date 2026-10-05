@@ -8,7 +8,7 @@ import {
 } from '@tanuki/contracts';
 import Mdash from '@/shared/ui/Mdash';
 import type { UserHandlers } from './models';
-import SortableTh from './SortableTh';
+import SortableTh from '../SortableTh';
 import UserCell from './UserCell';
 import UserDatesCell from './UserDatesCell';
 import UserStatusCell from './UserStatusCell';

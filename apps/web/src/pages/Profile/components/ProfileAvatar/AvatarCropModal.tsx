@@ -1,9 +1,11 @@
-import { Box, Button, Group, Modal, Slider, Stack, Text } from '@mantine/core';
-import { MagnifyingGlassMinusIcon, MagnifyingGlassPlusIcon } from '@phosphor-icons/react';
+import { Box, Button, Group, Slider, Stack, Text } from '@mantine/core';
+import { CropIcon, MagnifyingGlassMinusIcon, MagnifyingGlassPlusIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import Cropper, { type Area, type Point } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
 import { MAX_ZOOM } from './models';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 import styles from './ProfileAvatar.module.scss';
 
 type Props = {
@@ -26,12 +28,13 @@ function AvatarCropModal({ src, isSaving, onClose, onSave }: Props) {
   };
 
   return (
-    <Modal
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={CropIcon}
       opened={src !== null}
       onClose={onClose}
       onExitTransitionEnd={reset}
       title={t('newAvatar')}
-      centered
     >
       <Stack>
         <Box pos="relative" h={320} bg="black" style={{ borderRadius: 'var(--mantine-radius-md)' }}>
@@ -77,7 +80,7 @@ function AvatarCropModal({ src, isSaving, onClose, onSave }: Props) {
           </Button>
         </Group>
       </Stack>
-    </Modal>
+    </ToneModal>
   );
 }
 

@@ -1,6 +1,9 @@
-import { Button, Checkbox, Group, Modal, Text } from '@mantine/core';
+import { Button, Checkbox, Group, Text } from '@mantine/core';
+import { FunnelXIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   opened: boolean;
@@ -14,8 +17,14 @@ function ExclusiveFilterConfirmModal({ opened, groupTitle, onConfirm, onCancel }
   const [rememberChoice, setRememberChoice] = useState(false);
 
   return (
-    <Modal opened={opened} onClose={onCancel} title={t('resetOtherFilters')} centered>
-      <Text size="sm" mb="md">
+    <ToneModal
+      tone={MODAL_TONE.WARNING}
+      icon={FunnelXIcon}
+      opened={opened}
+      onClose={onCancel}
+      title={t('resetOtherFilters')}
+    >
+      <Text fz="sm" mb="md">
         {groupTitle
           ? t('cannotCombineFiltersWithGroup', { groupTitle })
           : t('cannotCombineFilters')}
@@ -30,9 +39,11 @@ function ExclusiveFilterConfirmModal({ opened, groupTitle, onConfirm, onCancel }
         <Button variant="default" onClick={onCancel}>
           {t('cancel')}
         </Button>
-        <Button onClick={() => onConfirm(rememberChoice)}>{t('replace')}</Button>
+        <Button leftSection={<FunnelXIcon />} onClick={() => onConfirm(rememberChoice)}>
+          {t('replace')}
+        </Button>
       </Group>
-    </Modal>
+    </ToneModal>
   );
 }
 

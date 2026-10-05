@@ -1,13 +1,15 @@
-import { Button, Checkbox, Modal, PasswordInput, Stack } from '@mantine/core';
+import { Button, Checkbox, PasswordInput, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
-import { FloppyDiskIcon } from '@phosphor-icons/react';
+import { FloppyDiskIcon, KeyIcon } from '@phosphor-icons/react';
 import { API_ERROR_CODE } from '@tanuki/contracts';
 import { ApiRequestError } from '@/shared/api/client';
 import { validatePassword, validateRequired } from '@/shared/lib/authValidation';
 import useChangePassword from './hooks/useChangePassword';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   opened: boolean;
@@ -58,7 +60,13 @@ function ChangePasswordModal({ opened, onClose }: Props) {
   });
 
   return (
-    <Modal opened={opened} onClose={handleClose} title={t('changePassword')} centered>
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={KeyIcon}
+      opened={opened}
+      onClose={handleClose}
+      title={t('changePassword')}
+    >
       <form onSubmit={handleSubmit}>
         <Stack>
           <PasswordInput
@@ -90,7 +98,7 @@ function ChangePasswordModal({ opened, onClose }: Props) {
           </ModalButtonsLayout>
         </Stack>
       </form>
-    </Modal>
+    </ToneModal>
   );
 }
 

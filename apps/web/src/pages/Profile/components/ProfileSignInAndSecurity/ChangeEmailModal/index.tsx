@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Group, Modal } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import { EnvelopeSimpleIcon } from '@phosphor-icons/react';
 import type { ChangeEmailRequest } from '@tanuki/contracts';
 import useChangeEmail from '../hooks/useChangeEmail';
 import EmailChangeFormStep from './EmailChangeFormStep';
-import GoBackButton from '@/shared/ui/GoBackButton';
 import EmailChangeCodeStep from './EmailChangeCodeStep';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   opened: boolean;
@@ -30,20 +31,13 @@ function ChangeEmailModal({ opened, onClose }: Props) {
   };
 
   return (
-    <Modal
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={EnvelopeSimpleIcon}
       opened={opened}
       onClose={handleClose}
-      title={
-        codeSent ? (
-          <Group gap="xs">
-            <GoBackButton onClick={() => setCodeSent(false)} />
-            {t('enterCode')}
-          </Group>
-        ) : (
-          t('changeEmail')
-        )
-      }
-      centered
+      title={codeSent ? t('enterCode') : t('changeEmail')}
+      onBack={codeSent ? () => setCodeSent(false) : undefined}
     >
       {codeSent && request ? (
         <EmailChangeCodeStep
@@ -58,7 +52,7 @@ function ChangeEmailModal({ opened, onClose }: Props) {
           onCancel={handleClose}
         />
       )}
-    </Modal>
+    </ToneModal>
   );
 }
 

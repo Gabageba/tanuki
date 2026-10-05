@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Group, Modal } from '@mantine/core';
 import { useTimeout } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
+import { CloudArrowDownIcon } from '@phosphor-icons/react';
 import useSources from '@/entities/source/hooks/useSources';
-import GoBackButton from '@/shared/ui/GoBackButton';
 import useSourceAccounts from '../../ProfileSourceAccounts/hooks/useSourceAccounts';
 import { groupSourcesByAccount } from '../../ProfileSourceAccounts/lib';
 import ImportParsingStep from './ImportParsingStep';
 import ImportSourceStep from './ImportSourceStep';
 import ImportTitlesStep from './ImportTitlesStep';
 import { MOCK_PARSING_DURATION_MS, SOURCE_IMPORT_STEP, type SourceImportStep } from './models';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   opened: boolean;
@@ -70,25 +71,24 @@ function ImportFromSourceModal({ opened, onClose }: Props) {
   };
 
   return (
-    <Modal
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={CloudArrowDownIcon}
       opened={opened}
       onClose={handleClose}
       // Шаг сбрасывается после анимации закрытия, иначе в закрывающейся модалке мелькает первый шаг.
       onExitTransitionEnd={() => setStep(SOURCE_IMPORT_STEP.SOURCE)}
       title={
-        step === SOURCE_IMPORT_STEP.TITLES ? (
-          <Group gap="xs">
-            <GoBackButton onClick={() => setStep(SOURCE_IMPORT_STEP.SOURCE)} />
-            {t('bookmarksOn', { source: sourceTitle })}
-          </Group>
-        ) : (
-          t('importFromSource')
-        )
+        step === SOURCE_IMPORT_STEP.TITLES
+          ? t('bookmarksOn', { source: sourceTitle })
+          : t('importFromSource')
       }
-      centered
+      onBack={
+        step === SOURCE_IMPORT_STEP.TITLES ? () => setStep(SOURCE_IMPORT_STEP.SOURCE) : undefined
+      }
     >
       {renderStep()}
-    </Modal>
+    </ToneModal>
   );
 }
 

@@ -329,9 +329,10 @@ GET  /auth/me     → CurrentUser
 POST /auth/forgot-password { email, language } → 204, ответ не выдаёт, есть ли аккаунт  @Public()
 POST /auth/reset-password  { token, password } → CurrentUser, отзывает старые сессии   @Public()
 
-GET    /invites          → { items: Invite[] }                    admin, moderator
-POST   /invites  { role } → Invite & { code }, код виден только тут   admin, moderator (moderator — только role=user)
-DELETE /invites/:id      → 204                                    admin, moderator
+GET    /invites?page&status&role&sort&direction → { items: Invite[], total }   admin, moderator
+POST   /invites  { role }   → Invite & { code }, код виден только тут   admin, moderator (moderator — только role=user)
+DELETE /invites/:id         → Invite, отзывает активное                 admin; moderator — только своё
+POST   /invites/:id/reissue → Invite & { code }, отзыв + новое с той же ролью   admin; moderator — только своё; не для role=admin
 
 GET    /users?page&query&role&status → { items: ManagedUser[], total }   admin, moderator
 PATCH  /users/:id/role  { role }     → ManagedUser                       только admin
@@ -344,7 +345,16 @@ DELETE /users/:id                    → 204, удаляет сразу         
 
 - **Инвайт** — одноразовый, живёт 7 дней, несёт роль будущего пользователя. `code` в открытом
   виде отдаётся только в ответе на `POST /invites`; хранится (и потом проверяется) только его
-  SHA-256. Ссылка на регистрацию — `/register?invite=<code>` на фронтенде.
+  SHA-256. Ссылка на регистрацию — `/register?invite=<code>` на фронтенде. Потерянную ссылку не
+  восстановить — приглашение перевыпускают: `POST /invites/:id/reissue` в одной транзакции отзывает
+  старое и выпускает новое с той же ролью. Приглашение в роль `admin` (из CLI-скрипта) не
+  перевыпускается — только отзывается.
+- **Список приглашений** — по 10 (`INVITES_PAGE_SIZE`), фильтры `status` и `role` повторяемые
+  (`?status=active&status=used`), `sort` — `status` (по умолчанию, активные первыми) / `role` /
+  `createdBy`, внутри — новые сверху. `Invite` несёт `createdById` (по нему интерфейс узнаёт свои),
+  `revokedAt` и `revokedByUsername`.
+- **Права на приглашения** — `getInvitePermissions` в `@tanuki/contracts`, общие для API и
+  интерфейса: только активное; админ — любое, модератор — только своё; иначе 403.
 - **`username`** — `^[a-zA-Z0-9_.]{3,24}$`, хранится как введён, уникален без учёта регистра;
   `email` — тоже уникален без учёта регистра.
 - **Пароль** — Argon2id, 8–128 символов, без требований к составу (индикатор надёжности —

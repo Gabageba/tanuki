@@ -205,6 +205,8 @@ export const invites = pgTable('invites', {
   usedBy: uuid('used_by').references(() => users.id, { onDelete: 'set null' }),
   usedAt: timestamp('used_at', { withTimezone: true }),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  /** Кто отозвал; null у отозванных до появления колонки и если отозвавший уже удалён. */
+  revokedBy: uuid('revoked_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

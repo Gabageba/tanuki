@@ -1,4 +1,4 @@
-import { Button, Modal, Select, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Select, Stack, Text, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { CalendarBlankIcon, ChatTextIcon, ClockIcon, ProhibitIcon } from '@phosphor-icons/react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -16,6 +16,8 @@ import {
   getToday,
   type BlockDuration,
 } from './models';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   user: ManagedUser | null;
@@ -50,20 +52,28 @@ function BlockUserModal({ user, isPending, onClose, onConfirm }: Props) {
   });
 
   return (
-    <Modal opened={user !== null} onClose={onClose} title={t('blocking')} centered>
+    <ToneModal
+      tone={MODAL_TONE.DANGER}
+      icon={ProhibitIcon}
+      opened={user !== null}
+      onClose={onClose}
+      title={t('blocking')}
+    >
       {user && (
         <form onSubmit={handleSubmit}>
           <Stack gap="md">
-            <Text c="dimmed" fz={13}>
-              <Trans
-                i18nKey="userCantLogInWhileBlocked"
-                values={{ username: user.username }}
-                components={{ b: <Text span inherit fw={600} /> }}
-              />
-            </Text>
-            <Text c="dimmed" fz={13}>
-              {t('reasonIfGivenSeenByStaffAndUser')}
-            </Text>
+            <Stack gap={6}>
+              <Text fz="sm">
+                <Trans
+                  i18nKey="userCantLogInWhileBlocked"
+                  values={{ username: user.username }}
+                  components={{ b: <Text span inherit fw={600} /> }}
+                />
+              </Text>
+              <Text c="dimmed" fz={13}>
+                {t('reasonIfGivenSeenByStaffAndUser')}
+              </Text>
+            </Stack>
 
             <Select
               aria-label={t('period')}
@@ -104,7 +114,7 @@ function BlockUserModal({ user, isPending, onClose, onConfirm }: Props) {
           </Stack>
         </form>
       )}
-    </Modal>
+    </ToneModal>
   );
 }
 

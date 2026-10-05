@@ -5,6 +5,7 @@ import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
 import HeaderBackground from './HeaderBackground';
 import ImportSourcePicker from './ImportSourcePicker';
+import InvitesTable from './InvitesTable';
 import LoginBadge from './LoginBadge';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
@@ -27,6 +28,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'invites-table',
+    Component: InvitesTable,
+    title: 'Таблица приглашений',
+    description:
+      'Вкладка «Приглашения» перенесена из /invites как есть и не похожа на соседних «Пользователей» — как переложить её на те же фильтры, сортировку, страницы и карточку, объединять ли ячейки и как переделать модалку создания.',
+    createdAt: '2026-10-02',
+    decision: 'T3 + N1 + D1 + R1 + L1 + C1 + M9a',
+  },
   {
     slug: 'users-admin',
     Component: UsersAdmin,

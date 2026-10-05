@@ -1,9 +1,11 @@
-import { Button, Group, Modal, PasswordInput, Stack, Text } from '@mantine/core';
+import { Button, Group, PasswordInput, Stack, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useTranslation } from 'react-i18next';
 import { TrashIcon } from '@phosphor-icons/react';
 import { ApiRequestError } from '@/shared/api/client';
 import { validateRequired } from '@/shared/lib/authValidation';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 import useDeleteAccount from './hooks/useDeleteAccount';
 
 type Props = {
@@ -40,12 +42,21 @@ function DeleteAccountModal({ opened, onClose }: Props) {
   });
 
   return (
-    <Modal opened={opened} onClose={handleClose} title={t('deleteAccount')} centered>
+    <ToneModal
+      tone={MODAL_TONE.DANGER}
+      icon={TrashIcon}
+      opened={opened}
+      onClose={handleClose}
+      title={t('deleteAccount')}
+    >
       <form onSubmit={handleSubmit}>
         <Stack>
-          <Text c="dimmed" fz={13}>
-            {t('accountDeletionConsequences')}
-          </Text>
+          <Stack gap={6}>
+            <Text fz="sm">{t('accountDeletedIn14Days')}</Text>
+            <Text c="dimmed" fz={13}>
+              {t('allDevicesSignOutCancelLinkByEmail')}
+            </Text>
+          </Stack>
           <PasswordInput
             placeholder={t('enterPasswordToConfirm')}
             autoComplete="current-password"
@@ -67,7 +78,7 @@ function DeleteAccountModal({ opened, onClose }: Props) {
           </Group>
         </Stack>
       </form>
-    </Modal>
+    </ToneModal>
   );
 }
 

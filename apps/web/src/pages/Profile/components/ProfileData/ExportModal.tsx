@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Button, Modal, SegmentedControl, Stack } from '@mantine/core';
+import { Button, SegmentedControl, Stack } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import { DownloadSimpleIcon } from '@phosphor-icons/react';
 import { getExportFormatLabel } from './lib';
 import { EXPORT_FORMAT, type ExportFormat } from './models';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   opened: boolean;
@@ -23,7 +25,13 @@ function ExportModal({ opened, onClose }: Props) {
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title={t('bookmarksExport')} centered>
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={DownloadSimpleIcon}
+      opened={opened}
+      onClose={onClose}
+      title={t('bookmarksExport')}
+    >
       <Stack>
         <SegmentedControl
           size="xs"
@@ -48,7 +56,7 @@ function ExportModal({ opened, onClose }: Props) {
           </Button>
         </ModalButtonsLayout>
       </Stack>
-    </Modal>
+    </ToneModal>
   );
 }
 

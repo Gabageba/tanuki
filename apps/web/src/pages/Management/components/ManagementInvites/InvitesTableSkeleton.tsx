@@ -1,10 +1,10 @@
-import { Skeleton, Table } from '@mantine/core';
+import { Skeleton, Stack, Table } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import TextSkeleton from '@/shared/ui/TextSkeleton';
 
 const ROWS_COUNT = 5;
 
-/** Заглушка таблицы приглашений на время загрузки — те же колонки, строки из плашек. */
+/** Заглушка таблицы приглашений на время загрузки — те же столбцы, строки из плашек. */
 function InvitesTableSkeleton() {
   const { t } = useTranslation();
 
@@ -14,32 +14,32 @@ function InvitesTableSkeleton() {
         <Table.Thead>
           <Table.Tr>
             <Table.Th>{t('role')}</Table.Th>
-            <Table.Th>{t('status')}</Table.Th>
             <Table.Th>{t('createdBy')}</Table.Th>
-            <Table.Th>{t('usedBy')}</Table.Th>
-            <Table.Th>{t('expires')}</Table.Th>
-            <Table.Th />
+            <Table.Th>{t('status')}</Table.Th>
+            <Table.Th>{t('result')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {Array.from({ length: ROWS_COUNT }).map((_, index) => (
             <Table.Tr key={index}>
               <Table.Td>
-                <TextSkeleton fz="sm" w={90} />
+                <Skeleton h={20} w={90} radius="sm" />
               </Table.Td>
               <Table.Td>
-                <Skeleton h={20} w={80} radius="xl" />
+                <Stack gap={2}>
+                  <TextSkeleton fz="sm" w={100} />
+                  <TextSkeleton fz="xs" w={70} />
+                </Stack>
               </Table.Td>
               <Table.Td>
-                <TextSkeleton fz="sm" w={100} />
+                <Skeleton h={20} w={90} radius="sm" />
               </Table.Td>
               <Table.Td>
-                <TextSkeleton fz="sm" w={100} />
+                <Stack gap={2}>
+                  <TextSkeleton fz="sm" w={140} />
+                  <TextSkeleton fz="xs" w={70} />
+                </Stack>
               </Table.Td>
-              <Table.Td>
-                <TextSkeleton fz="sm" w={80} />
-              </Table.Td>
-              <Table.Td />
             </Table.Tr>
           ))}
         </Table.Tbody>

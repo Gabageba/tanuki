@@ -43,6 +43,15 @@
   `QueryClientProvider` already shows a notification. `QueryError` is only for the page's main
   query and is rendered by `PageLayout.Content`, not by blocks. A block whose query failed shows
   its empty state.
+- **Modals** carry their tone as an icon next to the title (20px, tone color); the body holds no
+  icons or colored boxes — just the main sentence in 14 and explanations in dimmed 13. The tone
+  matches the confirm button's color and how reversible the action is: `danger` (red) —
+  irreversible or hits someone else's account; `warning` (`gold`) — reversible, but something gets
+  reset, revealed or reloaded; `neutral` (dimmed gray) — an ordinary form; `success` (`teal`) — a
+  result. The icon repeats the confirm button's icon when it names the meaning, otherwise the
+  modal's subject; never an `X`, it reads as the close button. An inner step shows its back button
+  in place of the icon. The current map of every modal is in `docs/11-ui-decisions.md` («Таблица
+  приглашений и модалки») — add a new modal there too.
 - **Empty state** is Mantine `EmptyState` (`title`, `description`, `icon`; buttons go into
   `EmptyState.Actions`), never a hand-made `Stack` of `ThemeIcon` + `Text`.
 - **Tags** — `Badge` and `Pill` — use `variant="muted"` (registered in the theme: tint, border and
@@ -68,7 +77,8 @@
   native date input), keep the caption in `aria-label`.
 - Optionality is never shown with a placeholder like «Необязательно». Say it in the modal's text
   instead («Причину, если укажете, увидят…»).
-- Explanatory text in a modal is `<Text c="dimmed" fz={13}>`.
+- Explanatory text in a modal is `<Text c="dimmed" fz={13}>`; the main sentence above it (what
+  will happen) is plain `fz="sm"` (14). See **Modals** under UI patterns.
 
 ## Types
 

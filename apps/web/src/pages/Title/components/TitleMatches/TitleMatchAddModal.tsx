@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Button, Modal, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Stack, Text, TextInput } from '@mantine/core';
+import { LinkIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { TITLE_LINK_VERDICT } from '@tanuki/contracts';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 import type useSetTitleLink from '../../hooks/useSetTitleLink';
 import { parseTitleLink } from '../../lib';
 
@@ -32,9 +35,15 @@ function TitleMatchAddModal({ opened, onClose, mutateTitleLink, isTitleLinkPendi
   };
 
   return (
-    <Modal opened={opened} onClose={handleClose} title={t('addTitleManually')} centered>
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={LinkIcon}
+      opened={opened}
+      onClose={handleClose}
+      title={t('addTitleManually')}
+    >
       <Stack gap="sm">
-        <Text fz={14} c="dimmed">
+        <Text c="dimmed" fz={13}>
           {t('pasteLinkFromOtherSource')}
         </Text>
         <TextInput
@@ -48,7 +57,7 @@ function TitleMatchAddModal({ opened, onClose, mutateTitleLink, isTitleLinkPendi
           {t('add')}
         </Button>
       </Stack>
-    </Modal>
+    </ToneModal>
   );
 }
 

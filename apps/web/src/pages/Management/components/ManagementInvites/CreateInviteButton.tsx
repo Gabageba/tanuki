@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Button, CopyButton, Modal, SegmentedControl, Stack, TextInput } from '@mantine/core';
-import { CheckIcon, CopyIcon, PlusIcon } from '@phosphor-icons/react';
+import { Button, Stack, Text } from '@mantine/core';
+import { useForm } from '@mantine/form';
+import { CheckCircleIcon, CheckIcon, PlusIcon, TicketIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import {
   INVITABLE_ROLE,
@@ -8,21 +9,27 @@ import {
   type CreateInviteResponse,
   type InvitableRole,
 } from '@tanuki/contracts';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
-import { getUserRoleLabel } from '../../models';
+import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
+import InviteCreatedContent from './InviteCreatedContent';
+import RoleRadioCards from './RoleRadioCards';
 import useCreateInvite from './hooks/useCreateInvite';
+import { INVITE_TTL_DAYS } from './models';
 
-const inviteLinkOf = (code: string) =>
-  `${window.location.origin}${ROUTE_PATHS.REGISTER}?invite=${code}`;
+type FormValues = {
+  role: InvitableRole;
+};
 
+/** «Создать приглашение» в шапке вкладки: роль карточками, после создания — ссылка в том же окне. */
 function CreateInviteButton() {
   const { t } = useTranslation();
   const { data: currentUser } = useCurrentUser();
   const createInvite = useCreateInvite();
   const [opened, setOpened] = useState(false);
-  const [role, setRole] = useState<InvitableRole>(USER_ROLE.USER);
   const [created, setCreated] = useState<CreateInviteResponse | null>(null);
+  const form = useForm<FormValues>({ initialValues: { role: USER_ROLE.USER } });
 
   // Модератор может выпускать инвайты только роли USER — MODERATOR доступен лишь админу.
   const availableRoles = Object.values(INVITABLE_ROLE).filter(
@@ -32,63 +39,69 @@ function CreateInviteButton() {
   const handleClose = () => {
     setOpened(false);
     setCreated(null);
-    setRole(USER_ROLE.USER);
+    form.reset();
   };
 
-  const handleCreate = () => {
-    createInvite.mutate({ role }, { onSuccess: setCreated });
+  const handleCreateAnother = () => {
+    setCreated(null);
+    form.reset();
   };
+
+  const handleSubmit = form.onSubmit(({ role }) => {
+    createInvite.mutate({ role }, { onSuccess: setCreated });
+  });
 
   return (
     <>
-      <Button leftSection={<PlusIcon size={16} />} onClick={() => setOpened(true)}>
+      <Button leftSection={<PlusIcon />} onClick={() => setOpened(true)}>
         {t('createInvite')}
       </Button>
 
-      <Modal opened={opened} onClose={handleClose} title={t('createInvite')} centered>
+      <ToneModal
+        tone={created ? MODAL_TONE.SUCCESS : MODAL_TONE.NEUTRAL}
+        icon={created ? CheckCircleIcon : TicketIcon}
+        opened={opened}
+        onClose={handleClose}
+        title={created ? t('inviteCreated') : t('newInvite')}
+      >
         {created ? (
-          <Stack gap="sm">
-            <TextInput value={inviteLinkOf(created.code)} readOnly ff="monospace" />
-            <CopyButton value={inviteLinkOf(created.code)}>
-              {({ copied, copy }) => (
-                <Button
-                  variant={copied ? 'light' : 'filled'}
-                  color={copied ? 'green' : undefined}
-                  leftSection={copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
-                  onClick={copy}
-                >
-                  {copied ? t('linkCopied') : t('copyLink')}
-                </Button>
-              )}
-            </CopyButton>
+          <Stack gap="md">
+            <InviteCreatedContent invite={created} />
+            <ModalButtonsLayout>
+              <Button variant="default" leftSection={<PlusIcon />} onClick={handleCreateAnother}>
+                {t('oneMore')}
+              </Button>
+              <Button leftSection={<CheckIcon />} onClick={handleClose}>
+                {t('done')}
+              </Button>
+            </ModalButtonsLayout>
           </Stack>
         ) : (
-          <Stack gap="sm">
-            <SegmentedControl
-              w="100%"
-              size="sm"
-              value={role}
-              onChange={(value) => setRole(value as InvitableRole)}
-              data={availableRoles.map((value) => ({
-                value,
-                label: getUserRoleLabel(value, t),
-              }))}
-              styles={{
-                label: {
-                  justifyContent: 'center',
-                },
-              }}
-            />
-            <Button
-              leftSection={<PlusIcon size={16} />}
-              onClick={handleCreate}
-              loading={createInvite.isPending}
-            >
-              {t('createInvite')}
-            </Button>
-          </Stack>
+          <form onSubmit={handleSubmit}>
+            <Stack gap="md">
+              <Stack gap={6}>
+                <Text fz="sm">{t('inviteIsOneTimeRegistrationLink')}</Text>
+                <Text c="dimmed" fz={13}>
+                  {t('validForCountDaysOnePerson', { count: INVITE_TTL_DAYS })}
+                </Text>
+              </Stack>
+              <RoleRadioCards
+                roles={availableRoles}
+                value={form.values.role}
+                onChange={(role) => form.setFieldValue('role', role)}
+              />
+              <ModalButtonsLayout>
+                <Button variant="default" onClick={handleClose}>
+                  {t('cancel')}
+                </Button>
+                <Button type="submit" leftSection={<PlusIcon />} loading={createInvite.isPending}>
+                  {t('create')}
+                </Button>
+              </ModalButtonsLayout>
+            </Stack>
+          </form>
         )}
-      </Modal>
+      </ToneModal>
     </>
   );
 }

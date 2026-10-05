@@ -1,18 +1,24 @@
 import type { ReactNode } from 'react';
 import { Group, Table, UnstyledButton } from '@mantine/core';
-import { SORT_DIRECTION, type ManagedUsersSort, type SortDirection } from '@tanuki/contracts';
+import { SORT_DIRECTION, type SortDirection } from '@tanuki/contracts';
 import SortCaretsIcon from './SortCaretsIcon';
 
-type Props = {
-  sort: ManagedUsersSort;
-  activeSort: ManagedUsersSort;
+type Props<Sort extends string> = {
+  sort: Sort;
+  activeSort: Sort;
   direction: SortDirection;
-  onSortChange: (sort: ManagedUsersSort) => void;
+  onSortChange: (sort: Sort) => void;
   children: ReactNode;
 };
 
 /** Заголовок столбца-кнопка: двойная каретка, у активного столбца половина направления ярче. */
-function SortableTh({ sort, activeSort, direction, onSortChange, children }: Props) {
+function SortableTh<Sort extends string>({
+  sort,
+  activeSort,
+  direction,
+  onSortChange,
+  children,
+}: Props<Sort>) {
   const isActive = sort === activeSort;
   const isAscending = direction === SORT_DIRECTION.ASC;
 
