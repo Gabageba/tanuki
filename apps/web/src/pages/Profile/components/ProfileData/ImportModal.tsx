@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, FileInput, Modal, Stack, Text } from '@mantine/core';
+import { Button, FileInput, Stack, Text } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import { FileIcon, UploadSimpleIcon } from '@phosphor-icons/react';
@@ -7,6 +7,8 @@ import ProgressList from '@/shared/ui/ProgressList';
 import { getMockBookmarkStatusLabel } from './lib';
 import { MOCK_IMPORT_PREVIEW } from './models';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   opened: boolean;
@@ -31,7 +33,13 @@ function ImportModal({ opened, onClose }: Props) {
   };
 
   return (
-    <Modal opened={opened} onClose={handleClose} title={t('bookmarksImport')} centered>
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={UploadSimpleIcon}
+      opened={opened}
+      onClose={handleClose}
+      title={t('bookmarksImport')}
+    >
       <Stack>
         <Text fz={13} c="dimmed">
           {t('importDoesNotOverwriteProgress')}
@@ -72,7 +80,7 @@ function ImportModal({ opened, onClose }: Props) {
           </Button>
         </ModalButtonsLayout>
       </Stack>
-    </Modal>
+    </ToneModal>
   );
 }
 

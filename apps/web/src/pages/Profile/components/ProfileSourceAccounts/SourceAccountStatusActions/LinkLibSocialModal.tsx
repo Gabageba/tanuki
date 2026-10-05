@@ -1,11 +1,13 @@
-import { Modal, Tabs, Text } from '@mantine/core';
+import { Tabs, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { KeyIcon, PasswordIcon } from '@phosphor-icons/react';
+import { KeyIcon, PasswordIcon, SignInIcon } from '@phosphor-icons/react';
 import { SOURCE_AUTH_FAMILY, type Source } from '@tanuki/contracts';
 import useLinkLibSocialAccount from '../hooks/useLinkLibSocialAccount';
 import { getSourceAuthFamilyTitle } from '../lib';
 import PasswordAccountForm from './PasswordAccountForm';
 import LibSocialTokenForm from './LibSocialTokenForm';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   /** Сайты сети, в которые можно войти. */
@@ -63,12 +65,13 @@ function LinkLibSocialModal({ sources, defaultTokenSourceId, opened, onClose }: 
   ];
 
   return (
-    <Modal
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={SignInIcon}
       opened={opened}
       onClose={onClose}
       title={t('logInToName', { name: getSourceAuthFamilyTitle(SOURCE_AUTH_FAMILY.LIBSOCIAL) })}
       size="lg"
-      centered
     >
       <Tabs defaultValue={LOGIN_TAB.PASSWORD} keepMounted={false}>
         <Tabs.List>
@@ -84,7 +87,7 @@ function LinkLibSocialModal({ sources, defaultTokenSourceId, opened, onClose }: 
           </Tabs.Panel>
         ))}
       </Tabs>
-    </Modal>
+    </ToneModal>
   );
 }
 

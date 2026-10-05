@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { INVITE_STATUS } from '@tanuki/contracts';
-import { computeInviteStatus } from './invites.mapper';
+import { computeInviteStatus, toInvite } from './invites.mapper';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -39,5 +39,36 @@ describe('computeInviteStatus', () => {
     expect(computeInviteStatus({ ...baseRow, usedAt: new Date(), revokedAt: new Date() })).toBe(
       INVITE_STATUS.USED,
     );
+  });
+});
+
+describe('toInvite', () => {
+  it('отдаёт автора по id, кто и когда отозвал — в серверном формате', () => {
+    const revokedAt = new Date('2026-10-02T12:34:56.789Z');
+    const invite = toInvite(
+      {
+        ...baseRow,
+        id: 'invite-id',
+        codeHash: 'hash',
+        role: 'user',
+        createdBy: 'author-id',
+        usedBy: null,
+        revokedAt,
+        revokedBy: 'revoker-id',
+        createdAt: new Date('2026-10-01T00:00:00Z'),
+      },
+      {
+        createdByUsername: 'author',
+        usedByUsername: null,
+        usedByAvatarUpdatedAt: null,
+        revokedByUsername: 'revoker',
+      },
+    );
+    expect(invite).toMatchObject({
+      status: INVITE_STATUS.REVOKED,
+      createdById: 'author-id',
+      revokedByUsername: 'revoker',
+      revokedAt: '2026-10-02T12:34:56Z',
+    });
   });
 });

@@ -15,6 +15,13 @@ function useDateFormat() {
     return `${part('day')} ${part('month').replace('.', '')} ${part('year')}`;
   };
 
+  /** «9 октября 2026 г.» — дата словами внутри фразы; пробелы неразрывные, чтобы она не
+   *  переносилась. */
+  const formatDateLong = (isoDate: string) =>
+    new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long', year: 'numeric' })
+      .format(new Date(isoDate))
+      .replace(/ /g, '\u00a0');
+
   /** «10.12.2002» — фиксированный числовой формат для колонок, где даты идут подряд. */
   const formatDateNumeric = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -111,6 +118,7 @@ function useDateFormat() {
 
   return {
     formatDuration,
+    formatDateLong,
     getCurrentMonthName,
     formatDate: (isoDate: string | null) => {
       if (!isoDate) {

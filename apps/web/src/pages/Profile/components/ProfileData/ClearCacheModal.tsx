@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Button, Modal, Stack, Text } from '@mantine/core';
+import { Button, Stack, Text } from '@mantine/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { BroomIcon } from '@phosphor-icons/react';
 import { clearBrowserCache } from './lib';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   opened: boolean;
@@ -22,11 +24,20 @@ function ClearCacheModal({ opened, onClose }: Props) {
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title={t('clearBrowserCache')} centered>
-      <Stack>
-        <Text fz={13} c="dimmed">
-          {t('resetsSavedPageDataAndReloads')}
-        </Text>
+    <ToneModal
+      tone={MODAL_TONE.WARNING}
+      icon={BroomIcon}
+      opened={opened}
+      onClose={onClose}
+      title={t('clearBrowserCache')}
+    >
+      <Stack gap="md">
+        <Stack gap={6}>
+          <Text fz="sm">{t('resetsSavedPageDataAndReloads')}</Text>
+          <Text c="dimmed" fz={13}>
+            {t('signInAndSettingsWillRemain')}
+          </Text>
+        </Stack>
         <ModalButtonsLayout>
           <Button variant="default" onClick={onClose}>
             {t('cancel')}
@@ -36,7 +47,7 @@ function ClearCacheModal({ opened, onClose }: Props) {
           </Button>
         </ModalButtonsLayout>
       </Stack>
-    </Modal>
+    </ToneModal>
   );
 }
 

@@ -1,80 +1,130 @@
-import { Badge, Button, EmptyState, Table } from '@mantine/core';
-import { TicketIcon, XIcon } from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
-import { INVITE_STATUS } from '@tanuki/contracts';
-import Mdash from '@/shared/ui/Mdash';
-import useDateFormat from '@/shared/hooks/useDateFormat';
-import { getUserRoleLabel } from '../../models';
-import { getInviteStatusColor, getInviteStatusLabel } from './models';
-import InvitesTableSkeleton from './InvitesTableSkeleton';
+import { useState } from 'react';
+import { Stack } from '@mantine/core';
+import {
+  getInvitePermissions,
+  INVITES_SORT,
+  SORT_DIRECTION,
+  type CreateInviteResponse,
+  type Invite,
+  type InvitesSort,
+  type InviteStatus,
+  type SortDirection,
+  type UserRole,
+} from '@tanuki/contracts';
+import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
+import InviteCreatedModal from './InviteCreatedModal';
+import InviteDrawer from './InviteDrawer';
+import InvitesFilters from './InvitesFilters';
+import InvitesList from './InvitesList';
+import RevokeInviteModal from './RevokeInviteModal';
 import useInvites from './hooks/useInvites';
+import useReissueInvite from './hooks/useReissueInvite';
 import useRevokeInvite from './hooks/useRevokeInvite';
+import { getDefaultSortDirection } from './models';
 
-/** Вкладка «Приглашения» — прежняя страница /invites как есть. */
+/** Вкладка «Приглашения»: фильтры, таблица постранично, карточка и модалки действий. По умолчанию
+ *  новые сверху — только что созданное приглашение сразу видно в начале первой страницы. */
 function ManagementInvites() {
-  const { t } = useTranslation();
-  const { formatDateNumeric } = useDateFormat();
-  const invites = useInvites();
+  const { data: currentUser } = useCurrentUser();
+  const [status, setStatus] = useState<InviteStatus[]>([]);
+  const [role, setRole] = useState<UserRole[]>([]);
+  const [sort, setSort] = useState<InvitesSort>(INVITES_SORT.CREATED_AT);
+  const [direction, setDirection] = useState<SortDirection>(SORT_DIRECTION.DESC);
+  const [page, setPage] = useState(1);
+  // Снимки, а не id: карточка не должна закрываться, если после отзыва приглашение выпало из фильтра.
+  const [opened, setOpened] = useState<Invite | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<Invite | null>(null);
+  const [reissued, setReissued] = useState<CreateInviteResponse | null>(null);
+
+  const invites = useInvites({ page, status, role, sort, direction });
   const revokeInvite = useRevokeInvite();
+  const reissueInvite = useReissueInvite();
 
-  if (invites.isPending) {
-    return <InvitesTableSkeleton />;
-  }
+  const hasFilters = status.length > 0 || role.length > 0;
+  const isEmpty = !hasFilters && invites.data?.total === 0;
 
-  if (!invites.data?.items.length) {
-    return (
-      <EmptyState
-        title={t('noInvitesYet')}
-        description={t('createInviteToInviteSomeone')}
-        icon={<TicketIcon />}
-      />
-    );
-  }
+  const resetPage =
+    <Value,>(setter: (value: Value) => void) =>
+    (value: Value) => {
+      setter(value);
+      setPage(1);
+    };
+
+  /** Повторный клик по тому же столбцу разворачивает направление. */
+  const handleSortChange = (next: InvitesSort) => {
+    if (next === sort) {
+      setDirection(direction === SORT_DIRECTION.ASC ? SORT_DIRECTION.DESC : SORT_DIRECTION.ASC);
+    } else {
+      setSort(next);
+      setDirection(getDefaultSortDirection(next));
+    }
+    setPage(1);
+  };
+
+  const handleReset = () => {
+    setStatus([]);
+    setRole([]);
+    setPage(1);
+  };
+
+  const handleRevoke = (invite: Invite) =>
+    revokeInvite.mutate(invite.id, {
+      onSuccess: (updated) => {
+        setRevokeTarget(null);
+        setOpened(updated);
+      },
+    });
+
+  const handleReissue = (invite: Invite) =>
+    reissueInvite.mutate(invite.id, {
+      onSuccess: (created) => {
+        setOpened(null);
+        setReissued(created);
+      },
+    });
+
+  const permissions = opened && currentUser ? getInvitePermissions(currentUser, opened) : null;
 
   return (
-    <Table.ScrollContainer minWidth={720}>
-      <Table verticalSpacing="sm" highlightOnHover>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>{t('role')}</Table.Th>
-            <Table.Th>{t('status')}</Table.Th>
-            <Table.Th>{t('createdBy')}</Table.Th>
-            <Table.Th>{t('usedBy')}</Table.Th>
-            <Table.Th>{t('expires')}</Table.Th>
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {invites.data.items.map((invite) => (
-            <Table.Tr key={invite.id}>
-              <Table.Td>{getUserRoleLabel(invite.role, t)}</Table.Td>
-              <Table.Td>
-                <Badge color={getInviteStatusColor(invite.status)} variant="muted">
-                  {getInviteStatusLabel(invite.status, t)}
-                </Badge>
-              </Table.Td>
-              <Table.Td>{invite.createdByUsername ?? <Mdash />}</Table.Td>
-              <Table.Td>{invite.usedByUsername ?? <Mdash />}</Table.Td>
-              <Table.Td ff="monospace">{formatDateNumeric(invite.expiresAt)}</Table.Td>
-              <Table.Td>
-                {invite.status === INVITE_STATUS.ACTIVE && (
-                  <Button
-                    variant="subtle"
-                    color="red"
-                    size="xs"
-                    leftSection={<XIcon />}
-                    loading={revokeInvite.isPending}
-                    onClick={() => revokeInvite.mutate(invite.id)}
-                  >
-                    {t('revoke')}
-                  </Button>
-                )}
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <Stack gap="md">
+      {!isEmpty && (
+        <InvitesFilters
+          status={status}
+          role={role}
+          onStatusChange={resetPage(setStatus)}
+          onRoleChange={resetPage(setRole)}
+        />
+      )}
+
+      <InvitesList
+        invites={invites}
+        hasFilters={hasFilters}
+        page={page}
+        sort={sort}
+        direction={direction}
+        onPageChange={setPage}
+        onSortChange={handleSortChange}
+        onOpen={setOpened}
+        onReset={handleReset}
+      />
+
+      <InviteDrawer
+        invite={opened}
+        isOwn={opened !== null && opened.createdById === currentUser?.id}
+        permissions={permissions}
+        isReissuing={reissueInvite.isPending}
+        onRevoke={setRevokeTarget}
+        onReissue={handleReissue}
+        onClose={() => setOpened(null)}
+      />
+      <RevokeInviteModal
+        invite={revokeTarget}
+        isPending={revokeInvite.isPending}
+        onClose={() => setRevokeTarget(null)}
+        onConfirm={() => revokeTarget && handleRevoke(revokeTarget)}
+      />
+      <InviteCreatedModal invite={reissued} onClose={() => setReissued(null)} />
+    </Stack>
   );
 }
 

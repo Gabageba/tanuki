@@ -1,0 +1,2 @@
+ALTER TABLE "invites" ADD COLUMN "revoked_by" uuid;--> statement-breakpoint
+ALTER TABLE "invites" ADD CONSTRAINT "invites_revoked_by_users_id_fk" FOREIGN KEY ("revoked_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

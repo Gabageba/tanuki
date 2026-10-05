@@ -1,9 +1,11 @@
-import { Modal } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import { SignInIcon } from '@phosphor-icons/react';
 import type { SourceAuthFamily } from '@tanuki/contracts';
 import useLinkSourceAccount from '../hooks/useLinkSourceAccount';
 import { getSourceAuthFamilyTitle } from '../lib';
 import PasswordAccountForm from './PasswordAccountForm';
+import ToneModal from '@/shared/ui/ToneModal';
+import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
   family: SourceAuthFamily;
@@ -17,18 +19,19 @@ function LinkPasswordAccountModal({ family, opened, onClose }: Props) {
   const linkAccount = useLinkSourceAccount();
 
   return (
-    <Modal
+    <ToneModal
+      tone={MODAL_TONE.NEUTRAL}
+      icon={SignInIcon}
       opened={opened}
       onClose={onClose}
       title={t('logInToName', { name: getSourceAuthFamilyTitle(family) })}
-      centered
     >
       <PasswordAccountForm
         isPending={linkAccount.isPending}
         onSubmit={(values) => linkAccount.mutateAsync({ family, ...values }).then(onClose)}
         onCancel={onClose}
       />
-    </Modal>
+    </ToneModal>
   );
 }
 
