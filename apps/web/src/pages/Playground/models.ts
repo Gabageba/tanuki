@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import AccountGroups from './AccountGroups';
+import AccountMenu from './AccountMenu';
 import AdultContent from './AdultContent';
 import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
@@ -31,6 +32,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'account-menu',
+    Component: AccountMenu,
+    title: 'Меню аккаунта и drawer’ы',
+    description:
+      'Меню аватара и мобильное меню расходятся по составу и размеру пунктов, на телефоне нет профиля; drawer’ы выезжают с разных сторон и подписаны словом — как подать аккаунт, оформить заголовки drawer’ов и с какой стороны их открывать.',
+    createdAt: '2026-10-05',
+    decision: 'M5a + H1a + D1',
+  },
   {
     slug: 'multiselect-options',
     Component: MultiselectOptions,
