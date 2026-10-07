@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import AccountGroups from './AccountGroups';
 import AccountMenu from './AccountMenu';
+import Bookmarks from './Bookmarks';
 import AdultContent from './AdultContent';
 import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
@@ -32,6 +33,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'bookmarks',
+    Component: Bookmarks,
+    title: 'Закладки',
+    description:
+      'Как выглядят закладки по плану docs/plans/bookmarks.md: карточка с прогрессом и новыми главами, вкладки-папки, «В закладки» на тайтле и в читалке, метки в каталоге и списке глав, точка в шапке, папки в настройках и профиле, модалки.',
+    createdAt: '2026-10-07',
+    decision: 'C10h + U3a + T2 + A1 + I1 + E + S4 + R2c + K2 + N3 + D1 + F1 + P2 + G1 + M1d',
+  },
   {
     slug: 'account-menu',
     Component: AccountMenu,
