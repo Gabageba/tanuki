@@ -1,0 +1,27 @@
+// Наведение и линия — те же значения, что у Menu.Item и Menu.Divider в Menu.css Mantine: строка
+// меню не может взять их классы, потому что `Menu.Item` вне `Menu` не работает.
+.row {
+  &:hover:not(:disabled) {
+    background-color: var(--mantine-color-gray-1);
+
+    :global([data-mantine-color-scheme='dark']) & {
+      background-color: var(--mantine-color-dark-4);
+    }
+  }
+
+  // У красного пункта подложка одна на обе схемы — как `--menu-item-hover` у `color="red"`.
+  &[data-danger]:hover:not(:disabled) {
+    &,
+    :global([data-mantine-color-scheme='dark']) & {
+      background-color: var(--mantine-color-red-light-hover);
+    }
+  }
+}
+
+.divider {
+  border-top: 1px solid var(--mantine-color-gray-2);
+
+  :global([data-mantine-color-scheme='dark']) & {
+    border-color: var(--mantine-color-dark-4);
+  }
+}

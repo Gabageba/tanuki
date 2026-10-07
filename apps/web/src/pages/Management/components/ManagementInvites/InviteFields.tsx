@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { INVITE_STATUS, type Invite } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import DrawerField from '@/shared/ui/DrawerField';
-import RoleBadge from '../RoleBadge';
+import RoleBadge from '@/entities/user/components/RoleBadge';
 import InvitePerson from './InvitePerson';
 import InviteStatusBadge from './InviteStatusBadge';
 import { getDaysLeft } from './models';

@@ -1,4 +1,4 @@
-import { ActionIcon, Drawer, ScrollArea, Stack } from '@mantine/core';
+import { ActionIcon, ScrollArea, Stack } from '@mantine/core';
 import {
   ArrowsHorizontalIcon,
   ArrowsOutLineHorizontalIcon,
@@ -26,6 +26,8 @@ import {
 import useReaderSettings, {
   READER_SETTINGS_QUERY_KEY,
 } from '@/entities/reader/hooks/useReaderSettings';
+import ResponsiveDrawer from '@/shared/ui/ResponsiveDrawer';
+import { DRAWER_POSITION, SHEET_HEIGHT } from '@/shared/ui/ResponsiveDrawer/models';
 import useUpdateReaderSettings from '@/entities/reader/hooks/useUpdateReaderSettings';
 import useTapZonesHint from './hooks/useTapZonesHint';
 import ReaderSetting from './ReaderSetting';
@@ -128,10 +130,11 @@ function ReaderSettingsButton() {
       >
         <FadersHorizontalIcon />
       </ActionIcon>
-      <Drawer
+      <ResponsiveDrawer
         opened={isDrawerOpened}
         onClose={closeDrawer}
-        position="right"
+        side={DRAWER_POSITION.RIGHT}
+        height={SHEET_HEIGHT.TALL}
         title={t('readerSettings')}
       >
         <ScrollArea type="auto" offsetScrollbars="y" flex={1} mih={0}>
@@ -245,7 +248,7 @@ function ReaderSettingsButton() {
             </ReaderSetting>
           </Stack>
         </ScrollArea>
-      </Drawer>
+      </ResponsiveDrawer>
       {settings.readingMode === READER_READING_MODE.HORIZONTAL && (
         <ReaderTapZonesOverlay
           tapZoneWidth={settings.tapZoneWidth}

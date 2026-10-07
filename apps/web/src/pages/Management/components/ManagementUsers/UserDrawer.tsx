@@ -1,14 +1,4 @@
-import {
-  Avatar,
-  Badge,
-  Button,
-  Divider,
-  Drawer,
-  Group,
-  Stack,
-  Text,
-  useMatches,
-} from '@mantine/core';
+import { Avatar, Badge, Button, Divider, Stack, Text } from '@mantine/core';
 import {
   LockOpenIcon,
   ProhibitIcon,
@@ -27,8 +17,11 @@ import { PRIMARY_COLOR } from '@/shared/lib/palette';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import Mdash from '@/shared/ui/Mdash';
 import DrawerField from '@/shared/ui/DrawerField';
+import EntityHeading from '@/shared/ui/EntityHeading';
+import ResponsiveDrawer from '@/shared/ui/ResponsiveDrawer';
+import { DRAWER_POSITION } from '@/shared/ui/ResponsiveDrawer/models';
 import LastSeen from './LastSeen';
-import RoleBadge from '../RoleBadge';
+import RoleBadge from '@/entities/user/components/RoleBadge';
 import UserStatusBadge from './UserStatusBadge';
 import UserStatusTerm from './UserStatusTerm';
 import type { UserHandlers } from './models';
@@ -44,7 +37,8 @@ type Props = {
   onClose: () => void;
 };
 
-/** Карточка пользователя: все поля целиком и действия кнопками внизу. Справа, на телефоне — снизу. */
+/** Карточка пользователя: в заголовке аватар, имя и почта, ниже все поля целиком и действия
+ *  кнопками внизу. Справа, на телефоне — снизу. */
 function UserDrawer({
   user,
   isSelf,
@@ -56,49 +50,46 @@ function UserDrawer({
 }: Props) {
   const { t } = useTranslation();
   const { formatDateNumeric } = useDateFormat();
-  const position = useMatches<'bottom' | 'right'>({ base: 'bottom', sm: 'right' });
 
   const hasActions =
     permissions !== null &&
     (permissions.canChangeRole || permissions.canBlock || permissions.canDelete);
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={user !== null}
       onClose={onClose}
-      position={position}
-      size={position === 'bottom' ? 'auto' : 420}
-      title={t('user')}
+      side={DRAWER_POSITION.RIGHT}
+      sideSize={420}
+      title={
+        user ? (
+          <EntityHeading
+            icon={
+              <Avatar
+                src={user.avatarUrl}
+                name={user.username}
+                color={PRIMARY_COLOR}
+                variant="outline"
+                size={40}
+              />
+            }
+            title={user.username}
+            badge={
+              isSelf && (
+                <Badge size="xs" variant="muted" color="gray" flex="none">
+                  {t('you')}
+                </Badge>
+              )
+            }
+            subtitle={user.email}
+          />
+        ) : (
+          t('user')
+        )
+      }
     >
       {user && (
         <Stack gap="md">
-          <Group gap="sm" wrap="nowrap">
-            <Avatar
-              src={user.avatarUrl}
-              name={user.username}
-              color={PRIMARY_COLOR}
-              variant="outline"
-              size={48}
-            />
-            <Stack gap={0} miw={0}>
-              <Group gap={6} wrap="nowrap" miw={0}>
-                <Text fw={600} truncate>
-                  {user.username}
-                </Text>
-                {isSelf && (
-                  <Badge size="xs" variant="muted" color="gray" flex="none">
-                    {t('you')}
-                  </Badge>
-                )}
-              </Group>
-              <Text fz="sm" c="dimmed" ff="monospace" truncate>
-                {user.email}
-              </Text>
-            </Stack>
-          </Group>
-
-          <Divider />
-
           <Stack gap="sm">
             <DrawerField label={t('role')}>
               <RoleBadge role={user.role} />
@@ -187,7 +178,7 @@ function UserDrawer({
           )}
         </Stack>
       )}
-    </Drawer>
+    </ResponsiveDrawer>
   );
 }
 

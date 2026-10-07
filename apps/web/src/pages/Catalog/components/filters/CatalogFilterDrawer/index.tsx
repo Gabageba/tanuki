@@ -1,8 +1,10 @@
-import { Button, Drawer, Group, Stack } from '@mantine/core';
+import { Button, Group, Stack } from '@mantine/core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import useAutoCloseDrawer from '@/shared/hooks/useAutoCloseDrawer';
+import ResponsiveDrawer from '@/shared/ui/ResponsiveDrawer';
+import { SHEET_HEIGHT } from '@/shared/ui/ResponsiveDrawer/models';
 import useExclusiveFilterConfirm from '../../../hooks/useExclusiveFilterConfirm';
 import CatalogFilterDrawerTitle from './CatalogFilterDrawerTitle';
 import CatalogFilterDrawerGroups from './CatalogFilterDrawerGroups';
@@ -38,13 +40,11 @@ function CatalogFilterDrawer({ groups, selection, opened, onClose, onChange }: P
 
   return (
     <>
-      <Drawer
+      <ResponsiveDrawer
         opened={opened}
         onClose={onClose}
         hiddenFrom="sm"
-        size="xl"
-        overlayProps={{ hiddenFrom: 'sm' }}
-        position="bottom"
+        height={SHEET_HEIGHT.TALL}
         title={
           <CatalogFilterDrawerTitle
             activeGroup={activeGroup}
@@ -89,7 +89,7 @@ function CatalogFilterDrawer({ groups, selection, opened, onClose, onChange }: P
             </Button>
           </Group>
         </Stack>
-      </Drawer>
+      </ResponsiveDrawer>
       <ExclusiveFilterConfirmModal
         opened={!!pending}
         groupTitle={pending?.group.title}

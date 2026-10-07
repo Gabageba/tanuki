@@ -1,0 +1,15 @@
+// Сдвиг при свайпе идёт через `translate`, а не `transform`: `transform` занят анимацией
+// открытия Mantine. Её инлайновый `transition-property` здесь расширен на `translate`, чтобы
+// отпущенный drawer плавно вернулся на место; пока тянут — без анимации.
+.content {
+  translate: 0 var(--sheet-offset, 0);
+
+  &:not([data-dragging]) {
+    transition-property: transform, opacity, translate !important;
+  }
+}
+
+// Шапка — место, за которое тянут: браузер не должен прокручивать страницу этим жестом.
+.swipeArea {
+  touch-action: none;
+}

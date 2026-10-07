@@ -152,7 +152,10 @@ const createAppTheme = (t: TFunction) =>
             backgroundColor: 'var(--tanuki-color-surface)',
             borderTop: 'var(--mantine-radius-md)',
           },
+          // Карточка в заголовке тянется до крестика и обрезается многоточием, а не выталкивает его.
           title: {
+            flex: 1,
+            minWidth: 0,
             fontWeight: 600,
           },
           content: {

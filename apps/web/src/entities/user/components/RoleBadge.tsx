@@ -1,7 +1,7 @@
 import { Badge, type BadgeProps } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { UserRole } from '@tanuki/contracts';
-import { getUserRoleColor, getUserRoleLabel } from '../models';
+import { getUserRoleColor, getUserRoleLabel } from '../lib';
 
 type Props = {
   role: UserRole;

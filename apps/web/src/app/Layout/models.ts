@@ -24,3 +24,37 @@ export type ActiveSelection = {
   kind: ActiveSelectionKind;
   sourceId?: string;
 };
+
+export const ACCOUNT_MENU_ITEM = {
+  PROFILE: 'profile',
+  SETTINGS: 'settings',
+  SOURCES_HEALTH: 'sourcesHealth',
+  MANAGEMENT: 'management',
+  PLAYGROUND: 'playground',
+} as const;
+export type AccountMenuItem = EnumLiteralsOf<typeof ACCOUNT_MENU_ITEM>;
+
+export const ACCOUNT_MENU_SECTION = {
+  ACCOUNT: 'account',
+  SOURCES: 'sources',
+  SERVICE: 'service',
+} as const;
+export type AccountMenuSection = EnumLiteralsOf<typeof ACCOUNT_MENU_SECTION>;
+
+export type AccountMenuSectionItems = {
+  section: AccountMenuSection;
+  items: AccountMenuItem[];
+};
+
+/** Один состав и порядок меню аккаунта — для выпадающего на десктопе и drawer на телефоне. */
+export const ACCOUNT_MENU_SECTIONS: AccountMenuSectionItems[] = [
+  {
+    section: ACCOUNT_MENU_SECTION.ACCOUNT,
+    items: [ACCOUNT_MENU_ITEM.PROFILE, ACCOUNT_MENU_ITEM.SETTINGS],
+  },
+  { section: ACCOUNT_MENU_SECTION.SOURCES, items: [ACCOUNT_MENU_ITEM.SOURCES_HEALTH] },
+  {
+    section: ACCOUNT_MENU_SECTION.SERVICE,
+    items: [ACCOUNT_MENU_ITEM.MANAGEMENT, ACCOUNT_MENU_ITEM.PLAYGROUND],
+  },
+];

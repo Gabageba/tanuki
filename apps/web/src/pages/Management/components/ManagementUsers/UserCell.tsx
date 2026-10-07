@@ -2,7 +2,7 @@ import { Avatar, Badge, Group, Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { USER_ROLE, type ManagedUser } from '@tanuki/contracts';
 import { PRIMARY_COLOR } from '@/shared/lib/palette';
-import RoleBadge from '../RoleBadge';
+import RoleBadge from '@/entities/user/components/RoleBadge';
 
 type Props = {
   user: ManagedUser;

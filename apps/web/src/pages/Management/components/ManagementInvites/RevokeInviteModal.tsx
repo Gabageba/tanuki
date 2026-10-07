@@ -5,7 +5,7 @@ import type { Invite } from '@tanuki/contracts';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
 import ToneModal from '@/shared/ui/ToneModal';
 import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
-import { getUserRoleLabel } from '../../models';
+import { getUserRoleLabel } from '@/entities/user/lib';
 
 type Props = {
   invite: Invite | null;

@@ -3,7 +3,7 @@ import { CalendarPlusIcon, UserIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { INVITES_SORT, type Invite, type InvitesSort, type SortDirection } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
-import RoleBadge from '../RoleBadge';
+import RoleBadge from '@/entities/user/components/RoleBadge';
 import SortableTh from '@/shared/ui/SortableTh';
 import SortMenuTh from '@/shared/ui/SortMenuTh';
 import InvitePerson from './InvitePerson';

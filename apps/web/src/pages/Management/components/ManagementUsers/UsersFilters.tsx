@@ -3,7 +3,7 @@ import { CircleHalfIcon, MagnifyingGlassIcon, ShieldIcon } from '@phosphor-icons
 import { useTranslation } from 'react-i18next';
 import { USER_ROLE, USER_STATUS, type UserRole, type UserStatus } from '@tanuki/contracts';
 import CompactMultiSelect from '@/shared/ui/CompactMultiSelect';
-import { getUserRoleLabel } from '../../models';
+import { getUserRoleLabel } from '@/entities/user/lib';
 import { getUserStatusFilterLabel } from './models';
 
 type Props = {
