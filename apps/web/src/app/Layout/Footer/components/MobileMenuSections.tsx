@@ -1,6 +1,7 @@
 import { Box, ScrollArea, Text } from '@mantine/core';
 import { SignOutIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
 import MobileMenuRow from './MobileMenuRow';
@@ -17,9 +18,12 @@ type Props = {
   onNavigate: () => void;
 };
 
-/** Разделы меню аккаунта строками в размер Menu.Item — тот же список, что в меню аватара. */
+/** Разделы меню аккаунта строками в размер Menu.Item — тот же список, что в меню аватара.
+ *  Drawer после перехода на другую страницу закрывает Footer — по смене pathname; клик по
+ *  пункту текущей страницы адрес не меняет, и drawer закрывается здесь, через `onNavigate`. */
 function MobileMenuSections({ onNavigate }: Props) {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const { data: user } = useCurrentUser();
   const logout = useLogout();
 
@@ -47,7 +51,7 @@ function MobileMenuSections({ onNavigate }: Props) {
               <MobileMenuRow
                 key={item}
                 to={getAccountMenuItemPath(item)}
-                onClick={onNavigate}
+                onClick={getAccountMenuItemPath(item) === pathname ? onNavigate : undefined}
                 leftSection={getAccountMenuItemIcon(item)}
               >
                 {getAccountMenuItemLabel(item, t)}

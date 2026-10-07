@@ -1,6 +1,6 @@
 import { AppShell, Group } from '@mantine/core';
 import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
@@ -16,15 +16,42 @@ function Footer() {
   const navigate = useNavigate();
   const isSourcesActive = useIsActiveUrl([
     ROUTE_PATHS.SOURCES,
-    ROUTE_PATHS.SOURCES_HEALTH,
     ROUTE_PATHS.CATALOG,
     ROUTE_PATHS.TITLE,
   ]);
   const isBookmarksActive = useIsActiveUrl(ROUTE_PATHS.BOOKMARKS);
   const isNotificationsActive = useIsActiveUrl(ROUTE_PATHS.NOTIFICATIONS);
+  const isMenuActive = useIsActiveUrl([
+    ROUTE_PATHS.PROFILE,
+    ROUTE_PATHS.SETTINGS,
+    ROUTE_PATHS.SOURCES_HEALTH,
+    ROUTE_PATHS.MANAGEMENT,
+    `${ROUTE_PATHS.PLAYGROUND}/*`,
+  ]);
 
   const [isSourcesOpened, setIsSourcesOpened] = useState(false);
   const [isMenuOpened, setIsMenuOpened] = useState(false);
+
+  // Drawer закрывается не кликом по пункту, а самой сменой страницы: переход react-router идёт
+  // транзишеном и коммитится позже клика, и закрытие по клику на кадр гасило бы кнопку раньше,
+  // чем загорится новая. Смотрим на pathname, а не на key: страницы сами дописывают параметры
+  // в адрес (replace), и drawer, открытый во время загрузки, не должен от этого закрываться.
+  const { pathname } = useLocation();
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setIsSourcesOpened(false);
+    setIsMenuOpened(false);
+  }
+
+  // Переход на текущую страницу pathname не меняет — тогда drawer'ы закрываем сами.
+  const navigateFromFooter = (path: string, isCurrent: boolean) => {
+    if (isCurrent) {
+      setIsSourcesOpened(false);
+      setIsMenuOpened(false);
+    }
+    navigate(path);
+  };
 
   return (
     <AppShell.Footer hiddenFrom="md" withBorder className={styles.footer}>
@@ -38,28 +65,20 @@ function Footer() {
           }}
         />
         <MobileNavigationButton
-          onClick={() => {
-            navigate(ROUTE_PATHS.BOOKMARKS);
-            setIsSourcesOpened(false);
-            setIsMenuOpened(false);
-          }}
+          onClick={() => navigateFromFooter(ROUTE_PATHS.BOOKMARKS, isBookmarksActive)}
           title={t('bookmarks')}
           isActive={isBookmarksActive && !isSourcesOpened && !isMenuOpened}
           leftSection={<BookmarkSimpleIcon size={20} />}
         />
         <MobileNavigationButton
-          onClick={() => {
-            navigate(ROUTE_PATHS.NOTIFICATIONS);
-            setIsSourcesOpened(false);
-            setIsMenuOpened(false);
-          }}
+          onClick={() => navigateFromFooter(ROUTE_PATHS.NOTIFICATIONS, isNotificationsActive)}
           title={t('notifications')}
           isActive={isNotificationsActive && !isSourcesOpened && !isMenuOpened}
           leftSection={<BellIcon size={20} />}
         />
         <MobileMenuButton
           isOpened={isMenuOpened}
-          isActive={isMenuOpened}
+          isActive={isMenuOpened || (isMenuActive && !isSourcesOpened)}
           setIsOpened={(opened) => {
             setIsMenuOpened(opened);
             setIsSourcesOpened(false);
