@@ -179,11 +179,27 @@ export default {
   '*.scss': ['stylelint --fix', 'prettier --write'],
   '*.{json,md,yml,yaml}': ['prettier --write'],
   'package.json': 'sort-package-json',
+  'apps/web/src/**/*.{ts,tsx,json}': () => 'node scripts/check-i18n.mjs',
 };
 ```
 
 Порядок в `*.{ts,tsx}` важен: сначала `eslint --fix`, потом `prettier --write`. Обратный
 порядок даёт коммиты, где Prettier переформатировал то, что ESLint только что починил.
+
+`scripts/check-i18n.mjs` (`pnpm lint:i18n`, входит в `pnpm lint`) сверяет словари
+`apps/web/src/shared/locales/{ru,en}.json` с кодом `apps/web/src` (без `pages/Playground`).
+Ошибки — коммит не пройдёт: ключ из `t('…')`/`i18nKey` отсутствует в словаре, ключ есть только
+в одном языке, неполные plural-формы, разные `{{переменные}}` в ru и en. Предупреждения — нет:
+неиспользуемые ключи, одно русское значение под разными ключами, обычный пробел вместо
+` ` между числом и сокращением, динамические `t(variable)`.
+
+## Claude Code: /review и /commit
+
+- `/review` — ревью всех незакоммиченных изменений: линтеры с `--fix` и три субагента из
+  `.claude/agents/` (`review-bugs` — opus, `review-rules` — sonnet, `review-i18n` — haiku).
+  Механику и переводы чинит сам, баги и спорные нарушения правил сообщает.
+- `/commit` — `/review`, затем разбиение на conventional-коммиты, push и PR в `master`, если
+  его ещё нет. Typecheck и тесты оставлены хуку `pre-commit`.
 
 ## Turborepo
 

@@ -1,4 +1,4 @@
-import { Button, Drawer, Group, Text } from '@mantine/core';
+import { Button, Group, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useMediaQuery } from '@mantine/hooks';
@@ -7,6 +7,8 @@ import { isEmpty } from '@/shared/lib/isEmpty';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import ChaptersList from '@/shared/ui/ChaptersList';
 import { XXS_QUERY } from '@/shared/lib/breakpoints';
+import ResponsiveDrawer from '@/shared/ui/ResponsiveDrawer';
+import { DRAWER_POSITION, SHEET_HEIGHT } from '@/shared/ui/ResponsiveDrawer/models';
 import useReadingProgress from '@/entities/title/hooks/useReadingProgress';
 import useUpdateReadingProgress from '@/entities/title/hooks/useUpdateReadingProgress';
 import {
@@ -42,14 +44,11 @@ function ReaderChapterName({ chapters, numbering, currentChapter, titleId }: Pro
           ]}
         />
       </Button>
-      <Drawer
+      <ResponsiveDrawer
         opened={isDrawerOpened}
         onClose={() => setIsDrawerOpened(false)}
-        display="flex"
-        styles={{
-          content: { flexDirection: 'column' },
-          body: { flex: 1, minHeight: 0 },
-        }}
+        side={DRAWER_POSITION.LEFT}
+        height={SHEET_HEIGHT.TALL}
         title={
           <Group gap={8} align="flex-end">
             {t('chapters')}
@@ -72,7 +71,7 @@ function ReaderChapterName({ chapters, numbering, currentChapter, titleId }: Pro
             updateProgress({ chapterId: chapter.id, pageIndex: 0, chapter })
           }
         />
-      </Drawer>
+      </ResponsiveDrawer>
     </>
   );
 }

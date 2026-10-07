@@ -2,7 +2,8 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useState } from 'react';
 import { CaretUpDownIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { Drawer } from '@mantine/core';
+import ResponsiveDrawer from '@/shared/ui/ResponsiveDrawer';
+import { DRAWER_POSITION, SHEET_HEIGHT } from '@/shared/ui/ResponsiveDrawer/models';
 import MobileNavigationButton from './MobileNavigationButton';
 import SourceSelectMenu from '../../components/SourceSelectMenu';
 import useSources from '@/entities/source/hooks/useSources';
@@ -39,7 +40,13 @@ function MobileSourceSelect({ isActive, setIsOpened, isOpened }: Props) {
         isActive={isActive}
         onClick={() => setIsOpened((prev) => !prev)}
       />
-      <Drawer opened={isOpened} onClose={() => setIsOpened(false)} title={t('sources')}>
+      <ResponsiveDrawer
+        opened={isOpened}
+        onClose={() => setIsOpened(false)}
+        side={DRAWER_POSITION.LEFT}
+        height={SHEET_HEIGHT.TALL}
+        title={t('sources')}
+      >
         <SourceSelectMenu
           sources={getEnabledSources(sources)}
           activeSelection={activeSelection}
@@ -48,7 +55,7 @@ function MobileSourceSelect({ isActive, setIsOpened, isOpened }: Props) {
           handleOpenedChange={handleOpenedChange}
           fillHeight
         />
-      </Drawer>
+      </ResponsiveDrawer>
     </>
   );
 }

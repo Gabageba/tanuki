@@ -554,6 +554,7 @@
   "closeWindowWithoutLoggingOut": "Закройте окно, не выходя из аккаунта, — иначе вставленный токен перестанет работать",
   "authKeyValue": "Значение ключа auth",
   "account": "Аккаунт",
+  "service": "Служебное",
   "you": "Вы",
   "importAndExport": "Импорт и экспорт",
   "languageAndRegion": "Язык и регион",

@@ -1,11 +1,18 @@
-import { Avatar as MantineAvatar, Menu } from '@mantine/core';
-import { FlaskIcon, GearSixIcon, SignOutIcon, UserGearIcon, UserIcon } from '@phosphor-icons/react';
+import { Avatar as MantineAvatar, Box, Menu } from '@mantine/core';
+import { SignOutIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import { isStaffRole } from '@tanuki/contracts';
-import { ROUTE_PATHS } from '@/shared/lib/routes';
+import { PRIMARY_COLOR } from '@/shared/lib/palette';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
+import AccountHeading from '../../components/AccountHeading';
+import {
+  getAccountMenuItemIcon,
+  getAccountMenuItemLabel,
+  getAccountMenuItemPath,
+  getAccountMenuSectionLabel,
+  getAccountMenuSections,
+} from '../../lib';
 import styles from './../Header.module.scss';
 
 function Avatar() {
@@ -14,10 +21,10 @@ function Avatar() {
   const logout = useLogout();
 
   return (
-    <Menu>
+    <Menu width={260}>
       <Menu.Target>
         <MantineAvatar
-          color="terracotta"
+          color={PRIMARY_COLOR}
           className={styles.avatar}
           variant="outline"
           visibleFrom="md"
@@ -27,24 +34,27 @@ function Avatar() {
         />
       </Menu.Target>
       <Menu.Dropdown>
-        {user && <Menu.Label>{user.username}</Menu.Label>}
-        <Menu.Item leftSection={<UserIcon />} component={Link} to={ROUTE_PATHS.PROFILE}>
-          {t('profile')}
-        </Menu.Item>
-        {isStaffRole(user?.role) && (
-          <Menu.Item component={Link} to={ROUTE_PATHS.MANAGEMENT} leftSection={<UserGearIcon />}>
-            {t('management')}
-          </Menu.Item>
+        {user && (
+          <Box px="sm" py="xs">
+            <AccountHeading user={user} />
+          </Box>
         )}
-        {import.meta.env.DEV && (
-          <Menu.Item component={Link} to={ROUTE_PATHS.PLAYGROUND} leftSection={<FlaskIcon />}>
-            {t('playground')}
-          </Menu.Item>
-        )}
-        <Menu.Item leftSection={<GearSixIcon />} component={Link} to={ROUTE_PATHS.SETTINGS}>
-          {t('settings')}
-        </Menu.Item>
-
+        {getAccountMenuSections(user?.role).map(({ section, items }) => (
+          <Box key={section}>
+            <Menu.Divider />
+            <Menu.Label>{getAccountMenuSectionLabel(section, t)}</Menu.Label>
+            {items.map((item) => (
+              <Menu.Item
+                key={item}
+                component={Link}
+                to={getAccountMenuItemPath(item)}
+                leftSection={getAccountMenuItemIcon(item)}
+              >
+                {getAccountMenuItemLabel(item, t)}
+              </Menu.Item>
+            ))}
+          </Box>
+        ))}
         <Menu.Divider />
         <Menu.Item
           color="red"

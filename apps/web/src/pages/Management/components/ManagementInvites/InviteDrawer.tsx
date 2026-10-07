@@ -1,7 +1,9 @@
-import { Button, Divider, Drawer, Stack, Text, useMatches } from '@mantine/core';
+import { Button, Divider, Stack, Text } from '@mantine/core';
 import { ArrowsClockwiseIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import type { Invite, InvitePermissions } from '@tanuki/contracts';
+import ResponsiveDrawer from '@/shared/ui/ResponsiveDrawer';
+import { DRAWER_POSITION } from '@/shared/ui/ResponsiveDrawer/models';
 import InviteFields from './InviteFields';
 import { getInviteDrawerTitle } from './models';
 
@@ -29,16 +31,15 @@ function InviteDrawer({
   onClose,
 }: Props) {
   const { t } = useTranslation();
-  const position = useMatches<'bottom' | 'right'>({ base: 'bottom', sm: 'right' });
 
   const hasActions = permissions !== null && (permissions.canRevoke || permissions.canReissue);
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={invite !== null}
       onClose={onClose}
-      position={position}
-      size={position === 'bottom' ? 'auto' : 420}
+      side={DRAWER_POSITION.RIGHT}
+      sideSize={420}
       title={invite ? getInviteDrawerTitle(invite, isOwn, t) : t('invite')}
     >
       {invite && (
@@ -79,7 +80,7 @@ function InviteDrawer({
           )}
         </Stack>
       )}
-    </Drawer>
+    </ResponsiveDrawer>
   );
 }
 

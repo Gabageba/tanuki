@@ -1,7 +1,7 @@
 import { Badge, Group, Paper, Radio, Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { INVITABLE_ROLE, type InvitableRole } from '@tanuki/contracts';
-import { getUserRoleColor, getUserRoleLabel } from '../../models';
+import { getUserRoleColor, getUserRoleLabel } from '@/entities/user/lib';
 import { getInvitableRoleDescription } from './models';
 
 type Props = {

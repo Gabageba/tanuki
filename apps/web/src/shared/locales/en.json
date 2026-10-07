@@ -526,6 +526,7 @@
   "closeWindowWithoutLoggingOut": "Close the window without logging out — otherwise the pasted token stops working",
   "authKeyValue": "Value of the auth key",
   "account": "Account",
+  "service": "Service",
   "you": "You",
   "importAndExport": "Import and export",
   "languageAndRegion": "Language and region",

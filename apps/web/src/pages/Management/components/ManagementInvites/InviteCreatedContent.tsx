@@ -2,7 +2,7 @@ import { Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { CreateInviteResponse } from '@tanuki/contracts';
 import useDateFormat from '@/shared/hooks/useDateFormat';
-import { getUserRoleLabel } from '../../models';
+import { getUserRoleLabel } from '@/entities/user/lib';
 import InviteLinkField from './InviteLinkField';
 
 type Props = {
