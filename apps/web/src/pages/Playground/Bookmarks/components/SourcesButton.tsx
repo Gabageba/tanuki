@@ -1,19 +1,13 @@
-import type { MouseEvent } from 'react';
 import { Box, Menu, Text, UnstyledButton } from '@mantine/core';
 import { catalogEntryFor, type SourceId } from '@tanuki/contracts';
 import SourceIcon from '@/entities/source/components/SourceIcon';
+import { stopCardClick } from '../lib';
 import styles from '../Bookmarks.module.scss';
 
 type Props = {
   /** Первый — источник, куда ведёт карточка. */
   sourceIds: SourceId[];
   size?: number;
-};
-
-/** Карточка целиком — ссылка, клик по иконке до неё доходить не должен. */
-const stopCardClick = (event: MouseEvent) => {
-  event.preventDefault();
-  event.stopPropagation();
 };
 
 /**

@@ -24,6 +24,7 @@ import {
   PICKER_VARIANT,
   PROFILE_VARIANT,
   READER_VARIANT,
+  SOURCES_VARIANT,
   TAB_COUNTER,
   UNAVAILABLE_VARIANT,
 } from '../models';
@@ -41,15 +42,15 @@ function SummarySection() {
         description="Всё вместе, как будет связано в приложении. Папка «Ван Писа» общая: смените её в «В закладки» на странице тайтла или в меню читалки — метка на его карточке в каталоге поменяется тут же; «Убрать из закладок» снимает метку, «Вернуть» в тосте возвращает."
       />
       <DemoSection
-        code="C10h + U3a + T2 + A1 + I1 + E + S4 + R2c + K2 + N3 + D1 + F1 + P2 + G1 + M1d"
+        code="C10h + U3a + Q4 + T2 + A1 + I1 + E + S4 + R2c + K4a + N3 + D1 + F1 + P2 + G1 + M1d"
         title="Закладки"
-        description="Один язык для нового: точка в шапке (D1) → точка на вкладке папки (T2) → точка в первой строке названия (C10h) → точка у узла новой главы в списке глав (N3). Иконки папок контурные, смысловые (I1), и та же иконка папки её цветом — на кнопке читалки (R2c); где папку выбирают — в «В закладки», меню читалки и модалке склейки — выбранный пункт красится в цвет папки (S4, M1d); недоступная закладка — серая обложка с плашкой причины (U3a)."
+        description="Один язык для нового: точка в шапке (D1) → точка на вкладке папки (T2) → точка в первой строке названия (C10h) → точка у узла новой главы в списке глав (N3). Иконки папок контурные, смысловые (I1), и та же иконка папки её цветом — на кнопке читалки (R2c); где папку выбирают — в «В закладки», меню читалки и модалке склейки — выбранный пункт красится в цвет папки (S4, M1d); недоступная закладка — серая обложка с плашкой причины (U3a). Действия с закладкой — в меню «⋯» карточки (Q4): другие источники, «Перенести в папку» подменю и «Убрать из закладок» с «Вернуть» в тосте; что источников несколько, подсказывает тихий «+N» у иконки."
       >
         <Stack gap="xl">
           <VariantState label="Шапка и футер (D1)">
             <NavDotMock variant={DOT_VARIANT.DOT} />
           </VariantState>
-          <VariantState label="/bookmarks (T2 + A1 + I1 + C10h + U3a)">
+          <VariantState label="/bookmarks (T2 + A1 + I1 + C10h + U3a + Q4)">
             <Group gap="xl" align="flex-start">
               <Paper withBorder radius="md" p="md" flex={1} miw={320} maw={1000}>
                 <BookmarksPageMock
@@ -57,6 +58,7 @@ function SummarySection() {
                   actionsPlacement={ACTIONS_PLACEMENT.TABS}
                   cardVariant={CARD_VARIANT.TITLE_DOT_FIRST_LINE}
                   unavailableVariant={UNAVAILABLE_VARIANT.DIMMED_PLATE_LIGHT}
+                  sourcesVariant={SOURCES_VARIANT.CARD_MENU_FOLDERS}
                   bookmarks={MOCK_SUMMARY_BOOKMARKS}
                 />
               </Paper>
@@ -66,6 +68,7 @@ function SummarySection() {
                   actionsPlacement={ACTIONS_PLACEMENT.TABS}
                   cardVariant={CARD_VARIANT.TITLE_DOT_FIRST_LINE}
                   unavailableVariant={UNAVAILABLE_VARIANT.DIMMED_PLATE_LIGHT}
+                  sourcesVariant={SOURCES_VARIANT.CARD_MENU_FOLDERS}
                   bookmarks={MOCK_SUMMARY_BOOKMARKS}
                   compact
                 />
@@ -83,7 +86,7 @@ function SummarySection() {
           <VariantState label="Читалка (R2c)">
             <ReaderBarMock variant={READER_VARIANT.FOLDER_GLYPH} choice={choice} />
           </VariantState>
-          <VariantState label="Каталог (K2) — «Ван Пис» в той же папке, что выше">
+          <VariantState label="Каталог (K4a) — «Ван Пис» в той же папке, что выше">
             <SummaryCatalogCards folderId={choice.folderId} />
           </VariantState>
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="xl">

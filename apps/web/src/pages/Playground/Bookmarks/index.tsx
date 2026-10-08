@@ -5,6 +5,7 @@ import CardsSection from './sections/CardsSection';
 import FoldersSection from './sections/FoldersSection';
 import MarkersSection from './sections/MarkersSection';
 import PageSection from './sections/PageSection';
+import SourcesSection from './sections/SourcesSection';
 import SummarySection from './sections/SummarySection';
 import TitleSection from './sections/TitleSection';
 
@@ -12,6 +13,7 @@ const AXES = [
   { letter: 'Итог', title: 'выбранное' },
   { letter: 'C', title: 'карточка' },
   { letter: 'U', title: 'недоступная' },
+  { letter: 'Q', title: 'источники' },
   { letter: 'T', title: 'вкладки' },
   { letter: 'A', title: 'действия' },
   { letter: 'I', title: 'иконки' },
@@ -60,6 +62,7 @@ function PlaygroundBookmarks() {
       </Stack>
       <SummarySection />
       <CardsSection />
+      <SourcesSection />
       <PageSection />
       <TitleSection />
       <MarkersSection />

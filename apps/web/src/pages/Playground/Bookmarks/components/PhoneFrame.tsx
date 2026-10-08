@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Box, Stack, Text } from '@mantine/core';
+import { PHONE_FRAME_CONTEXT } from '../models';
 import styles from '../Bookmarks.module.scss';
 
 type Props = {
@@ -17,7 +18,7 @@ function PhoneFrame({ children, label = '375 px', width = 375 }: Props) {
         {label}
       </Text>
       <Box p="sm" className={styles.phoneFrame} bg="var(--mantine-color-body)">
-        {children}
+        <PHONE_FRAME_CONTEXT value>{children}</PHONE_FRAME_CONTEXT>
       </Box>
     </Stack>
   );

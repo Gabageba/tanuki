@@ -16,9 +16,12 @@ import {
   CARD_VARIANT,
   COVER_FILTER,
   type CardVariant,
+  SOURCES_VARIANT,
   type MockBookmark,
+  type SourcesVariant,
   type UnavailableVariant,
 } from '../models';
+import CoverSourcesButton from './CoverSourcesButton';
 import NewChaptersBar from './NewChaptersBar';
 import NewCountBadge from './NewCountBadge';
 import titleStyles from '@/entities/title/Title.module.scss';
@@ -28,6 +31,7 @@ type Props = {
   bookmark: MockBookmark;
   variant: CardVariant;
   unavailableVariant: UnavailableVariant;
+  sourcesVariant?: SourcesVariant;
   /** В списке обложка маленькая: бейджи мельче. */
   compact?: boolean;
   w?: number;
@@ -35,7 +39,14 @@ type Props = {
 
 /** Обложка закладки со всем, что вариант кладёт поверх или рядом: счётчик (C1), прогресс (C4),
  *  полоса под обложкой (C6), NEW (C7), рамка (C9), приглушение (U1) или плашка причины (U2). 18+ — бейдж и размытие, как в каталоге. */
-function BookmarkCover({ bookmark, variant, unavailableVariant, compact = false, w }: Props) {
+function BookmarkCover({
+  bookmark,
+  variant,
+  unavailableVariant,
+  sourcesVariant,
+  compact = false,
+  w,
+}: Props) {
   const isUnavailable = bookmark.availability !== AVAILABILITY.AVAILABLE;
   const plateOpacity = isUnavailable ? getPlateOpacity(unavailableVariant) : null;
   const hasPlate = plateOpacity !== null;
@@ -84,7 +95,7 @@ function BookmarkCover({ bookmark, variant, unavailableVariant, compact = false,
         >
           <Stack gap={compact ? 2 : 6} align="center">
             {renderAvailabilityIcon(bookmark.availability, { size: compact ? 20 : 32 })}
-            <Text fz={compact ? 10 : 12} ta="center" lh="tight" c="white">
+            <Text fz="xs" ta="center" lh="tight" c="white">
               {getAvailabilityLabel(bookmark.availability)}
             </Text>
           </Stack>
@@ -107,7 +118,7 @@ function BookmarkCover({ bookmark, variant, unavailableVariant, compact = false,
           className={styles.progressShade}
         >
           <Group justify="space-between" gap={4} wrap="nowrap">
-            <Text component="div" c="white" fz={compact ? 10 : 12} ff="monospace" lh="tight">
+            <Text component="div" c="white" fz="xs" ff="monospace" lh="tight">
               {bookmark.progress
                 ? `${bookmark.progress.chapter} / ${bookmark.progress.total}`
                 : (bookmark.chaptersCount ?? <Mdash />)}
@@ -145,6 +156,9 @@ function BookmarkCover({ bookmark, variant, unavailableVariant, compact = false,
           mod={{ compact }}
           aria-label="Есть новые главы"
         />
+      )}
+      {!isUnavailable && sourcesVariant === SOURCES_VARIANT.COVER && (
+        <CoverSourcesButton sourceIds={bookmark.sourceIds} compact={compact} />
       )}
       {hasNew && variant === CARD_VARIANT.NEW_TAG && (
         <Box pos="absolute" bottom={offset} left={offset} className={styles.overCover}>

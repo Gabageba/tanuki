@@ -8,18 +8,24 @@ import {
   CARD_VARIANT,
   UNAVAILABLE_VARIANT,
   type CardVariant,
+  SOURCES_VARIANT,
   type MockBookmark,
+  type SourcesVariant,
   type UnavailableVariant,
 } from '../models';
 import NewCountBadge from './NewCountBadge';
 import NewDot from './NewDot';
 import ProgressMeta from './ProgressMeta';
-import SourcesButton from './SourcesButton';
+import CardActionsMenu from './CardActionsMenu';
+import SourcesLead from './SourcesLead';
+import SourcesMoreLink from './SourcesMoreLink';
 
 type Props = {
   bookmark: MockBookmark;
   variant: CardVariant;
   unavailableVariant: UnavailableVariant;
+  /** Ось Q; undefined — как на осях до неё. */
+  sourcesVariant?: SourcesVariant;
 };
 
 /** Варианты, где новое сказано фразой в мета-строке. */
@@ -33,8 +39,11 @@ const PHRASE_VARIANTS: CardVariant[] = [
 const QUIET_PHRASE_VARIANTS: CardVariant[] = [CARD_VARIANT.NEW_TAG, CARD_VARIANT.FRAME];
 
 /** Мета-строка карточки: иконка источника (с «+N» и меню) и через точку — где остановился. */
-function BookmarkMetaLine({ bookmark, variant, unavailableVariant }: Props) {
+function BookmarkMetaLine({ bookmark, variant, unavailableVariant, sourcesVariant }: Props) {
   const isUnavailable = bookmark.availability !== AVAILABILITY.AVAILABLE;
+  const hasCardMenu =
+    sourcesVariant === SOURCES_VARIANT.CARD_MENU ||
+    sourcesVariant === SOURCES_VARIANT.CARD_MENU_FOLDERS;
 
   if (variant === CARD_VARIANT.CATALOG) {
     return (
@@ -96,15 +105,25 @@ function BookmarkMetaLine({ bookmark, variant, unavailableVariant }: Props) {
       variant === CARD_VARIANT.META_BADGE && !isUnavailable && bookmark.newChaptersCount > 0 && (
         <NewCountBadge key="new" count={bookmark.newChaptersCount} />
       ),
+      sourcesVariant === SOURCES_VARIANT.WORDS && (
+        <SourcesMoreLink key="sources" sourceIds={bookmark.sourceIds} />
+      ),
     ];
   };
 
   return (
-    <Group gap={6} wrap="nowrap" miw={0}>
-      <SourcesButton sourceIds={bookmark.sourceIds} />
+    <Group gap={6} wrap="nowrap" miw={0} flex={hasCardMenu ? 1 : undefined}>
+      <SourcesLead sourceIds={bookmark.sourceIds} sourcesVariant={sourcesVariant} />
       <Box miw={0}>
         <TitleMetaItems gap={4} items={getItems()} />
       </Box>
+      {hasCardMenu && (
+        <CardActionsMenu
+          sourceIds={bookmark.sourceIds}
+          folderId={bookmark.folderId}
+          withFolders={sourcesVariant === SOURCES_VARIANT.CARD_MENU_FOLDERS}
+        />
+      )}
     </Group>
   );
 }

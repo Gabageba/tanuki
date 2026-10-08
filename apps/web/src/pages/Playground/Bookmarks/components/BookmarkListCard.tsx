@@ -5,6 +5,7 @@ import {
   UNAVAILABLE_VARIANT,
   type CardVariant,
   type MockBookmark,
+  type SourcesVariant,
   type UnavailableVariant,
 } from '../models';
 import { isTitleDimmed } from '../lib';
@@ -17,6 +18,7 @@ type Props = {
   bookmark: MockBookmark;
   variant: CardVariant;
   unavailableVariant?: UnavailableVariant;
+  sourcesVariant?: SourcesVariant;
 };
 
 /** Карточка закладки списком — раскладка как у `TitleListCard`, но без описания и тегов: в
@@ -25,6 +27,7 @@ function BookmarkListCard({
   bookmark,
   variant,
   unavailableVariant = UNAVAILABLE_VARIANT.DIMMED,
+  sourcesVariant,
 }: Props) {
   const isUnavailable = bookmark.availability !== AVAILABILITY.AVAILABLE;
   const isDimmed = isUnavailable && isTitleDimmed(unavailableVariant);
@@ -36,6 +39,7 @@ function BookmarkListCard({
           bookmark={bookmark}
           variant={variant}
           unavailableVariant={unavailableVariant}
+          sourcesVariant={sourcesVariant}
           compact
           w={84}
         />
@@ -50,13 +54,14 @@ function BookmarkListCard({
               bookmark={bookmark}
               variant={variant}
               unavailableVariant={unavailableVariant}
+              sourcesVariant={sourcesVariant}
             />
           </Group>
           <BookmarkTitle
             bookmark={bookmark}
             variant={variant}
             isDimmed={isDimmed}
-            fz={{ base: 15, xs: 17 }}
+            fz={{ base: 14, xs: 16 }}
           />
           {variant !== CARD_VARIANT.CATALOG && variant !== CARD_VARIANT.COVER_PROGRESS && (
             <Text fz={12} c="dimmed" lh="tight">

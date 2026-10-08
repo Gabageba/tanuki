@@ -9,18 +9,20 @@ type Props = {
   folderId: string | null;
   onSelect: (id: string) => void;
   onRemove: () => void;
+  /** false — «Убрать» стоит в меню выше, а это подменю папок (Q4). */
+  withRemove?: boolean;
 };
 
 /** Пункты меню «В закладки» — одни и те же в читалке и в S3: папки, ниже за чертой — «Убрать».
  *  Выглядят как пункты «В закладки» (S4): выбранная папка — в её цвете. */
-function FolderMenuItems({ folders, folderId, onSelect, onRemove }: Props) {
+function FolderMenuItems({ folders, folderId, onSelect, onRemove, withRemove = true }: Props) {
   return (
     <>
       {folders.map((folder) => (
         <Menu.Item
           key={folder.id}
           // Выбранная папка — как в «В закладки» (S4): подложка, рамка и текст цветом папки.
-          className="selectableOption"
+          className="selectable-option"
           style={folder.id === folderId ? getFolderTintStyle(folder.color) : undefined}
           leftSection={<FolderGlyph folder={folder} />}
           rightSection={
@@ -31,7 +33,7 @@ function FolderMenuItems({ folders, folderId, onSelect, onRemove }: Props) {
           {folder.name}
         </Menu.Item>
       ))}
-      {folderId && (
+      {withRemove && folderId && (
         <>
           <Menu.Divider />
           <Menu.Item color="red" leftSection={<TrashIcon />} onClick={onRemove}>

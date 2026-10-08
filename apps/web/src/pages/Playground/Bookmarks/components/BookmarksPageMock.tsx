@@ -11,6 +11,7 @@ import {
   type BuiltInStyle,
   type CardVariant,
   type MockBookmark,
+  type SourcesVariant,
   type TabCounter,
   type UnavailableVariant,
 } from '../models';
@@ -27,6 +28,7 @@ type Props = {
   compact?: boolean;
   cardVariant?: CardVariant;
   unavailableVariant?: UnavailableVariant;
+  sourcesVariant?: SourcesVariant;
   bookmarks?: MockBookmark[];
 };
 
@@ -38,6 +40,7 @@ function BookmarksPageMock({
   compact = false,
   cardVariant = CARD_VARIANT.COVER_BADGE,
   unavailableVariant,
+  sourcesVariant,
   bookmarks: allBookmarks = MOCK_BOOKMARKS,
 }: Props) {
   const [activeId, setActiveId] = useState('reading');
@@ -70,6 +73,7 @@ function BookmarksPageMock({
                 bookmark={bookmark}
                 variant={cardVariant}
                 unavailableVariant={unavailableVariant}
+                sourcesVariant={sourcesVariant}
               />
             ))}
           </SimpleGrid>

@@ -1,3 +1,4 @@
+import { createContext } from 'react';
 import type { MantineColor } from '@mantine/core';
 import type { EnumLiteralsOf, SourceId } from '@tanuki/contracts';
 
@@ -140,6 +141,29 @@ export const UNAVAILABLE_VARIANT = {
 } as const;
 export type UnavailableVariant = EnumLiteralsOf<typeof UNAVAILABLE_VARIANT>;
 
+/** Ось Q — как на карточке открыть другие источники группы. */
+export const SOURCES_VARIANT = {
+  /** Q0 — иконка и наложенный на неё «+N», как сейчас в приложении. */
+  OVERLAP: 'overlap',
+  /** Q1 — чип в рамке: иконка, «+N» и стрелка. */
+  CHIP: 'chip',
+  /** Q1b — тот же чип, на телефоне список выезжает снизу. */
+  CHIP_DRAWER: 'chipDrawer',
+  /** Q2 — «ещё N ▾» словами в конце мета-строки. */
+  WORDS: 'words',
+  /** Q3 — плашка «+N» на обложке. */
+  COVER: 'cover',
+  /** Q4 — меню «⋯» карточки. */
+  CARD_MENU: 'cardMenu',
+  /** Q4 в итоге: папки подменю, у иконки — тихий «+N». */
+  CARD_MENU_FOLDERS: 'cardMenuFolders',
+} as const;
+export type SourcesVariant = EnumLiteralsOf<typeof SOURCES_VARIANT>;
+
+/** Карточка внутри рамки телефона: брейкпоинты смотрят на окно, а не на рамку, поэтому вариант
+ *  узнаёт о «телефоне» отсюда (Q1b). */
+export const PHONE_FRAME_CONTEXT = createContext(false);
+
 /** Что делается с обложкой недоступной закладки. */
 export const COVER_FILTER = {
   /** Серая и бледная. */
@@ -213,8 +237,26 @@ export const MARKER_VARIANT = {
   FOLDER_ICON: 'folderIcon',
   /** K3 — иконка и название папки пилюлей. */
   FOLDER_PILL: 'folderPill',
+  /** K2a — K2 как в коде: 26px, светлое кольцо и тень. */
+  FOLDER_ICON_RING: 'folderIconRing',
+  /** K4 — тёмная подложка рейтинга, иконка цветом папки. */
+  DARK_PLATE: 'darkPlate',
+  /** K4a — K4 с залитой иконкой. */
+  DARK_PLATE_FILL: 'darkPlateFill',
+  /** K5 — иконка папки внутри бейджа рейтинга. */
+  IN_SCORE: 'inScore',
+  /** K6 — K2a на тёмном градиенте снизу обложки. */
+  SHADE: 'shade',
+  /** K7 — матовое стекло, иконка цветом папки. */
+  GLASS: 'glass',
+  /** K8 — ленточка-закладка сверху цветом папки с её иконкой. */
+  RIBBON: 'ribbon',
 } as const;
 export type MarkerVariant = EnumLiteralsOf<typeof MARKER_VARIANT>;
+
+/** Подложка бейджа рейтинга на обложке — её же берут K4 и K5. */
+export const SCORE_PLATE_COLOR =
+  'color-mix(in srgb, var(--mantine-color-dark-filled) 85%, transparent)';
 
 /** Ось N — пометка новой главы в списке глав. */
 export const NEW_CHAPTER_VARIANT = {
@@ -317,6 +359,8 @@ export type MockCatalogTitle = {
   id: string;
   name: string;
   coverSeed: string;
+  /** Своя обложка вместо picsum — для трудных случаев, которых случайное фото не даёт. */
+  coverUrl?: string;
   typeLabel: string;
   year: number;
   chaptersCount: number;

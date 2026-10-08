@@ -3,6 +3,7 @@ import {
   UNAVAILABLE_VARIANT,
   type CardVariant,
   type MockBookmark,
+  type SourcesVariant,
   type UnavailableVariant,
 } from '../models';
 import BookmarkGridCard from './BookmarkGridCard';
@@ -13,10 +14,16 @@ type Props = {
   bookmarks: MockBookmark[];
   variant: CardVariant;
   unavailableVariant?: UnavailableVariant;
+  sourcesVariant?: SourcesVariant;
 };
 
 /** Одни и те же закладки сеткой и списком на десктопе и в рамке телефона. */
-function CardsDemo({ bookmarks, variant, unavailableVariant = UNAVAILABLE_VARIANT.DIMMED }: Props) {
+function CardsDemo({
+  bookmarks,
+  variant,
+  unavailableVariant = UNAVAILABLE_VARIANT.DIMMED,
+  sourcesVariant,
+}: Props) {
   const [first] = bookmarks;
 
   return (
@@ -33,6 +40,7 @@ function CardsDemo({ bookmarks, variant, unavailableVariant = UNAVAILABLE_VARIAN
                 bookmark={bookmark}
                 variant={variant}
                 unavailableVariant={unavailableVariant}
+                sourcesVariant={sourcesVariant}
               />
             ))}
           </SimpleGrid>
@@ -46,6 +54,7 @@ function CardsDemo({ bookmarks, variant, unavailableVariant = UNAVAILABLE_VARIAN
                 bookmark={bookmark}
                 variant={variant}
                 unavailableVariant={unavailableVariant}
+                sourcesVariant={sourcesVariant}
               />
             ))}
           </SimpleGrid>
@@ -60,6 +69,7 @@ function CardsDemo({ bookmarks, variant, unavailableVariant = UNAVAILABLE_VARIAN
                 bookmark={bookmark}
                 variant={variant}
                 unavailableVariant={unavailableVariant}
+                sourcesVariant={sourcesVariant}
               />
             ))}
           </SimpleGrid>
@@ -68,6 +78,7 @@ function CardsDemo({ bookmarks, variant, unavailableVariant = UNAVAILABLE_VARIAN
               bookmark={first}
               variant={variant}
               unavailableVariant={unavailableVariant}
+              sourcesVariant={sourcesVariant}
             />
           )}
         </Stack>

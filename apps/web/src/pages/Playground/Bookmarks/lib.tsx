@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import type { MantineColor } from '@mantine/core';
 import {
   ArchiveIcon,
@@ -267,3 +267,9 @@ export const getFolderTintStyle = (color: MantineColor): CSSProperties => ({
   backgroundColor: getMutedBackground(color, true),
   borderColor: `var(--mantine-color-${color}-filled)`,
 });
+
+/** Карточка целиком — ссылка: клик по кнопке внутри неё до карточки доходить не должен. */
+export const stopCardClick = (event: MouseEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
+};

@@ -264,3 +264,134 @@ export const MOCK_SUMMARY_BOOKMARKS: MockBookmark[] = [
   MOCK_BOOKMARKS[2],
   MOCK_BOOKMARKS[3],
 ].filter((bookmark): bookmark is MockBookmark => !!bookmark);
+
+/** SVG-обложка из градиента и пары пятен — в песочнице, вместо картинки с сервера. */
+const svgCover = (from: string, to: string, spots: string) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs><rect width="300" height="400" fill="url(#g)"/>${spots}</svg>`,
+  )}`;
+
+/** Трудные обложки для метки: на них цвет папки сливается или теряется. Цвета захардкожены —
+ *  это картинки-заглушки обложек, а не интерфейс. */
+export const MOCK_HARD_COVER_TITLES: MockCatalogTitle[] = [
+  {
+    id: 'h1',
+    name: 'Поднятие уровня в одиночку',
+    coverSeed: 'hard-violet',
+    coverUrl: svgCover(
+      '#140b2e',
+      '#3b2c8f',
+      '<circle cx="60" cy="350" r="70" fill="#6d5ce8" opacity=".8"/><path d="M0 300 L300 200 L300 230 L0 340Z" fill="#8f7bff" opacity=".6"/>',
+    ),
+    typeLabel: 'Манхва',
+    year: 2018,
+    chaptersCount: 200,
+    rating: 9.5,
+    folderId: 'reading',
+  },
+  {
+    id: 'h2',
+    name: 'Синее небо',
+    coverSeed: 'hard-blue',
+    coverUrl: svgCover(
+      '#1971c2',
+      '#4dabf7',
+      '<circle cx="40" cy="370" r="80" fill="#228be6"/><circle cx="240" cy="80" r="50" fill="#a5d8ff" opacity=".7"/>',
+    ),
+    typeLabel: 'Манга',
+    year: 2020,
+    chaptersCount: 88,
+    rating: 8.7,
+    folderId: 'reading',
+  },
+  {
+    id: 'h3',
+    name: 'Белый лист',
+    coverSeed: 'hard-light',
+    coverUrl: svgCover(
+      '#fbf8f1',
+      '#e6e0d2',
+      '<circle cx="220" cy="120" r="60" fill="#ffffff"/><rect x="30" y="300" width="120" height="6" fill="#d8d0bd"/>',
+    ),
+    typeLabel: 'Манга',
+    year: 2023,
+    chaptersCount: 12,
+    rating: null,
+    folderId: 'completed',
+  },
+  {
+    id: 'h4',
+    name: 'Карнавал',
+    coverSeed: 'hard-busy',
+    coverUrl: svgCover(
+      '#e8590c',
+      '#5f3dc4',
+      '<rect x="0" y="260" width="300" height="30" fill="#fab005"/><rect x="0" y="310" width="300" height="25" fill="#12b886"/><rect x="0" y="355" width="300" height="45" fill="#f03e3e"/><circle cx="50" cy="370" r="30" fill="#ffffff"/>',
+    ),
+    typeLabel: 'Маньхуа',
+    year: 2022,
+    chaptersCount: 140,
+    rating: 7.9,
+    folderId: 'favorites',
+  },
+];
+
+/** Ось Q: пять, два, один источник при длинном названии, 18+ с тремя. */
+export const MOCK_SOURCES_BOOKMARKS: MockBookmark[] = [
+  {
+    id: 'q1',
+    name: 'Ван Пис',
+    coverSeed: 'tanuki-onepiece',
+    sourceIds: [
+      SOURCE_ID.MANGALIB,
+      SOURCE_ID.REMANGA,
+      SOURCE_ID.READMANGA_RU,
+      SOURCE_ID.MINTMANGA,
+      SOURCE_ID.COMX,
+    ],
+    folderId: 'reading',
+    progress: { chapter: 1090, total: 1093 },
+    chaptersCount: 1093,
+    newChaptersCount: 3,
+    updatedAgo: 'вчера',
+    availability: AVAILABILITY.AVAILABLE,
+    typeLabel: 'Манга',
+  },
+  {
+    id: 'q2',
+    name: 'Поднятие уровня в одиночку',
+    coverSeed: 'tanuki-solo',
+    sourceIds: [SOURCE_ID.SENKURO, SOURCE_ID.MANGALIB],
+    folderId: 'reading',
+    progress: { chapter: 197, total: 203 },
+    chaptersCount: 203,
+    newChaptersCount: 0,
+    availability: AVAILABILITY.AVAILABLE,
+    typeLabel: 'Манхва',
+  },
+  {
+    id: 'q3',
+    name: 'Становление злодейки: как я случайно получила в мужья северного герцога, которого все боялись',
+    coverSeed: 'tanuki-villainess',
+    sourceIds: [SOURCE_ID.REMANGA],
+    folderId: 'reading',
+    progress: { chapter: 87, total: 241 },
+    chaptersCount: 241,
+    newChaptersCount: 0,
+    availability: AVAILABILITY.AVAILABLE,
+    typeLabel: 'Манхва',
+  },
+  {
+    id: 'q4',
+    name: 'Ночной сад',
+    coverSeed: 'tanuki-garden',
+    isAdult: true,
+    sourceIds: [SOURCE_ID.MANGABUFF, SOURCE_ID.SENKURO, SOURCE_ID.REMANGA],
+    folderId: 'reading',
+    progress: null,
+    chaptersCount: 64,
+    newChaptersCount: 0,
+    availability: AVAILABILITY.AVAILABLE,
+    typeLabel: 'Манхва',
+  },
+];

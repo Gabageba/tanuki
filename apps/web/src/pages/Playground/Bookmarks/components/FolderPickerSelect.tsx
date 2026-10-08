@@ -124,7 +124,7 @@ function FolderPickerSelect({
                 value={item.id}
                 // S5: без отметки selected — у неё своя подложка, а тут выбор только галочкой.
                 selected={isPlain ? undefined : isSelected}
-                className="selectableOption"
+                className="selectable-option"
                 style={isFolderTint && isSelected ? getFolderTintStyle(item.color) : undefined}
               >
                 <Group justify="space-between" wrap="nowrap" gap="xs">

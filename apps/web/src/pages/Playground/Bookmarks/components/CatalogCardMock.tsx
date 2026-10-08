@@ -1,5 +1,5 @@
 import { Badge, Box, Card, Center, Stack, Text } from '@mantine/core';
-import { BookmarkSimpleIcon, StarFourIcon } from '@phosphor-icons/react';
+import { BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { CONTENT_RATING, type SourceId } from '@tanuki/contracts';
 import CoverImage from '@/shared/ui/CoverImage';
 import NumericMeta from '@/entities/title/NumericMeta';
@@ -13,7 +13,9 @@ import {
   type MockCatalogTitle,
   type ResolvedFolder,
 } from '../models';
+import CoverFolderMarker from './CoverFolderMarker';
 import FolderGlyph from './FolderGlyph';
+import ScoreBadgeMock from './ScoreBadgeMock';
 import titleStyles from '@/entities/title/Title.module.scss';
 import styles from '../Bookmarks.module.scss';
 
@@ -35,26 +37,22 @@ function CatalogCardMock({ title, folder, variant, sourceId }: Props) {
           <TitleAdultBadge
             contentRating={title.isAdult ? CONTENT_RATING.ADULT : CONTENT_RATING.SAFE}
           />
-          {title.rating !== null && (
-            <Badge
+          {variant === MARKER_VARIANT.SHADE && (
+            <Box
               pos="absolute"
-              bottom={6}
-              right={6}
-              className={styles.overCover}
-              color="color-mix(in srgb, var(--mantine-color-dark-filled) 85%, transparent)"
-              size="lg"
-              fw={400}
-              leftSection={
-                <StarFourIcon weight="fill" color="var(--mantine-color-terracotta-text)" />
-              }
-              px={8}
-              radius="md"
-              variant="filled"
-            >
-              <Text c="white" fw={600} ff="monospace">
-                {title.rating}
-              </Text>
-            </Badge>
+              left={0}
+              right={0}
+              bottom={0}
+              h="35%"
+              className={styles.markerShade}
+            />
+          )}
+          <ScoreBadgeMock
+            rating={title.rating}
+            folder={variant === MARKER_VARIANT.IN_SCORE ? folder : null}
+          />
+          {folder && (
+            <CoverFolderMarker folder={folder} variant={variant} hasSource={Boolean(sourceId)} />
           )}
           {folder && variant === MARKER_VARIANT.BOOKMARK && (
             <Box
@@ -104,7 +102,7 @@ function CatalogCardMock({ title, folder, variant, sourceId }: Props) {
             </Badge>
           )}
           <CoverImage
-            src={getMockCoverUrl(title.coverSeed)}
+            src={title.coverUrl ?? getMockCoverUrl(title.coverSeed)}
             alt={title.name}
             className={titleStyles.image}
           />
