@@ -267,7 +267,7 @@ const createAppTheme = (t: TFunction) =>
           ),
         },
         classNames: {
-          option: 'selectableOption',
+          option: 'selectable-option',
         },
       },
       Select: {
@@ -277,7 +277,7 @@ const createAppTheme = (t: TFunction) =>
           ),
         },
         classNames: {
-          option: 'selectableOption',
+          option: 'selectable-option',
         },
       },
       Text: {

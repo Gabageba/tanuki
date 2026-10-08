@@ -55,7 +55,7 @@ export const getBenefitIcon = (benefit: LoginBenefit) => {
   switch (benefit) {
     case LOGIN_BENEFIT.ADULT_TITLES:
       return (
-        <Text span ff="monospace" fz={11} lh={1}>
+        <Text span ff="monospace" fz="xs" lh={1}>
           18+
         </Text>
       );

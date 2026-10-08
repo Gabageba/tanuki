@@ -21,7 +21,7 @@ function DrawerHeading({ icon, title, subtitle, isSubtitleMonospace = false }: P
         </Text>
         <Text
           ff={isSubtitleMonospace ? 'monospace' : undefined}
-          fz={isSubtitleMonospace ? 11 : 'xs'}
+          fz="xs"
           c="dimmed"
           lh="tight"
           truncate

@@ -27,7 +27,7 @@ function ReaderTapZonePreview({ tapZoneWidth }: Props) {
           <CaretLeftIcon />
         </Center>
         <Center flex={1} bg="var(--mantine-color-default-hover)" miw={0}>
-          <Text fz={10} c="dimmed" truncate>
+          <Text fz="xs" c="dimmed" truncate>
             {t('menu')}
           </Text>
         </Center>

@@ -30,7 +30,7 @@ function TitleMetaItem<T extends MetaItemValue = MetaItemValue>({
 
   return (
     <Stack gap={8}>
-      <Text lh="tight" c="dimmed" fz={11} tt="uppercase" lts={1}>
+      <Text lh="tight" c="dimmed" fz="xs" tt="uppercase" lts={1}>
         {label}
       </Text>
       <Text component="div" lh="tight">

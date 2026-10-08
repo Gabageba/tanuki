@@ -77,7 +77,7 @@ function SourceStack({
         )}
       </Flex>
       {withCaption && (
-        <Text fz={10} lh={1.2} c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+        <Text fz="xs" lh={1.2} c="dimmed" style={{ whiteSpace: 'nowrap' }}>
           ≈{' '}
           <Text span inherit visibleFrom="xs">
             примерно

@@ -18,7 +18,7 @@ function AccountCardText({ user, withRole = false }: Props) {
         </Text>
         {withRole && isStaffRole(user.role) && <RoleBadge role={user.role} size="xs" />}
       </Group>
-      <Text ff="monospace" fz={11} c="dimmed" lh="tight" truncate>
+      <Text ff="monospace" fz="xs" c="dimmed" lh="tight" truncate>
         {user.email}
       </Text>
     </Stack>

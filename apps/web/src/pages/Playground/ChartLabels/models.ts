@@ -23,6 +23,6 @@ export const BAR_GAP = 3;
 /** Зазор между неделями в варианте с разбивкой — заметно шире, чем между днями. */
 export const GROUP_GAP = 10;
 export const WEEK_DAYS = 7;
-export const LABEL_FONT_SIZE = 10;
+export const LABEL_FONT_SIZE = 12;
 export const MOBILE_WIDTH = 343;
 export const DESKTOP_WIDTH = 520;

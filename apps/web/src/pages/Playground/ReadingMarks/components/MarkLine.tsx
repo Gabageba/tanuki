@@ -74,12 +74,12 @@ function MarkLine({ demo, mark, withGoTo = false }: Props) {
             ' ≈'}
         </Text>
         {placed && placed.confidence === READING_MARK_CONFIDENCE.APPROXIMATE && (
-          <Text fz={11} c="dimmed">
+          <Text fz="xs" c="dimmed">
             Место определено примерно
           </Text>
         )}
         {!placed && (
-          <Text fz={11} c="dimmed">
+          <Text fz="xs" c="dimmed">
             Места в этой ветке не нашлось
           </Text>
         )}

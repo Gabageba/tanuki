@@ -17,7 +17,7 @@ function TitleMetaSkeleton() {
       <SimpleGrid cols={{ base: 2, sm: 3 }} flex={1} w="100%">
         {Array.from({ length: 6 }).map((_, index) => (
           <Stack gap={8} key={index}>
-            <TextSkeleton fz={11} lh="tight" w="70%" />
+            <TextSkeleton fz="xs" lh="tight" w="70%" />
             <TextSkeleton lh="tight" />
           </Stack>
         ))}

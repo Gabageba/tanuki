@@ -88,7 +88,7 @@ function SourceRace({ demo }: Props) {
                     />
                   ) : (
                     <Box>
-                      <Text fz={11} c="dimmed">
+                      <Text fz="xs" c="dimmed">
                         Места в этой ветке не нашлось
                       </Text>
                     </Box>

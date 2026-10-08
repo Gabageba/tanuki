@@ -21,7 +21,7 @@ function ProfileStatisticMetaCard({ label, value, unit, hint }: Props) {
         </Text>
         <Stack gap={8}>
           <Group gap={8} align="baseline" wrap="nowrap">
-            <Text ff="monospace" fz={35} fw={600} lh={1}>
+            <Text ff="monospace" fz={38} fw={600} lh={1}>
               <NumberFormatter value={value} thousandSeparator=" " />
             </Text>
             <Text c="dimmed" lh="tight" tt="lowercase">

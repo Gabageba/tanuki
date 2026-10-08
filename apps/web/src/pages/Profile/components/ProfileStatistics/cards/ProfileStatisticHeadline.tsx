@@ -9,7 +9,7 @@ type Props = {
 function ProfileStatisticHeadline({ value, caption }: Props) {
   return (
     <Group gap={8} align="baseline">
-      <Text ff="monospace" fz={35} fw={600} lh={1} style={{ wordSpacing: -8 }}>
+      <Text ff="monospace" fz={38} fw={600} lh={1} style={{ wordSpacing: -8 }}>
         {value}
       </Text>
       <Text fz="sm" c="dimmed">

@@ -1,4 +1,4 @@
-// Глобальный .selectableOption из темы висит и на живых полях, поэтому базовый селектор удвоен —
+// Глобальный .selectable-option из темы висит и на живых полях, поэтому базовый селектор удвоен —
 // стили варианта перебивают его при любом порядке подключения стилей.
 .option.option {
   border: 1px solid transparent;
@@ -17,7 +17,7 @@
   }
 }
 
-// Тема даёт соседним пунктам живых полей зазор (.selectableOption + .selectableOption) — варианты
+// Тема даёт соседним пунктам живых полей зазор (.selectable-option + .selectable-option) — варианты
 // без зазора его снимают.
 .option.option:is(.lookCurrent, .lookMerged, .lookFlat, .lookCheck) {
   margin-top: 0;

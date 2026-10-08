@@ -13,7 +13,7 @@ function ErrorBlock({ error }: Props) {
   return (
     <Box pos="relative">
       <ScrollArea.Autosize mah={220} type="auto">
-        <Code block fz={11} pr={40} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+        <Code block fz="xs" pr={40} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
           {error}
         </Code>
       </ScrollArea.Autosize>
