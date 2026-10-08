@@ -10,13 +10,15 @@ import { getLabelByTitleType } from '@/entities/source/lib';
 import TitleCardTags from '../TitleCardTags';
 import TitleScoreMeta from '../../TitleScoreMeta';
 import TitleState from '../../TitleState';
+import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
 import styles from '../../Title.module.scss';
 
 type Props = {
   title: Title;
+  bookmarkFolder?: ResolvedBookmarkFolder | null;
 };
 
-function TitleListCard({ title }: Props) {
+function TitleListCard({ title, bookmarkFolder }: Props) {
   const { t } = useTranslation();
   const metaItems: ReactNode[] = [
     getLabelByTitleType(title.type, t),
@@ -34,7 +36,7 @@ function TitleListCard({ title }: Props) {
   return (
     <NavigateToTitleCard title={title} className={styles.card} data-view-mode="list" withBorder>
       <Group align="start" gap={0}>
-        <TitleCardImage title={title} w={120} />
+        <TitleCardImage title={title} w={120} bookmarkFolder={bookmarkFolder} />
         <Stack p="sm" h="100%" flex={1} miw={0} gap={8}>
           <Stack gap={8} flex={1}>
             <Group gap={8}>
@@ -46,12 +48,7 @@ function TitleListCard({ title }: Props) {
               <TitleMetaItems gap={6} items={metaItems} />
               <TitleState state={title.releaseState} visibleFrom="xxs" />
             </Group>
-            <Text
-              className={styles.title}
-              lineClamp={title.description ? 1 : 2}
-              lh="tight"
-              fz={{ base: 16, xs: 18 }}
-            >
+            <Text className={styles.title} lineClamp={title.description ? 1 : 2} lh="tight" fz="sm">
               {title.name}
             </Text>
             {!!title.description && (

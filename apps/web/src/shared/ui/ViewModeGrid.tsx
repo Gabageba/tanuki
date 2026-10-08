@@ -6,7 +6,8 @@ type Props = {
   viewMode: ViewMode;
 } & Omit<SimpleGridProps, 'cols' | 'spacing'>;
 
-function CatalogContentGridWrapper({ children, viewMode }: Props) {
+/** Сетка карточек тайтлов в виде, выбранном пользователем: плитки или список. */
+function ViewModeGrid({ children, viewMode }: Props) {
   const cols: SimpleGridProps['cols'] = useMemo(() => {
     switch (viewMode) {
       case VIEW_MODE.GRID:
@@ -25,4 +26,4 @@ function CatalogContentGridWrapper({ children, viewMode }: Props) {
   );
 }
 
-export default CatalogContentGridWrapper;
+export default ViewModeGrid;

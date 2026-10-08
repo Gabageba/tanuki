@@ -30,7 +30,7 @@ function StatusScreen({ code, title, description, children }: Props) {
             {code}
           </Text>
           <Stack align="center" justify="flex-end" gap={8}>
-            <Title ta="center" fz={{ base: 32, sm: 38 }} lh="tight">
+            <Title ta="center" fz={{ base: 30, sm: 38 }} lh="tight">
               {title}
             </Title>
             <Text c="dimmed" size="lg" ta="center" maw={540} fz={{ base: 14, sm: 16 }}>

@@ -20,7 +20,7 @@ function TitleAdultBadge({ contentRating, compact }: Props) {
       style={{ zIndex: 1 }}
       size={compact ? 'xs' : 'lg'}
       fw={400}
-      fz={compact ? 9 : 14}
+      fz={compact ? 12 : 14}
       px={compact ? 4 : 8}
       radius={compact ? 'sm' : 'md'}
       variant="filled"

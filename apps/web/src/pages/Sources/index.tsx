@@ -14,6 +14,7 @@ function Sources() {
     <PageLayout useQuery={useSources}>
       <PageLayout.Content
         title={t('sources')}
+        showLoading={false}
         actions={
           <Button
             component={Link}

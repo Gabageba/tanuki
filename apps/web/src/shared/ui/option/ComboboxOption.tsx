@@ -6,7 +6,7 @@ type Props = { label: string } & ComboboxOptionProps;
 
 function ComboboxOption({ label, value, selected }: Props) {
   return (
-    <Combobox.Option value={value} selected={selected} className="selectableOption">
+    <Combobox.Option value={value} selected={selected} className="selectable-option">
       <SelectOption
         checked={selected}
         option={{

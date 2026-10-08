@@ -17,7 +17,7 @@ function TitleSourceRibbon({ sourceId }: Props) {
       className={styles.ribbon}
       bg={color}
       c={getContrastColor({ color, theme })}
-      fz={11}
+      fz="xs"
       fw={600}
       tt="uppercase"
       ff="monospace"

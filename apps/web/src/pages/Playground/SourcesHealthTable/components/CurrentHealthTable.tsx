@@ -49,7 +49,7 @@ function CurrentHealthTable({ sources }: Props) {
                   coloredText
                 />
                 {source.statusChangedAt && (
-                  <Text fz={11} c="dimmed">
+                  <Text fz="xs" c="dimmed">
                     с {formatDate(source.statusChangedAt)}
                   </Text>
                 )}

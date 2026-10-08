@@ -1,0 +1,151 @@
+/* U1 — закладка без доступных источников: обложка гаснет и обесцвечивается. */
+.dimmedCover {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+/* C4 — тёмный градиент снизу обложки под прогрессом: белый текст читается на любой картинке. */
+.progressShade {
+  z-index: 1;
+  background: linear-gradient(to top, rgb(0 0 0 / 80%), rgb(0 0 0 / 0%));
+}
+
+/* «+N» у иконки источника — тот же значок, что у LinkedMarksIcon в списке глав. */
+.sourceCount {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  min-width: 14px;
+  height: 14px;
+  padding-inline: 3px;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  color: var(--mantine-color-body);
+  background-color: var(--mantine-color-text);
+}
+
+.sourceIcon {
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
+}
+
+/* Ось Q — кнопка в мета-строке мелкая, а попасть в неё надо пальцем: зона нажатия выходит за
+   кнопку до ~40px в высоту. Наружу, а не паддингом, — иначе съехала бы мета-строка. */
+.hitArea {
+  position: relative;
+
+  &::before {
+    position: absolute;
+    inset: -8px -4px;
+    content: '';
+  }
+}
+
+/* Q3 — плашка на обложке: тёмное стекло, белый текст читается на любой картинке. Чёрный
+   жёстко: плашка лежит на картинке, тема тут не важна. */
+.coverPlate {
+  background-color: rgb(0 0 0 / 60%);
+  backdrop-filter: blur(6px);
+
+  &:hover {
+    background-color: rgb(0 0 0 / 75%);
+  }
+}
+
+/* Маркеры поверх обложки — над размытием 18+. */
+.overCover {
+  z-index: 1;
+}
+
+/* K1/K2 — флажок закладки, свисающий с верхнего края: рисуется иконкой поверх подложки. */
+.markerShadow {
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 50%));
+}
+
+/* K6 — мягкое затемнение низа обложки под метками: и цветная плашка, и рейтинг читаются на любой картинке. */
+.markerShade {
+  z-index: 1;
+  background: linear-gradient(to top, rgb(0 0 0 / 55%), rgb(0 0 0 / 0%));
+}
+
+/* K7 — матовое стекло: обложка под меткой размыта, поверх лёгкое затемнение. */
+.glassPlate {
+  z-index: 1;
+  backdrop-filter: blur(8px) saturate(140%);
+}
+
+/* D2 — точка с вырезом: обводка цветом фона шапки отделяет её от иконки. */
+.cutoutDot {
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
+}
+
+/* N3 — точка новой главы прямо на линии, правее узла. */
+.nodeDot {
+  position: absolute;
+  top: 50%;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transform: translateY(-120%);
+  background-color: var(--mantine-primary-color-filled);
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
+}
+
+/* G3 — сегменты одной полосы: стык между ними — тонкий зазор фона. */
+.stackedSegment {
+  & + & {
+    border-left: 2px solid var(--mantine-color-body);
+  }
+}
+
+/* Мобильная рамка 375: фиксированная ширина и тонкая граница, как окно телефона. */
+.phoneFrame {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  overflow: hidden;
+}
+
+/* Копия стилей строки из SettingsSources: импорт из другой страницы запрещён линтом. */
+[data-mantine-color-scheme='dark'] input:not(:checked, :disabled) + .switchTrack {
+  --switch-bg: var(--mantine-color-dark-4);
+}
+
+.sortableRow {
+  position: relative;
+  background: var(--mantine-color-body);
+}
+
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* C9 — рамка обложки с новыми главами: outline не режется overflow обёртки. */
+.newFrame {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+/* C14 — загнутый уголок: треугольник рамками, размер — переменной, у маленькой обложки меньше. */
+.cornerFold {
+  --corner-size: 26px;
+
+  width: 0;
+  height: 0;
+  border-top: var(--corner-size) solid var(--mantine-primary-color-filled);
+  border-right: var(--corner-size) solid transparent;
+  filter: drop-shadow(1px 1px 2px rgb(0 0 0 / 35%));
+
+  &[data-compact] {
+    --corner-size: 16px;
+  }
+}
+
+/* U3 — под плашкой обложка только обесцвечена. */
+.grayCover {
+  filter: grayscale(1);
+}

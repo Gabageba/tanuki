@@ -4,7 +4,6 @@ import {
   Button,
   Container,
   Group,
-  Loader,
   SimpleGrid,
   Stack,
   Text,
@@ -16,6 +15,8 @@ import { SignInIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
 import TitleCard from '@/entities/title/card/TitleCard';
+import BlockLoader from '@/shared/ui/BlockLoader';
+import useTitleBookmarkFolders from '@/entities/bookmark/hooks/useTitleBookmarkFolders';
 import useSearch from './hooks/useSearch';
 import { flattenSources } from '@/entities/source/lib';
 import useSources from '@/entities/source/hooks/useSources';
@@ -27,8 +28,12 @@ function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('query') ?? '';
   const [input, setInput] = useState(query);
-  const { data, isPending } = useSearch({ query });
+  // Пустой запрос выключен и висит в pending — крутится только то, что действительно грузится.
+  const { data, isLoading } = useSearch({ query });
   const { data: sourcesData } = useSources();
+  const getBookmarkFolder = useTitleBookmarkFolders(
+    data?.groups.flatMap(({ items }) => items.map(({ id }) => id)) ?? [],
+  );
 
   const sourceTitle = (sourceId: string) =>
     flattenSources(sourcesData).find((source) => source.id === sourceId)?.title ?? sourceId;
@@ -55,7 +60,7 @@ function SearchPage() {
         />
       </form>
 
-      {isPending && <Loader />}
+      {isLoading && <BlockLoader />}
 
       <Stack gap="xl">
         {data?.groups.map((group) => (
@@ -86,7 +91,11 @@ function SearchPage() {
             )}
             <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="md">
               {group.items.map((title) => (
-                <TitleCard key={title.id} title={title} />
+                <TitleCard
+                  key={title.id}
+                  title={title}
+                  bookmarkFolder={getBookmarkFolder(title.id)}
+                />
               ))}
             </SimpleGrid>
           </div>

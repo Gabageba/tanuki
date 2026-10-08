@@ -24,7 +24,7 @@ function EntityHeading({ icon, title, badge, subtitle }: Props) {
           </Text>
           {badge}
         </Group>
-        <Text ff="monospace" fz={11} fw={400} c="dimmed" lh="tight" truncate>
+        <Text ff="monospace" fz="xs" fw={400} c="dimmed" lh="tight" truncate>
           {subtitle}
         </Text>
       </Stack>

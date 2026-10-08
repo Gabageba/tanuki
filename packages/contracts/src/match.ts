@@ -67,6 +67,11 @@ export const TitleLinkRequestSchema = z.object({
   /** Полный Title.id второй стороны связи — "sourceId:opaqueId". */
   targetId: z.string().min(1),
   verdict: TitleLinkVerdictSchema,
+  /**
+   * Папка, в которой оставить закладку, если обе стороны связи лежат в закладках в разных папках.
+   * Без неё подтверждение такой связи отвечает 409 bookmarkFolderConflict.
+   */
+  bookmarkFolderId: z.string().uuid().optional(),
 });
 
 export type TitleLinkRequest = z.infer<typeof TitleLinkRequestSchema>;

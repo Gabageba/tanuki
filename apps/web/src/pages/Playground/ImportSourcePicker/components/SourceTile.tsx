@@ -55,12 +55,12 @@ function SourceTile({
           {source.title}
         </Text>
         {isNetworkShown && (
-          <Text fz={11} lh={1.2} c="dimmed" ta="center" truncate maw="100%">
+          <Text fz="xs" lh={1.2} c="dimmed" ta="center" truncate maw="100%">
             {source.network}
           </Text>
         )}
         {isStateShown && !isAvailable && (
-          <Text fz={11} lh={1.2} c={color} ta="center" truncate maw="100%">
+          <Text fz="xs" lh={1.2} c={color} ta="center" truncate maw="100%">
             {getShortStateLabel(source.state)}
           </Text>
         )}

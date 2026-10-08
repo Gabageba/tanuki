@@ -1,4 +1,4 @@
-import { Card, Center, Group, Loader, Stack, Tabs } from '@mantine/core';
+import { Card, Group, Stack, Tabs } from '@mantine/core';
 import { useSearchParams } from 'react-router';
 import {
   CHAPTER_NUMBERING,
@@ -16,6 +16,8 @@ import {
   resolveOwnMark,
 } from '@/entities/title/readingProgress';
 import ChaptersList from '@/shared/ui/ChaptersList';
+import useTitleBookmarkVisit from '../../hooks/useTitleBookmarkVisit';
+import TitleChaptersListSkeleton from './TitleChaptersListSkeleton';
 import TitleChaptersSettings from './TitleChaptersSettings';
 
 type Props = {
@@ -31,6 +33,7 @@ function TitleChaptersList({ titleId, branch }: Props) {
   });
   const { data: progress } = useReadingProgress({ titleId });
   const { mutate: updateProgress } = useUpdateReadingProgress({ titleId });
+  const { data: newChapterIds } = useTitleBookmarkVisit(titleId);
 
   const parsedDirection = SortDirectionSchema.safeParse(searchParams.get('direction'));
   const direction = parsedDirection.success ? parsedDirection.data : SORT_DIRECTION.DESC;
@@ -44,9 +47,9 @@ function TitleChaptersList({ titleId, branch }: Props) {
 
   if (isChaptersPending) {
     return (
-      <Center>
-        <Loader />
-      </Center>
+      <Tabs.Panel value={branch.id}>
+        <TitleChaptersListSkeleton />
+      </Tabs.Panel>
     );
   }
 
@@ -72,6 +75,7 @@ function TitleChaptersList({ titleId, branch }: Props) {
             direction={direction}
             ownMark={resolveOwnMark(progress, chapters, numbering)}
             linkedMarks={resolveLinkedMarks(progress, chapters, branch.id)}
+            newChapterIds={newChapterIds}
             onMarkChapter={(chapter) =>
               updateProgress({ chapterId: chapter.id, pageIndex: 0, chapter })
             }

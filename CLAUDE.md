@@ -37,8 +37,18 @@
 - **Tabs** are built from a `TABS` array in `useMemo` — `{ id, title, icon, content }` — that is
   mapped once into `Tabs.Tab` and once into `Tabs.Panel` (see `pages/Settings/index.tsx`). No
   hand-written `Tabs.Tab`/`Tabs.Panel` pairs.
-- **Loading** of a block or tab is a skeleton that repeats the block's layout (a sibling
-  `XxxSkeleton.tsx`, built from `Skeleton` and `TextSkeleton`), never a centered `Loader`.
+- **Loading** of a block or tab depends on whether its answer is likely to be empty:
+  - **Skeleton** when the shape of the answer is known in advance and it's almost never empty —
+    catalog, title page, chapters, source lists, users, statistics, settings forms. It repeats the
+    block's layout (a sibling `XxxSkeleton.tsx`, built from `Skeleton` and `TextSkeleton`).
+  - **Spinner** — the shared `BlockLoader` (`shared/ui/BlockLoader`) — when the answer may well
+    be empty: bookmarks in a folder, search results, invites. A skeleton of a dozen cards that
+    turns into a lone `EmptyState` is worse than a spinner. `BlockLoader` keeps the block's height
+    and fades in after 200 ms, so a fast answer never flashes it. Never a bare centered `Loader`.
+  - A mixed block splits along the same line: the part that's always there is a skeleton, the
+    part that may be empty is a `BlockLoader` (bookmarks: folder tabs — skeleton, cards — spinner).
+  - A small `Loader` inside a control that's busy (a button, an avatar upload, the infinite-scroll
+    trigger, a process screen like email verification) is not a block loading and stays as is.
 - **Errors** of a query inside a page block or tab are not rendered: the global handler in
   `QueryClientProvider` already shows a notification. `QueryError` is only for the page's main
   query and is rendered by `PageLayout.Content`, not by blocks. A block whose query failed shows
@@ -63,7 +73,7 @@
 - **Multi-choice filters** use the shared `CompactMultiSelect` — the first chosen item plus a
   `+N` pill, so the field never grows in height. Empty selection means "no restriction"; there is
   no fake «Все» option inside the list. Options look the same as in `Select` (theme
-  `renderOption` + `selectableOption`).
+  `renderOption` + `selectable-option`).
 
 ## Forms
 
@@ -192,6 +202,15 @@
 - **Unbounded** — the logo only, one call site (`var(--tanuki-font-brand)`, set in
   `CSS_VARIABLES_RESOLVER`, used in the header `Anchor`). Nowhere else — block headings, section
   names, and modal titles all use Golos Text now.
+- **Font sizes come from a short scale** — Ant Design's type scale plus one in-between step:
+  12 (`fz="xs"`), 13 (`fz={13}`, the explanatory text of a modal only), 14 (`fz="sm"`), 16
+  (`fz="md"`), and for headings and large readouts 20, 24, 30, 38, 46. No sizes in between — no
+  11, 15, 17, 18 — and no responsive pairs built from them (`{ base: 15, xs: 17 }`); a responsive
+  size steps between neighbours on the scale (`{ base: 14, xs: 16 }`). Pick the nearest step
+  instead of inventing a new one. The only exceptions are sizes tied to geometry rather than
+  typography: a counter squeezed into a fixed dot on an icon (`8px` in a 13px circle), a glyph
+  sized from its container (`SIZE / 2` inside an avatar), a fluid display number
+  (`min(58cqi, 520px)`), and `fz` used only to size a `1em` icon.
 
 ## Hooks
 

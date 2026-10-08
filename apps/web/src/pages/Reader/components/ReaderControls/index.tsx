@@ -1,7 +1,8 @@
 import type { MantineBreakpoint } from '@mantine/core';
-import { ActionIcon, Divider, Group } from '@mantine/core';
+import { Divider, Group } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { BookmarkSimpleIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
+import BookmarkMenuButton from '@/features/bookmark/BookmarkMenuButton';
 import { XXS_QUERY } from '@/shared/lib/breakpoints';
 import ReaderNavigateButton from '../ReaderNavigateButton';
 import ReaderChapterName from '../ReaderChapterName';
@@ -65,9 +66,7 @@ function ReaderControls({
       <Divider orientation="vertical" h={26} className={styles.divider} />
       <Group gap={innerGap} wrap="nowrap" style={{ flexShrink: 0 }}>
         <ReaderPagesCount page={page} pagesLength={pagesLength} visibleFrom="md" />
-        <ActionIcon variant="subtle" color="gray" size="lg">
-          <BookmarkSimpleIcon />
-        </ActionIcon>
+        <BookmarkMenuButton titleId={titleId} />
         <ReaderSettingsButton />
       </Group>
     </Group>

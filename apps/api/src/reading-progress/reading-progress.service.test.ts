@@ -3,6 +3,7 @@ import { READING_MARK_CONFIDENCE } from '@tanuki/contracts';
 import type { AdultContentService } from '../adult-content/adult-content.service';
 import { encodeChapterId, encodeTitleId } from '../common/opaque-id';
 import type { DatabaseService } from '../database/database.service';
+import type { BookmarksService } from '../library/bookmarks.service';
 import type { TitleLinksService } from '../matches/title-links.service';
 import type { ParsersClientService } from '../parsers-client/parsers-client.service';
 import {
@@ -124,7 +125,15 @@ describe('ReadingProgressService при недоступной базе', () => 
     getAccess: () => Promise.resolve({ showAdultSources: true, hideAdultTitles: false }),
   } as unknown as AdultContentService;
 
-  const service = new ReadingProgressService(unavailable, links, parsersClient, adultContent);
+  const bookmarks = { touchVisit: () => Promise.resolve() } as unknown as BookmarksService;
+
+  const service = new ReadingProgressService(
+    unavailable,
+    links,
+    parsersClient,
+    adultContent,
+    bookmarks,
+  );
   const titleId = encodeTitleId({ id: 1, url: '/title' });
 
   it('чтение отдаёт пустой прогресс, а не роняет страницу тайтла', async () => {

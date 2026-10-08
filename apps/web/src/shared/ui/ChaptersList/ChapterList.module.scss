@@ -48,6 +48,19 @@
   }
 }
 
+/* N3 — новая глава: акцентная точка у правого верхнего края узла, с вырезом цвета фона. */
+.newDot {
+  position: absolute;
+  top: 50%;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transform: translateY(-120%);
+  background-color: var(--mantine-primary-color-filled);
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
+}
+
 .ownNode {
   display: flex;
   border-radius: 50%;

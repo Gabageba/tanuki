@@ -24,6 +24,7 @@ import {
   toBranchKey,
 } from '../common/normalize';
 import { AdultContentService } from '../adult-content/adult-content.service';
+import { TitleSnapshotsService } from '../library/title-snapshots.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawChapter } from '../parsers-client/parsers-client.types';
 
@@ -35,6 +36,7 @@ export class CatalogService {
     @Inject(ENV) private readonly env: Env,
     private readonly parsersClient: ParsersClientService,
     private readonly adultContent: AdultContentService,
+    private readonly snapshots: TitleSnapshotsService,
   ) {}
 
   async listCatalog(
@@ -81,6 +83,9 @@ export class CatalogService {
     const ref = decodeTitleId(titleId);
     const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
     await this.adultContent.assertTitleVisible(sourceId, raw.contentRating);
+    // Дотяжка: открытая страница тайтла обновляет его снимок глав — новые главы закладок видны и
+    // без крона. Пишется то, что уходит клиенту, так что кеш деталей этому не мешает.
+    this.snapshots.recordQuietly(sourceId, ref.url, raw);
     const chapters = raw.chapters ?? [];
     const targetBranch = branch === undefined ? pickDefaultBranch(chapters) : toBranchKey(branch);
     const filtered = chapters

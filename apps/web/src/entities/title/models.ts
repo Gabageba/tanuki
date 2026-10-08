@@ -24,3 +24,6 @@ export type ReadingMark = {
 export type LinkedReadingMark = ReadingMark & {
   progress: LinkedReadingProgress;
 };
+
+/** Размытие скрытой обложки 18+ в px — в каталоге и в закладках. */
+export const HIDDEN_COVER_BLUR = 20;

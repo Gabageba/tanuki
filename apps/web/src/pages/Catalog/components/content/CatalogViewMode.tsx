@@ -1,30 +1,17 @@
-import { SegmentedControl } from '@mantine/core';
-import { RowsIcon, SquaresFourIcon } from '@phosphor-icons/react';
 import PageLayout from '@/shared/ui/PageLayout';
+import ViewModeSwitch from '@/shared/ui/ViewModeSwitch';
 import type { CatalogParams } from '../../models';
 import { setStoredViewMode, VIEW_MODE, type ViewMode } from '@/shared/lib/viewMode';
 
 function CatalogViewMode() {
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
 
-  const viewMode = params.viewMode ?? VIEW_MODE.GRID;
-
-  const handleChange = (value: string) => {
-    const nextViewMode = value as ViewMode;
-    setStoredViewMode(nextViewMode);
-    setParams({ ...params, viewMode: nextViewMode });
+  const handleChange = (viewMode: ViewMode) => {
+    setStoredViewMode(viewMode);
+    setParams({ ...params, viewMode });
   };
 
-  return (
-    <SegmentedControl
-      value={viewMode}
-      onChange={handleChange}
-      data={[
-        { label: <SquaresFourIcon size={18} />, value: VIEW_MODE.GRID },
-        { label: <RowsIcon size={18} />, value: VIEW_MODE.LIST },
-      ]}
-    />
-  );
+  return <ViewModeSwitch value={params.viewMode ?? VIEW_MODE.GRID} onChange={handleChange} />;
 }
 
 export default CatalogViewMode;

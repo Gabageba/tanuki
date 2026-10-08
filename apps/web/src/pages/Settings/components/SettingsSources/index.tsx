@@ -1,4 +1,4 @@
-import { Center, Loader, Stack, Text } from '@mantine/core';
+import { Stack, Text } from '@mantine/core';
 import {
   closestCenter,
   DndContext,
@@ -21,6 +21,7 @@ import { flattenSources, getPresentSourceLoginMarks } from '@/entities/source/li
 import GroupedList from '@/shared/ui/GroupedList';
 import useReorderSources from './hooks/useReorderSources';
 import { isSourceLoginOffered } from './lib';
+import SettingsSourcesSkeleton from './SettingsSourcesSkeleton';
 import SourceToggleRow from './SourceToggleRow';
 
 function SettingsSources() {
@@ -33,11 +34,7 @@ function SettingsSources() {
   );
 
   if (isPending) {
-    return (
-      <Center mt="lg">
-        <Loader />
-      </Center>
-    );
+    return <SettingsSourcesSkeleton />;
   }
 
   const sources = flattenSources(data);

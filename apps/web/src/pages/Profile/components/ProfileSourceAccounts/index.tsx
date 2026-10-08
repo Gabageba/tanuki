@@ -1,4 +1,4 @@
-import { Alert, Center, Loader, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Alert, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { InfoIcon } from '@phosphor-icons/react';
 import SourceLoginBadgeLegend from '@/entities/source/components/SourceLoginBadge/SourceLoginBadgeLegend';
@@ -6,6 +6,7 @@ import useSources from '@/entities/source/hooks/useSources';
 import { getPresentSourceLoginMarks } from '@/entities/source/lib';
 import useSourceAccounts from './hooks/useSourceAccounts';
 import { groupSourcesByAccount } from './lib';
+import ProfileSourceAccountsSkeleton from './ProfileSourceAccountsSkeleton';
 import SourceFamilySection from './SourceFamilySection';
 
 function ProfileSourceAccounts() {
@@ -14,11 +15,7 @@ function ProfileSourceAccounts() {
   const { data: accounts, isPending: isAccountsPending } = useSourceAccounts();
 
   if (isSourcesPending) {
-    return (
-      <Center mt="lg">
-        <Loader />
-      </Center>
-    );
+    return <ProfileSourceAccountsSkeleton />;
   }
 
   const isLinkingAvailable = accounts?.isLinkingAvailable ?? false;

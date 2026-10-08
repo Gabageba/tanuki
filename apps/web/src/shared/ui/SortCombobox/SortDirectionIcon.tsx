@@ -6,7 +6,7 @@ type Props = {
   direction: SortDirection;
 };
 
-function CatalogSortIcon({ direction }: Props) {
+function SortDirectionIcon({ direction }: Props) {
   if (direction === SORT_DIRECTION.ASC) {
     return <SortAscendingIcon />;
   }
@@ -16,4 +16,4 @@ function CatalogSortIcon({ direction }: Props) {
   }
 }
 
-export default CatalogSortIcon;
+export default SortDirectionIcon;

@@ -37,7 +37,7 @@ function BlurOverlay({ blurStyle, compact = false }: Props) {
       return (
         <Center pos="absolute" inset={0} bg="rgba(0, 0, 0, 0.45)" c="white" p="xs">
           {compact ? (
-            <Text ff="monospace" fw={700} fz={10}>
+            <Text ff="monospace" fw={700} fz="xs">
               18+
             </Text>
           ) : (

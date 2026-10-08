@@ -14,6 +14,7 @@ import { NotFoundApiException, StorageUnavailableException } from '../common/err
 import { groupByBranch, normalizeChapter, titleIdOf } from '../common/normalize';
 import { decodeChapterId, decodeTitleId, splitCompositeId } from '../common/opaque-id';
 import { DatabaseService } from '../database/database.service';
+import { BookmarksService } from '../library/bookmarks.service';
 import { readingProgress } from '../database/schema';
 import { linkKeyOf, parseLinkKey, TitleLinksService } from '../matches/title-links.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
@@ -108,6 +109,7 @@ export class ReadingProgressService {
     private readonly links: TitleLinksService,
     private readonly parsersClient: ParsersClientService,
     private readonly adultContent: AdultContentService,
+    private readonly bookmarks: BookmarksService,
   ) {}
 
   /**
@@ -229,6 +231,9 @@ export class ReadingProgressService {
     }, null);
 
     if (!row) throw new StorageUnavailableException();
+    // Чтение главы — визит в группу: пометка «обновился» на карточке закладки снимается. Отметка
+    // уже сохранена, так что неудача здесь её не отменяет.
+    await this.bookmarks.touchVisit(userId, row.titleKey).catch(() => undefined);
     return toReadingProgress(row);
   }
 }

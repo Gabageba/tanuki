@@ -17,7 +17,7 @@ function SourceRowMock({ id, title, domain }: Props) {
         <Text fz="sm" lh="tight" truncate>
           {title}
         </Text>
-        <Text fz={11} ff="monospace" c="dimmed" lh="tight" truncate>
+        <Text fz="xs" ff="monospace" c="dimmed" lh="tight" truncate>
           {domain}
         </Text>
       </Stack>

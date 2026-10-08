@@ -2,6 +2,7 @@ import { Badge, Text } from '@mantine/core';
 import { HeartIcon, StarFourIcon } from '@phosphor-icons/react';
 import { isEmpty } from '@/shared/lib/isEmpty';
 import type { Title } from '@tanuki/contracts';
+import { COVER_BADGE_COLOR } from './models';
 
 type Props = {
   title: Title;
@@ -21,7 +22,7 @@ function TitleScoreBadge({ title }: Props) {
       bottom={6}
       right={6}
       style={{ zIndex: 1 }}
-      color="color-mix(in srgb, var(--mantine-color-dark-filled) 85%, transparent)"
+      color={COVER_BADGE_COLOR}
       size="lg"
       fw={400}
       leftSection={

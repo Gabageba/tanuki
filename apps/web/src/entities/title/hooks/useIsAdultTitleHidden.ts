@@ -12,7 +12,7 @@ import useUserSettings from '@/shared/hooks/useUserSettings';
  * отдаёт. Настройка касается только обычных источников — в источнике с меткой 18+ взрослое всё,
  * и его показ решает showAdultSources.
  */
-function useIsAdultTitleHidden(title: Title) {
+function useIsAdultTitleHidden(title: Pick<Title, 'contentRating' | 'sourceId'>) {
   const { data: settings } = useUserSettings();
 
   if (title.contentRating !== CONTENT_RATING.ADULT) return false;

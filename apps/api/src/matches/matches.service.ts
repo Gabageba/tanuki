@@ -23,6 +23,7 @@ import { SourcesService } from '../sources/sources.service';
 import { UserSourcesService } from '../sources/user-sources.service';
 import { runAsService } from '../source-accounts/viewer-context';
 import { AdultContentService, isAdultSourceHidden } from '../adult-content/adult-content.service';
+import { BookmarksService } from '../library/bookmarks.service';
 import { excludeRejected, linkKeyOf, TitleLinksService, parseLinkKey } from './title-links.service';
 import {
   FALLBACK_WAVE_TIME_SHARE,
@@ -103,6 +104,7 @@ export class MatchesService {
     private readonly links: TitleLinksService,
     private readonly userSources: UserSourcesService,
     private readonly adultContent: AdultContentService,
+    private readonly bookmarks: BookmarksService,
   ) {}
 
   async findMatches(
@@ -221,11 +223,19 @@ export class MatchesService {
   }
 
   /** Ставит или снимает ручную пометку связи между текущим тайтлом и указанным. */
+  /**
+   * Подтверждение склеивает и закладки того, кто подтверждает: если обе стороны лежат у него в
+   * разных папках, без bookmarkFolderId связь не ставится (409), с ним — вся новая группа
+   * переезжает в эту папку. У остальных пользователей разошедшиеся папки остаются конфликтом,
+   * который им предложат решить при следующем открытии тайтла.
+   */
   async setLink(
+    userId: string,
     sourceId: string,
     titleId: string,
     targetId: string,
     verdict: TitleLinkVerdict,
+    bookmarkFolderId?: string,
   ): Promise<void> {
     const ref = decodeTitleId(titleId);
     const { data: refRaw } = await this.parsersClient.getDetails(sourceId, ref.url);
@@ -238,13 +248,15 @@ export class MatchesService {
       this.parsersClient.getDetails(targetSourceId, targetUrl),
     );
 
-    await this.links.set(
-      linkKeyOf(sourceId, ref.url),
-      refRaw.title,
-      linkKeyOf(targetSourceId, targetUrl),
-      targetRaw.title,
-      verdict,
-    );
+    const titleKey = linkKeyOf(sourceId, ref.url);
+    const targetKey = linkKeyOf(targetSourceId, targetUrl);
+    const mergeBookmarks =
+      verdict === TITLE_LINK_VERDICT.CONFIRMED
+        ? await this.bookmarks.prepareLinkMerge(userId, titleKey, targetKey, bookmarkFolderId)
+        : null;
+
+    await this.links.set(titleKey, refRaw.title, targetKey, targetRaw.title, verdict);
+    await mergeBookmarks?.();
   }
 
   private async fanOut(sourceId: string, refRaw: RawTitle): Promise<MatchCachePayload> {

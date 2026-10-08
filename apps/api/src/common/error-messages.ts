@@ -52,6 +52,12 @@ const ERROR_MESSAGES_RU = {
   invalidRequest: 'Некорректный запрос',
   searchQueryMissing: 'Не указан поисковый запрос',
   internalServerError: 'Внутренняя ошибка сервера',
+  customFoldersLimit: 'Своих папок может быть не больше {{count}}',
+  folderNameTaken: 'Папка с таким названием уже есть',
+  builtInFolderCantBeChanged: 'Встроенную папку нельзя переименовать или удалить',
+  bothTitlesInBookmarksInDifferentFolders:
+    'Оба тайтла в закладках в разных папках — выберите, в какой оставить',
+  folderNotFound: 'Папка не найдена',
 } as const;
 
 export type ErrorMessageKey = keyof typeof ERROR_MESSAGES_RU;
@@ -102,6 +108,12 @@ const ERROR_MESSAGES_EN: Record<ErrorMessageKey, string> = {
   invalidRequest: 'Invalid request',
   searchQueryMissing: 'Search query is missing',
   internalServerError: 'Internal server error',
+  customFoldersLimit: 'You can have at most {{count}} custom folders',
+  folderNameTaken: 'A folder with this name already exists',
+  builtInFolderCantBeChanged: "A built-in folder can't be renamed or deleted",
+  bothTitlesInBookmarksInDifferentFolders:
+    'Both titles are bookmarked in different folders — choose which one to keep',
+  folderNotFound: 'Folder not found',
 };
 
 /**

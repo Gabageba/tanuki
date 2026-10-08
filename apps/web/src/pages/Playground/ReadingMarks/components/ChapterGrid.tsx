@@ -44,7 +44,7 @@ function ChapterGrid({ demo }: Props) {
           data-zone={getTimelineZone(demo, demo.chapters.indexOf(chapter))}
           onClick={() => demo.onGoToChapter(chapter.id, scopeRef.current)}
         >
-          <Text span fz={11} ff="monospace" inherit>
+          <Text span fz="xs" ff="monospace" inherit>
             {chapter.number}
           </Text>
           {marks.length > 0 && (

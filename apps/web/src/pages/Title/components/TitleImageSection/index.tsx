@@ -9,17 +9,16 @@ import {
   Image,
   Menu,
   Overlay,
-  Select,
   Stack,
 } from '@mantine/core';
 import {
   ArrowsClockwiseIcon,
-  BookmarkSimpleIcon,
   DotsThreeIcon,
   HardDrivesIcon,
   ShareNetworkIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import FolderPickerSelect from '@/features/bookmark/FolderPickerSelect';
 import CoverImage from '@/shared/ui/CoverImage';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { TitleDetailsQuery } from '../../models';
@@ -74,17 +73,7 @@ function TitleImageSection() {
         <Stack gap={8}>
           <TitleReadingActions titleId={title.id} />
           <Group gap={8}>
-            <Select
-              flex={1}
-              data={[t('reading')]}
-              value={t('reading')}
-              c="terracotta"
-              leftSection={
-                <Center c="terracotta">
-                  <BookmarkSimpleIcon weight="fill" size={14} />
-                </Center>
-              }
-            />
+            <FolderPickerSelect titleId={title.id} />
             <Menu>
               <Menu.Target>
                 <ActionIcon size={36} variant="default">

@@ -47,7 +47,7 @@ function SummarySplitButton({ demo }: Props) {
                   />
                 }
                 rightSection={
-                  <Text fz={11} c="dimmed">
+                  <Text fz="xs" c="dimmed">
                     {formatRelative(mark.progress.updatedAt)}
                   </Text>
                 }

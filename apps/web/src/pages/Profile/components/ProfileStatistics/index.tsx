@@ -1,4 +1,4 @@
-import { Center, Loader, SimpleGrid, Stack } from '@mantine/core';
+import { SimpleGrid, Stack } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { BooksIcon, FireIcon } from '@phosphor-icons/react';
 import useProfileStatistics from '@/entities/user/hooks/useProfileStatistics';
@@ -8,7 +8,9 @@ import ProfileStatisticMetaCard from './cards/ProfileStatisticMetaCard';
 import ChaptersReadCard from './cards/ChaptersReadCard';
 import ReadingTimeCard from './cards/ReadingTimeCard';
 import TagsCard from './cards/TagsCard';
+import BookmarksCard from './cards/BookmarksCard';
 import ProfileStatisticsEmpty from './ProfileStatisticsEmpty';
+import ProfileStatisticsSkeleton from './ProfileStatisticsSkeleton';
 import { formatSigned, getMonthDeltaPercent, getTodayDelta, getTrendHint } from './lib';
 
 function ProfileStatistics() {
@@ -17,11 +19,7 @@ function ProfileStatistics() {
   const { data: statistics, isPending } = useProfileStatistics();
 
   if (isPending) {
-    return (
-      <Center mt="lg">
-        <Loader />
-      </Center>
-    );
+    return <ProfileStatisticsSkeleton />;
   }
 
   if (!statistics || !statistics.hasActivity) return <ProfileStatisticsEmpty />;
@@ -85,6 +83,7 @@ function ProfileStatistics() {
         <ReadingTimeCard readingTime={statistics.readingTime} />
         <TagsCard tags={statistics.tags} />
         <SourcesCard sources={statistics.sources} />
+        <BookmarksCard />
       </SimpleGrid>
     </Stack>
   );

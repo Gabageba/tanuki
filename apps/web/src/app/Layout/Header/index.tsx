@@ -1,4 +1,4 @@
-import { Anchor, AppShell, Group, Typography } from '@mantine/core';
+import { ActionIcon, Anchor, AppShell, Group, Indicator, Tooltip, Typography } from '@mantine/core';
 import { Link, useNavigate } from 'react-router';
 import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -7,11 +7,14 @@ import DesktopNavigateButton from './components/DesktopNavigateButton';
 import Avatar from './components/Avatar';
 import DesktopSourceSelect from './components/DesktopSourceSelect';
 import SearchInput from '@/shared/ui/SearcInput';
+import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import styles from './Header.module.scss';
 
 function Header() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { data: bookmarkFolders } = useBookmarkFolders();
 
   const handleSearch = (query: string) =>
     navigate(`/search?query=${encodeURIComponent(query.trim())}`);
@@ -34,7 +37,20 @@ function Header() {
             placeholder={t('searchAllSources')}
           />
           <Group gap={4} visibleFrom="md">
-            <DesktopNavigateButton icon={<BookmarkSimpleIcon size={20} />} />
+            <Tooltip label={t('bookmarks')}>
+              <ActionIcon
+                component={Link}
+                to={ROUTE_PATHS.BOOKMARKS}
+                size="lg"
+                variant="subtle"
+                color="gray"
+                aria-label={t('bookmarks')}
+              >
+                <Indicator size={8} offset={{ x: 5, y: 3 }} disabled={!bookmarkFolders?.hasNew}>
+                  <BookmarkSimpleIcon size={20} />
+                </Indicator>
+              </ActionIcon>
+            </Tooltip>
             <DesktopNavigateButton icon={<BellIcon size={20} />} />
           </Group>
           <Avatar />

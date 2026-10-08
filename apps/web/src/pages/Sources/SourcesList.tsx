@@ -5,11 +5,16 @@ import { getEnabledSources, getLabelByContentType } from '@/entities/source/lib'
 import PageLayout from '@/shared/ui/PageLayout';
 import type { SourcesQuery } from './models';
 import SourceCard from '@/entities/source/components/SourceCard';
+import SourcesListSkeleton from './SourcesListSkeleton';
 
 function SourcesList() {
   const { t } = useTranslation();
-  const { data: allSources } = PageLayout.useQuery<SourcesQuery>();
+  const { data: allSources, isPending } = PageLayout.useQuery<SourcesQuery>();
   const data = getEnabledSources(allSources);
+
+  if (isPending) {
+    return <SourcesListSkeleton />;
+  }
 
   return (
     <Stack gap="lg">
