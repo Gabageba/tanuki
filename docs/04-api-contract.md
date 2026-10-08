@@ -484,23 +484,61 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
 - Реализация: `apps/api/src/source-accounts` (зритель запроса — AsyncLocalStorage,
   `ViewerContextInterceptor`), `packages/parsers/src/core/source-accounts.ts`.
 
-### Библиотека (Фаза 5, требует аккаунта)
+### Закладки
+
+Хранятся на сервере (Postgres), без Dexie и local-first: всё приложение требует вход, прогресс
+уже на сервере. Реализация — `apps/api/src/library` (`LibraryModule`), план —
+[`plans/bookmarks.md`](plans/bookmarks.md), контракты — `packages/contracts/src/bookmark.ts`.
 
 ```
-GET    /library                         → сохранённые тайтлы
-POST   /library                         → { titleId, sourceId }
-DELETE /library/:titleId
+GET    /bookmark-folders                 → { items: BookmarkFolder[], hasNew }
+POST   /bookmark-folders                 { name, icon, color, trackUpdates } → BookmarkFolder
+PATCH  /bookmark-folders/:id             { name?, icon?, color?, trackUpdates? } → 204
+PUT    /bookmark-folders/order           { ids: string[] } — все папки в новом порядке → 204
+DELETE /bookmark-folders/:id?moveTo=<id> без moveTo закладки папки удаляются → 204
 
-GET    /progress?titleIds=a,b,c
-PUT    /progress                        → { titleId, branch, chapterId, page, percent }
+GET    /bookmarks?folderId=&sort=&query=&page=   → { items: BookmarkItem[], page, total }
+POST   /bookmarks/lookup     { titleIds }        → { [titleId]: folderId } — метки на карточках
+POST   /bookmarks/restore    { rows }            — «Вернуть» после удаления → 204
 
-POST   /sync                            → батч-синхронизация из IndexedDB
+GET    /titles/:titleId/bookmark          → { folderId | null, conflict: BookmarkFolderCopy[] | null }
+PUT    /titles/:titleId/bookmark          { folderId } — положить или перенести группу
+DELETE /titles/:titleId/bookmark          → { rows } — удалённые строки для restore
+POST   /titles/:titleId/bookmark/visit    → { newChapterIds } — главы с прошлого визита
+
+BookmarkFolder = { id, builtIn: "reading" | "planned" | "completed" | "dropped" | null,
+                   name, icon, color (null у встроенных), trackUpdates, count, newCount }
+BookmarkItem = { titleId, sourceId, name, coverUrl, contentRating, type, folderId,
+                 progress: { chapterNumber, total } | null, chaptersCount, newChaptersCount,
+                 otherSources: { sourceId, titleId }[],
+                 availability: "available" | "sourceDisabled" | "sourceDown" | "titleMissing" }
 ```
 
-Работает по принципу local-first: клиент пишет в IndexedDB немедленно, синхронизация —
-фоновая, конфликты разрешаются по «максимальному прогрессу», а не по времени записи.
-Пользователь, прочитавший главу 50 на телефоне, не должен откатиться на 30 из-за того,
-что планшет синхронизировался позже.
+- **Ключ** — тайтл на источнике (`sourceId:адрес`, как у прогресса и связей), а показ и правки —
+  по группе подтверждённых совпадений: смена папки и удаление касаются всех строк группы, тайтл
+  «в закладках», если в закладках он сам или любая копия. Одна папка на тайтл.
+- **Папки:** четыре встроенные создаются лениво, переименовать и удалить их нельзя
+  (`builtInBookmarkFolderReadonly`); своих — не больше 20 (`bookmarkFolderLimit`), название 1–32
+  символа и уникально без учёта регистра, в том числе против названий встроенных на любом языке
+  (`bookmarkFolderNameTaken`). «Следить за обновлениями» по умолчанию включено у всех, кроме
+  «Брошено».
+- **Куда ведёт карточка:** источник самой свежей отметки чтения в группе, без отметок — где
+  добавили. Выключенные и лежащие источники целью не становятся, пока в группе есть другие; не
+  осталось ни одного — `availability` называет причину. Снимок названия, обложки, рейтинга и типа
+  хранится в строке закладки (обложка — сырым адресом, подпись прокси ставится при чтении).
+- **Новые главы:** общие таблицы снимков `title_chapter_snapshots` / `title_chapters_seen` пишут
+  крон (`BOOKMARK_UPDATES_CRON`, по умолчанию раз в 3 часа, только отслеживаемые папки, мимо
+  источников в `down`), `GET /titles/:id/chapters` (дотяжка, не чаще раза в 5 минут) и визит.
+  Первый снимок тайтла — базовый, его главы новыми не считаются. Новые — увиденные впервые после
+  последнего визита в группу; визит — открытие страницы тайтла или сохранение прогресса. Число
+  считается по ветке отметки цели (без отметки — по самой длинной), наружу карточка показывает
+  только точку. Снимки, которых нет ни в закладках, ни в отметках, чистятся раз в сутки
+  (`BOOKMARK_SNAPSHOTS_CLEANUP_CRON`).
+- **Склейка:** `PUT /titles/:id/links` с `confirmed` принимает необязательный `bookmarkFolderId`.
+  Если у подтверждающего обе стороны лежат в закладках в разных папках, а поля нет — `409
+bookmarkFolderConflict`, фронт спрашивает папку и повторяет запрос. У остальных пользователей
+  папки группы остаются разошедшимися: `GET /titles/:id/bookmark` отдаёт `conflict`, и фронт
+  спрашивает при следующем открытии тайтла; до выбора группа лежит в папке самой свежей строки.
 
 ## Ошибки
 
@@ -508,28 +546,32 @@ POST   /sync                            → батч-синхронизация 
 { error: { code: 'SOURCE_UNAVAILABLE', message: '...', sourceId, retryAfter?: 30 } }
 ```
 
-| Код                   | HTTP | Смысл                                                |
-| --------------------- | ---- | ---------------------------------------------------- |
-| `SOURCE_UNAVAILABLE`  | 503  | Circuit breaker открыт                               |
-| `SOURCE_BLOCKED`      | 502  | Источник вернул антибот-челлендж                     |
-| `PARSER_FAILED`       | 502  | Парсер не смог разобрать ответ — сайт сменил вёрстку |
-| `STORAGE_UNAVAILABLE` | 503  | Postgres недоступен — правка связи не сохранена      |
-| `NOT_FOUND`           | 404  | Тайтла или главы нет на источнике                    |
-| `UNAUTHORIZED`        | 401  | Нет валидной сессии                                  |
-| `FORBIDDEN`           | 403  | Сессия есть, но не хватает роли (не admin)           |
-| `INVALID_CREDENTIALS` | 401  | Неверная почта/имя пользователя или пароль           |
-| `EMAIL_NOT_VERIFIED`  | 403  | Почта ещё не подтверждена — вход запрещён            |
-| `EMAIL_TAKEN`         | 409  | Такая почта уже зарегистрирована                     |
-| `USERNAME_TAKEN`      | 409  | Такое имя пользователя уже занято                    |
-| `INVITE_INVALID`      | 400  | Инвайт не найден, использован, отозван или истёк     |
-| `TOKEN_INVALID`       | 400  | Ссылка подтверждения/сброса недействительна          |
-| `CODE_INVALID`        | 400  | Код из письма неверный, истёк или сгорел             |
-| `TOO_MANY_REQUESTS`   | 429  | Rate limit (вход/письма) — см. `retryAfter`          |
-| `RATE_LIMITED`        | 429  | Превышен лимит запросов клиента                      |
-| `INVALID_SIGNATURE`   | 403  | Некорректная подпись у `/img`                        |
-| `VALIDATION_FAILED`   | 400  | Тело или параметры запроса не прошли zod-схему       |
-| `BAD_REQUEST`         | 4xx  | Прочий 4xx без своего кода                           |
-| `INTERNAL`            | 500  | Непредвиденное падение сервера                       |
+| Код                             | HTTP | Смысл                                                                |
+| ------------------------------- | ---- | -------------------------------------------------------------------- |
+| `SOURCE_UNAVAILABLE`            | 503  | Circuit breaker открыт                                               |
+| `SOURCE_BLOCKED`                | 502  | Источник вернул антибот-челлендж                                     |
+| `PARSER_FAILED`                 | 502  | Парсер не смог разобрать ответ — сайт сменил вёрстку                 |
+| `STORAGE_UNAVAILABLE`           | 503  | Postgres недоступен — правка связи не сохранена                      |
+| `NOT_FOUND`                     | 404  | Тайтла или главы нет на источнике                                    |
+| `UNAUTHORIZED`                  | 401  | Нет валидной сессии                                                  |
+| `FORBIDDEN`                     | 403  | Сессия есть, но не хватает роли (не admin)                           |
+| `INVALID_CREDENTIALS`           | 401  | Неверная почта/имя пользователя или пароль                           |
+| `EMAIL_NOT_VERIFIED`            | 403  | Почта ещё не подтверждена — вход запрещён                            |
+| `EMAIL_TAKEN`                   | 409  | Такая почта уже зарегистрирована                                     |
+| `USERNAME_TAKEN`                | 409  | Такое имя пользователя уже занято                                    |
+| `INVITE_INVALID`                | 400  | Инвайт не найден, использован, отозван или истёк                     |
+| `TOKEN_INVALID`                 | 400  | Ссылка подтверждения/сброса недействительна                          |
+| `CODE_INVALID`                  | 400  | Код из письма неверный, истёк или сгорел                             |
+| `TOO_MANY_REQUESTS`             | 429  | Rate limit (вход/письма) — см. `retryAfter`                          |
+| `RATE_LIMITED`                  | 429  | Превышен лимит запросов клиента                                      |
+| `INVALID_SIGNATURE`             | 403  | Некорректная подпись у `/img`                                        |
+| `VALIDATION_FAILED`             | 400  | Тело или параметры запроса не прошли zod-схему                       |
+| `BAD_REQUEST`                   | 4xx  | Прочий 4xx без своего кода                                           |
+| `INTERNAL`                      | 500  | Непредвиденное падение сервера                                       |
+| `bookmarkFolderLimit`           | 409  | Своих папок закладок уже 20                                          |
+| `bookmarkFolderNameTaken`       | 409  | Папка с таким названием уже есть                                     |
+| `builtInBookmarkFolderReadonly` | 400  | Встроенную папку нельзя переименовать или удалить                    |
+| `bookmarkFolderConflict`        | 409  | Связь склеила бы закладки из разных папок — нужен `bookmarkFolderId` |
 
 `message` переводится на язык из `Accept-Language` (`ru`/`en`, по умолчанию `ru`) — фронт
 выводит его как есть, своих текстов под коды не держит. Словари — `apps/api/src/common/error-messages.ts`;
