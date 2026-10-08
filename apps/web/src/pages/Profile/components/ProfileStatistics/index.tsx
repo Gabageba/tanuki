@@ -8,6 +8,7 @@ import ProfileStatisticMetaCard from './cards/ProfileStatisticMetaCard';
 import ChaptersReadCard from './cards/ChaptersReadCard';
 import ReadingTimeCard from './cards/ReadingTimeCard';
 import TagsCard from './cards/TagsCard';
+import BookmarksCard from './cards/BookmarksCard';
 import ProfileStatisticsEmpty from './ProfileStatisticsEmpty';
 import { formatSigned, getMonthDeltaPercent, getTodayDelta, getTrendHint } from './lib';
 
@@ -85,6 +86,7 @@ function ProfileStatistics() {
         <ReadingTimeCard readingTime={statistics.readingTime} />
         <TagsCard tags={statistics.tags} />
         <SourcesCard sources={statistics.sources} />
+        <BookmarksCard />
       </SimpleGrid>
     </Stack>
   );

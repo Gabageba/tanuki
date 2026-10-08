@@ -1,7 +1,6 @@
 import type { TFunction } from 'i18next';
 import {
   SORT_ORDER,
-  SORT_DIRECTION,
   SortOrderSchema,
   SortDirectionSchema,
   type FilterGroup,
@@ -97,14 +96,5 @@ export const getSortOrderLabel = (order: SortOrder, t: TFunction): string => {
       return t('titleLatin');
     case SORT_ORDER.ALPHABETICAL_RU:
       return t('titleCyrillic');
-  }
-};
-
-export const getSortDirectionLabel = (direction: SortDirection, t: TFunction): string => {
-  switch (direction) {
-    case SORT_DIRECTION.DESC:
-      return t('descending');
-    case SORT_DIRECTION.ASC:
-      return t('ascending');
   }
 };

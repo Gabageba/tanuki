@@ -1,11 +1,12 @@
 import { Scroller, Tabs } from '@mantine/core';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { BookOpenTextIcon, GearIcon, PlugsIcon } from '@phosphor-icons/react';
+import { BookmarkSimpleIcon, BookOpenTextIcon, GearIcon, PlugsIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import PageLayout from '@/shared/ui/PageLayout';
 import useUserSettings from '@/shared/hooks/useUserSettings';
 import { SETTINGS_TAB_SEARCH_PARAM, SETTINGS_TABS } from '@/shared/lib/routes';
+import SettingsBookmarks from './components/SettingsBookmarks';
 import SettingsGeneral from './components/SettingsGeneral';
 import SettingsReader from './components/SettingsReader';
 import SettingsSources from './components/SettingsSources';
@@ -42,6 +43,12 @@ function Settings() {
         title: t('reader'),
         icon: <BookOpenTextIcon />,
         content: <SettingsReader />,
+      },
+      {
+        id: SETTINGS_TABS.BOOKMARKS,
+        title: t('bookmarks'),
+        icon: <BookmarkSimpleIcon />,
+        content: <SettingsBookmarks />,
       },
     ],
     [t],

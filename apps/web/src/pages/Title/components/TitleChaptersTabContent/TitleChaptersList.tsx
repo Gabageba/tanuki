@@ -16,6 +16,7 @@ import {
   resolveOwnMark,
 } from '@/entities/title/readingProgress';
 import ChaptersList from '@/shared/ui/ChaptersList';
+import useTitleBookmarkVisit from '../../hooks/useTitleBookmarkVisit';
 import TitleChaptersSettings from './TitleChaptersSettings';
 
 type Props = {
@@ -31,6 +32,7 @@ function TitleChaptersList({ titleId, branch }: Props) {
   });
   const { data: progress } = useReadingProgress({ titleId });
   const { mutate: updateProgress } = useUpdateReadingProgress({ titleId });
+  const { data: newChapterIds } = useTitleBookmarkVisit(titleId);
 
   const parsedDirection = SortDirectionSchema.safeParse(searchParams.get('direction'));
   const direction = parsedDirection.success ? parsedDirection.data : SORT_DIRECTION.DESC;
@@ -72,6 +74,7 @@ function TitleChaptersList({ titleId, branch }: Props) {
             direction={direction}
             ownMark={resolveOwnMark(progress, chapters, numbering)}
             linkedMarks={resolveLinkedMarks(progress, chapters, branch.id)}
+            newChapterIds={newChapterIds}
             onMarkChapter={(chapter) =>
               updateProgress({ chapterId: chapter.id, pageIndex: 0, chapter })
             }

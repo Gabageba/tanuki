@@ -3,7 +3,8 @@ import type { CatalogParams, CatalogQuery } from '../../../models';
 import { VIEW_MODE } from '@/shared/lib/viewMode';
 import CatalogContentGridSkeleton from './CatalogContentGridSkeleton';
 import TitleCard from '@/entities/title/card/TitleCard';
-import CatalogContentGridWrapper from './CatalogContentGridWrapper';
+import useTitleBookmarkFolders from '@/entities/bookmark/hooks/useTitleBookmarkFolders';
+import ViewModeGrid from '@/shared/ui/ViewModeGrid';
 
 function CatalogContentGrid() {
   const { data, isFetching, isFetchingNextPage } = PageLayout.useQuery<CatalogQuery>();
@@ -11,6 +12,7 @@ function CatalogContentGrid() {
 
   const items = data?.pages.flatMap((page) => page.items) ?? [];
   const viewMode = params.viewMode ?? VIEW_MODE.GRID;
+  const getBookmarkFolder = useTitleBookmarkFolders(items.map(({ id }) => id));
 
   if (isFetching && !isFetchingNextPage) {
     return <CatalogContentGridSkeleton viewMode={viewMode} />;
@@ -18,11 +20,16 @@ function CatalogContentGrid() {
 
   return (
     <>
-      <CatalogContentGridWrapper viewMode={viewMode}>
+      <ViewModeGrid viewMode={viewMode}>
         {items.map((title) => (
-          <TitleCard key={title.id} title={title} viewMode={viewMode} />
+          <TitleCard
+            key={title.id}
+            title={title}
+            viewMode={viewMode}
+            bookmarkFolder={getBookmarkFolder(title.id)}
+          />
         ))}
-      </CatalogContentGridWrapper>
+      </ViewModeGrid>
       <PageLayout.InfiniteScrollTrigger />
     </>
   );

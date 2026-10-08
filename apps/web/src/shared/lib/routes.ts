@@ -43,8 +43,18 @@ export const SETTINGS_TABS = {
   GENERAL: 'general',
   SOURCES: 'sources',
   READER: 'reader',
+  BOOKMARKS: 'bookmarks',
 } as const;
 export type SettingsTab = EnumLiteralsOf<typeof SETTINGS_TABS>;
+
+/** Вкладка настроек с папками закладок — на неё ведёт шестерёнка на /bookmarks. */
+export const SETTINGS_BOOKMARKS_PATH = `${ROUTE_PATHS.SETTINGS}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.BOOKMARKS}`;
+
+/** Открытая папка на /bookmarks — в адресе, чтобы на неё можно было сослаться из профиля. */
+export const BOOKMARKS_FOLDER_SEARCH_PARAM = 'folder';
+
+export const getBookmarksFolderPath = (folderId: string) =>
+  `${ROUTE_PATHS.BOOKMARKS}?${BOOKMARKS_FOLDER_SEARCH_PARAM}=${folderId}`;
 
 /** Вкладка «Управления» — в адресе, чтобы прежний /invites вёл сразу на приглашения. */
 export const MANAGEMENT_TAB_SEARCH_PARAM = 'tab';

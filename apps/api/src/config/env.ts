@@ -75,6 +75,17 @@ const EnvSchema = z.object({
     .string()
     .default('true')
     .transform((value) => value !== 'false'),
+  // Проверка новых глав у закладок (BookmarkUpdatesService): тайтлы из папок с «Следить за
+  // обновлениями». Каждый тайтл запрашивается раз за проход, сколько бы человек его ни сохранили.
+  BOOKMARK_UPDATES_CRON: z.string().default('0 */3 * * *'),
+  BOOKMARK_UPDATES_CONCURRENCY: z.coerce.number().default(2),
+  // Раз в сутки — чистка снимков глав тайтлов, которых больше нет ни в закладках, ни в отметках.
+  BOOKMARK_SNAPSHOTS_CLEANUP_CRON: z.string().default('30 4 * * *'),
+  // Выключатель для локальной разработки: крон ходит по реальным сайтам, как и пробник.
+  BOOKMARK_UPDATES_ENABLED: z
+    .string()
+    .default('true')
+    .transform((value) => value !== 'false'),
   SEARCH_TIMEOUT_MS: z.coerce.number().default(5_000),
   // Заметно больше, чем у поиска: матчинг опрашивает два десятка источников в двух волнах и
   // добирает детали, а результат кешируется на часы. Пользователя он при этом не блокирует —

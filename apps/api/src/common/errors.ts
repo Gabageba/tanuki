@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import {
   API_ERROR_CODE,
+  CUSTOM_BOOKMARK_FOLDERS_LIMIT,
   LANGUAGE,
   SOURCE_CATALOG,
   type ApiErrorCode,
@@ -323,5 +324,40 @@ export class TooManyRequestsException extends ApiException {
 export class BadRequestApiException extends ApiException {
   constructor(messageKey: ErrorMessageKey = 'invalidRequest') {
     super(API_ERROR_CODE.BAD_REQUEST, messageKey, HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class BookmarkFolderLimitException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.BOOKMARK_FOLDER_LIMIT, 'customFoldersLimit', HttpStatus.CONFLICT, {
+      params: { count: CUSTOM_BOOKMARK_FOLDERS_LIMIT },
+    });
+  }
+}
+
+export class BookmarkFolderNameTakenException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.BOOKMARK_FOLDER_NAME_TAKEN, 'folderNameTaken', HttpStatus.CONFLICT);
+  }
+}
+
+export class BuiltInBookmarkFolderReadonlyException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.BUILT_IN_BOOKMARK_FOLDER_READONLY,
+      'builtInFolderCantBeChanged',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+/** Подтверждаемая связь склеила бы закладки из разных папок — клиент спрашивает, какую оставить. */
+export class BookmarkFolderConflictException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.BOOKMARK_FOLDER_CONFLICT,
+      'bothTitlesInBookmarksInDifferentFolders',
+      HttpStatus.CONFLICT,
+    );
   }
 }

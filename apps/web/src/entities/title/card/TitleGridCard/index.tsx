@@ -7,14 +7,16 @@ import TitleMetaItems from '../../TitleMetaItems';
 import { getLabelByTitleType } from '@/entities/source/lib';
 import TitleCardImage from '../../TitleCardImage';
 import NumericMeta from '../../NumericMeta';
+import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
 import styles from '../../Title.module.scss';
 
 type Props = {
   title: Title;
   showSource?: boolean;
+  bookmarkFolder?: ResolvedBookmarkFolder | null;
 };
 
-function TitleGridCard({ title, showSource = false }: Props) {
+function TitleGridCard({ title, showSource = false, bookmarkFolder }: Props) {
   const { t } = useTranslation();
   const metaItems: ReactNode[] = [
     getLabelByTitleType(title.type, t),
@@ -37,7 +39,12 @@ function TitleGridCard({ title, showSource = false }: Props) {
   return (
     <NavigateToTitleCard title={title} data-view-mode="grid" className={styles.card}>
       <Stack gap={8}>
-        <TitleCardImage title={title} showBadges showSource={showSource} />
+        <TitleCardImage
+          title={title}
+          showBadges
+          showSource={showSource}
+          bookmarkFolder={bookmarkFolder}
+        />
         <Stack gap={4}>
           <TitleMetaItems items={metaItems} gap={metaGap} />
           <Text className={styles.title} lineClamp={2} lh="tight">

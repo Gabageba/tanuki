@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import { FileIcon, UploadSimpleIcon } from '@phosphor-icons/react';
 import ProgressList from '@/shared/ui/ProgressList';
-import { getMockBookmarkStatusLabel } from './lib';
+import { getBuiltInBookmarkFolderLabel } from '@/entities/bookmark/lib';
 import { MOCK_IMPORT_PREVIEW } from './models';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
 import ToneModal from '@/shared/ui/ToneModal';
@@ -59,7 +59,7 @@ function ImportModal({ opened, onClose }: Props) {
               gap="xs"
               items={MOCK_IMPORT_PREVIEW.map(({ status, count }) => ({
                 key: status,
-                label: getMockBookmarkStatusLabel(status, t),
+                label: getBuiltInBookmarkFolderLabel(status, t),
                 value: count,
                 text: (
                   <Text ff="monospace" fz="sm">

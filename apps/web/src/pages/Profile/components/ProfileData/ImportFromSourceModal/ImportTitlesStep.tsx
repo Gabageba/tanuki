@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import { UploadSimpleIcon } from '@phosphor-icons/react';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
-import { getMockBookmarkStatusLabel } from '../lib';
+import { getBuiltInBookmarkFolderLabel } from '@/entities/bookmark/lib';
 import { MOCK_IMPORT_TITLES } from './models';
 
 type Props = {
@@ -46,7 +46,7 @@ function ImportTitlesStep({ onClose }: Props) {
                 description={isInBookmarks ? t('alreadyInBookmarksWillBeAddedAsSource') : null}
               />
               <Badge variant="default" size="sm" flex="none">
-                {getMockBookmarkStatusLabel(status, t)}
+                {getBuiltInBookmarkFolderLabel(status, t)}
               </Badge>
             </Group>
           ))}

@@ -10,6 +10,7 @@ import { EnvModule } from './config/env.module';
 import { HealthModule } from './health/health.module';
 import { ImgProxyModule } from './img-proxy/img-proxy.module';
 import { InvitesModule } from './invites/invites.module';
+import { LibraryModule } from './library/library.module';
 import { MatchesModule } from './matches/matches.module';
 import { ReaderSettingsModule } from './reader-settings/reader-settings.module';
 import { ReadingProgressModule } from './reading-progress/reading-progress.module';
@@ -43,6 +44,7 @@ import { ViewerContextInterceptor } from './source-accounts/viewer-context.inter
     ReaderSettingsModule,
     ReadingProgressModule,
     ReadingStatisticsModule,
+    LibraryModule,
     UserSettingsModule,
     UsersModule,
     SourceAccountsModule,

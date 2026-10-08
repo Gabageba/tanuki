@@ -1,5 +1,6 @@
 import { Box, Group, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import BlurredCover from '@/entities/title/BlurredCover';
 import HiddenCoverOverlay from '@/entities/title/HiddenCoverOverlay';
 import { PREVIEW_COVER_BLUR, PREVIEW_COVER_WIDTH, PREVIEW_COVERS } from './models';
 
@@ -24,35 +25,37 @@ function AdultCoversPreview({ isBlurred }: Props) {
               bdrs="xs"
               style={{ aspectRatio: '3 / 4', overflow: 'hidden' }}
             >
-              <Box
-                pos="absolute"
-                inset={0}
-                style={{
-                  background: `linear-gradient(135deg, var(--mantine-color-${from}-7), var(--mantine-color-${to}-4))`,
-                }}
-              >
+              <BlurredCover blur={isHidden ? PREVIEW_COVER_BLUR : 0}>
                 <Box
                   pos="absolute"
-                  top="12%"
-                  left="-15%"
-                  w="70%"
-                  bg="white"
-                  opacity={0.3}
-                  bdrs="50%"
-                  style={{ aspectRatio: '1' }}
-                />
-                <Box
-                  pos="absolute"
-                  bottom="8%"
-                  right="-10%"
-                  w="55%"
-                  bg={`${to}.2`}
-                  opacity={0.6}
-                  bdrs="50%"
-                  style={{ aspectRatio: '1' }}
-                />
-              </Box>
-              {isHidden && <HiddenCoverOverlay size={14} blur={PREVIEW_COVER_BLUR} />}
+                  inset={0}
+                  style={{
+                    background: `linear-gradient(135deg, var(--mantine-color-${from}-7), var(--mantine-color-${to}-4))`,
+                  }}
+                >
+                  <Box
+                    pos="absolute"
+                    top="12%"
+                    left="-15%"
+                    w="70%"
+                    bg="white"
+                    opacity={0.3}
+                    bdrs="50%"
+                    style={{ aspectRatio: '1' }}
+                  />
+                  <Box
+                    pos="absolute"
+                    bottom="8%"
+                    right="-10%"
+                    w="55%"
+                    bg={`${to}.2`}
+                    opacity={0.6}
+                    bdrs="50%"
+                    style={{ aspectRatio: '1' }}
+                  />
+                </Box>
+              </BlurredCover>
+              {isHidden && <HiddenCoverOverlay size={14} />}
             </Box>
           );
         })}

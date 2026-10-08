@@ -1,8 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import { SETTINGS_STORAGE_KEY } from '@/shared/lib/settings';
-import { EXPORT_FORMAT, MOCK_BOOKMARK_STATUS, OFFLINE_CACHE_NAME } from './models';
-import type { ExportFormat, MockBookmarkStatus } from './models';
+import { EXPORT_FORMAT, OFFLINE_CACHE_NAME } from './models';
+import type { ExportFormat } from './models';
 
 /**
  * Сбрасывает всё, что приложение накопило в браузере, кроме входа и настроек: сессия живёт в
@@ -37,19 +37,6 @@ export const getExportFormatLabel = (format: ExportFormat) => {
       return 'JSON';
     case EXPORT_FORMAT.CSV:
       return 'CSV';
-  }
-};
-
-export const getMockBookmarkStatusLabel = (status: MockBookmarkStatus, t: TFunction) => {
-  switch (status) {
-    case MOCK_BOOKMARK_STATUS.READING:
-      return t('reading');
-    case MOCK_BOOKMARK_STATUS.PLANNED:
-      return t('planned');
-    case MOCK_BOOKMARK_STATUS.COMPLETED:
-      return t('completed');
-    case MOCK_BOOKMARK_STATUS.DROPPED:
-      return t('dropped');
   }
 };
 

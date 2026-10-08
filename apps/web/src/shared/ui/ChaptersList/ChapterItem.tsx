@@ -22,6 +22,8 @@ type Props = {
   status?: ChapterReadStatus;
   /** Своя отметка стоит на этой главе. */
   isMarked?: boolean;
+  /** Глава вышла с прошлого визита — точка у узла. */
+  isNew?: boolean;
   /** Отметки других источников группы, перенесённые на эту главу, свежие первыми. */
   linkedMarks?: LinkedReadingMark[];
   /** Слот под иконку чужих отметок между линией и номером: есть, если отметки есть хоть где-то
@@ -49,6 +51,7 @@ function ChapterItem({
   showDate = false,
   status = CHAPTER_READ_STATUS.UNREAD,
   isMarked = false,
+  isNew = false,
   linkedMarks = [],
   withMarksSlot = false,
   isReadBelow = true,
@@ -97,7 +100,15 @@ function ChapterItem({
     />
   );
   // Своя отметка — в кольце акцентного цвета: рядом с иконками чужих её видно сразу.
-  const node = isMarked ? <Box className={styles.ownNode}>{circle}</Box> : circle;
+  const ring = isMarked ? <Box className={styles.ownNode}>{circle}</Box> : circle;
+  const node = isNew ? (
+    <Box pos="relative" lh={0}>
+      {ring}
+      <Box className={styles.newDot} role="img" aria-label={t('hasNewChapters')} />
+    </Box>
+  ) : (
+    ring
+  );
 
   const timeline = (
     <Stack gap={4} align="center" flex={1}>

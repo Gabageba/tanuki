@@ -33,6 +33,8 @@ type Props = {
   linkedMarks?: LinkedReadingMark[];
   /** Порядок, в котором пришли chapters: от него зависит, с какой стороны прочитанное. */
   direction?: SortDirection;
+  /** Главы, вышедшие с прошлого визита: у узла — точка (N3). */
+  newChapterIds?: ReadonlySet<string>;
   onMarkChapter?: (chapter: Chapter) => void;
 };
 
@@ -47,6 +49,7 @@ function ChaptersList({
   ownMark,
   linkedMarks = [],
   direction = SORT_DIRECTION.DESC,
+  newChapterIds,
   onMarkChapter,
 }: Props) {
   const { t } = useTranslation();
@@ -127,6 +130,7 @@ function ChaptersList({
                     showDate={showDate}
                     status={getChapterReadStatus(virtualItem.index, ownIndex, direction)}
                     isMarked={isMarked}
+                    isNew={newChapterIds?.has(chapter.id) ?? false}
                     linkedMarks={marksByChapterId.get(chapter.id)}
                     withMarksSlot={linkedMarks.length > 0}
                     isReadBelow={direction === SORT_DIRECTION.DESC}

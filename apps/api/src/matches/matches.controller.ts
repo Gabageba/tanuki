@@ -45,10 +45,18 @@ export class MatchesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @Put('links')
   async setLink(
+    @CurrentUser() user: SessionUser,
     @Param('titleId') titleId: string,
     @Body() body: TitleLinkRequestDto,
   ): Promise<void> {
     const { sourceId, opaqueId } = splitCompositeId(titleId);
-    await this.matchesService.setLink(sourceId, opaqueId, body.targetId, body.verdict);
+    await this.matchesService.setLink(
+      user.id,
+      sourceId,
+      opaqueId,
+      body.targetId,
+      body.verdict,
+      body.bookmarkFolderId,
+    );
   }
 }

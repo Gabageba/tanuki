@@ -1,9 +1,10 @@
-import { AppShell, Group } from '@mantine/core';
+import { AppShell, Group, Indicator } from '@mantine/core';
 import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
+import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
 import { closeAllDrawers } from '@/shared/lib/drawerRegistry';
 import MobileNavigationButton from './components/MobileNavigationButton';
 import MobileSourceSelect from './components/MobileSourceSelect';
@@ -14,6 +15,7 @@ import styles from './Footer.module.scss';
 function Footer() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { data: bookmarkFolders } = useBookmarkFolders();
   const isSourcesActive = useIsActiveUrl([
     ROUTE_PATHS.SOURCES,
     ROUTE_PATHS.CATALOG,
@@ -68,7 +70,11 @@ function Footer() {
           onClick={() => navigateFromFooter(ROUTE_PATHS.BOOKMARKS, isBookmarksActive)}
           title={t('bookmarks')}
           isActive={isBookmarksActive && !isSourcesOpened && !isMenuOpened}
-          leftSection={<BookmarkSimpleIcon size={20} />}
+          leftSection={
+            <Indicator size={8} offset={{ x: 5, y: 3 }} disabled={!bookmarkFolders?.hasNew}>
+              <BookmarkSimpleIcon size={20} />
+            </Indicator>
+          }
         />
         <MobileNavigationButton
           onClick={() => navigateFromFooter(ROUTE_PATHS.NOTIFICATIONS, isNotificationsActive)}

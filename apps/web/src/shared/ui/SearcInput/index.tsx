@@ -1,19 +1,28 @@
 import type { TextInputProps } from '@mantine/core';
 import { TextInput } from '@mantine/core';
-import { useDebouncedCallback } from '@mantine/hooks';
+import { useDebouncedCallback, useUncontrolled } from '@mantine/hooks';
 import { MagnifyingGlassIcon, XCircleIcon } from '@phosphor-icons/react';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import styles from './SearchInput.module.scss';
 
 type Props = {
-  handleSearch: (query: string) => void;
+  handleSearch?: (query: string) => void;
   debounceMs?: number;
   className?: string;
   allowClear?: boolean;
+  /** Текст поля, если им управляет родитель, — например, чтобы сбросить его снаружи. */
+  value?: string;
+  onChange?: (value: string) => void;
 } & Omit<
   TextInputProps,
-  'type' | 'className' | 'enterKeyHint' | 'leftSection' | 'rightSection' | 'value' | 'onChange'
+  | 'type'
+  | 'className'
+  | 'enterKeyHint'
+  | 'leftSection'
+  | 'rightSection'
+  | 'value'
+  | 'defaultValue'
+  | 'onChange'
 >;
 
 function SearchInput({
@@ -21,16 +30,21 @@ function SearchInput({
   debounceMs,
   className,
   allowClear = false,
+  value,
+  onChange,
   ...restProps
 }: Props) {
   const { t } = useTranslation();
-  const [query, setQuery] = useState('');
-  const debouncedSearch = useDebouncedCallback(handleSearch, debounceMs ?? 0);
+  const [query, setQuery] = useUncontrolled({ value, finalValue: '', onChange });
+  const debouncedSearch = useDebouncedCallback(
+    (nextQuery: string) => handleSearch?.(nextQuery),
+    debounceMs ?? 0,
+  );
 
   const clear = () => {
     debouncedSearch.cancel();
     setQuery('');
-    handleSearch('');
+    handleSearch?.('');
   };
 
   return (
@@ -39,7 +53,7 @@ function SearchInput({
         e.preventDefault();
         debouncedSearch.cancel();
         if (query.trim()) {
-          handleSearch(query.trim());
+          handleSearch?.(query.trim());
         }
       }}
       className={className}

@@ -10,6 +10,8 @@ import {
   SOURCE_ACCESS,
   SOURCE_LOGIN_BENEFIT,
   SOURCE_LOGIN_REQUIREMENT,
+  SOURCE_CATALOG,
+  type CatalogEntry,
   type Source,
   type SourceAccess,
   type SourceLoginBenefit,
@@ -207,3 +209,7 @@ export const getFlagByLocale = (locale: SourceLocale) => {
       return '🇺🇸';
   }
 };
+
+/** Название источника по каталогу; незнакомый id (источник убрали) — как есть, без падения. */
+export const getCatalogSourceTitle = (sourceId: string) =>
+  (SOURCE_CATALOG as Record<string, CatalogEntry | undefined>)[sourceId]?.title ?? sourceId;

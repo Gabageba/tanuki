@@ -25,6 +25,11 @@ import type {
   ReaderPageFit,
   ColorScheme,
   ViewMode,
+  BuiltInBookmarkFolder,
+  BookmarkFolderIcon,
+  BookmarkFolderColor,
+  ContentRating,
+  TitleType,
 } from '@tanuki/contracts';
 import type { EmailTokenPurpose } from '../auth/models';
 
@@ -432,3 +437,118 @@ export const emailTokens = pgTable('email_tokens', {
   usedAt: timestamp('used_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Папки закладок. Четыре встроенные (builtIn не null) создаются лениво, при первом обращении
+ * пользователя к закладкам; их название, иконку и цвет задаёт фронт, поэтому эти колонки у них
+ * null. Свои папки (builtIn null) пользователь создаёт, переименовывает и удаляет сам.
+ */
+export const bookmarkFolders = pgTable(
+  'bookmark_folders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // Тип text, а не pgEnum — см. комментарий у title_links.verdict выше.
+    builtIn: text('built_in').$type<BuiltInBookmarkFolder>(),
+    name: text('name'),
+    icon: text('icon').$type<BookmarkFolderIcon>(),
+    color: text('color').$type<BookmarkFolderColor>(),
+    /** Место вкладки — по возрастанию. */
+    position: integer('position').notNull(),
+    /** Проверять ли новые главы закладок этой папки кроном и показывать ли пометку. */
+    trackUpdates: boolean('track_updates').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // NULL в уникальном индексе Postgres считает разными значениями — свои папки (builtIn null)
+    // и встроенные (name null) друг другу не мешают.
+    uniqueIndex('bookmark_folders_user_built_in_idx').on(table.userId, table.builtIn),
+    uniqueIndex('bookmark_folders_user_name_lower_idx').on(table.userId, sql`lower(${table.name})`),
+  ],
+);
+
+/**
+ * Закладки — строка на пару «пользователь × тайтл на источнике», как reading_progress. Одной
+ * закладкой для пользователя их делает чтение: строки одной группы подтверждённых совпадений
+ * (TitleLinksService) показываются и правятся вместе — смена папки и удаление касаются всех.
+ */
+export const bookmarks = pgTable(
+  'bookmarks',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** linkKeyOf(sourceId, url) — тот же ключ, что в title_links и reading_progress. */
+    titleKey: text('title_key').notNull(),
+    sourceId: text('source_id').notNull(),
+    /** Полный Title.id — по нему карточка ведёт на тайтл. */
+    titleId: text('title_id').notNull(),
+    /**
+     * Без каскада: что делать с закладками удаляемой папки, решает сервис (перенос или удаление).
+     * no action, а не restrict: проверка идёт в конце оператора, так что каскад от users удаляет
+     * и папки, и закладки одним махом.
+     */
+    folderId: uuid('folder_id')
+      .notNull()
+      .references(() => bookmarkFolders.id, { onDelete: 'no action' }),
+    /** Снимок на момент добавления — карточка рисуется и без живого источника. */
+    name: text('name').notNull(),
+    /** Адрес обложки на источнике, без подписи прокси: подпись живёт час, её ставит чтение. */
+    coverUrl: text('cover_url'),
+    contentRating: text('content_rating').$type<ContentRating>().notNull(),
+    type: text('type').$type<TitleType>(),
+    /** Последний визит в группу — общий для неё: пишется во все её строки. */
+    visitedAt: timestamp('visited_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Когда последний раз меняли папку: при разошедшихся папках группы побеждает свежая. */
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.titleKey] }),
+    index('bookmarks_user_folder_idx').on(table.userId, table.folderId),
+  ],
+);
+
+/**
+ * Когда тайтл последний раз проверяли на новые главы — общая для всех пользователей: тайтл
+ * запрашивается у источника один раз, сколько бы человек его ни сохранили.
+ */
+export const titleChapterSnapshots = pgTable('title_chapter_snapshots', {
+  /** linkKeyOf(sourceId, url). */
+  titleKey: text('title_key').primaryKey(),
+  sourceId: text('source_id').notNull(),
+  /** Полный Title.id — по нему крон и меню источников на карточке находят тайтл. */
+  titleId: text('title_id').notNull(),
+  checkedAt: timestamp('checked_at', { withTimezone: true }).notNull().defaultNow(),
+  /** Текст последней ошибки проверки; null — последняя прошла. */
+  lastError: text('last_error'),
+  /** Источник ответил «не найдено» — тайтл пропал с него. */
+  missing: boolean('missing').notNull().default(false),
+});
+
+/**
+ * Каждая глава, которую хоть раз видели у тайтла, и когда впервые. «Новые» для пользователя —
+ * увиденные впервые после его последнего визита. Главы первого снимка помечены baseline: тайтл,
+ * проверенный впервые, не должен показать все свои главы новыми.
+ */
+export const titleChaptersSeen = pgTable(
+  'title_chapters_seen',
+  {
+    titleKey: text('title_key').notNull(),
+    /** Chapter.id — «sourceId:opaqueId», как его получает фронт. */
+    chapterId: text('chapter_id').notNull(),
+    /** Branch.id — имя ветки или DEFAULT_BRANCH_ID, как в reading_progress. */
+    branchId: text('branch_id').notNull(),
+    chapterVolume: doublePrecision('chapter_volume'),
+    chapterNumber: doublePrecision('chapter_number'),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    baseline: boolean('baseline').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.titleKey, table.chapterId] }),
+    index('title_chapters_seen_key_branch_idx').on(table.titleKey, table.branchId),
+  ],
+);

@@ -42,6 +42,14 @@ export const API_ERROR_CODE = {
   CODE_INVALID: 'codeInvalid',
   TOO_MANY_REQUESTS: 'tooManyRequests',
   INVALID_IMAGE: 'invalidImage',
+  // Своих папок закладок уже CUSTOM_BOOKMARK_FOLDERS_LIMIT.
+  BOOKMARK_FOLDER_LIMIT: 'bookmarkFolderLimit',
+  // Папка с таким названием (без учёта регистра, включая встроенные) уже есть.
+  BOOKMARK_FOLDER_NAME_TAKEN: 'bookmarkFolderNameTaken',
+  // Встроенную папку нельзя переименовать, перекрасить или удалить.
+  BUILT_IN_BOOKMARK_FOLDER_READONLY: 'builtInBookmarkFolderReadonly',
+  // Подтверждаемая связь склеивает закладки из разных папок — нужен bookmarkFolderId.
+  BOOKMARK_FOLDER_CONFLICT: 'bookmarkFolderConflict',
   // Тело или параметры запроса не прошли zod-схему.
   VALIDATION_FAILED: 'validationFailed',
   // Прочий 4xx, у которого нет своего кода.
