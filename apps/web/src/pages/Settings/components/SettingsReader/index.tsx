@@ -1,4 +1,4 @@
-import { Box, Center, Loader, Select, Switch } from '@mantine/core';
+import { Box, Select, Switch } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowsHorizontalIcon,
@@ -30,6 +30,7 @@ import ReaderTapZonePreview from '@/entities/reader/ReaderTapZonePreview';
 import GroupedList from '@/shared/ui/GroupedList';
 import { getReaderPresets } from './lib';
 import ReaderSliderRow from './ReaderSliderRow';
+import SettingsReaderSkeleton from './SettingsReaderSkeleton';
 import styles from './SettingsReader.module.scss';
 
 function SettingsReader() {
@@ -38,11 +39,7 @@ function SettingsReader() {
   const updateSettings = useUpdateReaderSettings();
 
   if (isPending) {
-    return (
-      <Center mt="lg">
-        <Loader />
-      </Center>
-    );
+    return <SettingsReaderSkeleton />;
   }
 
   if (!settings) return null;

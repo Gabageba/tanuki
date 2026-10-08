@@ -1,5 +1,6 @@
-import { Center, Container, Flex, Group, Loader, Title } from '@mantine/core';
+import { Container, Flex, Group, Title } from '@mantine/core';
 import { useContext, useMemo, type ReactNode } from 'react';
+import BlockLoader from '../../BlockLoader';
 import QueryError from '../../QueryError';
 import GoBackButton from '../../GoBackButton';
 import { PageLayoutQueryContext } from '../context';
@@ -22,11 +23,7 @@ function Content({ children, title, actions, showLoading = true, goBack }: Props
 
   const renderContent = useMemo(() => {
     if (isPending && showLoading) {
-      return (
-        <Center>
-          <Loader />
-        </Center>
-      );
+      return <BlockLoader />;
     }
 
     if (error) {

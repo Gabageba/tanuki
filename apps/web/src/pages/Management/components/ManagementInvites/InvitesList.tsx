@@ -9,10 +9,10 @@ import {
   type InvitesSort,
   type SortDirection,
 } from '@tanuki/contracts';
+import BlockLoader from '@/shared/ui/BlockLoader';
 import ListPagination from '@/shared/ui/ListPagination';
 import InvitesEmptyResult from './InvitesEmptyResult';
 import InvitesTable from './InvitesTable';
-import InvitesTableSkeleton from './InvitesTableSkeleton';
 
 type Props = {
   invites: UseQueryResult<InvitesResponse>;
@@ -27,7 +27,7 @@ type Props = {
   onReset: () => void;
 };
 
-/** Скелетон на первой загрузке, «пока нет», «ничего не найдено» или таблица с пагинацией. */
+/** Спиннер на первой загрузке, «пока нет», «ничего не найдено» или таблица с пагинацией. */
 function InvitesList({
   invites,
   hasFilters,
@@ -41,8 +41,9 @@ function InvitesList({
 }: Props) {
   const { t } = useTranslation();
 
+  // Приглашений часто нет вовсе — таблица-скелетон сменилась бы пустым состоянием.
   if (invites.isPending) {
-    return <InvitesTableSkeleton />;
+    return <BlockLoader />;
   }
 
   if (!invites.data?.total) {

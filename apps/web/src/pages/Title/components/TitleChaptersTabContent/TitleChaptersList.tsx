@@ -1,4 +1,4 @@
-import { Card, Center, Group, Loader, Stack, Tabs } from '@mantine/core';
+import { Card, Group, Stack, Tabs } from '@mantine/core';
 import { useSearchParams } from 'react-router';
 import {
   CHAPTER_NUMBERING,
@@ -17,6 +17,7 @@ import {
 } from '@/entities/title/readingProgress';
 import ChaptersList from '@/shared/ui/ChaptersList';
 import useTitleBookmarkVisit from '../../hooks/useTitleBookmarkVisit';
+import TitleChaptersListSkeleton from './TitleChaptersListSkeleton';
 import TitleChaptersSettings from './TitleChaptersSettings';
 
 type Props = {
@@ -46,9 +47,9 @@ function TitleChaptersList({ titleId, branch }: Props) {
 
   if (isChaptersPending) {
     return (
-      <Center>
-        <Loader />
-      </Center>
+      <Tabs.Panel value={branch.id}>
+        <TitleChaptersListSkeleton />
+      </Tabs.Panel>
     );
   }
 

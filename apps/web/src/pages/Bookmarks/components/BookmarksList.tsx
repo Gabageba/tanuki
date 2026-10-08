@@ -2,12 +2,12 @@ import { useEffect } from 'react';
 import { Stack } from '@mantine/core';
 import { BOOKMARKS_PAGE_SIZE } from '@tanuki/contracts';
 import type { ViewMode } from '@/shared/lib/viewMode';
+import BlockLoader from '@/shared/ui/BlockLoader';
 import ListPagination from '@/shared/ui/ListPagination';
 import ViewModeGrid from '@/shared/ui/ViewModeGrid';
 import useBookmarks from '../hooks/useBookmarks';
 import type { BookmarksListParams } from '../models';
 import BookmarkCard from './BookmarkCard';
-import BookmarksGridSkeleton from './BookmarksGridSkeleton';
 import FolderEmpty from './FolderEmpty';
 import SearchEmpty from './SearchEmpty';
 
@@ -29,8 +29,9 @@ function BookmarksList({ params, viewMode, onPageChange, onResetQuery }: Props) 
     if (isPastLastPage) onPageChange(Math.ceil(data.total / BOOKMARKS_PAGE_SIZE));
   }, [isPastLastPage, data, onPageChange]);
 
+  // Папка или выдача поиска вполне может оказаться пустой — спиннер, а не сетка-скелетон.
   if (isPending || isPastLastPage) {
-    return <BookmarksGridSkeleton viewMode={viewMode} />;
+    return <BlockLoader />;
   }
 
   if (!data || data.items.length === 0) {

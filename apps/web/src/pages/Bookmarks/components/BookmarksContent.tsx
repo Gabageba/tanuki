@@ -63,7 +63,7 @@ function BookmarksContent() {
   }, [activeFolderId, folderParam, setSearchParams]);
 
   if (isPending) {
-    return <BookmarksSkeleton viewMode={viewMode} />;
+    return <BookmarksSkeleton />;
   }
 
   const isEmpty = items.every(({ count }) => count === 0);
