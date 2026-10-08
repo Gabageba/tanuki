@@ -1,0 +1,37 @@
+/* Строка недавнего запроса: подсветка под курсором, как у пунктов Combobox. */
+.recentRow {
+  &:hover {
+    background-color: var(--mantine-color-default-hover);
+  }
+}
+
+/* D1 — крестик появляется только под курсором; на тач-экране (рамка телефона) виден всегда. */
+.removeOnHover {
+  opacity: 0;
+
+  .recentRow:hover &,
+  &:focus-visible {
+    opacity: 1;
+  }
+}
+
+/* F6 — пилюля выбранного, копия `.pill` из CatalogFilter.module.scss. */
+.catalogPill {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  background-color: transparent;
+  border: 1px solid var(--mantine-primary-color-filled);
+  color: var(--mantine-primary-color-filled);
+}
+
+/* F6 — копия `.tab` / `.list` из CatalogFilter.module.scss. */
+.catalogTab {
+  &[data-active] {
+    background-color: var(--mantine-color-gray-light-hover);
+  }
+}
+
+.catalogTabList {
+  flex-shrink: 0;
+}
