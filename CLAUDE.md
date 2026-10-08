@@ -37,8 +37,18 @@
 - **Tabs** are built from a `TABS` array in `useMemo` — `{ id, title, icon, content }` — that is
   mapped once into `Tabs.Tab` and once into `Tabs.Panel` (see `pages/Settings/index.tsx`). No
   hand-written `Tabs.Tab`/`Tabs.Panel` pairs.
-- **Loading** of a block or tab is a skeleton that repeats the block's layout (a sibling
-  `XxxSkeleton.tsx`, built from `Skeleton` and `TextSkeleton`), never a centered `Loader`.
+- **Loading** of a block or tab depends on whether its answer is likely to be empty:
+  - **Skeleton** when the shape of the answer is known in advance and it's almost never empty —
+    catalog, title page, chapters, source lists, users, statistics, settings forms. It repeats the
+    block's layout (a sibling `XxxSkeleton.tsx`, built from `Skeleton` and `TextSkeleton`).
+  - **Spinner** — the shared `BlockLoader` (`shared/ui/BlockLoader`) — when the answer may well
+    be empty: bookmarks in a folder, search results, invites. A skeleton of a dozen cards that
+    turns into a lone `EmptyState` is worse than a spinner. `BlockLoader` keeps the block's height
+    and fades in after 200 ms, so a fast answer never flashes it. Never a bare centered `Loader`.
+  - A mixed block splits along the same line: the part that's always there is a skeleton, the
+    part that may be empty is a `BlockLoader` (bookmarks: folder tabs — skeleton, cards — spinner).
+  - A small `Loader` inside a control that's busy (a button, an avatar upload, the infinite-scroll
+    trigger, a process screen like email verification) is not a block loading and stays as is.
 - **Errors** of a query inside a page block or tab are not rendered: the global handler in
   `QueryClientProvider` already shows a notification. `QueryError` is only for the page's main
   query and is rendered by `PageLayout.Content`, not by blocks. A block whose query failed shows
