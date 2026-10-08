@@ -63,7 +63,7 @@
 - **Multi-choice filters** use the shared `CompactMultiSelect` — the first chosen item plus a
   `+N` pill, so the field never grows in height. Empty selection means "no restriction"; there is
   no fake «Все» option inside the list. Options look the same as in `Select` (theme
-  `renderOption` + `selectableOption`).
+  `renderOption` + `selectable-option`).
 
 ## Forms
 
@@ -192,6 +192,15 @@
 - **Unbounded** — the logo only, one call site (`var(--tanuki-font-brand)`, set in
   `CSS_VARIABLES_RESOLVER`, used in the header `Anchor`). Nowhere else — block headings, section
   names, and modal titles all use Golos Text now.
+- **Font sizes come from a short scale** — Ant Design's type scale plus one in-between step:
+  12 (`fz="xs"`), 13 (`fz={13}`, the explanatory text of a modal only), 14 (`fz="sm"`), 16
+  (`fz="md"`), and for headings and large readouts 20, 24, 30, 38, 46. No sizes in between — no
+  11, 15, 17, 18 — and no responsive pairs built from them (`{ base: 15, xs: 17 }`); a responsive
+  size steps between neighbours on the scale (`{ base: 14, xs: 16 }`). Pick the nearest step
+  instead of inventing a new one. The only exceptions are sizes tied to geometry rather than
+  typography: a counter squeezed into a fixed dot on an icon (`8px` in a 13px circle), a glyph
+  sized from its container (`SIZE / 2` inside an avatar), a fluid display number
+  (`min(58cqi, 520px)`), and `fz` used only to size a `1em` icon.
 
 ## Hooks
 
