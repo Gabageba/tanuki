@@ -134,6 +134,19 @@ git switch -c feat/<task-kebab>
   `Stack gap="xl" p="md"` → шапка `Group` с `GoBackButton path={ROUTE_PATHS.PLAYGROUND}` и
   `Title order={2}` → `Text c="dimmed" fz="sm" maw={760}` с подсказкой, как смотреть (состояния,
   темы, ширина) → варианты.
+- **Боковая навигация по разделам — на каждой странице.** Общий компонент
+  `../components/SectionNav` (`SectionNav` с пропом `groups`): слева от контента, отделён
+  вертикальным `Divider`, прилипает под шапкой приложения, подсвечивает раздел, который сейчас на
+  экране, и плавно прокручивает к выбранному; на узком экране скрыт. Пункты — **разделы (оси или
+  блоки), а не отдельные варианты**: у каждого буква раздела в плашке и название, пункты собраны
+  под жирными подзаголовками-группами по смыслу, в том же порядке, что на странице. Каждому
+  разделу на странице нужен заголовок с `id="axis-<буква>"` (так находит их scroll-spy; можно взять
+  `AxisHeading` из `Playground/Notifications/components` как образец). Список групп —
+  `SECTION_GROUPS` в `models.ts` задачи. Разметка страницы:
+  `Group align="stretch" wrap="nowrap" gap="xl"` → `SectionNav` → `Divider orientation="vertical"
+visibleFrom="lg"` → `Stack gap="xl" flex={1} miw={0}` с разделами (см.
+  `Playground/Notifications/index.tsx`). Если страница с одним-двумя разделами, навигация не нужна.
+  Новый раздел в доработке — сразу добавляй и в `SECTION_GROUPS`.
 - Каждый вариант — в `DemoSection` (`../components/DemoSection`) с `code`, `title`,
   `description`. Описание объясняет **идею и отличие**, а не пересказывает разметку.
 - **У каждого варианта — плюсы и минусы**: `pros` и `cons` в `DemoSection`, по 1–4 коротких
