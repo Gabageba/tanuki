@@ -10,6 +10,7 @@ import ImportSourcePicker from './ImportSourcePicker';
 import InvitesTable from './InvitesTable';
 import LoginBadge from './LoginBadge';
 import MultiselectOptions from './MultiselectOptions';
+import Notifications from './Notifications';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
 import SortKeys from './SortKeys';
@@ -34,6 +35,16 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'notifications',
+    Component: Notifications,
+    title: 'Уведомления',
+    description:
+      'Как выглядит лента и всё вокруг неё по плану docs/plans/notifications.md: строка ленты, бейдж на колокольчике, фильтр категорий, страницы, пустая лента, тосты, предложение включить push и вкладка настроек.',
+    createdAt: '2026-10-09',
+    decision:
+      'R2 + L1 + N1 + B2 + F1 + P∞ + E3 без ссылки + T1 + D1 + Q1 (≤3) + K4/M3 + X3 + GroupedList',
+  },
   {
     slug: 'title-search',
     Component: TitleSearch,
