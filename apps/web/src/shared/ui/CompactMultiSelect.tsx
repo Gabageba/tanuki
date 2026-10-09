@@ -6,14 +6,16 @@ type Props = Omit<MultiSelectProps, 'value' | 'renderPill' | 'styles'> & {
 
 /**
  * MultiSelect, который не растёт в высоту: в поле только первый выбранный пункт и счётчик
- * остальных «+N», весь выбор виден галочками в списке.
+ * остальных «+N», весь выбор виден галочками в списке. Плейсхолдер («Все …») виден только при пустом
+ * выборе: Mantine оставляет его и рядом с пилюлями.
  */
-function CompactMultiSelect({ value, ...props }: Props) {
+function CompactMultiSelect({ value, placeholder, ...props }: Props) {
   const isClearVisible = props.clearable && value.length > 0;
 
   return (
     <MultiSelect
       value={value}
+      placeholder={value.length > 0 ? undefined : placeholder}
       styles={{
         // С кнопкой очистки Mantine отодвигает пилюли и отступом списка, и отступом поля под
         // стрелку — место резервируется дважды. Отступа списка хватает на обе иконки.

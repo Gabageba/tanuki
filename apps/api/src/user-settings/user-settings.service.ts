@@ -30,6 +30,7 @@ export class UserSettingsService {
         ageConfirmed: row.ageConfirmed ?? undefined,
         saveSearchHistory: row.saveSearchHistory ?? undefined,
         collapsedSearchSources: row.collapsedSearchSources ?? undefined,
+        pushDisabledCategories: row.pushDisabledCategories ?? undefined,
       };
     }, {});
   }

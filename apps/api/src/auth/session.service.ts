@@ -4,6 +4,7 @@ import { StorageUnavailableException } from '../common/errors';
 import { DatabaseService } from '../database/database.service';
 import { sessions, users } from '../database/schema';
 import { generateToken, hashToken } from '../common/token.util';
+import { DeviceLoginService } from '../notifications/device-login.service';
 import { SESSION_IDLE_MS, SESSION_REMEMBER_MS, SESSION_TOUCH_INTERVAL_MS } from './models';
 
 export type SessionUser = typeof users.$inferSelect;
@@ -24,7 +25,10 @@ const expiryFor = (remember: boolean, from: number): Date =>
 
 @Injectable()
 export class SessionService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly deviceLogin: DeviceLoginService,
+  ) {}
 
   /** Создаёт сессию и возвращает токен в открытом виде — единственный момент, когда он виден. */
   async create(
@@ -34,6 +38,9 @@ export class SessionService {
   ): Promise<{ token: string; expiresAt: Date; remember: boolean }> {
     const token = generateToken();
     const expiresAt = expiryFor(remember, Date.now());
+
+    // До вставки сессии: новое устройство сравнивается с прежними, а не с самим собой.
+    await this.deviceLogin.recordLogin(userId, meta.userAgent);
 
     const applied = await this.database.withFallback(async () => {
       await this.database.db.insert(sessions).values({

@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
+import NotificationsStream from '@/entities/notification/NotificationsStream';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import FullScreenLoader from '@/shared/ui/FullScreenLoader';
@@ -14,7 +15,12 @@ function RequireAuth() {
     return <Navigate to={`${ROUTE_PATHS.LOGIN}?redirect=${redirect}`} replace />;
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <NotificationsStream />
+      <Outlet />
+    </>
+  );
 }
 
 export default RequireAuth;

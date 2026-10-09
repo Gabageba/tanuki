@@ -37,7 +37,7 @@ function HealthFilters({ status, contentType, onStatusChange, onContentTypeChang
           label: getSourceStatusLabel(value, t),
         }))}
         value={status}
-        placeholder={status.length ? undefined : t('allStatuses')}
+        placeholder={t('allStatuses')}
         clearable
         leftSection={<CircleHalfIcon />}
         onChange={(values) => onStatusChange(values.filter(isStatus))}
@@ -49,7 +49,7 @@ function HealthFilters({ status, contentType, onStatusChange, onContentTypeChang
           label: getLabelByContentType(value, t),
         }))}
         value={contentType}
-        placeholder={contentType.length ? undefined : t('allContent')}
+        placeholder={t('allContent')}
         clearable
         leftSection={<BooksIcon />}
         onChange={(values) => onContentTypeChange(values.filter(isContentType))}

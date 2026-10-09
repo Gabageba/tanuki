@@ -1,10 +1,21 @@
-import { Container } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import type { NotificationCategory } from '@tanuki/contracts';
+import useNotifications from '@/entities/notification/hooks/useNotifications';
+import PageLayout from '@/shared/ui/PageLayout';
+import NotificationsFeed from './components/NotificationsFeed';
+
+const INITIAL_PARAMS = { categories: [] as NotificationCategory[] };
 
 function Notifications() {
   const { t } = useTranslation();
 
-  return <Container>{t('notifications')}</Container>;
+  return (
+    <PageLayout useQuery={useNotifications} params={INITIAL_PARAMS}>
+      <PageLayout.Content title={t('notifications')}>
+        <NotificationsFeed />
+      </PageLayout.Content>
+    </PageLayout>
+  );
 }
 
 export default Notifications;

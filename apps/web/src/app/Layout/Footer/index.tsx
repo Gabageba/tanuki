@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
+import UnreadNotificationsIndicator from '@/entities/notification/UnreadNotificationsIndicator';
 import { closeAllDrawers } from '@/shared/lib/drawerRegistry';
 import MobileNavigationButton from './components/MobileNavigationButton';
 import MobileSourceSelect from './components/MobileSourceSelect';
@@ -80,7 +81,11 @@ function Footer() {
           onClick={() => navigateFromFooter(ROUTE_PATHS.NOTIFICATIONS, isNotificationsActive)}
           title={t('notifications')}
           isActive={isNotificationsActive && !isSourcesOpened && !isMenuOpened}
-          leftSection={<BellIcon size={20} />}
+          leftSection={
+            <UnreadNotificationsIndicator>
+              <BellIcon size={20} />
+            </UnreadNotificationsIndicator>
+          }
         />
         <MobileMenuButton
           isOpened={isMenuOpened}

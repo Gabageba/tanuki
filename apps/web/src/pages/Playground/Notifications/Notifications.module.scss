@@ -1,0 +1,55 @@
+.frame {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  overflow: hidden;
+}
+
+.rowLegacy {
+  border-radius: var(--mantine-radius-md);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+.rowSquare {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+.rowRounded {
+  border-radius: var(--mantine-radius-md);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+.rowCard {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-default);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+.toastClickable {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+/* Кольцо цвета фона вокруг метки: отделяет её от иконки под ней. */
+.cutout {
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
+}

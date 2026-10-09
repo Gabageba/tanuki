@@ -1,0 +1,10 @@
+{
+  "extends": "@tanuki/tsconfig/react-app.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "WebWorker"],
+    "types": [],
+    "noEmit": true,
+    "tsBuildInfoFile": "./tsconfig.sw.tsbuildinfo"
+  },
+  "include": ["src/sw"]
+}

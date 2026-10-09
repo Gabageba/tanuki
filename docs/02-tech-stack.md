@@ -70,6 +70,7 @@ prefetch и pinch-zoom, и не надо пытаться натянуть на 
 | `sharp`                          | `^0.35.3`  | Ресайз и WebP/AVIF-переупаковка обложек                                                                                                                                                         |
 | `zod`                            | `^4.4.3`   | Валидация и общие схемы с фронтом                                                                                                                                                               |
 | `pino`                           | `^10.3.1`  | Структурные логи                                                                                                                                                                                |
+| `web-push`                       | `^3.6.7`   | Отправка Web Push с VAPID-ключами (`NotificationsModule`); без ключей в конфиге push выключен                                                                                                   |
 | `drizzle-orm`                    | latest     | PostgreSQL (Фаза 5)                                                                                                                                                                             |
 
 ### Почему NestJS, а не голый Fastify

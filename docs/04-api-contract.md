@@ -581,6 +581,64 @@ bookmarkFolderConflict`, фронт спрашивает папку и повт�
   папки группы остаются разошедшимися: `GET /titles/:id/bookmark` отдаёт `conflict`, и фронт
   спрашивает при следующем открытии тайтла; до выбора группа лежит в папке самой свежей строки.
 
+### Уведомления
+
+Лента, поток SSE и Web Push. Реализация — `apps/api/src/notifications` (`NotificationsModule`,
+глобальный: события в него шлют закладки, статусы источников, аккаунт и инвайты), план —
+[`plans/notifications.md`](plans/notifications.md), контракты —
+`packages/contracts/src/notification.ts`.
+
+```
+GET    /notifications?category=a,b&page=   → { items: NotificationItem[], page, total } (по 20)
+GET    /notifications/unread-count         → { count }
+GET    /notifications/stream               → text/event-stream
+DELETE /notifications/:id                  → 204 — «прочитано» (убрать) одно
+DELETE /notifications?category=a,b        → 204 — убрать все, с учётом категории
+GET    /notifications/push/config          → { enabled, publicKey }
+POST   /notifications/push/subscriptions   { endpoint, keys: { p256dh, auth } } → 204
+DELETE /notifications/push/subscriptions   { endpoint } → 204
+
+NotificationItem = { id, type, category, count, createdAt, updatedAt, payload }  // по type
+  payload: newChapters   { titleId, sourceId, name, coverUrl }
+           newDeviceLogin { device }
+           sourceDown / parserDown { sourceId, reason }
+           sourceRecovered / parserRecovered { sourceId }
+           inviteUsed { inviteId, username } · inviteExpired { inviteId }
+           emailChanged / deletionRequested {}
+```
+
+- **Категории и типы** — `NOTIFICATION_CATEGORY` (`chapters`, `account`, `sources`,
+  `administration`) и `NOTIFICATION_TYPE`; категория выводится из типа (`getNotificationCategory`).
+  «Администрирование» видят только `admin` и `moderator`; чужая категория в фильтре даёт пустой
+  список, а не 403. Текст ленты клиент собирает по `type` и `payload` — готовой строки нет.
+- **Прочитано = удалено.** Столбца `readAt` нет, лента показывает только непрочитанное. Запись
+  уникальна по `(userId, groupKey)`: `chapters:<ключ группы закладки>`, `source:<id>`,
+  `parser:<id>`, `invite:<id>`, `event:<uuid>`. Переход источника `down` → `ok` переписывает ту же
+  запись типом `…Recovered` и поднимает её как новую. Непрочитанное живёт 30 дней от `updatedAt`
+  (суточный крон, 05:00), не больше 200 записей на пользователя.
+- **Новые главы** создаёт крон закладок после прохода: для каждой группы, чьи главы найдены именно
+  в этом проходе, `count` выставляется равным текущему числу новых глав (идемпотентно). Группы без
+  новых глав, а также записи удалённых закладок и папок, у которых выключили «Следить за
+  обновлениями», убираются. Визит в группу (страница тайтла, прогресс) удаляет запись сразу.
+- **Поток SSE.** Событие на каждое создание, переписывание и удаление: `{ type: 'created' |
+'updated', notification }` или `{ type: 'removed', id? }` (без `id` — удалена пачка, клиент
+  перезапрашивает ленту). Раз в 25 с — событие `ping` с пустыми данными; заголовок
+  `X-Accel-Buffering: no`. Не больше 5 потоков на пользователя — самый старый закрывается. Хаб —
+  в памяти процесса (одна реплика API).
+- **Push.** Опция инстанса: пара `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (+ `VAPID_SUBJECT`) в
+  конфиге API; без неё `push/config` отдаёт `enabled: false`. Push уходит, когда запись создана или
+  сменила тип, а не при росте `count`; больше 3 новых записей `newChapters` за проход крона — один
+  сводный push. Категории, выключенные в `UserSettings.pushDisabledCategories`, пропускаются. Текст
+  push — на сервере, на языке пользователя. Подписка с ответом 404/410 удаляется.
+- **Источники событий.** `newChapters` — крон закладок; `sourceDown/Recovered` — держателям
+  закладок на источнике (кроме выключивших его), `parserDown/Recovered` — всем `admin` и
+  `moderator`, оба — на переходах в `down` и обратно, `degraded` не шумит
+  (`SourceStatusService`); `emailChanged`, `deletionRequested` — `AccountService`;
+  `newDeviceLogin` — вход с устройства, которого нет в `known_devices` (отпечаток «браузер + ОС»
+  из User-Agent; первый вход аккаунта не считается, пустая таблица засевается из прежних сессий);
+  `inviteUsed` / `inviteExpired` — **только создателю инвайта** (`invites.createdBy`; у первого
+  инвайта из CLI создателя нет — никому). Истечение ловит часовой крон по окну прошедшего часа.
+
 ## Ошибки
 
 ```ts

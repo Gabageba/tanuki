@@ -5,6 +5,7 @@ import {
   doublePrecision,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   smallint,
@@ -30,6 +31,8 @@ import type {
   BookmarkFolderColor,
   ContentRating,
   TitleType,
+  NotificationCategory,
+  NotificationType,
 } from '@tanuki/contracts';
 import type { EmailTokenPurpose } from '../auth/models';
 
@@ -276,6 +279,8 @@ export const userSettings = pgTable('user_settings', {
    * /user-settings.
    */
   sourceOrder: text('source_order').array(),
+  /** Категории уведомлений с выключенным push; null — включены все. */
+  pushDisabledCategories: text('push_disabled_categories').array().$type<NotificationCategory[]>(),
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -576,5 +581,72 @@ export const searchHistory = pgTable(
   (table) => [
     primaryKey({ columns: [table.userId, table.normalizedQuery] }),
     index('search_history_user_searched_at_idx').on(table.userId, table.searchedAt.desc()),
+  ],
+);
+
+/**
+ * Лента уведомлений. «Прочитано» — это удаление записи, поэтому в таблице только непрочитанное.
+ * Уникальна по (userId, groupKey): повторное событие того же рода переписывает запись, а не
+ * множит ленту — один тайтл, один источник.
+ */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').$type<NotificationType>().notNull(),
+    /** `chapters:<ключ группы>`, `source:<id>`, `parser:<id>` или `event:<uuid>`. */
+    groupKey: text('group_key').notNull(),
+    /** Снимок для текста и ссылки; форма зависит от type (NotificationItemSchema). */
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    count: integer('count').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('notifications_user_group_idx').on(table.userId, table.groupKey),
+    index('notifications_user_updated_idx').on(table.userId, table.updatedAt),
+  ],
+);
+
+/** Браузерные подписки на push: по строке на устройство. */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull().unique(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('push_subscriptions_user_idx').on(table.userId)],
+);
+
+/**
+ * Устройства, с которых человек уже входил, — чтобы вход с нового устройства попал в ленту.
+ * Отпечаток — хэш пары «браузер + ОС» из User-Agent, а не сессии: сессии живут недолго, а
+ * устройство не должно становиться «новым» после каждого выхода.
+ */
+export const knownDevices = pgTable(
+  'known_devices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    fingerprint: text('fingerprint').notNull(),
+    /** «Chrome · macOS». */
+    label: text('label').notNull(),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('known_devices_user_fingerprint_idx').on(table.userId, table.fingerprint),
   ],
 );

@@ -1,0 +1,15 @@
+.row:hover {
+  background: var(--mantine-color-default-hover);
+}
+
+/* Ссылка накрывает всю карточку; корзина поднята над ней. */
+.link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.remove {
+  position: relative;
+  z-index: 1;
+}

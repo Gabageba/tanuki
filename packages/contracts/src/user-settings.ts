@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { EnumLiteralsOf } from './utils';
 import { LanguageSchema } from './language';
+import { NotificationCategorySchema } from './notification';
 
 export const COLOR_SCHEME = {
   LIGHT: 'light',
@@ -67,6 +68,8 @@ export const UserSettingsSchema = z.object({
   saveSearchHistory: z.boolean().optional(),
   /** Источники, чья секция в выдаче поиска свёрнута: id. Отсутствие — все развёрнуты. */
   collapsedSearchSources: z.array(z.string()).optional(),
+  /** Категории уведомлений, для которых push выключен. Отсутствие — включены все. */
+  pushDisabledCategories: z.array(NotificationCategorySchema).optional(),
 });
 export type UserSettings = z.infer<typeof UserSettingsSchema>;
 
