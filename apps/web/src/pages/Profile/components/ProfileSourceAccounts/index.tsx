@@ -1,4 +1,4 @@
-import { Alert, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Alert, SimpleGrid, Stack, Text, useMatches } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { InfoIcon } from '@phosphor-icons/react';
 import SourceLoginBadgeLegend from '@/entities/source/components/SourceLoginBadge/SourceLoginBadgeLegend';
@@ -13,6 +13,7 @@ function ProfileSourceAccounts() {
   const { t } = useTranslation();
   const { data: sources, isPending: isSourcesPending } = useSources();
   const { data: accounts, isPending: isAccountsPending } = useSourceAccounts();
+  const columnCount = useMatches({ base: 1, md: 2 });
 
   if (isSourcesPending) {
     return <ProfileSourceAccountsSkeleton />;
@@ -30,17 +31,25 @@ function ProfileSourceAccounts() {
         </Alert>
       )}
       <Stack gap={6}>
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-          {accountGroups.map(({ key, title, family, sources }) => (
-            <SourceFamilySection
-              key={key}
-              title={title}
-              family={family}
-              sources={sources}
-              accounts={accounts?.items ?? []}
-              isLinkingAvailable={isLinkingAvailable}
-              isAccountsPending={isAccountsPending}
-            />
+        {/* Колонки складываются каждая сама по себе: под коротким семейством не остаётся
+            пустоты до высоты соседнего. Порядок по строкам тот же, что у сетки. */}
+        <SimpleGrid cols={columnCount} spacing="lg">
+          {Array.from({ length: columnCount }, (_, column) => (
+            <Stack key={column} gap="lg">
+              {accountGroups
+                .filter((_, index) => index % columnCount === column)
+                .map(({ key, title, family, sources }) => (
+                  <SourceFamilySection
+                    key={key}
+                    title={title}
+                    family={family}
+                    sources={sources}
+                    accounts={accounts?.items ?? []}
+                    isLinkingAvailable={isLinkingAvailable}
+                    isAccountsPending={isAccountsPending}
+                  />
+                ))}
+            </Stack>
           ))}
         </SimpleGrid>
         {/* Пока семейства в скелетоне, пояснять нечего. */}

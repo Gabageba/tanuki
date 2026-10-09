@@ -4,6 +4,7 @@ import { CookieJar } from 'tough-cookie';
 import {
   CONTENT_RATING,
   FILTER_TYPE,
+  SOURCE_AUTH_FAMILY,
   TITLE_TYPE,
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
@@ -26,7 +27,11 @@ import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
 import { toTitleCase, nullIfEmpty } from '../../core/text/strings';
 import { ParseError, SourceAuthRequiredError } from '../../errors';
 import { FILTER_GROUP } from '../../core/filters/group';
+import { classifyResponse } from '../../core/http/classify';
+import { parseHtml } from '../../core/html/dom';
+import { currentSourceAccount } from '../../core/source-accounts';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { encodeCp1251, hasNudeMoonSession, loginNudeMoon } from './auth';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.NUDEMOON;
 /** The site's own `all_manga` pager advances `rowstart` by 30 raw rows per page. */
@@ -457,13 +462,80 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     return cache.items;
   };
 
-  const getList = async (params: ListParams): Promise<RawTitle[]> => {
-    if (params.query) {
+  /**
+   * Whose session `/search` goes through. A viewer's own account brings its jar (and, if they
+   * let us keep it, the password to log in again); background work outside any viewer goes
+   * through the service account in the shared jar. A viewer without an account has no session
+   * at all — the shared jar may hold the service account's cookie, and that's not theirs to use.
+   */
+  const resolveSearchSession = () => {
+    const account = currentSourceAccount(SOURCE_AUTH_FAMILY.NUDEMOON);
+    if (!account) return { jar: ctx.jar, credentials: ctx.credentials.nudemoon };
+    return account.jar ? { jar: account.jar, credentials: account.credentials } : null;
+  };
+
+  const fetchSearchWindow = async (
+    query: string,
+    rowstart: number,
+    isRetry = false,
+  ): Promise<RawTitle[]> => {
+    const session = resolveSearchSession();
+    if (!session) {
       throw new SourceAuthRequiredError(
-        `Search requires an authenticated session: query="${params.query}"`,
+        `Search requires a Nude-Moon account: query="${query}"`,
         SOURCE_ID,
       );
     }
+    const login = () =>
+      session.credentials
+        ? loginNudeMoon(ctx.http, session.jar, domain, session.credentials, ctx.logger)
+        : Promise.resolve(false);
+    if (!isRetry && !(await hasNudeMoonSession(session.jar, domain))) await login();
+
+    const res = await ctx.http.request({
+      url: `https://${domain}/search?stext=${encodeCp1251(query)}&rowstart=${rowstart}`,
+    });
+    // A guest (or a session the site no longer accepts) is redirected to /error.php — itself a
+    // 404, so this is checked on the raw response, before the status turns it into NotFoundError.
+    if (new URL(res.url).pathname === '/error.php') {
+      if (!isRetry && (await login())) return fetchSearchWindow(query, rowstart, true);
+      throw new SourceAuthRequiredError(`Search session rejected: query="${query}"`, SOURCE_ID);
+    }
+    const error = classifyResponse(SOURCE_ID, res.status, res.url, res.headers, res.text());
+    if (error) throw error;
+    const doc = parseHtml(res.text(), res.url);
+    return doc
+      .$('table.news_pic2')
+      .toArray()
+      .map((el) => parseMangaRow(doc.$(el), doc.$, doc.baseUrl))
+      .filter((m): m is RawTitle => m !== null);
+  };
+
+  /**
+   * `/search` pages by the same `rowstart` windows of ROWSTART_STEP as `all_manga`, but its
+   * results aren't kept in catalogCaches: every query would add a key that's never read again.
+   * Each call starts from the window holding `offset` and stops at the first short window.
+   */
+  const fetchSearchList = async (params: ListParams & { query: string }) => {
+    const firstRowstart = Math.floor(params.offset / ROWSTART_STEP) * ROWSTART_STEP;
+    const skip = params.offset - firstRowstart;
+    const items: RawTitle[] = [];
+    const seen = new Set<number>();
+    for (let rowstart = firstRowstart; items.length < skip + params.limit;) {
+      const batch = await fetchSearchWindow(params.query, rowstart);
+      for (const item of batch) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        items.push(item);
+      }
+      if (batch.length < ROWSTART_STEP) break;
+      rowstart += ROWSTART_STEP;
+    }
+    return items.slice(skip, skip + params.limit);
+  };
+
+  const getList = async (params: ListParams): Promise<RawTitle[]> => {
+    if (params.query) return fetchSearchList({ ...params, query: params.query });
     const { cacheKey, urlForRowstart } = resolveRoute(params.filters, params.order);
     const items = await ensureCatalogItems(cacheKey, params.offset + params.limit, urlForRowstart);
     return items.slice(params.offset, params.offset + params.limit);
@@ -718,6 +790,8 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
         SORT_ORDER.RELEASED,
       ],
       supportsDirection: false,
+      // Only for a logged-in session — see fetchSearchWindow; the API locks it in search for a
+      // viewer without an account (SOURCE_LOGIN_BENEFIT.TITLE_SEARCH).
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,

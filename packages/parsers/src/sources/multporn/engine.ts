@@ -58,6 +58,8 @@ const LANGUAGE_OPTIONS: RawFilterOption[] = [
 /** `/search`'s native Views page size — verified against several live queries, always 20 rows
  *  regardless of how many of them end up matching this source's `pathPrefix`. */
 const SEARCH_RAW_PAGE_SIZE = 20;
+/** Raw `/search` pages fetched at once after page 0 — see fetchSearchList. */
+const SEARCH_PAGE_BATCH = 4;
 
 const IMG_SRC_RE = /<img[^>]*\ssrc="([^"]+)"/g;
 /** Listing rows carry `<h5><span>Date: </span><span>23/04/2024 - 14:47</span></h5>` — the only
@@ -386,23 +388,52 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
    * stop after page 1 any time most of a page's rows belong to some other type, so this walks
    * raw pages instead and only stops when a raw page itself comes back short.
    */
-  const fetchSearchList = async (params: ListParams): Promise<RawTitle[]> => {
-    const acc: RawTitle[] = [];
-    let rawPage = 0;
-    for (;;) {
-      const url = new URL('/search', `https://${domain}/`);
-      url.searchParams.set('search_api_views_fulltext', params.query ?? '');
-      url.searchParams.set('page', String(rawPage));
-      const doc = await ctx.http.getHtml(url.toString());
-      const rows = doc.$('.view-content .masonry-item').toArray();
-      rows
+  const fetchSearchPage = async (
+    query: string,
+    rawPage: number,
+  ): Promise<{ items: RawTitle[]; isLast: boolean }> => {
+    const url = new URL('/search', `https://${domain}/`);
+    url.searchParams.set('search_api_views_fulltext', query);
+    url.searchParams.set('page', String(rawPage));
+    const doc = await ctx.http.getHtml(url.toString());
+    const rows = doc.$('.view-content .masonry-item').toArray();
+    return {
+      items: rows
         .map((el) => parseRow(doc.$(el), doc.$, doc.baseUrl))
-        .filter((m): m is RawTitle => m !== null)
-        .forEach((m) => acc.push(m));
-      rawPage += 1;
-      if (acc.length >= params.offset + params.limit || rows.length < SEARCH_RAW_PAGE_SIZE) break;
+        .filter((m): m is RawTitle => m !== null),
+      isLast: rows.length < SEARCH_RAW_PAGE_SIZE,
+    };
+  };
+
+  /**
+   * Only a handful of a raw page's rows belong to this type (verified live: 4–8 comics out of
+   * ~50 rows for "sister"), so filling one catalog page can take 5+ raw pages — walked one by
+   * one that's ~1.2 s each and blows the search fan-out's shared deadline. `/search` has no
+   * pager to read the last page from and ignores every `type` param tried live, so page 0 goes
+   * alone (a narrow query ends right there) and the rest go in parallel batches of
+   * SEARCH_PAGE_BATCH, each batch trimmed at its first short page.
+   */
+  const fetchSearchList = async (params: ListParams): Promise<RawTitle[]> => {
+    const query = params.query ?? '';
+    const wanted = params.offset + params.limit;
+    const first = await fetchSearchPage(query, 0);
+    const acc = [...first.items];
+    let isLast = first.isLast;
+    let nextPage = 1;
+    while (!isLast && acc.length < wanted) {
+      const batch = await Promise.all(
+        Array.from({ length: SEARCH_PAGE_BATCH }, (_, i) => fetchSearchPage(query, nextPage + i)),
+      );
+      nextPage += SEARCH_PAGE_BATCH;
+      for (const page of batch) {
+        acc.push(...page.items);
+        if (page.isLast) {
+          isLast = true;
+          break;
+        }
+      }
     }
-    return acc.slice(params.offset, params.offset + params.limit);
+    return acc.slice(params.offset, wanted);
   };
 
   const getList = async (params: ListParams): Promise<RawTitle[]> => {

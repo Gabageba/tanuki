@@ -33,6 +33,8 @@ export type Credentials = {
   /** AllHentai's qawa.org SSO gateway is a separate account system from the main network. */
   allhentai?: GroupleCredentials;
   libsocial?: LibSocialCredentials;
+  /** Service account for Nude-Moon's own login — only its title search needs it. */
+  nudemoon?: GroupleCredentials;
 };
 
 export type ParserContext = {

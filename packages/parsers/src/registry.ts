@@ -27,6 +27,7 @@ import { createComxParser } from './sources/comx';
 import { createTomiloLibParser } from './sources/tomilolib';
 import { createWaMangaParser } from './sources/wamanga';
 import { createNudeMoonParser } from './sources/nudemoon';
+import { loginNudeMoon } from './sources/nudemoon/auth';
 import { createAComicsParser } from './sources/acomics';
 import { SENKURO_CONFIGS } from './sources/senkuro/config';
 import { createSenkuroParser } from './sources/senkuro/engine';
@@ -211,6 +212,12 @@ export const listSources = (): RawSourceInfo[] => {
   return SOURCE_IDS.map((id) => SOURCES[id].info);
 };
 
+/** Семейства, в которые сервер входит сам — логином и паролем пользователя. */
+export type PasswordAuthFamily =
+  | typeof SOURCE_AUTH_FAMILY.GROUPLE
+  | typeof SOURCE_AUTH_FAMILY.ALLHENTAI
+  | typeof SOURCE_AUTH_FAMILY.NUDEMOON;
+
 export type ParsersRegistry = {
   listSources(): RawSourceInfo[];
   get(sourceId: string): Parser;
@@ -218,11 +225,11 @@ export type ParsersRegistry = {
   decodeImage(sourceId: string, bytes: Buffer, imageUrl: string): Promise<Buffer>;
   init(): Promise<void>;
   /**
-   * Входит в Grouple или AllHentai под учёткой пользователя, в свежий jar — общий и чужие
-   * сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
+   * Входит в Grouple, AllHentai или Nude-Moon под учёткой пользователя, в свежий jar — общий и
+   * чужие сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
    */
   loginAccount(
-    family: typeof SOURCE_AUTH_FAMILY.GROUPLE | typeof SOURCE_AUTH_FAMILY.ALLHENTAI,
+    family: PasswordAuthFamily,
     credentials: GroupleCredentials,
   ): Promise<CookieJar | null>;
   /**
@@ -342,6 +349,22 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       return initPromise ?? Promise.resolve();
     },
     async loginAccount(family, credentials) {
+      if (family === SOURCE_AUTH_FAMILY.NUDEMOON) {
+        const jar = new CookieJar();
+        const http = new HttpClientImpl({
+          sourceId: SOURCE_ID.NUDEMOON,
+          jar,
+          defaultHeaders: SOURCES[SOURCE_ID.NUDEMOON].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const domain = SOURCES[SOURCE_ID.NUDEMOON].domains[0];
+          return (await loginNudeMoon(http, jar, domain, credentials, opts.logger)) ? jar : null;
+        } finally {
+          await http.close();
+        }
+      }
+
       const memberId =
         family === SOURCE_AUTH_FAMILY.ALLHENTAI ? SOURCE_ID.ALLHENTAI : SOURCE_ID.READMANGA_RU;
       const cfg = GROUPLE_CONFIGS.find((config) => config.id === memberId);

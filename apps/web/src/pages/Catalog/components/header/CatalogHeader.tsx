@@ -7,6 +7,7 @@ import SearchInput from '@/shared/ui/SearchInput';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { CatalogParams } from '../../models';
 import type { Source } from '@tanuki/contracts';
+import { isTitleSearchLocked } from '@/entities/source/lib';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import GoBackButton from '@/shared/ui/GoBackButton';
 
@@ -42,6 +43,8 @@ function CatalogHeader({ source, isPending }: Props) {
     return null;
   }
 
+  const isSearchLocked = isTitleSearchLocked(source.id, source);
+
   return (
     <PageLayout.Header>
       <Flex justify="space-between" direction={{ base: 'column', sm: 'row' }} gap="sm">
@@ -54,7 +57,10 @@ function CatalogHeader({ source, isPending }: Props) {
           allowClear
           handleSearch={handleSearch}
           defaultValue={params.query}
-          placeholder={t('searchIn', { title: source.title })}
+          disabled={isSearchLocked}
+          placeholder={
+            isSearchLocked ? t('searchAvailableAfterLogin') : t('searchIn', { title: source.title })
+          }
           debounceMs={400}
         />
       </Flex>

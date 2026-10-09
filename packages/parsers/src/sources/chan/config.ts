@@ -20,6 +20,12 @@ export type ChanConfig = {
    * docs/03-parsers.md on why the shared engines here are config-driven factories.
    */
   variant: 'default' | 'henchan' | 'yaoichan';
+  /**
+   * Path of the plain (no query, no filter) browse listing. MANGACHAN/YAOICHAN serve it at
+   * `/manga/new`; HENCHAN's moved to `/manga/newest` (`/manga/new` is a 404 there, verified live
+   * 2026-10-10) — same `n=<field><asc|desc>` sort and `offset=` paging on both.
+   */
+  browsePath: string;
 };
 
 // title/domains live in SOURCE_CATALOG (../catalog) — look them up by id, don't duplicate here.
@@ -35,6 +41,7 @@ export const CHAN_CONFIGS: ChanConfig[] = [
     ],
     supportsDirection: true,
     variant: 'default',
+    browsePath: '/manga/new',
   },
   {
     id: SOURCE_ID.HENCHAN,
@@ -42,6 +49,7 @@ export const CHAN_CONFIGS: ChanConfig[] = [
     sortOrders: [SORT_ORDER.RELEASED, SORT_ORDER.POPULARITY, SORT_ORDER.RATING],
     supportsDirection: false,
     variant: 'henchan',
+    browsePath: '/manga/newest',
   },
   {
     id: SOURCE_ID.YAOICHAN,
@@ -49,5 +57,6 @@ export const CHAN_CONFIGS: ChanConfig[] = [
     sortOrders: [SORT_ORDER.RELEASED],
     supportsDirection: false,
     variant: 'yaoichan',
+    browsePath: '/manga/new',
   },
 ];

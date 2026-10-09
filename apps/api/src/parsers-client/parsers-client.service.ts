@@ -100,6 +100,8 @@ export class ParsersClientService {
     sourceId: string,
     params: {
       page: number;
+      /** Размер страницы; по умолчанию — страница каталога (PAGE_SIZE). */
+      limit?: number;
       order?: string;
       direction?: string;
       query?: string;
@@ -107,6 +109,7 @@ export class ParsersClientService {
       filters?: FilterSelection[];
     },
   ): Promise<CachedResult<{ items: RawTitle[] }>> {
+    const limit = params.limit ?? PAGE_SIZE;
     // Mirrors parse-filter-query's own wire format (including its `min..max` range syntax) —
     // not parsed back, just kept consistent so a cache key is recognizable next to the request
     // that produced it.
@@ -122,6 +125,7 @@ export class ParsersClientService {
       'catalog',
       sourceId,
       params.page,
+      limit,
       params.order ?? '',
       params.direction ?? '',
       params.query ?? '',
@@ -133,8 +137,8 @@ export class ParsersClientService {
       sourceId,
       async (parser) => ({
         items: await parser.getList({
-          offset: params.page * PAGE_SIZE,
-          limit: PAGE_SIZE,
+          offset: params.page * limit,
+          limit,
           order: params.order,
           direction: params.direction,
           query: params.query,
@@ -270,8 +274,10 @@ export class ParsersClientService {
       }
       const apiError = toApiException(error, sourceId);
       const viewer = getViewer();
+      // Без своего аккаунта (анонимная сессия семейства) перелогиниваться нечем — это обычный
+      // отказ источника гостю, а не протухший аккаунт.
       if (
-        scope &&
+        hasSourceAccount(scope) &&
         viewer.kind === VIEWER_KIND.USER &&
         (apiError instanceof SourceAuthRequiredException ||
           apiError instanceof SourceTokenExpiredException)

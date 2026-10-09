@@ -157,8 +157,7 @@ GET /sources/:sourceId/titles
 
 `query` и `filters` вместе работают не у каждого источника: `Source.isSearchWithFiltersSupported`
 говорит, применяет ли источник оба. Если `false`, при запросе он берёт что-то одно (chan, desu,
-mangabuff, multporn — запрос; sexkomix2 — фильтры) и молча отбрасывает другое, а nudemoon без
-входа на поиске отвечает ошибкой. Поэтому клиент не отправляет `filters`, пока набран `query`
+mangabuff, multporn, nudemoon — запрос; sexkomix2 — фильтры) и молча отбрасывает другое. Поэтому клиент не отправляет `filters`, пока набран `query`
 (в адресе выбор остаётся), и блокирует кнопку «Фильтры».
 
 ### Мультипоиск
@@ -174,7 +173,12 @@ GET /search?query=...&sources=READMANGA,DESU&types=manga,manhwa&states=ongoing&l
 ожидание самого медленного. Группы идут в порядке источников пользователя (`Source.position`);
 выключенные пользователем и скрытые настройкой 18+ не возвращаются вовсе.
 
-- `locked` — у пользователя нет аккаунта на закрытом источнике, его не опрашивали.
+- `locked` — у пользователя нет аккаунта на закрытом источнике, его не опрашивали. Так же
+  закрыт источник, у которого поиск по названию — выгода входа (`loginBenefits` с `titleSearch`,
+  nudemoon), если пользователь на нём не вошёл: каталог открыт и гостю, а поиск сайт гостю не
+  отдаёт.
+- Источник отдаёт ровно `limit` карточек: веер просит у него страницу размера `limit`, а не
+  страницу каталога, и кладёт её в кеш под своим ключом (размер страницы — часть ключа).
 - `unavailable` — источник в `degraded`/`down`: веер его не опрашивает, чтобы не отъедать
   дедлайн у живых, но группа есть, чтобы клиент показал пропуск.
 - `sources` — пересечение с источниками пользователя; остальные не опрашиваются.
@@ -472,7 +476,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -481,7 +485,9 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 `locked`. Источник с `optional` без аккаунта читается анонимно, а свой аккаунт используется, если он
 привязан. Сервисные учётки из env пользователю не подставляются — через них ходят только фоновые
 задачи. `Source.loginBenefits` — всё, что вход даёт (`catalogAndReading` — сам источник, у каждого
-`required`; `memberChapters`; `purchasedChapters`),
+`required`; `memberChapters`; `purchasedChapters`; `titleSearch` — поиск по названию, который
+сайт отдаёт только вошедшим: без аккаунта источник в `/search` — `locked`, а поле поиска в его
+каталоге закрыто),
 `Source.isLoggedIn` — есть ли действующий аккаунт.
 Источник с `optional` всегда `access: available`. Если аккаунт привязан, но источник
 перестал принимать его сессию, закрытый источник отвечает 403 `SOURCE_RELOGIN_REQUIRED`.
@@ -492,7 +498,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ```
 GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }
-POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai)
+POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon)
 POST   /source-accounts/libsocial/login { login, password, rememberPassword } → 204
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
 DELETE /source-accounts/:family → 204
@@ -501,7 +507,8 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
 ```
 
 - Аккаунт один на семейство. Grouple и AllHentai: сервер сам входит на SSO-шлюз и хранит
-  cookie jar. Пароль хранится, только если человек разрешил: тогда истёкшая сессия
+  cookie jar. Nude-Moon — так же, но через форму входа самого сайта (`/setuser.php`, cookie
+  `fusion_user`). Пароль хранится, только если человек разрешил: тогда истёкшая сессия
   восстанавливается сама. LibSocial: учётка общая на всю сеть, но у MangaLib и HentaiLib свои
   OAuth-шлюзы, и токен каждый выдаёт свой. Аккаунт хранит токены по сайтам
   (`SourceAccount.sourceIds` — у каких сайтов токен есть), сайт без токена закрыт (`locked`),

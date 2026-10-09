@@ -8,14 +8,14 @@ PWA-читалка манги, манхвы и маньхуа с упором н
 
 ## Стек
 
-| Слой          | Технология                                                          |
-| ------------- | ------------------------------------------------------------------- |
-| Фронтенд      | React 19 + TypeScript 7 + Vite 8, Mantine 9, PWA (Workbox)          |
-| BFF / API     | NestJS 11 на Fastify 5 (TypeScript)                                 |
-| Парсеры       | `@tanuki/parsers` — TS-порт 23 RU-источников, в процессе `apps/api` |
-| Хранилища     | Valkey/Redis (кеш), PostgreSQL + Drizzle (аккаунты и синхронизация) |
-| Монорепо      | pnpm workspaces + Turborepo                                         |
-| Качество кода | ESLint 10 · Stylelint 17 · Prettier 3 · husky 9 · lint-staged 17    |
+| Слой          | Технология                                                       |
+| ------------- | ---------------------------------------------------------------- |
+| Фронтенд      | React 19 + TypeScript 7 + Vite 8, Mantine 9, PWA (Workbox)       |
+| BFF / API     | NestJS 11 на Fastify 5 (TypeScript)                              |
+| Парсеры       | `@tanuki/parsers` — 27 RU-источников, в процессе `apps/api`      |
+| Хранилища     | Valkey/Redis (кеш), PostgreSQL + Drizzle (аккаунты и данные)     |
+| Монорепо      | pnpm workspaces + Turborepo                                      |
+| Качество кода | ESLint 10 · Stylelint 17 · Prettier 3 · husky 9 · lint-staged 17 |
 
 ## Документация
 
@@ -30,21 +30,20 @@ PWA-читалка манги, манхвы и маньхуа с упором н
 | [07 — Тулинг и конвенции](docs/07-tooling.md)      | Готовые конфиги ESLint / Stylelint / Prettier / husky     |
 | [08 — Roadmap](docs/08-roadmap.md)                 | Фазы, задачи, оценки, критерии готовности                 |
 | [09 — Правовые аспекты](docs/09-legal.md)          | Лицензии, GPL-обязательства, модель распространения       |
+| [10 — Хардкод в шапке](docs/10-header-gaps.md)     | Чего не хватает макету шапки и «Источников»               |
 | [11 — Решения по макетам](docs/11-ui-decisions.md) | Выбранные варианты UI из песочницы и почему               |
+| [12 — TODO](docs/12-todo.md)                       | Что осталось сделать и от чего отказались                 |
 
 ## Быстрый старт
 
-> Ничего из этого пока не существует — см. [Roadmap, Фаза 0](docs/08-roadmap.md#фаза-0--фундамент).
-
 ```bash
 pnpm install
-docker compose up -d          # valkey, postgres
-pnpm --filter @tanuki/api db:migrate   # схема БД (пока только ручные связи тайтлов)
+docker compose up -d          # valkey, postgres, mailpit
+pnpm --filter @tanuki/api db:migrate   # схема БД
 pnpm dev                      # turbo запускает web + api параллельно
 ```
 
 Web Push включается парой VAPID-ключей в `apps/api/.env` (`npx web-push generate-vapid-keys`, см.
 `.env.example`); без них лента уведомлений работает, а push скрыт.
 
-Миграции применяются явной командой, а не при старте приложения. Без базы API работает: не
-сохраняются только ручные правки связей между тайтлами.
+Миграции применяются явной командой, а не при старте приложения.

@@ -27,6 +27,7 @@ const CFG: ChanConfig = {
   ],
   supportsDirection: true,
   variant: 'default',
+  browsePath: '/manga/new',
 };
 
 const LIST_HTML = `<!doctype html><html><body>
@@ -305,13 +306,18 @@ describe('Chan parser sort routing', () => {
     expect(new URL(noDirHttp.requests.at(-1)!.url).searchParams.get('n')).toBe('favdesc');
   });
 
-  it('the henchan variant shares the same /manga/new routing — unverified against the live site (currently down) but no longer special-cased to its own mostviews/mostfavorites/manga-newest pages', async () => {
-    const henchanCfg: ChanConfig = { ...CFG, variant: 'henchan', supportsDirection: false };
+  it('the henchan variant browses its own /manga/newest path with the same n= sort param', async () => {
+    const henchanCfg: ChanConfig = {
+      ...CFG,
+      variant: 'henchan',
+      supportsDirection: false,
+      browsePath: '/manga/newest',
+    };
     const henchanHttp = setUpFixtures();
     const henchanParser = createChanParser(henchanCfg, makeContext(henchanHttp));
     await henchanParser.getList({ offset: 0, limit: 20, order: SORT_ORDER.RATING });
     const url = new URL(henchanHttp.requests.at(-1)!.url);
-    expect(url.pathname).toBe('/manga/new');
+    expect(url.pathname).toBe('/manga/newest');
     expect(url.searchParams.get('n')).toBe('favdesc');
     expect(url.searchParams.has('sort')).toBe(false);
   });

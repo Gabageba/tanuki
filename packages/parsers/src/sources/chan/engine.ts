@@ -379,11 +379,9 @@ const buildListUrl = (
   // pre-sorted pages (/mostfavorites, /catalog, /sortch) — but verified live, item-for-item
   // across multiple offsets, that `/manga/new?n=<field><asc|desc>` returns exactly the same
   // listing for every one of them on MANGACHAN (RATING aliases POPULARITY's `fav` field — this
-  // DLE engine has no separate rating axis, see RawTitle.likes doc). HENCHAN's own dedicated
-  // pages (/mostviews, /mostfavorites, /manga/newest — different paths, different `sort=manga`
-  // param) weren't reachable to verify the same way, but that source is already non-functional,
-  // so it shares this route unverified for now rather than keeping a second code path alive.
-  url.pathname = '/manga/new';
+  // DLE engine has no separate rating axis, see RawTitle.likes doc). HENCHAN takes the same `n=`
+  // and `offset=` on its own browse path (`/manga/newest`) — see ChanConfig.browsePath.
+  url.pathname = cfg.browsePath;
   const resolvedDirection =
     cfg.supportsDirection && direction ? direction : chanDefaultDirection(order);
   const dirSuffix = resolvedDirection === SORT_DIRECTION.ASC ? 'asc' : 'desc';

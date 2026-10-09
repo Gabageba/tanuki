@@ -11,6 +11,7 @@ import {
   parseLibSocialAuthValue,
   type LibSocialTokenState,
   type ParsersRegistry,
+  type PasswordAuthFamily,
 } from '@tanuki/parsers';
 import {
   BadRequestApiException,
@@ -34,10 +35,10 @@ const toSourceAccount = (row: SourceAccountRow, sourceIds: string[] | null): Sou
   linkedAt: toServerDateTime(row.linkedAt.getTime()),
 });
 
-type PasswordFamily = typeof SOURCE_AUTH_FAMILY.GROUPLE | typeof SOURCE_AUTH_FAMILY.ALLHENTAI;
-
-const isPasswordFamily = (family: SourceAuthFamily): family is PasswordFamily =>
-  family === SOURCE_AUTH_FAMILY.GROUPLE || family === SOURCE_AUTH_FAMILY.ALLHENTAI;
+const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamily =>
+  family === SOURCE_AUTH_FAMILY.GROUPLE ||
+  family === SOURCE_AUTH_FAMILY.ALLHENTAI ||
+  family === SOURCE_AUTH_FAMILY.NUDEMOON;
 
 /** Привязка и отвязка личных аккаунтов источников — то, что человек делает в настройках. */
 @Injectable()
@@ -65,7 +66,8 @@ export class SourceAccountsService {
   }
 
   /**
-   * Grouple и AllHentai: сервер сам входит на шлюз SSO и сохраняет полученную сессию. Пароль
+   * Grouple, AllHentai и Nude-Moon: сервер сам входит на сайт (у Grouple и AllHentai — через шлюз
+   * SSO) и сохраняет полученную сессию. Пароль
    * хранится, только если человек разрешил, — иначе он нужен лишь на время входа.
    */
   async linkWithPassword(

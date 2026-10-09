@@ -45,6 +45,7 @@ export class CatalogService {
     sourceId: string,
     params: {
       page: number;
+      limit?: number;
       order?: string;
       direction?: string;
       query?: string;
@@ -56,7 +57,7 @@ export class CatalogService {
     return {
       items: data.items.map((raw) => normalizeTitle(this.env, sourceId, raw)),
       page: params.page,
-      hasNext: data.items.length >= PAGE_SIZE,
+      hasNext: data.items.length >= (params.limit ?? PAGE_SIZE),
       stale: stale || undefined,
     };
   }

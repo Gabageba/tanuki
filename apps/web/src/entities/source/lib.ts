@@ -109,6 +109,8 @@ export const getSourceLoginBenefitLabel = (benefit: SourceLoginBenefit, t: TFunc
       return t('chaptersForRegisteredOnly');
     case SOURCE_LOGIN_BENEFIT.PURCHASED_CHAPTERS:
       return t('purchasedChapters');
+    case SOURCE_LOGIN_BENEFIT.TITLE_SEARCH:
+      return t('titleSearch');
   }
 };
 
@@ -213,3 +215,13 @@ export const getFlagByLocale = (locale: SourceLocale) => {
 /** Название источника по каталогу; незнакомый id (источник убрали) — как есть, без падения. */
 export const getCatalogSourceTitle = (sourceId: string) =>
   (SOURCE_CATALOG as Record<string, CatalogEntry | undefined>)[sourceId]?.title ?? sourceId;
+
+/**
+ * Поиск по названию закрыт: каталог открыт и гостю, а поиск сайт отдаёт только вошедшим. Выгода
+ * входа берётся из каталога, так что до ответа /sources поиск у такого источника считается
+ * закрытым — запрос с query без сессии не уходит.
+ */
+export const isTitleSearchLocked = (sourceId: string, source: Source | undefined) =>
+  !!(SOURCE_CATALOG as Record<string, CatalogEntry | undefined>)[sourceId]?.loginBenefits.includes(
+    SOURCE_LOGIN_BENEFIT.TITLE_SEARCH,
+  ) && !source?.isLoggedIn;

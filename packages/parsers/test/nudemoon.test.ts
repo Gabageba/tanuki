@@ -1,9 +1,11 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { CONTENT_RATING, TITLE_TYPE, SORT_ORDER } from '@tanuki/contracts';
+import { CONTENT_RATING, TITLE_TYPE, SORT_ORDER, SOURCE_AUTH_FAMILY } from '@tanuki/contracts';
 import { createNudeMoonParser } from '../src/sources/nudemoon';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
+import { runWithSourceAccounts } from '../src/core/source-accounts';
+import { SourceAuthRequiredError } from '../src/errors';
 import { FakeHttpClient } from './support/fake-http';
 
 const DOMAIN = 'nude-moon.example';
@@ -184,8 +186,47 @@ describe('Nude-Moon parser conformance', () => {
     expect(pages[0]!.url).toBe(`https://${DOMAIN}/pages/001.jpg`);
   });
 
-  it('getList: search without auth throws', async () => {
-    await expect(parser.getList({ offset: 0, limit: 20, query: 'test' })).rejects.toThrow();
+  it("getList: a viewer without a Nude-Moon account can't search — no request reaches the site", async () => {
+    const before = http.requests.length;
+    await expect(
+      runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.NUDEMOON]: {} }, () =>
+        parser.getList({ offset: 0, limit: 20, query: 'test' }),
+      ),
+    ).rejects.toBeInstanceOf(SourceAuthRequiredError);
+    expect(http.requests).toHaveLength(before);
+  });
+
+  it('getList: searches through the account session, the query encoded in cp1251', async () => {
+    const searchHttp = setUpFixtures();
+    searchHttp.register((url) => url.includes('/search?'), { status: 200, body: LIST_HTML });
+    const searchParser = createNudeMoonParser(makeContext(searchHttp));
+    const jar = new CookieJar();
+    await jar.setCookie('fusion_user=1.abc', `https://${DOMAIN}/`);
+
+    const items = await runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.NUDEMOON]: { jar } }, () =>
+      searchParser.getList({ offset: 0, limit: 10, query: 'девушка' }),
+    );
+
+    expect(items.map((item) => item.url)).toEqual(['/12345-some-title']);
+    expect(searchHttp.requests.at(-1)!.url).toBe(
+      `https://${DOMAIN}/search?stext=%E4%E5%E2%F3%F8%EA%E0&rowstart=0`,
+    );
+  });
+
+  it('getList: search starts from the rowstart window holding the offset', async () => {
+    const searchHttp = setUpFixtures();
+    searchHttp.register((url) => url.includes('/search?'), { status: 200, body: LIST_HTML });
+    const searchParser = createNudeMoonParser(makeContext(searchHttp));
+    const jar = new CookieJar();
+    await jar.setCookie('fusion_user=1.abc', `https://${DOMAIN}/`);
+
+    await runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.NUDEMOON]: { jar } }, () =>
+      searchParser.getList({ offset: 30, limit: 30, query: 'naruto' }),
+    );
+
+    expect(searchHttp.requests.at(-1)!.url).toBe(
+      `https://${DOMAIN}/search?stext=naruto&rowstart=30`,
+    );
   });
 
   it('getFilters: reads tags, series, authors, groups and translators off their own routes', async () => {
