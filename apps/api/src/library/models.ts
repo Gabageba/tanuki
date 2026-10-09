@@ -5,7 +5,7 @@ export type BookmarkRecord = typeof bookmarks.$inferSelect;
 
 export type ProgressRecord = Pick<
   typeof readingProgress.$inferSelect,
-  'titleKey' | 'sourceId' | 'branchId' | 'chapterNumber' | 'updatedAt'
+  'titleKey' | 'sourceId' | 'branchId' | 'chapterVolume' | 'chapterNumber' | 'updatedAt'
 >;
 
 export type SnapshotRecord = Pick<
@@ -54,6 +54,8 @@ export type BranchStat = {
   titleKey: string;
   branchId: string;
   total: number;
+  /** Порядковый номер главы отметки в ветке (сколько глав до неё включительно); null — отметки нет. */
+  position: number | null;
   newCount: number;
   /** Когда впервые увидели самую свежую из новых; null — новых нет. */
   latestNewAt: Date | null;
@@ -62,6 +64,7 @@ export type BranchStat = {
 /** Группа после подсчёта глав — то, из чего собирается BookmarkItem. */
 export type CountedBookmarkGroup = BookmarkGroup & {
   branchTotal: number | null;
+  branchPosition: number | null;
   newChaptersCount: number;
   latestNewAt: Date | null;
 };

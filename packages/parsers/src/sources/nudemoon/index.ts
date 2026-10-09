@@ -721,6 +721,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: false,
     },
     getList,
     getDetails,

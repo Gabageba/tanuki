@@ -266,6 +266,10 @@ export const userSettings = pgTable('user_settings', {
   hideAdultTitles: boolean('hide_adult_titles'),
   /** Пользователь однажды подтвердил, что ему есть 18, — больше не спрашиваем. */
   ageConfirmed: boolean('age_confirmed'),
+  /** Писать ли недавние запросы поиска: null — включено (DEFAULT_SAVE_SEARCH_HISTORY). */
+  saveSearchHistory: boolean('save_search_history'),
+  /** id источников со свёрнутой секцией в выдаче поиска; null — всё развёрнуто. */
+  collapsedSearchSources: text('collapsed_search_sources').array(),
   /**
    * Порядок источников, заданный в настройках: id по порядку. Источники, которых здесь нет
    * (новые), встают в конец в порядке каталога. Наружу отдаётся через /sources, не через
@@ -550,5 +554,27 @@ export const titleChaptersSeen = pgTable(
   (table) => [
     primaryKey({ columns: [table.titleKey, table.chapterId] }),
     index('title_chapters_seen_key_branch_idx').on(table.titleKey, table.branchId),
+  ],
+);
+
+/**
+ * Недавние запросы поиска — до SEARCH_HISTORY_LIMIT на пользователя. Повтор того же запроса
+ * (без учёта регистра и лишних пробелов) не плодит строку, а поднимает её и обновляет написание.
+ */
+export const searchHistory = pgTable(
+  'search_history',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Как набрано последним: пробелы схлопнуты, регистр сохранён. */
+    query: text('query').notNull(),
+    /** Ключ дедупликации — query в нижнем регистре. */
+    normalizedQuery: text('normalized_query').notNull(),
+    searchedAt: timestamp('searched_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.normalizedQuery] }),
+    index('search_history_user_searched_at_idx').on(table.userId, table.searchedAt.desc()),
   ],
 );

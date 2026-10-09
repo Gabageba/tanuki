@@ -2,8 +2,12 @@ import { useRef } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import type { CatalogResponse, FilterSelection, SortDirection, SortOrder } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
-import { serializeFilters } from '../utils/filterSelection';
-import { resolveEffectiveSortOrders, resolveOrder } from '../utils/sortOrder';
+import { serializeFilters } from '@/features/filters/lib/filterSelection';
+import {
+  isFiltersLockedByQuery,
+  resolveEffectiveSortOrders,
+  resolveOrder,
+} from '../utils/sortOrder';
 import type { ViewMode } from '@/shared/lib/viewMode';
 import useSource from '@/entities/source/hooks/useSource';
 import useFilters from './useFilters';
@@ -21,7 +25,7 @@ type Params = {
 function useCatalog({
   sourceId,
   query: searchQuery,
-  filters,
+  filters: selectedFilters,
   order: explicitOrder,
   direction,
 }: Params) {
@@ -29,6 +33,7 @@ function useCatalog({
   // Тот же queryKey ['filters', sourceId], что и в CatalogSettings — react-query отдаёт общий
   // кэш/in-flight запрос, second call здесь не бьёт по сети отдельно.
   const { data: filtersData } = useFilters({ sourceId });
+  const filters = isFiltersLockedByQuery(source, searchQuery) ? undefined : selectedFilters;
   const { sortOrders: effectiveSortOrders } = resolveEffectiveSortOrders(
     source,
     filtersData?.groups,

@@ -74,8 +74,18 @@ export class SourcesService {
    * него источники остаются — поиск показывает их отдельным статусом.
    */
   async listSearchableSources(userId?: string): Promise<Source[]> {
+    return (await this.listSearchSources(userId)).filter(
+      (source) => source.status === SOURCE_STATUS.OK,
+    );
+  }
+
+  /**
+   * Источники с поиском, включённые пользователем, — в любом статусе. Мультипоиск опрашивает из
+   * них только `ok`, а degraded/down показывает строкой «Не ответили», чтобы пропуск был виден.
+   */
+  async listSearchSources(userId?: string): Promise<Source[]> {
     return (await this.buildSources(userId, (raw) => raw.isSearchSupported)).filter(
-      (source) => source.status === SOURCE_STATUS.OK && source.isEnabled,
+      (source) => source.isEnabled,
     );
   }
 
@@ -170,6 +180,7 @@ export class SourcesService {
       requiresVpn: raw.requiresVpn,
       sortOrders: raw.sortOrders,
       supportsDirection: raw.supportsDirection,
+      isSearchWithFiltersSupported: raw.isSearchWithFiltersSupported,
       authFamily: catalogEntry.authFamily,
       loginBenefits: catalogEntry.loginBenefits,
       isEnabled: !disabled.has(raw.id),

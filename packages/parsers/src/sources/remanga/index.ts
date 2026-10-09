@@ -10,6 +10,7 @@ import {
   SOURCE_CONTENT_TYPE,
   type TitleState,
   SOURCE_LOCALE,
+  type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -20,6 +21,7 @@ import {
   getYearRangePresets,
 } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
+import { buildSearchFilters, type SearchFilterSpec } from '../../core/filters/searchFilters';
 import type {
   RawTitle,
   RawChapter,
@@ -275,6 +277,43 @@ const parseIsoDate = (value: string | undefined): number => {
 
 const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+const getRemangaTypeKeys = (value: TitleType): string[] => {
+  switch (value) {
+    case TITLE_TYPE.MANGA:
+      return ['1'];
+    case TITLE_TYPE.MANHWA:
+      return ['2'];
+    case TITLE_TYPE.MANHUA:
+      return ['3'];
+    case TITLE_TYPE.COMICS:
+      return ['4'];
+    case TITLE_TYPE.OTHER:
+      return ['5', '6', '7', '22'];
+  }
+};
+
+const getRemangaStateKeys = (value: TitleState): string[] => {
+  switch (value) {
+    case TITLE_STATE.ONGOING:
+      return ['2'];
+    case TITLE_STATE.FINISHED:
+      return ['1'];
+    case TITLE_STATE.PAUSED:
+      return ['3'];
+    case TITLE_STATE.ABANDONED:
+      // The status filter has no such option (STATUS_OPTIONS) — the criterion stays unapplied.
+      return [];
+    case TITLE_STATE.UPCOMING:
+      return ['5'];
+  }
+};
+
+/** Search criteria -> this source's own filter groups (see resolveSearchFilters). */
+const SEARCH_FILTER_SPEC: SearchFilterSpec = {
+  types: { groupId: REMANGA_FILTER_GROUP.TYPE, isMultiple: true, getKeys: getRemangaTypeKeys },
+  states: { groupId: REMANGA_FILTER_GROUP.STATUS, isMultiple: true, getKeys: getRemangaStateKeys },
 };
 
 export const createRemangaParser = (ctx: ParserContext): Parser => {
@@ -695,11 +734,13 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

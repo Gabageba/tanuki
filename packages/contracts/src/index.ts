@@ -181,6 +181,7 @@ export {
   type FilterRangePreset,
   type FilterGroupSettings,
   type FilterSelection,
+  FilterSelectionSchema,
   type RangeFormat,
 } from './filter';
 export {
@@ -218,10 +219,20 @@ export {
   SearchGroupSchema,
   SearchGroupStatusSchema,
   SEARCH_GROUP_STATUS,
+  SEARCH_FILTER_GROUP,
+  SearchFilterGroupSchema,
+  type SearchFilterCriteria,
+  type SearchFilterGroup,
+  type ResolvedSearchFilters,
   type SearchGroup,
   type SearchGroupStatus,
   type SearchResponse,
   SearchResponseSchema,
+  SEARCH_HISTORY_LIMIT,
+  SearchHistoryItemSchema,
+  type SearchHistoryItem,
+  SearchHistoryResponseSchema,
+  type SearchHistoryResponse,
 } from './search';
 export {
   MatchConfidenceSchema,
@@ -268,6 +279,7 @@ export {
   TimeZoneSchema,
   isValidTimeZone,
   DEFAULT_SHOW_ADULT_SOURCES,
+  DEFAULT_SAVE_SEARCH_HISTORY,
   DEFAULT_HIDE_ADULT_TITLES,
 } from './user-settings';
 export {

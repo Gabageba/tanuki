@@ -1,30 +1,40 @@
-import type { TFunction } from 'i18next';
-import { SEARCH_GROUP_STATUS, type SearchGroupStatus } from '@tanuki/contracts';
+import type { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
+import {
+  type FilterSelection,
+  type SearchFilterGroup,
+  type SearchGroupStatus,
+  type Source,
+  type Title,
+  type TitleState,
+  type TitleType,
+} from '@tanuki/contracts';
 
-/** Подпись для источников, не отдавших результат: у `ok` бейджа нет. */
-export const getGroupStatusLabel = (
-  status: Exclude<SearchGroupStatus, typeof SEARCH_GROUP_STATUS.OK>,
-  t: TFunction,
-) => {
-  switch (status) {
-    case SEARCH_GROUP_STATUS.TIMEOUT:
-      return t('timedOut');
-    case SEARCH_GROUP_STATUS.ERROR:
-      return t('error');
-    case SEARCH_GROUP_STATUS.LOCKED:
-      return t('loginRequired');
-  }
+/** Пустой список в группе — без ограничения. */
+export type SearchFilters = {
+  sources: string[];
+  types: TitleType[];
+  states: TitleState[];
 };
 
-export const getGroupStatusColor = (
-  status: Exclude<SearchGroupStatus, typeof SEARCH_GROUP_STATUS.OK>,
-) => {
-  switch (status) {
-    case SEARCH_GROUP_STATUS.TIMEOUT:
-      return 'yellow';
-    case SEARCH_GROUP_STATUS.ERROR:
-      return 'red';
-    case SEARCH_GROUP_STATUS.LOCKED:
-      return 'gray';
-  }
+export const EMPTY_SEARCH_FILTERS: SearchFilters = { sources: [], types: [], states: [] };
+
+/** Сколько карточек видно в виде «список» до «Показать ещё». */
+export const LIST_PREVIEW_COUNT = 3;
+
+export type MissStatus = Exclude<SearchGroupStatus, typeof SEARCH_GROUP_STATUS.OK>;
+
+/** Источник, где что-то нашлось. */
+export type FoundGroup = {
+  source: Source;
+  items: Title[];
+  /** Выбранные фильтры, которых источник не применил: выдача по ним не сужена. */
+  unappliedFilters: SearchFilterGroup[];
+  /** Фильтры источника, с которыми он искал: «Все результаты» переносит их в каталог. */
+  filters: FilterSelection[];
+};
+
+/** Источник из блока «Не ответили». */
+export type MissedGroup = {
+  source: Source;
+  status: MissStatus;
 };

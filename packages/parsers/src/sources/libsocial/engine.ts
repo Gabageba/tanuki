@@ -14,6 +14,7 @@ import {
   type TitleState,
   SOURCE_AUTH_FAMILY,
   SOURCE_LOCALE,
+  type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -24,6 +25,7 @@ import {
   getYearRangePresets,
 } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
+import { buildSearchFilters, type SearchFilterSpec } from '../../core/filters/searchFilters';
 import type {
   RawTitle,
   RawChapter,
@@ -378,6 +380,46 @@ const contentRatingFor = (
 ): RawContentRating => {
   const rating = ageRestrictionId != null ? AGE_RESTRICTION_RATINGS[ageRestrictionId] : undefined;
   return rating ?? (isNsfw ? CONTENT_RATING.ADULT : CONTENT_RATING.SAFE);
+};
+
+const getLibSocialTypeKeys = (value: TitleType): string[] => {
+  switch (value) {
+    case TITLE_TYPE.MANGA:
+      return ['1'];
+    case TITLE_TYPE.MANHWA:
+      return ['5'];
+    case TITLE_TYPE.MANHUA:
+      return ['6'];
+    case TITLE_TYPE.COMICS:
+      return ['9'];
+    case TITLE_TYPE.OTHER:
+      return ['4', '8'];
+  }
+};
+
+const getLibSocialStateKeys = (value: TitleState): string[] => {
+  switch (value) {
+    case TITLE_STATE.ONGOING:
+      return ['1'];
+    case TITLE_STATE.FINISHED:
+      return ['2'];
+    case TITLE_STATE.PAUSED:
+      return ['4'];
+    case TITLE_STATE.ABANDONED:
+      return ['5'];
+    case TITLE_STATE.UPCOMING:
+      return ['3'];
+  }
+};
+
+/** Search criteria -> this source's own filter groups (see resolveSearchFilters). */
+const SEARCH_FILTER_SPEC: SearchFilterSpec = {
+  types: { groupId: LIBSOCIAL_FILTER_GROUP.TYPE, isMultiple: true, getKeys: getLibSocialTypeKeys },
+  states: {
+    groupId: LIBSOCIAL_FILTER_GROUP.STATUS,
+    isMultiple: true,
+    getKeys: getLibSocialStateKeys,
+  },
 };
 
 export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext): Parser => {
@@ -922,11 +964,13 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     async init() {
       if (!cfg.auth) return;

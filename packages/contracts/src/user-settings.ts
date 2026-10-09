@@ -35,6 +35,8 @@ export const TimeZoneSchema = z.string().min(1).refine(isValidTimeZone);
  */
 export const DEFAULT_SHOW_ADULT_SOURCES = false;
 export const DEFAULT_HIDE_ADULT_TITLES = true;
+/** История поиска пишется, пока пользователь её не выключил. */
+export const DEFAULT_SAVE_SEARCH_HISTORY = true;
 
 /**
  * Настройки, не завязанные на конкретную страницу (тема, вид каталога, язык, отказ от диалога
@@ -58,6 +60,13 @@ export const UserSettingsSchema = z.object({
   hideAdultTitles: z.boolean().optional(),
   /** Возраст подтверждён: открыть 18+ можно без повторного вопроса «Вам есть 18?». */
   ageConfirmed: z.boolean().optional(),
+  /**
+   * Пишет ли сервер недавние запросы поиска. Отсутствие — включено; выключение стирает уже
+   * накопленное.
+   */
+  saveSearchHistory: z.boolean().optional(),
+  /** Источники, чья секция в выдаче поиска свёрнута: id. Отсутствие — все развёрнуты. */
+  collapsedSearchSources: z.array(z.string()).optional(),
 });
 export type UserSettings = z.infer<typeof UserSettingsSchema>;
 

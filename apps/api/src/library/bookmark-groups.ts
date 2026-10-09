@@ -189,6 +189,7 @@ export const countBookmarkGroup = (
   return {
     ...group,
     branchTotal: stat?.total ?? null,
+    branchPosition: stat?.position ?? null,
     newChaptersCount: isCounted ? stat.newCount : 0,
     latestNewAt: isCounted ? stat.latestNewAt : null,
   };

@@ -32,6 +32,7 @@ const makeSource = (id: string, title: string, domain: string, position: number)
   requiresVpn: false,
   sortOrders: [],
   supportsDirection: false,
+  isSearchWithFiltersSupported: true,
   authFamily: null,
   loginRequirement: null,
   loginBenefits: [],

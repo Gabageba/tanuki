@@ -29,6 +29,16 @@ export type EffectiveSortOrders = {
  * group/perevod теряют PAGES) — см. FilterGroup.sortOrders/supportsDirection. Берём первую
  * активную группу, которая объявляет такое сужение, и используем его вместо дефолта источника.
  */
+/**
+ * Фильтры не работают, пока набран запрос, если источник при поиске по названию их не применяет
+ * (`Source.isSearchWithFiltersSupported`): выбор остаётся в адресе, но не уходит в запрос и не
+ * влияет на сортировку — сотрёшь запрос, и он снова в силе.
+ */
+export const isFiltersLockedByQuery = (
+  source: Pick<Source, 'isSearchWithFiltersSupported'> | undefined,
+  query: string | undefined,
+) => Boolean(query) && source?.isSearchWithFiltersSupported === false;
+
 export const resolveEffectiveSortOrders = (
   source: Pick<Source, 'sortOrders' | 'supportsDirection'> | undefined,
   groups: FilterGroup[] | undefined,

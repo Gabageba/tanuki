@@ -639,5 +639,21 @@
   "folderHasCountTitlesWhatToDo_one": "The folder “{{name}}” has {{count}} title. What should be done with it?",
   "folderHasCountTitlesWhatToDo_other": "The folder “{{name}}” has {{count}} titles. What should be done with them?",
   "grid": "Grid",
-  "list": "List"
+  "list": "List",
+  "resultsFor": "Results for “{{query}}”",
+  "foundOn": "Found on:",
+  "allResults": "All results",
+  "showCountMore": "Show {{count}} more",
+  "sourcesDidNotRespond_one": "{{count}} source didn't respond",
+  "sourcesDidNotRespond_other": "{{count}} sources didn't respond",
+  "tryOtherSpellingOrOriginalTitle": "Try another spelling or the original title",
+  "searchByTitleImperative": "Search by title",
+  "typeTitleInSearchBar": "Type a title in the search bar — we'll search all enabled sources",
+  "recentSearches": "Recent searches",
+  "removeFromRecent": "Remove from recent",
+  "clearSearchHistory": "Clear search history",
+  "saveSearchHistory": "Save search history",
+  "recentSearchesVisibleInSearchBar": "Recent searches appear in the search bar on all your devices. Turning this off erases the history",
+  "titleSearchWithoutFilters": "On this source, search by title works without filters",
+  "notApplied": "Not applied: {{filters}}"
 }

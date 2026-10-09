@@ -10,6 +10,7 @@ import {
   SOURCE_CONTENT_TYPE,
   type TitleState,
   SOURCE_LOCALE,
+  type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -20,6 +21,7 @@ import {
   getYearRangePresets,
 } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
+import { buildSearchFilters, type SearchFilterSpec } from '../../core/filters/searchFilters';
 import type {
   RawTitle,
   RawChapter,
@@ -361,6 +363,46 @@ const parseIsoDate = (value: string | undefined): number => {
   const [, y, mo, d, h, mi, s, frac] = match;
   const ms = frac ? Math.round(Number(`0.${frac}`) * 1000) : 0;
   return Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s), ms);
+};
+
+const getInkStoryTypeKeys = (value: TitleType): string[] => {
+  switch (value) {
+    case TITLE_TYPE.MANGA:
+      return ['JAPAN'];
+    case TITLE_TYPE.MANHWA:
+      return ['KOREA'];
+    case TITLE_TYPE.MANHUA:
+      return ['CHINA'];
+    case TITLE_TYPE.COMICS:
+      return ['RUSSIA'];
+    case TITLE_TYPE.OTHER:
+      return ['OTHER'];
+  }
+};
+
+const getInkStoryStateKeys = (value: TitleState): string[] => {
+  switch (value) {
+    case TITLE_STATE.ONGOING:
+      return ['ONGOING'];
+    case TITLE_STATE.FINISHED:
+      return ['DONE'];
+    case TITLE_STATE.PAUSED:
+      return ['FROZEN'];
+    case TITLE_STATE.ABANDONED:
+      return [];
+    case TITLE_STATE.UPCOMING:
+      return ['ANNOUNCE'];
+  }
+};
+
+/** Search criteria -> this source's own filter groups (see resolveSearchFilters). */
+const SEARCH_FILTER_SPEC: SearchFilterSpec = {
+  types: { groupId: INKSTORY_FILTER_GROUP.COUNTRY, isMultiple: true, getKeys: getInkStoryTypeKeys },
+  states: {
+    groupId: INKSTORY_FILTER_GROUP.STATUS,
+    isMultiple: true,
+    getKeys: getInkStoryStateKeys,
+  },
 };
 
 export const createInkStoryParser = (ctx: ParserContext): Parser => {
@@ -759,11 +801,13 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     decodeImage,
   };

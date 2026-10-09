@@ -358,6 +358,7 @@ export class BookmarksService {
               titleKey: readingProgress.titleKey,
               sourceId: readingProgress.sourceId,
               branchId: readingProgress.branchId,
+              chapterVolume: readingProgress.chapterVolume,
               chapterNumber: readingProgress.chapterNumber,
               updatedAt: readingProgress.updatedAt,
             })
@@ -384,7 +385,12 @@ export class BookmarksService {
     });
 
     const stats = await this.loadBranchStats(
-      groups.map(({ target, visitedAt }) => ({ titleKey: target.titleKey, visitedAt })),
+      groups.map(({ target, visitedAt, progress }) => ({
+        titleKey: target.titleKey,
+        visitedAt,
+        markVolume: progress?.chapterVolume ?? null,
+        markNumber: progress?.chapterNumber ?? null,
+      })),
     );
     const trackedFolders = new Set(
       folders.filter(({ trackUpdates }) => trackUpdates).map(({ id }) => id),
@@ -419,6 +425,7 @@ export class BookmarksService {
       folderId: group.folderId,
       progress: progress && {
         chapterNumber: progress.chapterNumber,
+        position: group.branchPosition,
         total: group.branchTotal,
       },
       chaptersCount: progress ? null : group.branchTotal,
@@ -450,7 +457,12 @@ export class BookmarksService {
    * без выгрузки самих глав.
    */
   private async loadBranchStats(
-    targets: { titleKey: string; visitedAt: Date }[],
+    targets: {
+      titleKey: string;
+      visitedAt: Date;
+      markVolume: number | null;
+      markNumber: number | null;
+    }[],
   ): Promise<BranchStat[]> {
     if (targets.length === 0) return [];
     const keys = sql.join(
@@ -462,10 +474,20 @@ export class BookmarksService {
       sql`, `,
     );
 
+    const markVolumes = sql.join(
+      targets.map(({ markVolume }) => sql`${markVolume}`),
+      sql`, `,
+    );
+    const markNumbers = sql.join(
+      targets.map(({ markNumber }) => sql`${markNumber}`),
+      sql`, `,
+    );
+
     type StatRow = {
       title_key: string;
       branch_id: string;
       total: number;
+      position: number | null;
       new_count: number;
       latest_new_at: string | null;
     };
@@ -474,14 +496,25 @@ export class BookmarksService {
         ...(await this.database.db.execute<StatRow>(sql`
           SELECT t.title_key, s.branch_id,
             count(*)::int AS total,
+            CASE WHEN t.mark_number IS NULL THEN NULL ELSE
+              count(*) FILTER (
+                WHERE s.chapter_number IS NOT NULL
+                  AND (coalesce(s.chapter_volume, 'Infinity'::double precision), s.chapter_number)
+                    <= (coalesce(t.mark_volume, 'Infinity'::double precision), t.mark_number)
+              )::int
+            END AS position,
             count(*) FILTER (WHERE NOT s.baseline AND s.first_seen_at > t.visited_at)::int
               AS new_count,
             max(s.first_seen_at) FILTER (WHERE NOT s.baseline AND s.first_seen_at > t.visited_at)
               AS latest_new_at
-          FROM unnest(ARRAY[${keys}]::text[], ARRAY[${visited}]::timestamptz[])
-            AS t(title_key, visited_at)
+          FROM unnest(
+            ARRAY[${keys}]::text[],
+            ARRAY[${visited}]::timestamptz[],
+            ARRAY[${markVolumes}]::double precision[],
+            ARRAY[${markNumbers}]::double precision[]
+          ) AS t(title_key, visited_at, mark_volume, mark_number)
           JOIN title_chapters_seen AS s ON s.title_key = t.title_key
-          GROUP BY t.title_key, s.branch_id
+          GROUP BY t.title_key, s.branch_id, t.mark_volume, t.mark_number
         `)),
       ],
       [],
@@ -490,6 +523,7 @@ export class BookmarksService {
       titleKey: row.title_key,
       branchId: row.branch_id,
       total: row.total,
+      position: row.position,
       newCount: row.new_count,
       latestNewAt: row.latest_new_at ? new Date(row.latest_new_at) : null,
     }));

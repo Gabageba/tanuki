@@ -2,7 +2,7 @@ import { Grid, Group } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { BOOKMARK_SORT, type BookmarkSort, type SortDirection } from '@tanuki/contracts';
 import type { ViewMode } from '@/shared/lib/viewMode';
-import SearchInput from '@/shared/ui/SearcInput';
+import SearchInput from '@/shared/ui/SearchInput';
 import SortCombobox from '@/shared/ui/SortCombobox';
 import ViewModeSwitch from '@/shared/ui/ViewModeSwitch';
 import { getBookmarkSortLabel } from '../lib';

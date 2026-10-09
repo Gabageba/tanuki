@@ -199,5 +199,9 @@ export type RawSourceInfo = {
   isSearchSupported: boolean;
   /** Mirrors whether the parser implements getFilters() — see Parser.getFilters. */
   isFiltersSupported: boolean;
+  /** True when a catalog request with both `query` and `filters` applies both. False — the
+   *  source's search and its filter routes are alternatives: one of them wins and the other is
+   *  silently dropped, so the UI doesn't offer filters while a query is typed. */
+  isSearchWithFiltersSupported: boolean;
   isMultipleTagsSupported: boolean;
 };

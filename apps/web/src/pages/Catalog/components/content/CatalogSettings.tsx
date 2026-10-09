@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react';
-import { Button, Grid, Group, Stack, Text } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
+import { useEffect } from 'react';
+import { Group } from '@mantine/core';
 import { useSearchParams } from 'react-router';
-import { CaretDownIcon, CaretUpIcon, FunnelIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import PageLayout from '@/shared/ui/PageLayout';
 import { SORT_DIRECTION, type FilterSelection } from '@tanuki/contracts';
 import useSource from '@/entities/source/hooks/useSource';
-import { resolveEffectiveSortOrders, resolveOrder } from '../../utils/sortOrder';
-import { serializeFilters } from '../../utils/filterSelection';
+import {
+  isFiltersLockedByQuery,
+  resolveEffectiveSortOrders,
+  resolveOrder,
+} from '../../utils/sortOrder';
+import { serializeFilters } from '@/features/filters/lib/filterSelection';
 import type { CatalogParams } from '../../models';
 import useFilters from '../../hooks/useFilters';
-import CatalogFilterPills from '../filters/CatalogFilterPills';
-import CatalogFilterCard from '../filters/CatalogFilterCard';
-import CatalogFilterDrawer from '../filters/CatalogFilterDrawer';
+import FilterBar from '@/features/filters/FilterBar';
 import CatalogSettingsSkeleton from './CatalogSettingsSkeleton';
 import CatalogSort from './CatalogSort';
 import CatalogViewMode from './CatalogViewMode';
@@ -29,14 +29,11 @@ function CatalogSettings({ sourceId }: Props) {
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
   const [, setSearchParams] = useSearchParams();
 
-  const [isFilterOpened, setIsFilterOpened] = useState(false);
-  // Drawer скрыт на десктопе только через hiddenFrom (CSS), но Mantine всё равно блокирует
-  // скролл страницы (RemoveScroll), пока opened=true — из-за этого не крутится колесом
-  // ScrollArea в десктопной CatalogFilterCard. Открываем Drawer только на мобильном вьюпорте.
-  const isMobile = useMediaQuery('(max-width: 47.9375em)', false);
+  const isFiltersLocked = isFiltersLockedByQuery(source, params.query);
+  const activeFilters = isFiltersLocked ? undefined : params.filters;
 
   const { sortOrders: effectiveSortOrders, supportsDirection: effectiveSupportsDirection } =
-    resolveEffectiveSortOrders(source, filters?.groups, params.filters);
+    resolveEffectiveSortOrders(source, filters?.groups, activeFilters);
   const order = resolveOrder(params.order, effectiveSortOrders);
   const direction = params.direction ?? SORT_DIRECTION.DESC;
 
@@ -87,52 +84,24 @@ function CatalogSettings({ sourceId }: Props) {
   }
 
   return (
-    <Stack gap="xs" w="100%" mb="md">
-      <Grid gap="sm">
-        <Grid.Col span={{ base: 12, xs: 'auto' }} order={1}>
-          {!!filters?.groups.length && (
-            <Button
-              w={{ base: '100%', xs: 'auto' }}
-              leftSection={<FunnelIcon />}
-              rightSection={isFilterOpened ? <CaretUpIcon /> : <CaretDownIcon />}
-              onClick={() => setIsFilterOpened((prev) => !prev)}
-              style={{ alignSelf: 'flex-start' }}
-            >
-              <Text>{t('filters')}</Text>
-            </Button>
-          )}
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, xs: 'content' }} order={{ base: 3, xs: 2 }}>
-          <Group gap="xs">
-            <CatalogSort
-              sortOrders={effectiveSortOrders}
-              supportsDirection={effectiveSupportsDirection}
-            />
-            <CatalogViewMode />
-          </Group>
-        </Grid.Col>
-        <CatalogFilterPills
-          selection={params.filters ?? []}
-          groups={filters?.groups}
-          onChange={handleFiltersChange}
-        />
-      </Grid>
-      {isFilterOpened && filters?.groups.length && (
-        <CatalogFilterCard
-          groups={filters.groups}
-          selection={params.filters ?? []}
-          onClose={() => setIsFilterOpened(false)}
-          onChange={handleFiltersChange}
-        />
-      )}
-      <CatalogFilterDrawer
-        groups={filters?.groups ?? []}
-        selection={params.filters ?? []}
-        opened={isFilterOpened && isMobile}
-        onClose={() => setIsFilterOpened(false)}
-        onChange={handleFiltersChange}
-      />
-    </Stack>
+    <FilterBar
+      w="100%"
+      mb="md"
+      groups={filters?.groups}
+      selection={params.filters ?? []}
+      onChange={handleFiltersChange}
+      locked={isFiltersLocked}
+      lockedNote={t('titleSearchWithoutFilters')}
+      actions={
+        <Group gap="xs">
+          <CatalogSort
+            sortOrders={effectiveSortOrders}
+            supportsDirection={effectiveSupportsDirection}
+          />
+          <CatalogViewMode />
+        </Group>
+      }
+    />
   );
 }
 
