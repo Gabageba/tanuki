@@ -8,12 +8,10 @@ import {
   VIEW_MODE,
   type ViewMode,
 } from '@/shared/lib/viewMode';
-import BlockLoader from '@/shared/ui/BlockLoader';
 import PageLayout from '@/shared/ui/PageLayout';
-import useSearch from '../hooks/useSearch';
 import useSearchFilters from '../hooks/useSearchFilters';
 import { countSearchFilters, splitSearchGroups } from '../lib';
-import { EMPTY_SEARCH_FILTERS } from '../models';
+import { EMPTY_SEARCH_FILTERS, type SearchPageQuery } from '../models';
 import NotRespondedBlock from './NotRespondedBlock';
 import NothingFound from './NothingFound';
 import SearchHeader from './SearchHeader';
@@ -26,13 +24,13 @@ type Props = {
 };
 
 /**
- * Выдача по запросу. Ошибку самого поиска показывает глобальное уведомление — здесь она выглядит
- * как пустая выдача. Пока идёт веер, вместо фильтров ничего — только лоадер выдачи; если выдача
- * пришла раньше источников, на месте фильтров скелетон.
+ * Выдача по запросу. Запрос поиска — основной запрос страницы: лоадер и ошибку показывает
+ * PageLayout.Content, поэтому пока идёт веер, вместо фильтров ничего. Если выдача пришла раньше
+ * источников, на месте фильтров скелетон.
  */
 function SearchResults({ query }: Props) {
   const { filters, setFilters } = useSearchFilters();
-  const { data, isPending, isFetching, refetch } = useSearch({ query, filters });
+  const { data, isFetching, refetch } = PageLayout.useQuery<SearchPageQuery>();
   const { data: sourcesData, isPending: isSourcesPending } = useSources();
   const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredViewMode() ?? VIEW_MODE.GRID);
 
@@ -50,37 +48,30 @@ function SearchResults({ query }: Props) {
       <SearchHeader query={query} found={found} />
       <PageLayout.Content>
         <Stack gap="lg">
-          {!isPending &&
-            (isSourcesPending ? (
-              <SearchSettingsSkeleton />
-            ) : (
-              <SearchSettings
-                sources={enabledSources}
-                filters={filters}
-                onFiltersChange={setFilters}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-              />
-            ))}
-          {isPending ? (
-            <BlockLoader />
+          {isSourcesPending ? (
+            <SearchSettingsSkeleton />
           ) : (
-            <>
-              {found.length > 0 ? (
-                <SourceResultsList found={found} query={query} viewMode={viewMode} />
-              ) : (
-                <NothingFound
-                  withFilters={countSearchFilters(filters) > 0}
-                  onReset={() => setFilters(EMPTY_SEARCH_FILTERS)}
-                />
-              )}
-              <NotRespondedBlock
-                missed={missed}
-                isRetrying={isFetching}
-                onRetry={() => void refetch()}
-              />
-            </>
+            <SearchSettings
+              sources={enabledSources}
+              filters={filters}
+              onFiltersChange={setFilters}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+            />
           )}
+          {found.length > 0 ? (
+            <SourceResultsList found={found} query={query} viewMode={viewMode} />
+          ) : (
+            <NothingFound
+              withFilters={countSearchFilters(filters) > 0}
+              onReset={() => setFilters(EMPTY_SEARCH_FILTERS)}
+            />
+          )}
+          <NotRespondedBlock
+            missed={missed}
+            isRetrying={isFetching}
+            onRetry={() => void refetch()}
+          />
         </Stack>
       </PageLayout.Content>
     </>

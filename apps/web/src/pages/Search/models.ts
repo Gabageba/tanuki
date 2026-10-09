@@ -1,3 +1,4 @@
+import type useSearchPageQuery from './hooks/useSearchPageQuery';
 import type { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
 import {
   type FilterSelection,
@@ -15,6 +16,8 @@ export type SearchFilters = {
   types: TitleType[];
   states: TitleState[];
 };
+
+export type SearchPageQuery = ReturnType<typeof useSearchPageQuery>;
 
 export const EMPTY_SEARCH_FILTERS: SearchFilters = { sources: [], types: [], states: [] };
 
