@@ -13,7 +13,10 @@
 - Mantine first. Layout and text are built from Mantine components (`Box`, `Stack`, `Group`,
   `Flex`, `Center`, `Text`, `Title`, …) and their style props (`pos`, `w`, `mt`, `ff`, `fw`, `ta`,
   …), not from raw `div`/`span`/`p` plus a CSS module. Before writing a custom component, check
-  whether Mantine already ships one. A CSS module is only for what style props can't express —
+  whether Mantine already ships one — and whether `shared/ui` already has one built on top of it:
+  a search field is `SearchInput`, never a bare `TextInput type="search"`; a pager is
+  `ListPagination`. Reuse the shared component and extend it (a prop) rather than assembling the
+  same thing again next to it. A CSS module is only for what style props can't express —
   pseudo-elements, container queries, color-scheme-dependent values, `z-index`, custom properties
   — and holds just those declarations.
 - Elements with no children are self-closing — `<ActionIcon />`, never
@@ -28,6 +31,11 @@
 - No `renderXxx()` helpers inside a component that switch between whole branches of markup
   (skeleton / empty / list). Such a branch is its own component in its own file
   (`renderList()` → `UsersList`).
+- A component that shows nothing for empty data decides that itself. The check "is there anything
+  to show" (`items.length > 0`, `filters.length === 0`) lives inside the component, which returns
+  `null`; the parent renders it unconditionally (`<UnappliedFiltersNote filters={filters} />`), not
+  `{filters.length > 0 && <UnappliedFiltersNote … />}`. The parent keeps a condition only when it
+  depends on the parent's own state (a mode, a collapsed flag), not on the data the child receives.
 - Icons are always taken from `@phosphor-icons/react` as components, never copied in as raw SVG
   paths. When an icon has to be tinted in parts, layer library icons (e.g. two `CaretUpDownIcon`s,
   each cut to its half with `clip-path`) instead of redrawing it.
@@ -47,6 +55,11 @@
     and fades in after 200 ms, so a fast answer never flashes it. Never a bare centered `Loader`.
   - A mixed block splits along the same line: the part that's always there is a skeleton, the
     part that may be empty is a `BlockLoader` (bookmarks: folder tabs — skeleton, cards — spinner).
+    The split only holds when the always-there part has its data at once. When it depends on the
+    same answer as the spinner part (search: the filter bar appears together with the results),
+    don't draw a skeleton next to a `BlockLoader` — skeleton plus spinner looks odd. Render nothing
+    in its place until the answer arrives; a skeleton stays only for the part that waits on a
+    different, faster query.
   - A small `Loader` inside a control that's busy (a button, an avatar upload, the infinite-scroll
     trigger, a process screen like email verification) is not a block loading and stays as is.
 - **Errors** of a query inside a page block or tab are not rendered: the global handler in
@@ -153,12 +166,17 @@
 
 ## Text
 
+- A button or menu item that acts on something names its object: «Очистить историю поиска», not a
+  bare «Очистить» — the label has to be clear without the surrounding context. A bare verb is
+  fine only where the object is the thing the control sits in (a field's own clear cross).
 - Placeholder for a missing/empty value — no rating, no reason, no error — is never a raw `'—'`
   string literal. Use the shared `<Mdash />` component (`apps/web/src/shared/ui/Mdash.tsx`), which
   renders `&mdash;`.
 
 ## Placement
 
+- Names of files, folders and identifiers are spelled correctly — a typo in a name (`SearcInput`)
+  spreads to every import, so fix it as soon as it's noticed.
 - Keep code next to its only consumer: constants of a component go into its sibling `models.ts` or
   straight into the component file when there are just a couple of them.
 - `shared/` is for things with more than one consumer — and for generic UI building blocks that
@@ -168,6 +186,12 @@
   consumer until a second one actually appears. Don't create a folder in `shared/` for a single
   import.
 - No one-call wrappers around library hooks. Call the library hook in the component.
+- **The second consumer means extraction.** When the code you're about to write repeats a block of
+  an existing component (the state, a media query, the same set of children with the same props),
+  don't copy it and don't leave a «see XxxSettings» comment — pull the whole block into one
+  component in `features/` or `shared/ui` and move the original consumer onto it too. Variations
+  go into props and slots (`actions`, `locked`), not into a second copy. Extract the complete
+  unit (button + pills + card + drawer), not just its pieces.
 
 ## Colors
 
@@ -233,6 +257,12 @@
   // helper
   export const formatChapterNumber = (value: number) => ...;
   ```
+
+- A handler that only forwards to a function returning a promise is passed by reference
+  (`onRetry={refetch}`), not wrapped in `() => void refetch()`. The `void` wrapper is for a call
+  whose promise is really dropped inside a larger handler body; it is noise when the whole handler
+  is just that call. Wrap only when the extra arguments (a click event landing in `refetch`'s
+  options) would matter.
 
 ## Dates
 
