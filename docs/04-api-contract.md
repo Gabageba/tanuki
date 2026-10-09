@@ -589,11 +589,11 @@ bookmarkFolderConflict`, фронт спрашивает папку и повт�
 `packages/contracts/src/notification.ts`.
 
 ```
-GET    /notifications?category=&page=      → { items: NotificationItem[], page, total } (по 20)
+GET    /notifications?category=a,b&page=   → { items: NotificationItem[], page, total } (по 20)
 GET    /notifications/unread-count         → { count }
 GET    /notifications/stream               → text/event-stream
 DELETE /notifications/:id                  → 204 — «прочитано» (убрать) одно
-DELETE /notifications?category=            → 204 — убрать все, с учётом категории
+DELETE /notifications?category=a,b        → 204 — убрать все, с учётом категории
 GET    /notifications/push/config          → { enabled, publicKey }
 POST   /notifications/push/subscriptions   { endpoint, keys: { p256dh, auth } } → 204
 DELETE /notifications/push/subscriptions   { endpoint } → 204

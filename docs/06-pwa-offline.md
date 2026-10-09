@@ -4,6 +4,19 @@
 в самолёте, в поезде. Читалка, которая офлайн показывает белый экран, проигрывает
 нативным приложениям по единственному параметру, который в этом сценарии важен.
 
+## Что уже есть: push-уведомления
+
+Из этого документа реализован минимум для Web Push (план — [notifications.md](plans/notifications.md)):
+`vite-plugin-pwa` в режиме `injectManifest` **без precache**, `src/sw/sw.ts` с обработчиками
+`push` и `notificationclick`, веб-манифест и иконки (`apps/web/public`, собираются
+`scripts/generate-pwa-icons.mjs` из лапы-лого). Воркер регистрирует само приложение
+(`shared/lib/serviceWorker.ts`) и сразу активируется (`skipWaiting` + `clients.claim`): кэша нет,
+поэтому обновление не ломает чтение. Вкладка видима — push не показывается (то же событие
+приходит по SSE), кроме iOS: WebKit отзывает подписку, если на push не показать уведомление.
+Типы воркера проверяет `tsconfig.sw.json` (среда WebWorker), в линт он не входит.
+
+Ниже — целевая схема Фазы 4; `registerType: 'prompt'` и precache появятся вместе с кэшем.
+
 ## Service worker
 
 `vite-plugin-pwa` в режиме `injectManifest` — генерируемый `generateSW` не потянет
