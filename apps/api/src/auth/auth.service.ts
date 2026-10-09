@@ -1,6 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, gt, ilike, isNull } from 'drizzle-orm';
-import type { CurrentUser, Language, RegisterRequest } from '@tanuki/contracts';
+import {
+  NOTIFICATION_TYPE,
+  type CurrentUser,
+  type Language,
+  type RegisterRequest,
+} from '@tanuki/contracts';
 import {
   AccountDeletionScheduledException,
   ApiException,
@@ -19,6 +24,7 @@ import { DatabaseService } from '../database/database.service';
 import { getUniqueViolation } from '../database/pg-error.util';
 import { emailTokens, invites, users } from '../database/schema';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { assertNotBlocked, toCurrentUser } from '../users/users.util';
 import { normalizeEmail } from './email.util';
 import { EMAIL_TOKEN_PURPOSE, EMAIL_VERIFICATION_TTL_MS, PASSWORD_RESET_TTL_MS } from './models';
@@ -40,6 +46,7 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly sessionService: SessionService,
     private readonly mailService: MailService,
+    private readonly notifications: NotificationsService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -53,9 +60,9 @@ export class AuthService {
     const email = normalizeEmail(input.email);
     const passwordHash = await this.passwordService.hash(input.password);
 
-    let userId: string;
+    let registered: { userId: string; invitedBy: string | null; inviteId: string };
     try {
-      userId = await this.database.db.transaction(async (tx) => {
+      registered = await this.database.db.transaction(async (tx) => {
         const [invite] = await tx
           .select()
           .from(invites)
@@ -89,7 +96,7 @@ export class AuthService {
           .returning({ id: invites.id });
         if (consumed.length === 0) throw new InviteInvalidException();
 
-        return user.id;
+        return { userId: user.id, invitedBy: invite.createdBy, inviteId: invite.id };
       });
     } catch (error) {
       if (error instanceof ApiException) throw error;
@@ -99,7 +106,13 @@ export class AuthService {
       throw new StorageUnavailableException();
     }
 
-    await this.sendVerificationEmail(userId, email, input.language);
+    if (registered.invitedBy) {
+      await this.notifications.notifyEvent(registered.invitedBy, NOTIFICATION_TYPE.INVITE_USED, {
+        inviteId: registered.inviteId,
+        username: input.username,
+      });
+    }
+    await this.sendVerificationEmail(registered.userId, email, input.language);
   }
 
   /** true — свободно. Инвайт валиден проверяется отдельно контроллером/сервисом инвайтов. */

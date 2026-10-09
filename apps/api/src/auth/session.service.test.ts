@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DatabaseService } from '../database/database.service';
+import type { DeviceLoginService } from '../notifications/device-login.service';
 import { SESSION_IDLE_MS, SESSION_REMEMBER_MS, SESSION_TOUCH_INTERVAL_MS } from './models';
 import { SessionService } from './session.service';
 
@@ -22,16 +23,18 @@ const fakeDatabase = {
   withFallback: <T>(_operation: () => Promise<T>, _fallback: T) => Promise.resolve(true as T),
 } as unknown as DatabaseService;
 
+const fakeDeviceLogin = { recordLogin: () => Promise.resolve() } as unknown as DeviceLoginService;
+
 describe('SessionService.touch', () => {
   it('ничего не делает, если с прошлой записи прошло меньше часа', async () => {
-    const service = new SessionService(fakeDatabase);
+    const service = new SessionService(fakeDatabase, fakeDeviceLogin);
     const recent = { ...baseSession, lastSeenAt: new Date(Date.now() - 1000) };
 
     await expect(service.touch(recent)).resolves.toBeNull();
   });
 
   it('продлевает idle-сессию на SESSION_IDLE_MS от текущего момента', async () => {
-    const service = new SessionService(fakeDatabase);
+    const service = new SessionService(fakeDatabase, fakeDeviceLogin);
     const stale = {
       ...baseSession,
       remember: false,
@@ -46,7 +49,7 @@ describe('SessionService.touch', () => {
   });
 
   it('remember-сессию продлевает на куда больший SESSION_REMEMBER_MS', async () => {
-    const service = new SessionService(fakeDatabase);
+    const service = new SessionService(fakeDatabase, fakeDeviceLogin);
     const stale = {
       ...baseSession,
       remember: true,
@@ -65,7 +68,7 @@ describe('SessionService.touch', () => {
         Promise.resolve(fallback),
       ),
     } as unknown as DatabaseService;
-    const service = new SessionService(unavailable);
+    const service = new SessionService(unavailable, fakeDeviceLogin);
     const stale = {
       ...baseSession,
       lastSeenAt: new Date(Date.now() - SESSION_TOUCH_INTERVAL_MS - 1),

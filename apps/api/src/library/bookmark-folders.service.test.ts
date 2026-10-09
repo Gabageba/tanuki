@@ -11,6 +11,8 @@ import {
   BuiltInBookmarkFolderReadonlyException,
 } from '../common/errors';
 import type { DatabaseService } from '../database/database.service';
+import type { TitleLinksService } from '../matches/title-links.service';
+import type { NotificationsService } from '../notifications/notifications.service';
 import { bookmarkFolders, bookmarks } from '../database/schema';
 import {
   BookmarkFoldersService,
@@ -60,9 +62,24 @@ const createService = () => {
     },
   };
   const database = {
-    db: { transaction: (callback: (value: typeof tx) => Promise<void>) => callback(tx) },
+    db: {
+      transaction: (callback: (value: typeof tx) => Promise<void>) => callback(tx),
+      // Закладки папки: ключи, у которых надо убрать «новые главы» из ленты.
+      select: () => ({ from: () => ({ where: () => Promise.resolve([{ titleKey: 'a:/one' }]) }) }),
+    },
   } as unknown as DatabaseService;
-  return { service: new BookmarkFoldersService(database), calls };
+  const removeNewChapters = vi.fn().mockResolvedValue(undefined);
+  return {
+    service: new BookmarkFoldersService(
+      database,
+      {
+        listCanonicalKeys: async () => new Map([['a:/one', 'b:/one']]),
+      } as unknown as TitleLinksService,
+      { removeNewChapters } as unknown as NotificationsService,
+    ),
+    calls,
+    removeNewChapters,
+  };
 };
 
 describe('правила папок', () => {
@@ -166,5 +183,35 @@ describe('BookmarkFoldersService', () => {
       [bookmarks, 'delete'],
       [bookmarkFolders, 'delete'],
     ]);
+  });
+
+  it('удаляя папку без moveTo, убирает новые главы её закладок из ленты', async () => {
+    const { service, removeNewChapters } = createService();
+    vi.spyOn(service, 'get').mockResolvedValue(folder({ id: 'folder' }));
+
+    await service.delete('user', 'folder', undefined);
+
+    expect(removeNewChapters).toHaveBeenCalledWith('user', ['a:/one', 'b:/one']);
+  });
+
+  it('перенос в папку со слежением ленту не трогает', async () => {
+    const { service, removeNewChapters } = createService();
+    vi.spyOn(service, 'get').mockImplementation((_, id) =>
+      Promise.resolve(folder({ id, trackUpdates: true })),
+    );
+
+    await service.delete('user', 'folder', 'planned');
+
+    expect(removeNewChapters).not.toHaveBeenCalled();
+  });
+
+  it('выключая слежение, убирает новые главы закладок папки из ленты', async () => {
+    const { service, removeNewChapters } = createService();
+    vi.spyOn(service, 'get').mockResolvedValue(folder({ id: 'folder' }));
+    (service as unknown as { runUnique: unknown }).runUnique = () => Promise.resolve([folder({})]);
+
+    await service.update('user', 'folder', { trackUpdates: false });
+
+    expect(removeNewChapters).toHaveBeenCalledWith('user', ['a:/one', 'b:/one']);
   });
 });

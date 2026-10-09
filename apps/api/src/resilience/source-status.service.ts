@@ -4,6 +4,7 @@ import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { DatabaseService } from '../database/database.service';
 import { sourceHealth } from '../database/schema';
+import { SourceStatusNotifierService } from '../notifications/source-status-notifier.service';
 import { defaultStatusEntry, type SourceStatusEntry } from './models';
 
 /**
@@ -31,6 +32,7 @@ export class SourceStatusService implements OnModuleInit {
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly database: DatabaseService,
+    private readonly notifier: SourceStatusNotifierService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -163,6 +165,7 @@ export class SourceStatusService implements OnModuleInit {
 
     if (next.status !== previous.status) {
       this.logger.log(`Источник ${sourceId}: ${previous.status} → ${next.status} (${next.reason})`);
+      void this.notifier.onStatusChanged(sourceId, previous.status, next.status, next.reason);
     }
 
     void this.persist(sourceId, { ...next, statusChangedAt });

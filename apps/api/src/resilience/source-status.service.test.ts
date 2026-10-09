@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOURCE_STATUS, SOURCE_STATUS_REASON } from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import type { DatabaseService } from '../database/database.service';
+import type { SourceStatusNotifierService } from '../notifications/source-status-notifier.service';
 import { SourceStatusService } from './source-status.service';
 
 const SOURCE = 'readmanga_ru';
@@ -23,9 +24,26 @@ const databaseStub = {
 
 describe('SourceStatusService', () => {
   let service: SourceStatusService;
+  const onStatusChanged = vi.fn();
 
   beforeEach(() => {
-    service = new SourceStatusService(env, databaseStub);
+    onStatusChanged.mockReset();
+    service = new SourceStatusService(env, databaseStub, {
+      onStatusChanged,
+    } as unknown as SourceStatusNotifierService);
+  });
+
+  it('сообщает уведомлениям только о смене статуса', () => {
+    service.markDegraded(SOURCE, SOURCE_STATUS_REASON.REQUEST_FAILURES, 'boom');
+    service.markDegraded(SOURCE, SOURCE_STATUS_REASON.REQUEST_FAILURES, 'boom again');
+
+    expect(onStatusChanged).toHaveBeenCalledTimes(1);
+    expect(onStatusChanged).toHaveBeenCalledWith(
+      SOURCE,
+      SOURCE_STATUS.OK,
+      SOURCE_STATUS.DEGRADED,
+      SOURCE_STATUS_REASON.REQUEST_FAILURES,
+    );
   });
 
   it('считает источник рабочим, пока о нём ничего не известно', () => {

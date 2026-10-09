@@ -9,6 +9,7 @@ import { BookmarkFolderConflictException } from '../common/errors';
 import type { Env } from '../config/env';
 import type { DatabaseService } from '../database/database.service';
 import type { TitleLinksService } from '../matches/title-links.service';
+import type { NotificationsService } from '../notifications/notifications.service';
 import type { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { SourcesService } from '../sources/sources.service';
 import type { BookmarkFoldersService } from './bookmark-folders.service';
@@ -35,7 +36,7 @@ const row = (titleKey: string, folderId: string): BookmarkRecord => ({
 /** База отдаёт строки закладок группы на первое чтение, а записи запоминает. */
 const createService = (groupRows: BookmarkRecord[]) => {
   const withFallback = vi.fn().mockResolvedValueOnce(groupRows).mockResolvedValue(undefined);
-  const folders = { get: vi.fn().mockResolvedValue({ id: 'reading' }) };
+  const folders = { get: vi.fn().mockResolvedValue({ id: 'reading', trackUpdates: true }) };
   const service = new BookmarksService(
     {} as Env,
     { withFallback } as unknown as DatabaseService,
@@ -44,6 +45,7 @@ const createService = (groupRows: BookmarkRecord[]) => {
     {} as TitleSnapshotsService,
     {} as SourcesService,
     {} as ParsersClientService,
+    { removeNewChapters: () => Promise.resolve() } as unknown as NotificationsService,
   );
   return { service, withFallback, folders };
 };

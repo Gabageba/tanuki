@@ -1,7 +1,12 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, desc, eq, gt, inArray, isNull } from 'drizzle-orm';
-import { EMAIL_CHANGE_CODE_LENGTH, type CurrentUser, type Language } from '@tanuki/contracts';
+import {
+  EMAIL_CHANGE_CODE_LENGTH,
+  NOTIFICATION_TYPE,
+  type CurrentUser,
+  type Language,
+} from '@tanuki/contracts';
 import {
   ApiException,
   BadRequestApiException,
@@ -18,6 +23,7 @@ import { DatabaseService } from '../database/database.service';
 import { getUniqueViolation } from '../database/pg-error.util';
 import { emailTokens, users } from '../database/schema';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RATE_LIMIT } from '../rate-limit/models';
 import { RateLimitService } from '../rate-limit/rate-limit.service';
 import { assertNotBlocked, toCurrentUser } from '../users/users.util';
@@ -57,6 +63,7 @@ export class AccountService {
     private readonly sessionService: SessionService,
     private readonly mailService: MailService,
     private readonly rateLimit: RateLimitService,
+    private readonly notifications: NotificationsService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -163,6 +170,7 @@ export class AccountService {
       case EMAIL_CODE_RESULT.EXPIRED:
         throw new CodeInvalidException('codeExpiredRequestNew');
       case EMAIL_CODE_RESULT.APPLIED:
+        await this.notifications.notifyEvent(user.id, NOTIFICATION_TYPE.EMAIL_CHANGED);
         await this.trySend('о смене почты', user.email, () =>
           this.mailService.sendEmailChanged(
             user.email,
@@ -258,6 +266,7 @@ export class AccountService {
     }
 
     await this.sessionService.revokeAllForUser(user.id);
+    await this.notifications.notifyEvent(user.id, NOTIFICATION_TYPE.DELETION_REQUESTED);
     await this.trySend('о запланированном удалении', user.email, () =>
       this.mailService.sendAccountDeletionScheduled(
         user.email,

@@ -18,6 +18,8 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { getUniqueViolation } from '../database/pg-error.util';
 import { bookmarkFolders, bookmarks } from '../database/schema';
+import { TitleLinksService } from '../matches/title-links.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { BUILT_IN_BOOKMARK_FOLDER_NAMES } from './models';
 
 export type BookmarkFolderRecord = typeof bookmarkFolders.$inferSelect;
@@ -50,7 +52,11 @@ export const isCompleteOrder = (ids: string[], folderIds: string[]) =>
  */
 @Injectable()
 export class BookmarkFoldersService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly links: TitleLinksService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /** Папки по порядку вкладок. Встроенные создаются здесь, при первом обращении. */
   async list(userId: string): Promise<BookmarkFolderRecord[]> {
@@ -114,6 +120,9 @@ export class BookmarkFoldersService {
         .where(eq(bookmarkFolders.id, folder.id))
         .returning(),
     );
+    if (body.trackUpdates === false) {
+      await this.dropNewChapters(userId, await this.listTitleKeys(userId, folder.id));
+    }
     return updated!;
   }
 
@@ -146,6 +155,9 @@ export class BookmarkFoldersService {
     if (folder.builtIn !== null) throw new BuiltInBookmarkFolderReadonlyException();
     if (moveTo === folder.id) throw new BadRequestApiException();
     const target = moveTo === undefined ? null : await this.get(userId, moveTo);
+    // Закладки уходят из слежения: удаляются вместе с папкой или переезжают в папку без неё.
+    const unwatchedKeys =
+      target?.trackUpdates === true ? [] : await this.listTitleKeys(userId, folder.id);
 
     await this.run(() =>
       this.database.db.transaction(async (tx) => {
@@ -161,6 +173,27 @@ export class BookmarkFoldersService {
         await tx.delete(bookmarkFolders).where(eq(bookmarkFolders.id, folder.id));
       }),
     );
+    await this.dropNewChapters(userId, unwatchedKeys);
+  }
+
+  /** Ключи тайтлов закладок папки. */
+  private async listTitleKeys(userId: string, folderId: string): Promise<string[]> {
+    const rows = await this.run(() =>
+      this.database.db
+        .select({ titleKey: bookmarks.titleKey })
+        .from(bookmarks)
+        .where(and(eq(bookmarks.userId, userId), eq(bookmarks.folderId, folderId))),
+    );
+    return rows.map(({ titleKey }) => titleKey);
+  }
+
+  /** Убирает «новые главы» этих закладок из ленты: за ними больше не следят. */
+  private async dropNewChapters(userId: string, titleKeys: string[]): Promise<void> {
+    if (titleKeys.length === 0) return;
+    const canonical = await this.links.listCanonicalKeys(titleKeys);
+    await this.notifications.removeNewChapters(userId, [
+      ...new Set([...titleKeys, ...canonical.values()]),
+    ]);
   }
 
   /**

@@ -14,10 +14,12 @@ import {
   titleChapterSnapshots,
 } from '../database/schema';
 import { parseLinkKey, TitleLinksService } from '../matches/title-links.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import { runAsService } from '../source-accounts/viewer-context';
 import { SourcesService } from '../sources/sources.service';
 import { BOOKMARK_SNAPSHOTS_CLEANUP_JOB_NAME, BOOKMARK_UPDATES_JOB_NAME } from './models';
+import { BookmarksService } from './bookmarks.service';
 import { TitleSnapshotsService } from './title-snapshots.service';
 
 type UserKey = { userId: string; titleKey: string };
@@ -58,6 +60,8 @@ export const orderByStaleness = (keys: string[], checkedAt: Map<string, Date>): 
 export class BookmarkUpdatesService implements OnModuleInit {
   private readonly logger = new Logger(BookmarkUpdatesService.name);
   private isRunning = false;
+  /** Когда в прошлый раз сводили ленту «новых глав»; в памяти, после рестарта пусто. */
+  private lastNotifiedAt: Date | null = null;
 
   constructor(
     @Inject(ENV) private readonly env: Env,
@@ -66,6 +70,8 @@ export class BookmarkUpdatesService implements OnModuleInit {
     private readonly parsersClient: ParsersClientService,
     private readonly sources: SourcesService,
     private readonly snapshots: TitleSnapshotsService,
+    private readonly bookmarksService: BookmarksService,
+    private readonly notifications: NotificationsService,
     private readonly scheduler: SchedulerRegistry,
   ) {}
 
@@ -108,6 +114,7 @@ export class BookmarkUpdatesService implements OnModuleInit {
         }
       });
       await Promise.all(workers);
+      await this.notifyUsers(new Date(startedAt));
 
       const elapsed = Math.round((Date.now() - startedAt) / 1000);
       this.logger.log(`Проверка закладок закончилась за ${elapsed}с`);
@@ -125,6 +132,34 @@ export class BookmarkUpdatesService implements OnModuleInit {
     } catch (error) {
       this.logger.warn(`Чистка снимков глав упала: ${(error as Error).message}`);
     }
+  }
+
+  /**
+   * После прохода: каждому, кто следит за обновлениями, сводится лента «новых глав». Считает
+   * тот же код, что рисует карточки закладок, так что лента и точка на закладках не расходятся.
+   */
+  private async notifyUsers(runStartedAt: Date): Promise<void> {
+    // Главы, увиденные после прошлого сведения, — новые, кто бы их ни записал (крон, каталог,
+    // визит). После рестарта прошлого сведения нет: берём начало этого прохода.
+    const since = this.lastNotifiedAt ?? runStartedAt;
+    const notifiedAt = new Date();
+    const rows = await this.database.db
+      .selectDistinct({ userId: bookmarks.userId })
+      .from(bookmarks)
+      .innerJoin(bookmarkFolders, eq(bookmarkFolders.id, bookmarks.folderId))
+      .where(eq(bookmarkFolders.trackUpdates, true));
+
+    for (const { userId } of rows) {
+      try {
+        const snapshot = await runAsService(() =>
+          this.bookmarksService.listNewChaptersGroups(userId),
+        );
+        await this.notifications.syncNewChapters(userId, snapshot, since);
+      } catch (error) {
+        this.logger.warn(`Новые главы ${userId}: ${(error as Error).message}`);
+      }
+    }
+    this.lastNotifiedAt = notifiedAt;
   }
 
   private async buildQueue(): Promise<string[]> {

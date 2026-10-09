@@ -86,6 +86,12 @@ const EnvSchema = z.object({
     .string()
     .default('true')
     .transform((value) => value !== 'false'),
+  // Web Push (NotificationsModule). Без пары ключей push на инстансе выключен: лента и бейдж
+  // работают, а блок push нигде не показывается. Пара: `npx web-push generate-vapid-keys`.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  // mailto: или https://-адрес, по которому push-сервис может связаться с владельцем инстанса.
+  VAPID_SUBJECT: z.string().default('mailto:admin@tanuki.local'),
   SEARCH_TIMEOUT_MS: z.coerce.number().default(5_000),
   // Заметно больше, чем у поиска: матчинг опрашивает два десятка источников в двух волнах и
   // добирает детали, а результат кешируется на часы. Пользователя он при этом не блокирует —

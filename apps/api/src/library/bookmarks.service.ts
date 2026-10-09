@@ -29,6 +29,8 @@ import { bookmarks, readingProgress, titleChapterSnapshots } from '../database/s
 import { IMAGE_FORMAT } from '../img-proxy/models';
 import { buildSignedImageUrl } from '../img-proxy/sign.util';
 import { linkKeyOf, TitleLinksService } from '../matches/title-links.service';
+import type { NewChaptersSnapshot } from '../notifications/models';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import { SourcesService } from '../sources/sources.service';
 import { BookmarkFoldersService } from './bookmark-folders.service';
@@ -85,6 +87,7 @@ export class BookmarksService {
     private readonly snapshots: TitleSnapshotsService,
     private readonly sources: SourcesService,
     private readonly parsersClient: ParsersClientService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Папки по порядку вкладок со счётчиками — для вкладок, профиля и точки в шапке. */
@@ -190,6 +193,7 @@ export class BookmarksService {
         .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.titleKey, groupKeys)))
         .returning(),
     );
+    await this.notifications.removeNewChapters(userId, groupKeys);
     return removed.map(toBookmarkRow);
   }
 
@@ -341,6 +345,37 @@ export class BookmarksService {
 
     await this.folders.get(userId, folderId);
     return () => this.moveRows(userId, keys, folderId);
+  }
+
+  /** Группы закладок с новыми главами — из них крон строит уведомления. */
+  async listNewChaptersGroups(userId: string): Promise<NewChaptersSnapshot> {
+    const { folders, groups } = await this.loadGroups(userId);
+    const trackedFolders = new Set(
+      folders.filter(({ trackUpdates }) => trackUpdates).map(({ id }) => id),
+    );
+    return {
+      groups: groups
+        .filter(({ newChaptersCount }) => newChaptersCount > 0)
+        .map((group) => ({
+          key: group.key,
+          titleId: group.target.titleId,
+          sourceId: group.target.sourceId,
+          name: group.snapshot.name,
+          coverUrl: group.snapshot.coverUrl,
+          coverSourceId: group.snapshot.sourceId,
+          count: group.newChaptersCount,
+          latestNewAt: group.latestNewAt,
+        })),
+      // Источник лёг или выключен — счётчик обнулился, но главы не прочитаны.
+      heldKeys: groups
+        .filter(
+          ({ newChaptersCount, target, folderIds }) =>
+            newChaptersCount === 0 &&
+            target.availability !== BOOKMARK_AVAILABILITY.AVAILABLE &&
+            folderIds.some((id) => trackedFolders.has(id)),
+        )
+        .map(({ key }) => key),
+    };
   }
 
   /** Все группы пользователя с посчитанными главами — основа списка и счётчиков. */
@@ -552,6 +587,14 @@ export class BookmarksService {
         .set({ folderId, updatedAt: sql`now()` })
         .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.titleKey, keys))),
     );
+    // В папке без слежения «новые главы» не показываются — из ленты они уходят сразу.
+    const folder = await this.folders.get(userId, folderId);
+    if (!folder.trackUpdates) {
+      const canonical = await this.links.listCanonicalKeys(keys);
+      await this.notifications.removeNewChapters(userId, [
+        ...new Set([...keys, ...canonical.values()]),
+      ]);
+    }
   }
 
   private async touchGroup(userId: string, keys: string[]): Promise<void> {
@@ -561,6 +604,8 @@ export class BookmarksService {
         .set({ visitedAt: sql`now()` })
         .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.titleKey, keys))),
     );
+    // Визит прочитывает «новые главы» группы.
+    await this.notifications.removeNewChapters(userId, keys);
   }
 
   /** Чтение деградирует до пустого результата, как прогресс чтения на мёртвой базе. */

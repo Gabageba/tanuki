@@ -12,6 +12,7 @@ import { ImgProxyModule } from './img-proxy/img-proxy.module';
 import { InvitesModule } from './invites/invites.module';
 import { LibraryModule } from './library/library.module';
 import { MatchesModule } from './matches/matches.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { ReaderSettingsModule } from './reader-settings/reader-settings.module';
 import { ReadingProgressModule } from './reading-progress/reading-progress.module';
 import { ReadingStatisticsModule } from './reading-statistics/reading-statistics.module';
@@ -45,6 +46,7 @@ import { ViewerContextInterceptor } from './source-accounts/viewer-context.inter
     ReadingProgressModule,
     ReadingStatisticsModule,
     LibraryModule,
+    NotificationsModule,
     UserSettingsModule,
     UsersModule,
     SourceAccountsModule,
