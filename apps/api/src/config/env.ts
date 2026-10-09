@@ -28,6 +28,10 @@ const EnvSchema = z.object({
   // member-only chapters, so without these ALLHENTAI is unusable rather than degraded.
   ALLHENTAI_USERNAME: z.string().optional(),
   ALLHENTAI_PASSWORD: z.string().optional(),
+  // Nude-Moon service account for background work: the site serves title search only to a
+  // logged-in session. Viewers search through their own linked account, never through this one.
+  NUDEMOON_USERNAME: z.string().optional(),
+  NUDEMOON_PASSWORD: z.string().optional(),
   // LibSocial (MANGALIB/HENTAILIB/YAOILIB): login is reCAPTCHA-gated and can't be automated
   // in-process (see sources/libsocial/auth.ts) — a human runs
   // `pnpm --filter @tanuki/parsers login:libsocial <SOURCE_ID>` once via a real (Playwright)

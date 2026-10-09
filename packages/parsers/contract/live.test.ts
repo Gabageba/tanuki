@@ -41,10 +41,7 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   // source if that directory/token isn't configured for this run.
   SOURCE_ID.HENTAILIB,
   SOURCE_ID.MANGACHAN,
-  // HENCHAN intentionally excluded: marked broken (`isBroken: true` in source-catalog.ts) —
-  // domains[0] redirects to a dead 404, every other listed mirror sits behind a FingerprintJS
-  // antibot gate no undici client passes. Verified live 2026-09-09.
-  //
+  SOURCE_ID.HENCHAN,
   // YAOICHAN intentionally excluded: marked broken (`isBroken: true` in source-catalog.ts) —
   // every request times out at the connect/TLS stage, reproduces from multiple networks.
   //
@@ -103,6 +100,10 @@ const registry = createRegistry({
             username: process.env['ALLHENTAI_USERNAME'],
             password: process.env['ALLHENTAI_PASSWORD'],
           }
+        : undefined,
+    nudemoon:
+      process.env['NUDEMOON_USERNAME'] && process.env['NUDEMOON_PASSWORD']
+        ? { username: process.env['NUDEMOON_USERNAME'], password: process.env['NUDEMOON_PASSWORD'] }
         : undefined,
     // Same default as apps/api/src/config/env.ts, so the token written by
     // `login:libsocial` is picked up here without a separate LIBSOCIAL_TOKEN_STORE_DIR entry.

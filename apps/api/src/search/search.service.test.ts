@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   SEARCH_GROUP_STATUS,
   SOURCE_ACCESS,
+  SOURCE_LOGIN_BENEFIT,
   SEARCH_FILTER_GROUP,
   SOURCE_STATUS,
   TITLE_TYPE,
@@ -23,6 +24,8 @@ const source = (id: string, overrides: Partial<Source> = {}) =>
     status: SOURCE_STATUS.OK,
     access: SOURCE_ACCESS.AVAILABLE,
     isSearchWithFiltersSupported: true,
+    loginBenefits: [],
+    isLoggedIn: false,
     ...overrides,
   }) as Source;
 
@@ -69,6 +72,22 @@ describe('SearchService', () => {
     expect(listCatalog).toHaveBeenCalledTimes(1);
   });
 
+  it('источник, где поиск только для вошедших, без аккаунта закрыт и не опрашивается', async () => {
+    const searchBenefit = { loginBenefits: [SOURCE_LOGIN_BENEFIT.TITLE_SEARCH] };
+    const { service, listCatalog } = createService(
+      [source('a', searchBenefit), source('b', { ...searchBenefit, isLoggedIn: true })],
+      { b: [title('b1')] },
+    );
+
+    const { groups } = await service.search({ query: 'q', limit: 10, userId: 'user' });
+
+    expect(groups.map(({ sourceId, status }) => [sourceId, status])).toEqual([
+      ['a', SEARCH_GROUP_STATUS.LOCKED],
+      ['b', SEARCH_GROUP_STATUS.OK],
+    ]);
+    expect(listCatalog).toHaveBeenCalledTimes(1);
+  });
+
   it('обрезает выдачу источника до лимита', async () => {
     const { service } = createService([source('a')], {
       a: [title('a1'), title('a2'), title('a3')],
@@ -105,6 +124,7 @@ describe('SearchService', () => {
 
     expect(listCatalog).toHaveBeenCalledWith('a', {
       page: 0,
+      limit: 10,
       query: 'q',
       filters: [{ groupId: 'type', key: 'm' }],
     });
@@ -125,7 +145,12 @@ describe('SearchService', () => {
     });
 
     expect(resolveSearchFilters).not.toHaveBeenCalled();
-    expect(listCatalog).toHaveBeenCalledWith('a', { page: 0, query: 'q', filters: undefined });
+    expect(listCatalog).toHaveBeenCalledWith('a', {
+      page: 0,
+      limit: 10,
+      query: 'q',
+      filters: undefined,
+    });
     expect(groups[0]?.unappliedFilters).toEqual([SEARCH_FILTER_GROUP.TYPES]);
   });
 

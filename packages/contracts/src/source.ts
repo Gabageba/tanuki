@@ -96,13 +96,15 @@ export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 
 /**
  * Аккаунт, которым пользователь открывает источник. Одна учётка обслуживает всё семейство:
- * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у LibSocial — аккаунт lib.social.
- * Источник с семейством закрыт для пользователя, пока тот не привяжет свой аккаунт.
+ * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у LibSocial — аккаунт lib.social,
+ * у Nude-Moon — аккаунт самого сайта. Что именно без аккаунта закрыто — loginRequirement и
+ * loginBenefits источника.
  */
 export const SOURCE_AUTH_FAMILY = {
   GROUPLE: 'grouple',
   ALLHENTAI: 'allhentai',
   LIBSOCIAL: 'libsocial',
+  NUDEMOON: 'nudemoon',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 
@@ -127,6 +129,8 @@ export const SOURCE_LOGIN_BENEFIT = {
   MEMBER_CHAPTERS: 'memberChapters',
   /** Главы, купленные этим аккаунтом. */
   PURCHASED_CHAPTERS: 'purchasedChapters',
+  /** Поиск по названию: сайт отдаёт его только вошедшим — без аккаунта источник в поиске закрыт. */
+  TITLE_SEARCH: 'titleSearch',
 } as const;
 export type SourceLoginBenefit = EnumLiteralsOf<typeof SOURCE_LOGIN_BENEFIT>;
 export const SourceLoginBenefitSchema = z.enum(SOURCE_LOGIN_BENEFIT);

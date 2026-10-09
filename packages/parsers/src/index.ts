@@ -42,6 +42,7 @@ export {
   type SourceId,
   type SourceDescriptor,
   type ParsersRegistry,
+  type PasswordAuthFamily,
   type RegistryOptions,
 } from './registry';
 

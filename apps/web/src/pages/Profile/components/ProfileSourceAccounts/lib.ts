@@ -19,6 +19,8 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
       return 'AllHentai';
     case SOURCE_AUTH_FAMILY.LIBSOCIAL:
       return 'LibSocial';
+    case SOURCE_AUTH_FAMILY.NUDEMOON:
+      return 'Nude-Moon';
   }
 };
 

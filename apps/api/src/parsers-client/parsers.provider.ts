@@ -21,6 +21,10 @@ export const parsersProvider: Provider = {
           env.ALLHENTAI_USERNAME && env.ALLHENTAI_PASSWORD
             ? { username: env.ALLHENTAI_USERNAME, password: env.ALLHENTAI_PASSWORD }
             : undefined,
+        nudemoon:
+          env.NUDEMOON_USERNAME && env.NUDEMOON_PASSWORD
+            ? { username: env.NUDEMOON_USERNAME, password: env.NUDEMOON_PASSWORD }
+            : undefined,
         libsocial: { tokenStoreDir: env.LIBSOCIAL_TOKEN_STORE_DIR },
       },
       timeouts: {

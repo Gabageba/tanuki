@@ -7,20 +7,24 @@ import CatalogContent from './components/content/CatalogContent';
 import { parseFilters } from '@/features/filters/lib/filterSelection';
 import { parseSortDirection, parseSortOrder } from './utils/sortOrder';
 import { getStoredViewMode } from '@/shared/lib/viewMode';
+import { isTitleSearchLocked } from '@/entities/source/lib';
 
 function Catalog() {
   const { sourceId } = useParams<{ sourceId: string }>();
   const { data: source, isPending: isSourcePending } = useSource({ sourceId });
   const [searchParams] = useSearchParams();
+  // Закрытый поиск не отправляет query из адреса (закладка, старая ссылка): каталог открывается
+  // без него. Параметры PageLayout берёт при монтировании, поэтому смена блокировки — новый key.
+  const isSearchLocked = isTitleSearchLocked(sourceId ?? '', source);
 
   return (
     <PageLayout
-      key={sourceId}
+      key={`${sourceId}:${isSearchLocked}`}
       useQuery={useCatalog}
       params={{
         sourceId: sourceId ?? '',
         // С /search «Все результаты» приходят сюда с тем же запросом.
-        query: searchParams.get('query') ?? undefined,
+        query: isSearchLocked ? undefined : (searchParams.get('query') ?? undefined),
         order: parseSortOrder(searchParams.get('order')),
         direction: parseSortDirection(searchParams.get('direction')),
         filters: parseFilters(searchParams.getAll('filters')),

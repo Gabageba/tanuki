@@ -193,24 +193,14 @@ export const SOURCE_CATALOG = {
   henchan: {
     title: 'Хентай-тян',
     contentType: SOURCE_CONTENT_TYPE.HENTAI,
-    // Проверено вживую 9 сентября 2026: domains[0] (x5.h-chan.me) редиректит на x1.h-chan.me,
-    // который отдаёт 404 на каталог; остальные зеркала в списке формально живы (200), но за
-    // FingerprintJS-гейтом (JS-редирект по результату фингерпринта) — то же самое, о чём уже
-    // предупреждает комментарий у chanSortField в sources/chan/engine.ts. Ни одно зеркало из
-    // списка сейчас не читается undici-клиентом, поэтому источник — как YAOICHAN/COMX/ACOMICS.
-    isBroken: true,
+    // Проверено вживую 10 октября 2026: сайт переехал на hentaichan.live — отдаётся напрямую, без
+    // FingerprintJS-гейта (каталог, поиск, теги, страница тайтла и читалка читаются undici-клиентом).
+    // Часть ссылок на страницах абсолютные на x14.h-chan.me — он тоже жив. Старые зеркала
+    // (x5.h-chan.me, *.henchan.pro, поддомены hentaichan.live) убраны: редиректят на 404 или за гейтом.
+    isBroken: false,
     isAdult: true,
     requiresVpn: true,
-    domains: [
-      'x5.h-chan.me',
-      'xxxx.henchan.pro',
-      'xxl.hentaichan.live',
-      'xxx.henchan.pro',
-      'y.hentaichan.live',
-      'xx.hentaichan.live',
-      'x.henchan.pro',
-      'hentaichan.live',
-    ],
+    domains: ['hentaichan.live', 'x14.h-chan.me'],
     color: '#9EBE75',
     authFamily: null,
     loginRequirement: null,
@@ -255,9 +245,11 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['g.nude-moon.fun', 'nude-moon.net', 'nude-moon.org', 'b.nude-moon.fun'],
     color: '#ED0102',
-    authFamily: null,
-    loginRequirement: null,
-    loginBenefits: [],
+    // Каталог и чтение открыты гостю, а поиск по названию сайт отдаёт только вошедшим
+    // (гостя /search редиректит на /error.php — проверено вживую 10 октября 2026).
+    authFamily: SOURCE_AUTH_FAMILY.NUDEMOON,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
+    loginBenefits: [SOURCE_LOGIN_BENEFIT.TITLE_SEARCH],
   },
   acomics: {
     title: 'AComics',

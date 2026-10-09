@@ -3,6 +3,7 @@ import { unappliedSearchFilters } from '@tanuki/parsers';
 import {
   SEARCH_GROUP_STATUS,
   SOURCE_ACCESS,
+  SOURCE_LOGIN_BENEFIT,
   SOURCE_STATUS,
   type SearchGroup,
   type SearchResponse,
@@ -32,6 +33,10 @@ export type SearchParams = {
 const getSkippedStatus = (source: Source) => {
   // Закрытые для пользователя источники не опрашиваются — у него нет на них аккаунта.
   if (source.access !== SOURCE_ACCESS.AVAILABLE) return SEARCH_GROUP_STATUS.LOCKED;
+  // Источник открыт и без аккаунта, но сам поиск по названию сайт отдаёт только вошедшим.
+  if (source.loginBenefits.includes(SOURCE_LOGIN_BENEFIT.TITLE_SEARCH) && !source.isLoggedIn) {
+    return SEARCH_GROUP_STATUS.LOCKED;
+  }
   // Заведомо нездоровый источник отъел бы общий дедлайн у живых (см. listSearchableSources).
   if (source.status !== SOURCE_STATUS.OK) return SEARCH_GROUP_STATUS.UNAVAILABLE;
   return undefined;
@@ -81,6 +86,7 @@ export class SearchService {
             const catalog = await Promise.race([
               this.catalogService.listCatalog(sourceId, {
                 page: 0,
+                limit,
                 query,
                 filters: filters.length ? filters : undefined,
               }),
