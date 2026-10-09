@@ -233,3 +233,52 @@ describe('NotificationsService.syncNewChapters', () => {
     expect(build('ru').body).toBe(`Новые главы в ${NEW_CHAPTERS_PUSH_LIMIT + 1} тайтлах`);
   });
 });
+
+describe('NotificationsService: фильтр по нескольким категориям', () => {
+  const createFilterService = () => {
+    const del = vi.fn().mockReturnValue(chain([]));
+    const select = vi.fn().mockReturnValue(chain([]));
+    const service = new NotificationsService(
+      { IMG_SIGN_SECRET: 'secret-secret-secret' } as Env,
+      {
+        db: { select, delete: del },
+        withFallback: async (run: () => unknown) => run(),
+      } as unknown as DatabaseService,
+      { publish: vi.fn() } as unknown as NotificationsHubService,
+      {} as unknown as PushService,
+    );
+    return { service, del, select };
+  };
+  const viewer = { id: 'user', role: USER_ROLE.USER };
+
+  it('убрать все: пара категорий удаляет записи', async () => {
+    const { service, del } = createFilterService();
+
+    await service.removeAll(viewer, [
+      NOTIFICATION_CATEGORY.CHAPTERS,
+      NOTIFICATION_CATEGORY.ACCOUNT,
+    ]);
+
+    expect(del).toHaveBeenCalledOnce();
+  });
+
+  it('чужая категория «Администрирование» обычному пользователю ничего не удаляет', async () => {
+    const { service, del } = createFilterService();
+
+    await service.removeAll(viewer, [NOTIFICATION_CATEGORY.ADMINISTRATION]);
+
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it('список по чужой категории пуст, а не ошибка', async () => {
+    const { service, select } = createFilterService();
+
+    const page = await service.list(viewer, {
+      category: [NOTIFICATION_CATEGORY.ADMINISTRATION],
+      page: 1,
+    });
+
+    expect(page).toEqual({ items: [], page: 1, total: 0 });
+    expect(select).not.toHaveBeenCalled();
+  });
+});

@@ -132,9 +132,15 @@ export const NotificationItemSchema = z.discriminatedUnion('type', [
 ]);
 export type NotificationItem = z.infer<typeof NotificationItemSchema>;
 
+/** Список категорий в адресе: `?category=chapters,account`. Пусто — все доступные. */
+const CategoriesParamSchema = z.preprocess(
+  (value) => (typeof value === 'string' ? value.split(',').filter(Boolean) : value),
+  z.array(NotificationCategorySchema).optional(),
+);
+
 export const NotificationsQuerySchema = z.object({
   /** Нет — все доступные категории. */
-  category: NotificationCategorySchema.optional(),
+  category: CategoriesParamSchema,
   /** С единицы. */
   page: z.coerce.number().int().min(1).default(1),
 });
@@ -148,7 +154,7 @@ export const NotificationsPageSchema = z.object({
 export type NotificationsPage = z.infer<typeof NotificationsPageSchema>;
 
 export const DeleteNotificationsQuerySchema = z.object({
-  category: NotificationCategorySchema.optional(),
+  category: CategoriesParamSchema,
 });
 export type DeleteNotificationsQuery = z.infer<typeof DeleteNotificationsQuerySchema>;
 

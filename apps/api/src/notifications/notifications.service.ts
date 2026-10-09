@@ -120,7 +120,7 @@ export class NotificationsService {
   }
 
   /** «Прочитано» всего, что видно с учётом категории. */
-  async removeAll(viewer: NotificationViewer, category: NotificationCategory | undefined) {
+  async removeAll(viewer: NotificationViewer, category: NotificationCategory[] | undefined) {
     const types = this.typesFor(viewer.role, category);
     if (types.length === 0) return;
 
@@ -272,10 +272,13 @@ export class NotificationsService {
     }, false);
   }
 
-  private typesFor(role: UserRole, category: NotificationCategory | undefined): NotificationType[] {
+  private typesFor(
+    role: UserRole,
+    categories: NotificationCategory[] | undefined,
+  ): NotificationType[] {
     const visible = getVisibleNotificationTypes(role);
-    if (!category) return visible;
-    return visible.filter((type) => getNotificationCategory(type) === category);
+    if (!categories || categories.length === 0) return visible;
+    return visible.filter((type) => categories.includes(getNotificationCategory(type)));
   }
 
   private toItem(record: NotificationRecord): NotificationItem {

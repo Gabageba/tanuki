@@ -17,6 +17,10 @@ const sourceTitle = (sourceId: unknown): string => {
   }
 };
 
+/** Карточка источника на «Здоровье источников» (`getSourcesHealthPath` во фронте). */
+const sourcesHealthUrl = (sourceId: unknown): string =>
+  `/sources/health?source=${encodeURIComponent(text(sourceId))}`;
+
 /** «3 новые главы» / «3 new chapters»: склонение по правилам языка. */
 const formatNewChapters = (count: number, language: Language): string => {
   if (language === LANGUAGE.EN) return `${count} new chapter${count === 1 ? '' : 's'}`;
@@ -61,7 +65,7 @@ export const buildPushMessage = (source: PushSource, language: Language): PushMe
         body: isRu
           ? 'Аккаунт будет удалён, если вы не отмените удаление'
           : 'The account will be deleted unless you cancel',
-        url: '/account-deletion-scheduled',
+        url: '/profile?tab=signInAndSecurity',
       };
     case NOTIFICATION_TYPE.NEW_DEVICE_LOGIN:
       return {
@@ -75,28 +79,28 @@ export const buildPushMessage = (source: PushSource, language: Language): PushMe
         ...base,
         title: sourceTitle(payload['sourceId']),
         body: isRu ? 'Источник не отвечает' : 'The source is not responding',
-        url: '/settings?tab=sources',
+        url: sourcesHealthUrl(payload['sourceId']),
       };
     case NOTIFICATION_TYPE.SOURCE_RECOVERED:
       return {
         ...base,
         title: sourceTitle(payload['sourceId']),
         body: isRu ? 'Источник снова работает' : 'The source is working again',
-        url: '/settings?tab=sources',
+        url: sourcesHealthUrl(payload['sourceId']),
       };
     case NOTIFICATION_TYPE.PARSER_DOWN:
       return {
         ...base,
         title: sourceTitle(payload['sourceId']),
         body: isRu ? 'Парсер перестал работать' : 'The parser is down',
-        url: '/sources/health',
+        url: sourcesHealthUrl(payload['sourceId']),
       };
     case NOTIFICATION_TYPE.PARSER_RECOVERED:
       return {
         ...base,
         title: sourceTitle(payload['sourceId']),
         body: isRu ? 'Парсер снова работает' : 'The parser is working again',
-        url: '/sources/health',
+        url: sourcesHealthUrl(payload['sourceId']),
       };
     case NOTIFICATION_TYPE.INVITE_USED:
       return {
