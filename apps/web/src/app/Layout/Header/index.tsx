@@ -3,11 +3,11 @@ import { Link } from 'react-router';
 import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import LogoHorizontal from './LogoHorizontal';
-import DesktopNavigateButton from './components/DesktopNavigateButton';
 import Avatar from './components/Avatar';
 import DesktopSourceSelect from './components/DesktopSourceSelect';
 import HeaderSearch from './components/HeaderSearch';
 import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
+import UnreadNotificationsIndicator from '@/entities/notification/UnreadNotificationsIndicator';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import styles from './Header.module.scss';
 
@@ -43,7 +43,20 @@ function Header() {
                 </Indicator>
               </ActionIcon>
             </Tooltip>
-            <DesktopNavigateButton icon={<BellIcon size={20} />} />
+            <Tooltip label={t('notifications')}>
+              <ActionIcon
+                component={Link}
+                to={ROUTE_PATHS.NOTIFICATIONS}
+                size="lg"
+                variant="subtle"
+                color="gray"
+                aria-label={t('notifications')}
+              >
+                <UnreadNotificationsIndicator>
+                  <BellIcon size={20} />
+                </UnreadNotificationsIndicator>
+              </ActionIcon>
+            </Tooltip>
           </Group>
           <Avatar />
         </Group>

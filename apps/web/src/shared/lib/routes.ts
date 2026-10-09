@@ -44,6 +44,7 @@ export const SETTINGS_TABS = {
   SOURCES: 'sources',
   READER: 'reader',
   BOOKMARKS: 'bookmarks',
+  NOTIFICATIONS: 'notifications',
 } as const;
 export type SettingsTab = EnumLiteralsOf<typeof SETTINGS_TABS>;
 
@@ -55,6 +56,12 @@ export const BOOKMARKS_FOLDER_SEARCH_PARAM = 'folder';
 
 export const getBookmarksFolderPath = (folderId: string) =>
   `${ROUTE_PATHS.BOOKMARKS}?${BOOKMARKS_FOLDER_SEARCH_PARAM}=${folderId}`;
+
+/** Открытая карточка на «Здоровье источников» — в адресе, чтобы уведомление вело сразу к источнику. */
+export const SOURCES_HEALTH_SOURCE_SEARCH_PARAM = 'source';
+
+export const getSourcesHealthPath = (sourceId: string) =>
+  `${ROUTE_PATHS.SOURCES_HEALTH}?${SOURCES_HEALTH_SOURCE_SEARCH_PARAM}=${encodeURIComponent(sourceId)}`;
 
 /** Вкладка «Управления» — в адресе, чтобы прежний /invites вёл сразу на приглашения. */
 export const MANAGEMENT_TAB_SEARCH_PARAM = 'tab';

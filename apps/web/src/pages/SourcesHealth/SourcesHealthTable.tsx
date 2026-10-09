@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Stack } from '@mantine/core';
+import { useSearchParams } from 'react-router';
 import {
   SORT_DIRECTION,
   type SortDirection,
@@ -8,6 +9,7 @@ import {
 } from '@tanuki/contracts';
 import PageLayout from '@/shared/ui/PageLayout';
 import { flattenSources } from '@/entities/source/lib';
+import { SOURCES_HEALTH_SOURCE_SEARCH_PARAM } from '@/shared/lib/routes';
 import HealthFilters from './HealthFilters';
 import HealthList from './HealthList';
 import SourceDrawer from './SourceDrawer';
@@ -32,8 +34,10 @@ function SourcesHealthTable({ isStaff }: Props) {
   const [contentType, setContentType] = useState<SourceContentType[]>([]);
   const [sort, setSort] = useState<HealthSort>(HEALTH_SORT.STATUS);
   const [direction, setDirection] = useState<SortDirection>(SORT_DIRECTION.ASC);
-  // id, а не снимок: после проверки и опроса карточка сразу показывает свежий статус.
-  const [openedId, setOpenedId] = useState<string | null>(null);
+  // id в адресе, а не снимок: после проверки и опроса карточка сразу показывает свежий статус,
+  // а уведомление об источнике открывает его карточку.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openedId = searchParams.get(SOURCES_HEALTH_SOURCE_SEARCH_PARAM);
 
   const all = flattenSources(data);
   const sources = sortSources(filterSources(all, { status, contentType }), sort, direction);
@@ -47,6 +51,12 @@ function SourcesHealthTable({ isStaff }: Props) {
       setSort(next);
       setDirection(getDefaultSortDirection(next));
     }
+  };
+
+  const handleOpenedChange = (sourceId: string | null) => {
+    setSearchParams(sourceId ? { [SOURCES_HEALTH_SOURCE_SEARCH_PARAM]: sourceId } : {}, {
+      replace: true,
+    });
   };
 
   const handleReset = () => {
@@ -68,10 +78,10 @@ function SourcesHealthTable({ isStaff }: Props) {
         sort={sort}
         direction={direction}
         onSortChange={handleSortChange}
-        onOpen={(source) => setOpenedId(source.id)}
+        onOpen={(source) => handleOpenedChange(source.id)}
         onReset={handleReset}
       />
-      <SourceDrawer source={opened} isStaff={isStaff} onClose={() => setOpenedId(null)} />
+      <SourceDrawer source={opened} isStaff={isStaff} onClose={() => handleOpenedChange(null)} />
     </Stack>
   );
 }

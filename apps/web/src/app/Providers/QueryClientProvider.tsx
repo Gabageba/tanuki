@@ -16,6 +16,7 @@ import {
 import { readErrorMeta } from '@/shared/api/errorMeta';
 import { I18N } from '@/shared/lib/i18n';
 import { CURRENT_USER_QUERY_KEY } from '@/entities/user/hooks/useCurrentUser';
+import { dropBrowserPushSubscription } from '@/entities/notification/push';
 
 const isSessionExpired = (error: unknown) =>
   error instanceof ApiRequestError && error.code === API_ERROR_CODE.UNAUTHORIZED;
@@ -24,7 +25,8 @@ const isSessionExpired = (error: unknown) =>
  * Сессия протухла, пока человек был на странице: разлогиниваем на клиенте. Обнулённый `me`
  * заставляет RequireAuth увести на /login?redirect=…, откуда после входа вернёмся обратно.
  * Остальной кеш — данные прошлой сессии, его выкидываем. Гость (`me` уже null) и повторные 401
- * от соседних запросов сюда не проходят.
+ * от соседних запросов сюда не проходят. Push-подписка привязана к аккаунту — снимаем её в браузере,
+ * иначе устройство получало бы push прошлой сессии и показывало их следующему, кто войдёт.
  */
 const logOutExpiredSession = () => {
   if (!queryClient.getQueryData(CURRENT_USER_QUERY_KEY)) return;
@@ -32,6 +34,7 @@ const logOutExpiredSession = () => {
   queryClient.setQueryData(CURRENT_USER_QUERY_KEY, null);
   const currentUserHash = hashKey(CURRENT_USER_QUERY_KEY);
   queryClient.removeQueries({ predicate: (query) => query.queryHash !== currentUserHash });
+  void dropBrowserPushSubscription().catch(() => undefined);
   notifications.show({ color: 'red', message: I18N.t('sessionExpiredLogInAgain') });
 };
 

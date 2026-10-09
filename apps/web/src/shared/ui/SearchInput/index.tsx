@@ -1,7 +1,7 @@
 import type { TextInputProps } from '@mantine/core';
 import { TextInput } from '@mantine/core';
 import { useDebouncedCallback, useUncontrolled } from '@mantine/hooks';
-import { MagnifyingGlassIcon, XCircleIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import styles from './SearchInput.module.scss';
 
@@ -68,7 +68,7 @@ function SearchInput({
         enterKeyHint="search"
         leftSection={<MagnifyingGlassIcon />}
         rightSection={
-          !!query && allowClear && <XCircleIcon onClick={clear} aria-label={t('clearSearch')} />
+          !!query && allowClear && <XIcon onClick={clear} aria-label={t('clearSearch')} />
         }
         value={query}
         onChange={(event) => {

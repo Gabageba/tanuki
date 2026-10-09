@@ -44,7 +44,7 @@ function UsersFilters({ query, role, status, onQueryChange, onRoleChange, onStat
             label: getUserRoleLabel(value, t),
           }))}
           value={role}
-          placeholder={role.length ? undefined : t('allRoles')}
+          placeholder={t('allRoles')}
           clearable
           leftSection={<ShieldIcon />}
           onChange={(values) => onRoleChange(values.filter(isRole))}
@@ -56,7 +56,7 @@ function UsersFilters({ query, role, status, onQueryChange, onRoleChange, onStat
             label: getUserStatusFilterLabel(value, t),
           }))}
           value={status}
-          placeholder={status.length ? undefined : t('allStatuses')}
+          placeholder={t('allStatuses')}
           clearable
           leftSection={<CircleHalfIcon />}
           onChange={(values) => onStatusChange(values.filter(isStatus))}
