@@ -35,6 +35,7 @@ Tanuki не владеет контентом. Он владеет **опыто�
 │  │ ImageProxyModule стриминг картинок, Referer, WebP      │  │
 │  │ CacheModule      Valkey, TTL по типу сущности          │  │
 │  │ LibraryModule    закладки, папки, крон новых глав      │  │
+│  │ NotificationsModule лента, SSE-поток, Web Push         │  │
 │  │ ResilienceModule breaker + лимитер + статусы источников │  │
 │  │ SourceProbeModule ночная проверка источников           │  │
 │  └────────────────────────────────────────────────────────┘  │
