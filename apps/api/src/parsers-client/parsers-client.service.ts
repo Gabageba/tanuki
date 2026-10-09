@@ -1,8 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { SOURCE_STATUS_REASON } from '@tanuki/contracts';
+import {
+  SOURCE_STATUS_REASON,
+  type ResolvedSearchFilters,
+  type SearchFilterCriteria,
+} from '@tanuki/contracts';
 import {
   runSourceContract,
   runWithSourceAccounts,
+  unappliedSearchFilters,
   type FilterSelection,
   type Parser,
   type ParsersRegistry,
@@ -61,10 +66,10 @@ export class ParsersClientService {
   // /sources само по себе не бьёт по внешним сайтам (статические метаданные реестра),
   // поэтому идёт напрямую в кеш, без breaker/rate-limiter — как и раньше.
   async getSources(): Promise<CachedResult<{ items: RawSourceInfo[] }>> {
-    // v2 — RawSourceInfo обзавёлся полем `domain`; без смены ключа записи, залитые до деплоя,
-    // ещё сутки (staleSeconds) отдавались бы с domain: undefined.
+    // v3 — RawSourceInfo обзавёлся полем `isSearchWithFiltersSupported` (до него — `domain`); без
+    // смены ключа записи, залитые до деплоя, ещё сутки (staleSeconds) отдавались бы без поля.
     const result = await this.cache.getOrSet(
-      cacheKey('sources', 'all', 'v2'),
+      cacheKey('sources', 'all', 'v3'),
       CACHE_TTL.sources,
       () => Promise.resolve({ items: this.parsers.listSources() }),
     );
@@ -138,6 +143,15 @@ export class ParsersClientService {
       }),
       { force: params.force },
     );
+  }
+
+  /**
+   * Критерии поиска (тип, статус) в виде фильтров источника. Сети не касается; источник без
+   * соответствия (или без парсера, умеющего его) возвращает всё выбранное как неприменённое.
+   */
+  resolveSearchFilters(sourceId: string, criteria: SearchFilterCriteria): ResolvedSearchFilters {
+    const parser = this.parsers.get(sourceId);
+    return parser.resolveSearchFilters?.(criteria) ?? unappliedSearchFilters(criteria);
   }
 
   async getFilters(sourceId: string): Promise<CachedResult<{ groups: RawFilterGroup[] }>> {

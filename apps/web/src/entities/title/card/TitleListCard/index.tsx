@@ -35,9 +35,9 @@ function TitleListCard({ title, bookmarkFolder }: Props) {
 
   return (
     <NavigateToTitleCard title={title} className={styles.card} data-view-mode="list" withBorder>
-      <Group align="start" gap={0}>
+      <Group align="stretch" wrap="nowrap" gap={0}>
         <TitleCardImage title={title} w={120} bookmarkFolder={bookmarkFolder} />
-        <Stack p="sm" h="100%" flex={1} miw={0} gap={8}>
+        <Stack p="sm" flex={1} miw={0} gap={8}>
           <Stack gap={8} flex={1}>
             <Group gap={8}>
               {title.contentRating === CONTENT_RATING.ADULT && (

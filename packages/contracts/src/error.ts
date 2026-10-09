@@ -50,6 +50,8 @@ export const API_ERROR_CODE = {
   BUILT_IN_BOOKMARK_FOLDER_READONLY: 'builtInBookmarkFolderReadonly',
   // Подтверждаемая связь склеивает закладки из разных папок — нужен bookmarkFolderId.
   BOOKMARK_FOLDER_CONFLICT: 'bookmarkFolderConflict',
+  // Фильтр поиска (types/states) содержит значение не из TITLE_TYPE/TITLE_STATE.
+  SEARCH_FILTER_INVALID: 'searchFilterInvalid',
   // Тело или параметры запроса не прошли zod-схему.
   VALIDATION_FAILED: 'validationFailed',
   // Прочий 4xx, у которого нет своего кода.

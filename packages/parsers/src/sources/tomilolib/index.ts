@@ -9,12 +9,14 @@ import {
   SOURCE_CONTENT_TYPE,
   type TitleState,
   SOURCE_LOCALE,
+  type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchPaged } from '../../core/paging';
 import { CHAPTERS_COUNT_PRESETS, getYearRangePresets } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
+import { buildSearchFilters, type SearchFilterSpec } from '../../core/filters/searchFilters';
 import type {
   RawTitle,
   RawChapter,
@@ -211,6 +213,46 @@ const parseDate = (raw: string | null | undefined): number => {
   if (!raw) return 0;
   const parsed = Date.parse(raw.trim());
   return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const getTomiloLibTypeKeys = (value: TitleType): string[] => {
+  switch (value) {
+    case TITLE_TYPE.MANGA:
+      return ['manga'];
+    case TITLE_TYPE.MANHWA:
+      return ['manhwa'];
+    case TITLE_TYPE.MANHUA:
+      return ['manhua'];
+    case TITLE_TYPE.COMICS:
+      return ['comic'];
+    case TITLE_TYPE.OTHER:
+      return [];
+  }
+};
+
+const getTomiloLibStateKeys = (value: TitleState): string[] => {
+  switch (value) {
+    case TITLE_STATE.ONGOING:
+      return ['ongoing'];
+    case TITLE_STATE.FINISHED:
+      return ['completed'];
+    case TITLE_STATE.PAUSED:
+      return ['pause'];
+    case TITLE_STATE.ABANDONED:
+      return ['cancelled'];
+    case TITLE_STATE.UPCOMING:
+      return [];
+  }
+};
+
+/** Search criteria -> this source's own filter groups (see resolveSearchFilters). */
+const SEARCH_FILTER_SPEC: SearchFilterSpec = {
+  types: { groupId: TOMILOLIB_FILTER_GROUP.TYPE, isMultiple: false, getKeys: getTomiloLibTypeKeys },
+  states: {
+    groupId: TOMILOLIB_FILTER_GROUP.STATUS,
+    isMultiple: false,
+    getKeys: getTomiloLibStateKeys,
+  },
 };
 
 export const createTomiloLibParser = (ctx: ParserContext): Parser => {
@@ -520,11 +562,13 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/`, Accept: IMAGE_ACCEPT }),
   };
 };

@@ -2,6 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SOURCE_AUTH_FAMILY, catalogEntryFor } from '@tanuki/contracts';
 import type {
   CatalogResponse,
+  ResolvedSearchFilters,
+  SearchFilterCriteria,
   ChaptersResponse,
   FiltersResponse,
   TitleDetailsResponse,
@@ -57,6 +59,11 @@ export class CatalogService {
       hasNext: data.items.length >= PAGE_SIZE,
       stale: stale || undefined,
     };
+  }
+
+  /** Критерии поиска как фильтры источника — см. ParsersClientService.resolveSearchFilters. */
+  resolveSearchFilters(sourceId: string, criteria: SearchFilterCriteria): ResolvedSearchFilters {
+    return this.parsersClient.resolveSearchFilters(sourceId, criteria);
   }
 
   async listFilters(sourceId: string): Promise<FiltersResponse> {

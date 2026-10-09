@@ -121,6 +121,7 @@ const buildDescriptor = (id: SourceId): SourceDescriptor => {
     isSearchSupported: true,
     isMultipleTagsSupported: true,
     isFiltersSupported: FILTERS_SUPPORTED_IDS.has(id),
+    isSearchWithFiltersSupported: false,
   };
 
   if (groupleConfig) {

@@ -704,6 +704,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: false,
     },
     getList,
     getDetails,

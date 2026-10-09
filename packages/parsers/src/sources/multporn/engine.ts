@@ -664,6 +664,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: cfg.filters !== undefined,
+      isSearchWithFiltersSupported: false,
     },
     getList,
     getDetails,

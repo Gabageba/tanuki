@@ -186,9 +186,14 @@ export const BookmarkSourceSchema = z.object({
 });
 export type BookmarkSource = z.infer<typeof BookmarkSourceSchema>;
 
-/** Где остановился: номер главы отметки и сколько глав в её ветке (null — ветку ещё не проверяли). */
+/**
+ * Где остановился: номер главы отметки, её порядковый номер в ветке и сколько глав в ветке (null —
+ * ветку ещё не проверяли). С total сравнивается position, а не chapterNumber: номера бывают
+ * дробными, с пропусками и сквозными по томам.
+ */
 export const BookmarkProgressSchema = z.object({
   chapterNumber: z.number().nullable(),
+  position: z.number().int().min(0).nullable(),
   total: z.number().int().min(0).nullable(),
 });
 export type BookmarkProgress = z.infer<typeof BookmarkProgressSchema>;

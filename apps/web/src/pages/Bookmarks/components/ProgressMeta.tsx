@@ -9,14 +9,15 @@ type Props = {
 
 const MONO = { mono: <Text span inherit ff="monospace" /> };
 
-/** «Гл. 1090 из 1093» — фраза Golos Text с моноширинными номерами, неразрывная. Ветку отметки ещё
- *  не проверяли — только «Гл. 1090». Без отметки — число глав, тайтл ещё не проверяли — ничего. */
+/** «Гл. 197 из 203» — фраза Golos Text с моноширинными номерами, неразрывная. Первое число —
+ *  порядковый номер главы в ветке (position), а не номер из названия: он сравним с общим числом глав.
+ *  Ветку отметки ещё не проверяли — только «Гл. 1090» с номером главы. Без отметки — число глав, тайтл ещё не проверяли — ничего. */
 function ProgressMeta({ bookmark }: Props) {
   const { t } = useTranslation();
   const { progress, chaptersCount } = bookmark;
 
   if (progress && progress.chapterNumber !== null) {
-    if (progress.total === null) {
+    if (progress.total === null || progress.position === null) {
       return (
         <Text span inherit>
           {t('chapterNumberAbbrev', { number: progress.chapterNumber })}
@@ -27,7 +28,7 @@ function ProgressMeta({ bookmark }: Props) {
       <Text span inherit>
         <Trans
           i18nKey="chapterNumberOfTotalAbbrev"
-          values={{ number: progress.chapterNumber, total: progress.total }}
+          values={{ number: progress.position, total: progress.total }}
           components={MONO}
         />
       </Text>

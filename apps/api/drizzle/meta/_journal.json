@@ -169,6 +169,20 @@
       "when": 1791370390753,
       "tag": "0023_bookmarks",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791471593312,
+      "tag": "0024_search_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791524279485,
+      "tag": "0025_collapsed_search_sources",
+      "breakpoints": true
     }
   ]
 }

@@ -31,6 +31,7 @@ export type {
   Logger,
 } from './core/parser';
 export type { ListParams, FilterSelection } from './core/paging';
+export { unappliedSearchFilters } from './core/filters/searchFilters';
 
 export {
   SOURCE_ID,

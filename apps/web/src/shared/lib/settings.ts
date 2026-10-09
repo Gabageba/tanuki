@@ -7,6 +7,7 @@ export type Settings = {
   viewMode?: ViewMode;
   language?: Language;
   exclusiveFilterConfirmDismissed?: boolean;
+  collapsedSearchSources?: string[];
 };
 
 export const readSettings = (): Settings => {

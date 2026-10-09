@@ -640,6 +640,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: false,
     },
     getList,
     getDetails,

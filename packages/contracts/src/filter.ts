@@ -140,3 +140,11 @@ export type FilterGroup = z.infer<typeof FilterGroupSchema>;
 export type FilterSelection =
   | { groupId: string; key: string; exclude?: boolean }
   | { groupId: string; range: { min?: number; max?: number } };
+
+export const FilterSelectionSchema: z.ZodType<FilterSelection> = z.union([
+  z.object({ groupId: z.string(), key: z.string(), exclude: z.boolean().optional() }),
+  z.object({
+    groupId: z.string(),
+    range: z.object({ min: z.number().optional(), max: z.number().optional() }),
+  }),
+]);

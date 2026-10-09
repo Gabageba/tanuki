@@ -63,6 +63,7 @@ function UserSettingsSync() {
     writeSettings({
       viewMode: serverSettings.viewMode,
       exclusiveFilterConfirmDismissed: serverSettings.exclusiveFilterConfirmDismissed,
+      collapsedSearchSources: serverSettings.collapsedSearchSources,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, serverSettings]);

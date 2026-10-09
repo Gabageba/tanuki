@@ -9,10 +9,12 @@ import {
   formatCompactNumber,
   type FilterRangePreset,
   SOURCE_LOCALE,
+  type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { FILTER_GROUP } from '../../core/filters/group';
+import { buildSearchFilters, type SearchFilterSpec } from '../../core/filters/searchFilters';
 import { getYearRangePresets } from '../../core/filters/range-presets';
 import type {
   RawTitle,
@@ -316,6 +318,30 @@ const buildFilterParams = (filters: FilterSelection[] | undefined): Record<strin
     params[key] = keys!.join(',');
   }
   return params;
+};
+
+const getHentaichanCcTypeKeys = (value: TitleType): string[] => {
+  switch (value) {
+    case TITLE_TYPE.MANGA:
+      return ['manga', 'doujinshi'];
+    case TITLE_TYPE.MANHWA:
+      return [];
+    case TITLE_TYPE.MANHUA:
+      return [];
+    case TITLE_TYPE.COMICS:
+      return ['comix'];
+    case TITLE_TYPE.OTHER:
+      return [];
+  }
+};
+
+/** Search criteria -> this source's own filter groups (see resolveSearchFilters). */
+const SEARCH_FILTER_SPEC: SearchFilterSpec = {
+  types: {
+    groupId: HENTAICHAN_CC_FILTER_GROUP.TYPE,
+    isMultiple: true,
+    getKeys: getHentaichanCcTypeKeys,
+  },
 };
 
 export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
@@ -633,11 +659,13 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

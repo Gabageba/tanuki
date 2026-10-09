@@ -10,6 +10,7 @@ import { PROFILE_STATISTICS_QUERY_KEY } from '@/entities/user/hooks/useProfileSt
 import GroupedList from '@/shared/ui/GroupedList';
 import ColorSchemePicker from './ColorSchemePicker';
 import SettingsAdultContent from './SettingsAdultContent';
+import SettingsSearch from './SettingsSearch';
 
 function SettingsGeneral() {
   const { t, i18n } = useTranslation();
@@ -74,6 +75,7 @@ function SettingsGeneral() {
         />
       </GroupedList>
       <SettingsAdultContent />
+      <SettingsSearch />
     </SimpleGrid>
   );
 }

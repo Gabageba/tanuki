@@ -41,6 +41,7 @@ const progress = (titleKey: string, overrides: Partial<ProgressRecord> = {}): Pr
   titleKey,
   sourceId: titleKey.split(':')[0]!,
   branchId: 'default',
+  chapterVolume: null,
   chapterNumber: 10,
   updatedAt: at(10),
   ...overrides,
@@ -176,6 +177,7 @@ const stat = (branchId: string, total: number, newCount = 0): BranchStat => ({
   titleKey: 'a:/one',
   branchId,
   total,
+  position: null,
   newCount,
   latestNewAt: newCount > 0 ? at(20) : null,
 });

@@ -1,0 +1,4 @@
+/* Чип «Нашлось на:» прокручивает к секции — без отступа её заголовок ушёл бы под шапку. */
+.section {
+  scroll-margin-top: calc(var(--app-shell-header-height) + var(--mantine-spacing-md));
+}

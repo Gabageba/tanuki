@@ -222,6 +222,9 @@ export const SourceSchema = z.object({
   /** True when the source actually reverses order for the chosen SortOrder — most sources ignore
    *  ListParams.direction, so their UI hides the direction toggle entirely. */
   supportsDirection: z.boolean(),
+  /** Поиск по названию в каталоге источника сочетается с фильтрами. false — при запросе источник
+   *  фильтры не применяет, и клиент не отправляет их, пока запрос набран. */
+  isSearchWithFiltersSupported: z.boolean(),
   /** Семейство аккаунта, которым входят на источник; null — входа на источнике нет. */
   authFamily: SourceAuthFamilySchema.nullable(),
   /** Обязателен ли вход с учётом настройки сервера; null — входа на источнике нет. */

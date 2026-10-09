@@ -292,6 +292,7 @@ export const createComxParser = (ctx: ParserContext): Parser => {
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: false,
+      isSearchWithFiltersSupported: false,
     },
     getList,
     getDetails,

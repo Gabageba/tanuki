@@ -4,7 +4,7 @@ import PageLayout from '@/shared/ui/PageLayout';
 import CatalogHeader from './components/header/CatalogHeader';
 import useSource from '@/entities/source/hooks/useSource';
 import CatalogContent from './components/content/CatalogContent';
-import { parseFilters } from './utils/filterSelection';
+import { parseFilters } from '@/features/filters/lib/filterSelection';
 import { parseSortDirection, parseSortOrder } from './utils/sortOrder';
 import { getStoredViewMode } from '@/shared/lib/viewMode';
 
@@ -19,6 +19,8 @@ function Catalog() {
       useQuery={useCatalog}
       params={{
         sourceId: sourceId ?? '',
+        // С /search «Все результаты» приходят сюда с тем же запросом.
+        query: searchParams.get('query') ?? undefined,
         order: parseSortOrder(searchParams.get('order')),
         direction: parseSortDirection(searchParams.get('direction')),
         filters: parseFilters(searchParams.getAll('filters')),

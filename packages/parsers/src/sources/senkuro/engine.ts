@@ -8,12 +8,14 @@ import {
   SORT_ORDER,
   type TitleState,
   SOURCE_LOCALE,
+  type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
 import { fetchCursorPaged } from '../../core/paging';
 import { CHAPTERS_COUNT_PRESETS, getYearRangePresets } from '../../core/filters/range-presets';
 import { FILTER_GROUP } from '../../core/filters/group';
+import { buildSearchFilters, type SearchFilterSpec } from '../../core/filters/searchFilters';
 import type {
   RawTitle,
   RawChapter,
@@ -622,6 +624,42 @@ const buildFilterVariables = (filters: FilterSelection[] | undefined): Record<st
   return variables;
 };
 
+const getSenkuroTypeKeys = (value: TitleType): string[] => {
+  switch (value) {
+    case TITLE_TYPE.MANGA:
+      return ['MANGA'];
+    case TITLE_TYPE.MANHWA:
+      return ['MANHWA'];
+    case TITLE_TYPE.MANHUA:
+      return ['MANHUA'];
+    case TITLE_TYPE.COMICS:
+      return ['COMICS'];
+    case TITLE_TYPE.OTHER:
+      return ['OEL_MANGA', 'RU_MANGA'];
+  }
+};
+
+const getSenkuroStateKeys = (value: TitleState): string[] => {
+  switch (value) {
+    case TITLE_STATE.ONGOING:
+      return ['ONGOING'];
+    case TITLE_STATE.FINISHED:
+      return ['FINISHED'];
+    case TITLE_STATE.PAUSED:
+      return ['HIATUS'];
+    case TITLE_STATE.ABANDONED:
+      return ['CANCELLED'];
+    case TITLE_STATE.UPCOMING:
+      return ['ANNOUNCE'];
+  }
+};
+
+/** Search criteria -> this source's own filter groups (see resolveSearchFilters). */
+const SEARCH_FILTER_SPEC: SearchFilterSpec = {
+  types: { groupId: SENKURO_FILTER_GROUP.TYPE, isMultiple: true, getKeys: getSenkuroTypeKeys },
+  states: { groupId: SENKURO_FILTER_GROUP.STATUS, isMultiple: true, getKeys: getSenkuroStateKeys },
+};
+
 export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   const SOURCE_ID = cfg.id;
@@ -1050,11 +1088,13 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      isSearchWithFiltersSupported: true,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

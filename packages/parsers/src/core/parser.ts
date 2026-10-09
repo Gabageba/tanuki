@@ -1,4 +1,5 @@
 import type { CookieJar } from 'tough-cookie';
+import type { ResolvedSearchFilters, SearchFilterCriteria } from '@tanuki/contracts';
 import type { RawTitle, RawChapter, RawPage, RawSourceInfo, RawFilterGroup } from '../types';
 import type { ListParams, FilterSelection } from './paging';
 import type { HttpClient } from './http/client';
@@ -64,6 +65,10 @@ export type Parser = {
    *  sources that don't expose a catalog filter UI — RawSourceInfo.isFiltersSupported mirrors
    *  whether this is present. */
   getFilters?(): Promise<RawFilterGroup[]>;
+  /** Search criteria (title type / state) as this source's own filters — no network. Omit on
+   *  sources whose search doesn't combine with filters (RawSourceInfo.isSearchWithFiltersSupported
+   *  false); the caller then treats every criterion as unapplied. */
+  resolveSearchFilters?(criteria: SearchFilterCriteria): ResolvedSearchFilters;
   /** Headers the source expects when hotlinking its images — consumed by img-proxy. */
   imageHeaders(imageUrl: string): Record<string, string>;
   /**

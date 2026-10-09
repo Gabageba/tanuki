@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { UserSettings } from '@tanuki/contracts';
 import { StorageUnavailableException } from '../common/errors';
 import { DatabaseService } from '../database/database.service';
-import { userSettings } from '../database/schema';
+import { searchHistory, userSettings } from '../database/schema';
 
 @Injectable()
 export class UserSettingsService {
@@ -28,6 +28,8 @@ export class UserSettingsService {
         showAdultSources: row.showAdultSources ?? undefined,
         hideAdultTitles: row.hideAdultTitles ?? undefined,
         ageConfirmed: row.ageConfirmed ?? undefined,
+        saveSearchHistory: row.saveSearchHistory ?? undefined,
+        collapsedSearchSources: row.collapsedSearchSources ?? undefined,
       };
     }, {});
   }
@@ -35,17 +37,23 @@ export class UserSettingsService {
   /**
    * Патч частичный: полей, которых в нём нет, `onConflictDoUpdate` не касается, так что
    * значения, сохранённые с другого устройства, не затираются. В отличие от чтения, недоступность
-   * базы здесь становится ошибкой — иначе правка молча потеряется.
+   * базы здесь становится ошибкой — иначе правка молча потеряется. Выключение истории поиска
+   * стирает накопленное в той же транзакции.
    */
   async update(userId: string, patch: UserSettings): Promise<UserSettings> {
     const applied = await this.database.withFallback(async () => {
-      await this.database.db
-        .insert(userSettings)
-        .values({ userId, ...patch })
-        .onConflictDoUpdate({
-          target: userSettings.userId,
-          set: { ...patch, updatedAt: sql`now()` },
-        });
+      await this.database.db.transaction(async (tx) => {
+        await tx
+          .insert(userSettings)
+          .values({ userId, ...patch })
+          .onConflictDoUpdate({
+            target: userSettings.userId,
+            set: { ...patch, updatedAt: sql`now()` },
+          });
+        if (patch.saveSearchHistory === false) {
+          await tx.delete(searchHistory).where(eq(searchHistory.userId, userId));
+        }
+      });
       return true;
     }, false);
 

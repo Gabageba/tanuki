@@ -327,6 +327,15 @@ export class BadRequestApiException extends ApiException {
   }
 }
 
+/** В `types`/`states` поиска значение не из TITLE_TYPE/TITLE_STATE. */
+export class SearchFilterInvalidException extends ApiException {
+  constructor(value: string) {
+    super(API_ERROR_CODE.SEARCH_FILTER_INVALID, 'unknownFilterValue', HttpStatus.BAD_REQUEST, {
+      params: { value },
+    });
+  }
+}
+
 export class BookmarkFolderLimitException extends ApiException {
   constructor() {
     super(API_ERROR_CODE.BOOKMARK_FOLDER_LIMIT, 'customFoldersLimit', HttpStatus.CONFLICT, {

@@ -1,23 +1,19 @@
 import { ActionIcon, Anchor, AppShell, Group, Indicator, Tooltip, Typography } from '@mantine/core';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import LogoHorizontal from './LogoHorizontal';
 import DesktopNavigateButton from './components/DesktopNavigateButton';
 import Avatar from './components/Avatar';
 import DesktopSourceSelect from './components/DesktopSourceSelect';
-import SearchInput from '@/shared/ui/SearcInput';
+import HeaderSearch from './components/HeaderSearch';
 import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import styles from './Header.module.scss';
 
 function Header() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { data: bookmarkFolders } = useBookmarkFolders();
-
-  const handleSearch = (query: string) =>
-    navigate(`/search?query=${encodeURIComponent(query.trim())}`);
 
   return (
     <AppShell.Header>
@@ -31,11 +27,7 @@ function Header() {
         </Group>
 
         <Group justify="end" flex={1} gap="sm">
-          <SearchInput
-            handleSearch={handleSearch}
-            className={styles.form}
-            placeholder={t('searchAllSources')}
-          />
+          <HeaderSearch className={styles.form} />
           <Group gap={4} visibleFrom="md">
             <Tooltip label={t('bookmarks')}>
               <ActionIcon

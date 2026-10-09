@@ -1206,6 +1206,9 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       isSearchSupported: true,
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
+      // The catalog takes query and filters together; search criteria (types/states) aren't mapped
+      // to Grouple's per-site element ids, so they stay unapplied (no resolveSearchFilters).
+      isSearchWithFiltersSupported: true,
     },
     getList,
     getDetails,

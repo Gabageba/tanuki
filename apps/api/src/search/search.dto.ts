@@ -1,4 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
-import { SearchResponseSchema } from '@tanuki/contracts';
+import { SearchHistoryResponseSchema, SearchResponseSchema } from '@tanuki/contracts';
 
 export class SearchResponseDto extends createZodDto(SearchResponseSchema) {}
+
+export class SearchHistoryResponseDto extends createZodDto(SearchHistoryResponseSchema) {}

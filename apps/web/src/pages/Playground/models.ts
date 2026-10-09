@@ -16,6 +16,7 @@ import SortKeys from './SortKeys';
 import SourcesHealthTable from './SourcesHealthTable';
 import SourcesSetup from './SourcesSetup';
 import ThemePicker from './ThemePicker';
+import TitleSearch from './TitleSearch';
 import UsersAdmin from './UsersAdmin';
 
 export type PlaygroundTask = {
@@ -33,6 +34,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'title-search',
+    Component: TitleSearch,
+    title: 'Поиск тайтлов',
+    description:
+      'Как выглядит /search по плану docs/plans/title-search.md: шапка с запросом, секции источников и раскладка карточек, строка «Не ответили», недавние запросы в шапке и на пустой странице, фильтры.',
+    createdAt: '2026-10-08',
+    decision: 'H6c + S1 + L1s + N5 + D2 + E5 + F6 + G3 + M1 + C1 + V1 + R2',
+  },
   {
     slug: 'bookmarks',
     Component: Bookmarks,
