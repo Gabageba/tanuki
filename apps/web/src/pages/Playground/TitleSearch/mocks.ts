@@ -16,7 +16,12 @@ import { MOCK_GROUP_STATUS, type FoundGroup, type MissedGroup } from './models';
 
 export const MOCK_QUERY = 'Поднятие уровня в одиночку';
 
-const makeSource = (id: string, title: string, domain: string, position: number): Source => ({
+export const makeSource = (
+  id: string,
+  title: string,
+  domain: string,
+  position: number,
+): Source => ({
   id,
   title,
   domain,
@@ -42,7 +47,7 @@ const makeSource = (id: string, title: string, domain: string, position: number)
   access: SOURCE_ACCESS.AVAILABLE,
 });
 
-type TitleSeed = {
+export type TitleSeed = {
   name: string;
   type: TitleType | null;
   state: TitleState | null;
@@ -51,7 +56,7 @@ type TitleSeed = {
   rating: number | null;
 };
 
-const makeTitle = (source: Source, index: number, seed: TitleSeed): Title => ({
+export const makeTitle = (source: Source, index: number, seed: TitleSeed): Title => ({
   id: `${source.id}:mock-${index}`,
   sourceId: source.id,
   slug: `mock-${index}`,

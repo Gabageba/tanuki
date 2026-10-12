@@ -6,6 +6,7 @@ import AdultContent from './AdultContent';
 import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
 import HeaderBackground from './HeaderBackground';
+import Home from './Home';
 import ImportSourcePicker from './ImportSourcePicker';
 import InvitesTable from './InvitesTable';
 import LoginBadge from './LoginBadge';
@@ -35,6 +36,16 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'home-page',
+    Component: Home,
+    title: 'Главная',
+    description:
+      'Как устроены главная и подборки источников по плану docs/plans/home-page.md: «Продолжить чтение» и как убрать из него, подборки — на главной или отдельной страницей, входы с главной и её наполнение, кнопка «Главная» в шапке и нижней панели, вкладка настроек, пустые состояния.',
+    createdAt: '2026-10-12',
+    decision:
+      'P4a + V2a + W2 (без «Из подборок» и «Давно не открывали») + C1a + U1 + P3a + K1 + L4 + Z1 + H3a + B1 + T1a + E2',
+  },
   {
     slug: 'notifications',
     Component: Notifications,
