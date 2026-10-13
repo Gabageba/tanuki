@@ -1,4 +1,5 @@
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_STATE,
@@ -27,6 +28,7 @@ import type {
   RawFilterGroup,
   RawFilterOption,
   RawTitleType,
+  RawHomeSectionInfo,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -45,10 +47,18 @@ export const TOMILOLIB_HOME_SECTION = {
 } as const;
 type TomiloLibHomeSection = EnumLiteralsOf<typeof TOMILOLIB_HOME_SECTION>;
 
-const TOMILOLIB_HOME_SECTIONS: { id: TomiloLibHomeSection; title: string }[] = [
-  { id: TOMILOLIB_HOME_SECTION.POPULAR_WEEK, title: 'Популярное за неделю' },
-  { id: TOMILOLIB_HOME_SECTION.TOP_WEEK, title: 'Топ-5 недели' },
-  { id: TOMILOLIB_HOME_SECTION.NEW_CHAPTERS, title: 'Новые главы' },
+const TOMILOLIB_HOME_SECTIONS: (RawHomeSectionInfo & { id: TomiloLibHomeSection })[] = [
+  {
+    id: TOMILOLIB_HOME_SECTION.POPULAR_WEEK,
+    title: 'Популярное за неделю',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
+  { id: TOMILOLIB_HOME_SECTION.TOP_WEEK, title: 'Топ-5 недели', kind: HOME_SECTION_KIND.TOP },
+  {
+    id: TOMILOLIB_HOME_SECTION.NEW_CHAPTERS,
+    title: 'Новые главы',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
 ];
 
 /** Запрос блока — путь и параметры, как их шлёт сама главная. */

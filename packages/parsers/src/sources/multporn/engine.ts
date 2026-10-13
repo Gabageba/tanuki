@@ -1,6 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   SORT_DIRECTION,
@@ -678,7 +679,9 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
   };
 
   /** Единственный блок главной — обновления своего типа (MULTPORN_HOME_SECTION.UPDATED). */
-  const homeSections = [{ id: MULTPORN_HOME_SECTION.UPDATED, title: cfg.home.title }];
+  const homeSections = [
+    { id: MULTPORN_HOME_SECTION.UPDATED, title: cfg.home.title, kind: HOME_SECTION_KIND.UPDATES },
+  ];
 
   const getHome = async () => {
     const doc = await ctx.http.getHtml(new URL(cfg.home.path, `https://${domain}/`).toString());

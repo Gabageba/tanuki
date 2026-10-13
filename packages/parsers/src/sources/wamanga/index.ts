@@ -1,4 +1,5 @@
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_STATE,
@@ -45,9 +46,13 @@ export const WAMANGA_HOME_SECTION = {
 } as const;
 
 const WAMANGA_HOME_SECTIONS = [
-  { id: WAMANGA_HOME_SECTION.DAY_TOP, title: 'Топ за день' },
-  { id: WAMANGA_HOME_SECTION.NEW, title: 'Новинки' },
-  { id: WAMANGA_HOME_SECTION.FRESH_UPDATES, title: 'Свежие обновления' },
+  { id: WAMANGA_HOME_SECTION.DAY_TOP, title: 'Топ за день', kind: HOME_SECTION_KIND.TOP },
+  { id: WAMANGA_HOME_SECTION.NEW, title: 'Новинки', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: WAMANGA_HOME_SECTION.FRESH_UPDATES,
+    title: 'Свежие обновления',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
 ];
 const PAGE_SIZE = 20;
 const YEAR_RANGE_MIN = 1990;

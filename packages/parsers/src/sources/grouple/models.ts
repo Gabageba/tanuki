@@ -1,4 +1,4 @@
-import type { EnumLiteralsOf } from '@tanuki/contracts';
+import { HOME_SECTION_KIND, type EnumLiteralsOf } from '@tanuki/contracts';
 import { FILTER_GROUP } from '../../core/filters/group';
 
 export const GROUPLE_ELEMENT_TYPE = {
@@ -72,10 +72,22 @@ export const GROUPLE_HOME_SECTION = {
 } as const;
 
 export const GROUPLE_HOME_SECTIONS = [
-  { id: GROUPLE_HOME_SECTION.HOT_NEW, title: 'Горячие новинки' },
-  { id: GROUPLE_HOME_SECTION.POPULAR_UPDATES, title: 'Обновление популярного' },
-  { id: GROUPLE_HOME_SECTION.POPULAR_NOW, title: 'Популярная сейчас манга' },
-  { id: GROUPLE_HOME_SECTION.LATEST_UPDATES, title: 'Последние обновления каталога' },
+  { id: GROUPLE_HOME_SECTION.HOT_NEW, title: 'Горячие новинки', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: GROUPLE_HOME_SECTION.POPULAR_UPDATES,
+    title: 'Обновление популярного',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
+  {
+    id: GROUPLE_HOME_SECTION.POPULAR_NOW,
+    title: 'Популярная сейчас манга',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
+  {
+    id: GROUPLE_HOME_SECTION.LATEST_UPDATES,
+    title: 'Последние обновления каталога',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
 ];
 
 /** Вкладка карусели «Тренды» блока — `data-tab-content` её шаблона. */

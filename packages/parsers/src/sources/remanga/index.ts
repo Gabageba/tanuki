@@ -1,4 +1,5 @@
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_RESTRICTION,
@@ -31,6 +32,9 @@ import type {
   RawTitleType,
   RawFilterGroup,
   RawFilterOption,
+  RawHomeSectionInfo,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -70,13 +74,17 @@ export const REMANGA_HOME_SECTION = {
 } as const;
 type RemangaHomeSection = EnumLiteralsOf<typeof REMANGA_HOME_SECTION>;
 
-const REMANGA_HOME_SECTIONS: { id: RemangaHomeSection; title: string }[] = [
-  { id: REMANGA_HOME_SECTION.HOT_NEW, title: 'Горячие новинки' },
-  { id: REMANGA_HOME_SECTION.NEW_SEASON, title: 'Новый сезон' },
-  { id: REMANGA_HOME_SECTION.TRENDING, title: 'В тренде' },
-  { id: REMANGA_HOME_SECTION.POPULAR_TODAY, title: 'Популярно сегодня' },
-  { id: REMANGA_HOME_SECTION.NEW_CHAPTERS, title: 'Свежие главы' },
-  { id: REMANGA_HOME_SECTION.POPULAR, title: 'Популярное' },
+const REMANGA_HOME_SECTIONS: (RawHomeSectionInfo & { id: RemangaHomeSection })[] = [
+  { id: REMANGA_HOME_SECTION.HOT_NEW, title: 'Горячие новинки', kind: HOME_SECTION_KIND.NEW },
+  { id: REMANGA_HOME_SECTION.NEW_SEASON, title: 'Новый сезон', kind: HOME_SECTION_KIND.NEW },
+  { id: REMANGA_HOME_SECTION.TRENDING, title: 'В тренде', kind: HOME_SECTION_KIND.TRENDING },
+  {
+    id: REMANGA_HOME_SECTION.POPULAR_TODAY,
+    title: 'Популярно сегодня',
+    kind: HOME_SECTION_KIND.TOP,
+  },
+  { id: REMANGA_HOME_SECTION.NEW_CHAPTERS, title: 'Свежие главы', kind: HOME_SECTION_KIND.UPDATES },
+  { id: REMANGA_HOME_SECTION.POPULAR, title: 'Популярное', kind: HOME_SECTION_KIND.POPULAR },
 ];
 
 /** Слайдер v2 блока — `/api/v2/titles/sliders/{dir}/`; у «Популярного» dir словом, не числом.
@@ -754,21 +762,39 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     return result;
   };
 
-  const fetchHomeSection = async (section: RemangaHomeSection): Promise<RawTitle[]> => {
+  /** Порция блока: все блоки листаются `?page=` — «Горячие новинки» отдают `next`, слайдеры v2
+   *  кончаются неполной порцией (проверено вживую 2026-10-13). */
+  const fetchHomeSectionPage = async (
+    section: RemangaHomeSection,
+    page: number,
+  ): Promise<RawHomeSectionPage> => {
     const dir = getRemangaSliderDir(section);
     if (dir === null) {
-      const json = await ctx.http.getJson<{ results: MangaJson[] }>(
-        `https://${apiHost}/api/v3/titles/?slider_type=hot_new&count=${HOME_SECTION_SIZE}`,
+      const json = await ctx.http.getJson<{ results: MangaJson[]; next?: string | null }>(
+        `https://${apiHost}/api/v3/titles/?slider_type=hot_new&count=${HOME_SECTION_SIZE}&page=${page}`,
       );
-      return json.results.map(parseManga);
+      return { items: json.results.map(parseManga), hasNextPage: Boolean(json.next) };
     }
     const json = await ctx.http.getJson<{ titles?: { title: MangaJson }[] }>(
-      `https://${apiHost}/api/v2/titles/sliders/${dir}/`,
+      `https://${apiHost}/api/v2/titles/sliders/${dir}/?page=${page}`,
     );
-    return (json.titles ?? []).map(({ title }) => parseManga(title));
+    const titles = json.titles ?? [];
+    return {
+      items: titles.map(({ title }) => parseManga(title)),
+      hasNextPage: titles.length >= HOME_SECTION_SIZE,
+    };
   };
 
-  const getHome = () => fetchHomeSections(REMANGA_HOME_SECTIONS, fetchHomeSection);
+  const getHome = () =>
+    fetchHomeSections(
+      REMANGA_HOME_SECTIONS,
+      async (section) => (await fetchHomeSectionPage(section, 1)).items,
+    );
+
+  const getHomeSection = async (id: string, { page }: RawHomeSectionParams) => {
+    const section = REMANGA_HOME_SECTIONS.find((item) => item.id === id);
+    return section ? fetchHomeSectionPage(section.id, page) : null;
+  };
 
   return {
     id: SOURCE_ID,
@@ -803,6 +829,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     getPages,
     getFilters,
     getHome,
+    getHomeSection,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };

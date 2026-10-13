@@ -1,5 +1,8 @@
 import { join } from 'node:path';
 import {
+  HOME_SECTION_KIND,
+  HOME_SECTION_PERIOD,
+  type HomeSectionPeriod,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_RESTRICTION,
@@ -35,6 +38,9 @@ import type {
   RawFilterOption,
   RawTitleType,
   RawContentRating,
+  RawHomeSectionInfo,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -47,7 +53,7 @@ import { getValidAccessToken } from './auth';
 import { loginLibSocialWithPassword } from './login';
 import { fileTokenStore } from './token-store';
 import { currentSourceAccount } from '../../core/source-accounts';
-import { toHomeSections } from '../../core/home';
+import { toHomeSections, uniqueByUrl } from '../../core/home';
 
 const PAGE_SIZE = 60;
 
@@ -204,16 +210,32 @@ export const LIBSOCIAL_HOME_SECTION = {
   READING_NOW_POPULAR: 'readingNowPopular',
 } as const;
 
-const LIBSOCIAL_HOME_SECTIONS = [
-  { id: LIBSOCIAL_HOME_SECTION.POPULAR, title: 'Популярное' },
-  { id: LIBSOCIAL_HOME_SECTION.NEWEST, title: 'Новинки' },
-  { id: LIBSOCIAL_HOME_SECTION.LATEST_UPDATES, title: 'Последние обновления' },
-  { id: LIBSOCIAL_HOME_SECTION.READING_NOW_NEW, title: 'Сейчас читают: новинки' },
+const LIBSOCIAL_HOME_SECTIONS: RawHomeSectionInfo[] = [
+  { id: LIBSOCIAL_HOME_SECTION.POPULAR, title: 'Популярное', kind: HOME_SECTION_KIND.POPULAR },
+  { id: LIBSOCIAL_HOME_SECTION.NEWEST, title: 'Новинки', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: LIBSOCIAL_HOME_SECTION.LATEST_UPDATES,
+    title: 'Последние обновления',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
+  {
+    id: LIBSOCIAL_HOME_SECTION.READING_NOW_NEW,
+    title: 'Сейчас читают: новинки',
+    kind: HOME_SECTION_KIND.TRENDING,
+    isPeriodSupported: true,
+  },
   {
     id: LIBSOCIAL_HOME_SECTION.READING_NOW_RISING,
     title: 'Сейчас читают: набирающее популярность',
+    kind: HOME_SECTION_KIND.TRENDING,
+    isPeriodSupported: true,
   },
-  { id: LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR, title: 'Сейчас читают: популярное' },
+  {
+    id: LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR,
+    title: 'Сейчас читают: популярное',
+    kind: HOME_SECTION_KIND.TOP,
+    isPeriodSupported: true,
+  },
 ];
 
 /** Вкладка «Сейчас читают» в `currently_views.items`. */
@@ -232,6 +254,26 @@ const getReadingNowTabKey = (
       return '3';
   }
 };
+
+/** «Сейчас читают» за период — `/api/media/top-views?time=`: по 3 тайтла на вкладку за страницу,
+ *  страниц около десяти, за последней сайт повторяет её же (проверено вживую 2026-10-13).
+ *  Собираем блок целиком, пока страница не повторится, — с запасом на рост. */
+const READING_NOW_MAX_PAGES = 15;
+
+type TopViewsJson = {
+  items?: Partial<Record<string, { media: MangaListItemJson }[]>>;
+};
+
+/** `/api/latest-updates?page=` — за последней страницей сайт отдаёт её же с её `current_page`. */
+type LatestUpdatesJson = {
+  data: MangaListItemJson[];
+  meta?: { current_page?: number; has_next_page?: boolean };
+};
+
+const isReadingNowSection = (id: string): id is Parameters<typeof getReadingNowTabKey>[0] =>
+  id === LIBSOCIAL_HOME_SECTION.READING_NOW_NEW ||
+  id === LIBSOCIAL_HOME_SECTION.READING_NOW_RISING ||
+  id === LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR;
 
 /** `/api/genres` and `/api/tags` — shared across the whole LibSocial network, so each entry
  *  carries every member site's id and must be filtered down to `cfg.siteId`. */
@@ -1015,6 +1057,50 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     });
   };
 
+  /** Вся вкладка «Сейчас читают» за период: страницы подряд, пока сайт не повторит прошлую. */
+  const fetchReadingNow = async (
+    section: Parameters<typeof getReadingNowTabKey>[0],
+    period: HomeSectionPeriod,
+  ): Promise<RawTitle[]> => {
+    const tabKey = getReadingNowTabKey(section);
+    const items: RawTitle[] = [];
+    let previousKey = '';
+    for (let page = 1; page <= READING_NOW_MAX_PAGES; page++) {
+      const json = await ctx.http.getJson<{ data: TopViewsJson }>(
+        `https://${LIBSOCIAL_API_HOST}/api/media/top-views?time=${period}&page=${page}`,
+      );
+      const tab = json.data.items?.[tabKey] ?? [];
+      const pageKey = tab.map(({ media }) => media.id).join(',');
+      if (tab.length === 0 || pageKey === previousKey) break;
+      previousKey = pageKey;
+      items.push(...tab.map(({ media }) => parseManga(media)));
+    }
+    return uniqueByUrl(items);
+  };
+
+  const getHomeSection = async (
+    id: string,
+    { page, period = HOME_SECTION_PERIOD.DAY }: RawHomeSectionParams,
+  ): Promise<RawHomeSectionPage | null> => {
+    if (isReadingNowSection(id)) {
+      // Вкладка собирается целиком за раз — продолжения у неё нет.
+      if (page > 1) return { items: [], hasNextPage: false };
+      return { items: await fetchReadingNow(id, period), hasNextPage: false };
+    }
+    if (id === LIBSOCIAL_HOME_SECTION.LATEST_UPDATES) {
+      const json = await ctx.http.getJson<LatestUpdatesJson>(
+        `https://${LIBSOCIAL_API_HOST}/api/latest-updates?page=${page}`,
+      );
+      const currentPage = json.meta?.current_page ?? page;
+      if (currentPage < page) return { items: [], hasNextPage: false };
+      return {
+        items: json.data.map(parseManga),
+        hasNextPage: Boolean(json.meta?.has_next_page),
+      };
+    }
+    return null;
+  };
+
   return {
     id: cfg.id,
     info: {
@@ -1049,6 +1135,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     getPages,
     getFilters,
     getHome,
+    getHomeSection,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     async init() {

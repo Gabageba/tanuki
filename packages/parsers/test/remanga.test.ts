@@ -323,7 +323,7 @@ describe('Remanga getHome', () => {
       body: JSON.stringify({ results: [sliderTitle('hot').title] }),
       contentType: 'application/json',
     });
-    http.register((url) => url.endsWith('/api/v2/titles/sliders/35/'), {
+    http.register((url) => url.includes('/api/v2/titles/sliders/35/'), {
       status: 404,
       body: '{}',
       contentType: 'application/json',
@@ -352,5 +352,54 @@ describe('Remanga getHome', () => {
     const parser = createRemangaParser(makeContext(http));
 
     await expect(parser.getHome!()).rejects.toThrow();
+  });
+});
+
+describe('Remanga getHomeSection', () => {
+  const titles = (count: number) =>
+    Array.from({ length: count }, (_, index) => ({
+      dir: `t${index}`,
+      main_name: `t${index}`,
+      avg_rating: '7',
+      cover: { mid: `/covers/${index}.jpg` },
+      type: { id: 1 },
+    }));
+
+  it('«Горячие новинки»: page in the query, next page while the API returns `next`', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('slider_type=hot_new'), {
+      status: 200,
+      body: JSON.stringify({ results: titles(20), next: '/api/v3/titles/?page=3&count=20' }),
+      contentType: 'application/json',
+    });
+    const parser = createRemangaParser(makeContext(http));
+
+    const page = await parser.getHomeSection!('hotNew', { page: 2 });
+
+    expect(page?.items).toHaveLength(20);
+    expect(page?.hasNextPage).toBe(true);
+    expect(new URL(http.requests[0]!.url).searchParams.get('page')).toBe('2');
+  });
+
+  it('slider: a short page is the last one', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/v2/titles/sliders/26/'), {
+      status: 200,
+      body: JSON.stringify({ titles: titles(7).map((title) => ({ title })) }),
+      contentType: 'application/json',
+    });
+    const parser = createRemangaParser(makeContext(http));
+
+    const page = await parser.getHomeSection!('newChapters', { page: 4 });
+
+    expect(page?.items).toHaveLength(7);
+    expect(page?.hasNextPage).toBe(false);
+    expect(http.requests[0]!.url).toContain('/sliders/26/?page=4');
+  });
+
+  it('unknown section — null', async () => {
+    const parser = createRemangaParser(makeContext(new FakeHttpClient()));
+
+    await expect(parser.getHomeSection!('nope', { page: 1 })).resolves.toBeNull();
   });
 });

@@ -2,6 +2,7 @@ import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { CookieJar } from 'tough-cookie';
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   SOURCE_AUTH_FAMILY,
@@ -44,7 +45,11 @@ export const NUDEMOON_HOME_SECTION = {
 } as const;
 
 const NUDEMOON_HOME_SECTIONS = [
-  { id: NUDEMOON_HOME_SECTION.NEW_TRANSLATIONS, title: 'Новые переводы' },
+  {
+    id: NUDEMOON_HOME_SECTION.NEW_TRANSLATIONS,
+    title: 'Новые переводы',
+    kind: HOME_SECTION_KIND.NEW,
+  },
 ];
 /** The site's own `all_manga` pager advances `rowstart` by 30 raw rows per page. */
 const ROWSTART_STEP = 30;

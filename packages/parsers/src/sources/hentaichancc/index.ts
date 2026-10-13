@@ -1,4 +1,5 @@
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_TYPE,
@@ -272,8 +273,12 @@ export const HENTAICHAN_CC_HOME_SECTION = {
 } as const;
 
 const HENTAICHAN_CC_HOME_SECTIONS = [
-  { id: HENTAICHAN_CC_HOME_SECTION.NEW, title: 'Новая манга' },
-  { id: HENTAICHAN_CC_HOME_SECTION.POPULAR, title: 'Популярная манга' },
+  { id: HENTAICHAN_CC_HOME_SECTION.NEW, title: 'Новая манга', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: HENTAICHAN_CC_HOME_SECTION.POPULAR,
+    title: 'Популярная манга',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
 ];
 
 const HOME_SECTION_SIZE = 20;

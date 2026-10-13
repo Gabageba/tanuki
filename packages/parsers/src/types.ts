@@ -16,6 +16,8 @@ import type {
   ContentRating,
   FilterGroupSettings,
   FilterType,
+  HomeSectionKind,
+  HomeSectionPeriod,
   TitleRestriction,
   TitleState,
   TitleType,
@@ -187,6 +189,23 @@ export type RawFilterGroup = {
 export type RawHomeSectionInfo = {
   id: string;
   title: string;
+  /** Смысл блока — по нему фронт выбирает иконку вкладки. */
+  kind: HomeSectionKind;
+  /** У блока на сайте есть выбор периода — getHomeSection принимает `period`. */
+  isPeriodSupported?: true;
+};
+
+/** Какую порцию блока просить у getHomeSection: `page` с 1, `period` — только у блока с
+ *  `isPeriodSupported`. */
+export type RawHomeSectionParams = {
+  page: number;
+  period?: HomeSectionPeriod;
+};
+
+/** Порция блока главной: `hasNextPage` — сайт отдаёт блок порциями и следующая есть. */
+export type RawHomeSectionPage = {
+  items: RawTitle[];
+  hasNextPage: boolean;
 };
 
 /** Блок главной с тайтлами — элементы по тем же соглашениям, что у getList (`chapters: null`). */

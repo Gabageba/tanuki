@@ -1,6 +1,7 @@
 import type { Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_STATE,
@@ -80,8 +81,12 @@ export const DESU_HOME_SECTION = {
 } as const;
 
 const DESU_HOME_SECTIONS = [
-  { id: DESU_HOME_SECTION.POPULAR_UPDATES, title: 'Обновления популярной манги' },
-  { id: DESU_HOME_SECTION.HOT_NEW, title: 'Горячие новинки манги' },
+  {
+    id: DESU_HOME_SECTION.POPULAR_UPDATES,
+    title: 'Обновления популярной манги',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
+  { id: DESU_HOME_SECTION.HOT_NEW, title: 'Горячие новинки манги', kind: HOME_SECTION_KIND.NEW },
 ];
 
 const toRelativePath = (href: string): string => {

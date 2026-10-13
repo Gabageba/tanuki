@@ -1,6 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_STATE,
@@ -78,11 +79,19 @@ export const MANGABUFF_HOME_SECTION = {
 } as const;
 
 const MANGABUFF_HOME_SECTIONS = [
-  { id: MANGABUFF_HOME_SECTION.HOT_NEW, title: 'Горячие новинки' },
-  { id: MANGABUFF_HOME_SECTION.POPULAR_WEEK, title: 'Популярно на неделе' },
-  { id: MANGABUFF_HOME_SECTION.BEST_ONGOINGS, title: 'Лучшие онгоинги' },
-  { id: MANGABUFF_HOME_SECTION.NEW_ON_SITE, title: 'Новое на сайте' },
-  { id: MANGABUFF_HOME_SECTION.UPDATES, title: 'Обновления' },
+  { id: MANGABUFF_HOME_SECTION.HOT_NEW, title: 'Горячие новинки', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: MANGABUFF_HOME_SECTION.POPULAR_WEEK,
+    title: 'Популярно на неделе',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
+  {
+    id: MANGABUFF_HOME_SECTION.BEST_ONGOINGS,
+    title: 'Лучшие онгоинги',
+    kind: HOME_SECTION_KIND.TOP,
+  },
+  { id: MANGABUFF_HOME_SECTION.NEW_ON_SITE, title: 'Новое на сайте', kind: HOME_SECTION_KIND.NEW },
+  { id: MANGABUFF_HOME_SECTION.UPDATES, title: 'Обновления', kind: HOME_SECTION_KIND.UPDATES },
 ];
 
 const parseStatus = (value: string): TitleState | null => {

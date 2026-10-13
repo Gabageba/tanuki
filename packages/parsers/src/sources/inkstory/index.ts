@@ -1,4 +1,5 @@
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_RESTRICTION,
@@ -31,6 +32,8 @@ import type {
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -68,10 +71,26 @@ export const INKSTORY_HOME_SECTION = {
 } as const;
 
 const INKSTORY_HOME_SECTIONS = [
-  { id: INKSTORY_HOME_SECTION.POPULAR_ONGOINGS, title: 'Популярные онгоинги' },
-  { id: INKSTORY_HOME_SECTION.BEST_FINISHED, title: 'Лучшие завершенные' },
-  { id: INKSTORY_HOME_SECTION.RECENTLY_ADDED, title: 'Недавно добавлено' },
-  { id: INKSTORY_HOME_SECTION.LATEST_UPDATES, title: 'Последние обновления каталога' },
+  {
+    id: INKSTORY_HOME_SECTION.POPULAR_ONGOINGS,
+    title: 'Популярные онгоинги',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
+  {
+    id: INKSTORY_HOME_SECTION.BEST_FINISHED,
+    title: 'Лучшие завершенные',
+    kind: HOME_SECTION_KIND.TOP,
+  },
+  {
+    id: INKSTORY_HOME_SECTION.RECENTLY_ADDED,
+    title: 'Недавно добавлено',
+    kind: HOME_SECTION_KIND.NEW,
+  },
+  {
+    id: INKSTORY_HOME_SECTION.LATEST_UPDATES,
+    title: 'Последние обновления каталога',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
 ];
 
 /** Обложка карточки — `static.inuko.me/book/<id книги>/poster/...`: id книги тот же, что в API. */
@@ -858,6 +877,17 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     });
   };
 
+  /** «Последние обновления каталога» — лента глав, листается `page`; остальные блоки — из SSR
+   *  главной, без продолжения. */
+  const getHomeSection = async (
+    id: string,
+    { page }: RawHomeSectionParams,
+  ): Promise<RawHomeSectionPage | null> => {
+    if (id !== INKSTORY_HOME_SECTION.LATEST_UPDATES) return null;
+    const items = await fetchUpdatedPage(FIRST_PAGE + page - 1);
+    return { items, hasNextPage: items.length >= PAGE_SIZE };
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -890,6 +920,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     getPages,
     getFilters,
     getHome,
+    getHomeSection,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     decodeImage,

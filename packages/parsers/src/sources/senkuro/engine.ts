@@ -1,4 +1,5 @@
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_STATE,
@@ -25,6 +26,8 @@ import type {
   RawFilterGroup,
   RawFilterOption,
   RawTitleType,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -807,6 +810,26 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
     });
   };
 
+  /** «Последние обновления» — тот же список, что каталог по дате главы: листается курсором.
+   *  «Самое читаемое» (`mangaPopularByPeriod`) порций не знает — берётся из getHome. Лишний
+   *  тайтл в запросе говорит, есть ли следующая порция. */
+  const getHomeSection = async (
+    id: string,
+    { page }: RawHomeSectionParams,
+  ): Promise<RawHomeSectionPage | null> => {
+    if (id !== SENKURO_HOME_SECTION.LATEST_UPDATES) return null;
+    const items = await fetchCursorPaged(
+      { offset: (page - 1) * HOME_SECTION_SIZE, limit: HOME_SECTION_SIZE + 1 },
+      { maxPageSize: LIST_MAX_PAGE_SIZE },
+      (cursor, first) =>
+        fetchListPage(cursor, first, SORT_ORDER.UPDATED, undefined, undefined, undefined),
+    );
+    return {
+      items: items.slice(0, HOME_SECTION_SIZE),
+      hasNextPage: items.length > HOME_SECTION_SIZE,
+    };
+  };
+
   const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchCursorPaged(params, { maxPageSize: LIST_MAX_PAGE_SIZE }, (cursor, first) =>
       fetchListPage(cursor, first, params.order, params.direction, params.query, params.filters),
@@ -1116,6 +1139,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
     getPages,
     getFilters,
     getHome,
+    getHomeSection,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
@@ -1132,10 +1156,15 @@ export const SENKURO_HOME_SECTION = {
   LATEST_UPDATES: 'latestUpdates',
 } as const;
 
-const SENKURO_MOST_READ_SECTION = { id: SENKURO_HOME_SECTION.MOST_READ, title: 'Самое читаемое' };
+const SENKURO_MOST_READ_SECTION = {
+  id: SENKURO_HOME_SECTION.MOST_READ,
+  title: 'Самое читаемое',
+  kind: HOME_SECTION_KIND.TOP,
+};
 const SENKURO_LATEST_UPDATES_SECTION = {
   id: SENKURO_HOME_SECTION.LATEST_UPDATES,
   title: 'Последние обновления',
+  kind: HOME_SECTION_KIND.UPDATES,
 };
 
 const HOME_SECTION_SIZE = 21;

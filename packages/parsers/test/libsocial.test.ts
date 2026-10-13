@@ -516,3 +516,62 @@ describe('LibSocial getHome', () => {
     }
   });
 });
+
+describe('LibSocial getHomeSection', () => {
+  const ITEM = JSON.parse(LIST_JSON).data[0] as Record<string, unknown>;
+  const topViewsPage = (ids: number[]) =>
+    JSON.stringify({
+      data: {
+        time_filter: 'week',
+        items: { '1': ids.map((id) => ({ media: { ...ITEM, id, slug_url: `${id}--t` } })) },
+      },
+    });
+
+  it('«Сейчас читают»: collects pages until the site repeats the last one', async () => {
+    const http = new FakeHttpClient();
+    const pages: Record<string, number[]> = { '1': [1, 2, 3], '2': [4, 5, 6], '3': [7], '4': [7] };
+    http.register(
+      (url) => url.includes('/api/media/top-views'),
+      () => {
+        const page = new URL(http.requests.at(-1)!.url).searchParams.get('page') ?? '1';
+        return {
+          status: 200,
+          body: topViewsPage(pages[page] ?? [7]),
+          contentType: 'application/json',
+        };
+      },
+    );
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    const section = await parser.getHomeSection!('readingNowNew', { page: 1, period: 'week' });
+
+    expect(section?.items.map(({ url }) => url)).toHaveLength(7);
+    expect(section?.hasNextPage).toBe(false);
+    expect(http.requests[0]!.url).toContain('time=week');
+    expect(http.requests).toHaveLength(4);
+  });
+
+  it('«Последние обновления»: a page past the end comes back clamped — empty, no next', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/latest-updates'), {
+      status: 200,
+      body: JSON.stringify({ data: [ITEM], meta: { current_page: 9, has_next_page: true } }),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    await expect(parser.getHomeSection!('latestUpdates', { page: 9 })).resolves.toMatchObject({
+      hasNextPage: true,
+    });
+    await expect(parser.getHomeSection!('latestUpdates', { page: 10 })).resolves.toEqual({
+      items: [],
+      hasNextPage: false,
+    });
+  });
+
+  it('blocks that come only with the home payload — null', async () => {
+    const parser = createLibSocialParser(CFG, makeContext(new FakeHttpClient()));
+
+    await expect(parser.getHomeSection!('popular', { page: 1 })).resolves.toBeNull();
+  });
+});
