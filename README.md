@@ -39,7 +39,7 @@ PWA-читалка манги, манхвы и маньхуа с упором н
 ```bash
 pnpm install
 docker compose up -d          # valkey, postgres, mailpit
-pnpm --filter @tanuki/api db:migrate   # схема БД
+pnpm db:migrate               # схема БД
 pnpm dev                      # turbo запускает web + api параллельно
 ```
 

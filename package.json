@@ -7,6 +7,8 @@
   "scripts": {
     "build": "turbo run build",
     "build:contracts": "turbo run build --filter=@tanuki/contracts",
+    "db:generate": "pnpm --filter @tanuki/api db:generate",
+    "db:migrate": "pnpm --filter @tanuki/api db:migrate",
     "dev": "turbo run dev",
     "dev:mobile": "turbo run dev --filter=@tanuki/api & turbo run dev:host --filter=@tanuki/web; wait",
     "docker": "docker compose up -d --force-recreate --wait",
