@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ContentRatingSchema, TitleTypeSchema } from './title';
 import type { EnumLiteralsOf } from './utils';
 
 /**
@@ -61,3 +62,35 @@ export const UpdateReadingProgressRequestSchema = z.object({
   pageIndex: z.number().int().min(0),
 });
 export type UpdateReadingProgressRequest = z.infer<typeof UpdateReadingProgressRequestSchema>;
+
+/** Сколько тайтлов в «Продолжить чтение». */
+export const CONTINUE_READING_LIMIT = 20;
+
+/**
+ * Карточка «Продолжить чтение» — одна на группу подтверждённых совпадений: источник и глава самой
+ * свежей отметки. Название, обложка, рейтинг и тип — снимок на момент чтения.
+ */
+export const ContinueReadingItemSchema = z.object({
+  title: z.object({
+    id: z.string(), // Title.id — куда ведёт карточка
+    sourceId: z.string(),
+    name: z.string(),
+    coverUrl: z.string(), // уже проксированный /api/v1/img?...
+    contentRating: ContentRatingSchema,
+    type: TitleTypeSchema.nullable(),
+  }),
+  chapter: z.object({
+    id: z.string(),
+    number: z.number().nullable(),
+    volume: z.number().nullable(),
+    title: z.string().nullable(),
+  }),
+  updatedAt: z.string().datetime(),
+});
+export type ContinueReadingItem = z.infer<typeof ContinueReadingItemSchema>;
+
+export const ContinueReadingResponseSchema = z.object({
+  /** Свежие первыми, до CONTINUE_READING_LIMIT. */
+  items: z.array(ContinueReadingItemSchema),
+});
+export type ContinueReadingResponse = z.infer<typeof ContinueReadingResponseSchema>;

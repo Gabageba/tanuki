@@ -228,6 +228,15 @@ export const BookmarksResponseSchema = z.object({
 });
 export type BookmarksResponse = z.infer<typeof BookmarksResponseSchema>;
 
+/** Сколько закладок в «Новых главах в закладках» на главной. */
+export const NEW_CHAPTER_BOOKMARKS_LIMIT = 8;
+
+/** Закладки отслеживаемых папок с вышедшими главами — свежая глава первой. */
+export const NewChapterBookmarksResponseSchema = z.object({
+  items: z.array(BookmarkItemSchema),
+});
+export type NewChapterBookmarksResponse = z.infer<typeof NewChapterBookmarksResponseSchema>;
+
 /** Сколько тайтлов в одном запросе меток — длинный каталог клиент шлёт частями. */
 export const BOOKMARKS_LOOKUP_MAX_TITLES = 1000;
 

@@ -194,6 +194,16 @@ export const LinkLibSocialTokenRequestSchema = z.object({
 });
 export type LinkLibSocialTokenRequest = z.infer<typeof LinkLibSocialTokenRequestSchema>;
 
+/**
+ * Блок с главной страницы сайта («Горячие новинки», «В тренде»): id стабилен — по нему хранится
+ * выбор пользователя (`sourceId:sectionId`), название — как у сайта, без перевода.
+ */
+export const HomeSectionInfoSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+});
+export type HomeSectionInfo = z.infer<typeof HomeSectionInfoSchema>;
+
 export const SourceSchema = z.object({
   id: z.string(), // "desume"
   title: z.string(),
@@ -241,6 +251,8 @@ export const SourceSchema = z.object({
   /** Пользователь не выключил источник в настройках. У гостя всегда true. */
   isEnabled: z.boolean(),
   access: SourceAccessSchema,
+  /** Блоки главной сайта в его порядке — для подборок; пустой — у источника нет главной. */
+  homeSections: z.array(HomeSectionInfoSchema),
 });
 
 export type Source = z.infer<typeof SourceSchema>;

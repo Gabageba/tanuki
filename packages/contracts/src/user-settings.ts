@@ -70,8 +70,16 @@ export const UserSettingsSchema = z.object({
   collapsedSearchSources: z.array(z.string()).optional(),
   /** Категории уведомлений, для которых push выключен. Отсутствие — включены все. */
   pushDisabledCategories: z.array(NotificationCategorySchema).optional(),
+  /** Источники, убранные из подборок: id. Отсутствие — показываются все. */
+  selectionsDisabledSources: z.array(z.string()).optional(),
+  /** Выключенные блоки подборок: `sourceId:sectionId` (`getSelectionsSectionKey`). */
+  selectionsDisabledSections: z.array(z.string()).optional(),
 });
 export type UserSettings = z.infer<typeof UserSettingsSchema>;
 
 export const UpdateUserSettingsRequestSchema = UserSettingsSchema;
 export type UpdateUserSettingsRequest = z.infer<typeof UpdateUserSettingsRequestSchema>;
+
+/** Ключ блока подборок в `selectionsDisabledSections`. */
+export const getSelectionsSectionKey = (sourceId: string, sectionId: string) =>
+  `${sourceId}:${sectionId}`;
