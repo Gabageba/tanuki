@@ -371,7 +371,11 @@ ContinueReadingItem = {
 ```
 GET /selections/:sourceId → { sourceId, status, sections: HomeSection[] }
     status: "ok" | "timeout" | "error" | "locked" | "unavailable"   — как у группы поиска
-    HomeSection = { id, title, items: Title[] }
+    HomeSection = { id, title, kind, isPeriodSupported, items: Title[] }
+    kind: "new" | "trending" | "popular" | "top" | "updates"         — иконка вкладки на фронте
+
+GET /selections/:sourceId/:sectionId?page=1&period=day|week|month
+    → { sourceId, sectionId, status, items: Title[], hasNextPage }
 ```
 
 Блоки главной сайта одного источника (`Parser.getHome`). Отдаются все описанные блоки: какие
@@ -382,7 +386,15 @@ stale-while-revalidate до 6 часов. Не ответивший источн
 показывает тост. `locked` — источник закрыт без аккаунта (парсер не вызывается), `unavailable` —
 `degraded`/`down` (тоже без запроса), `timeout` — главная не пришла за 15 с (запрос доживает в
 фоне и прогревает кеш). Блок, которого не нашлось на странице, приходит пустым. Неизвестный или
-скрытый источник — 404 `sourceNotFound`.
+скрытый источник — 404 `sourceNotFound`. Описание блоков (`kind`, `isPeriodSupported`) берётся из
+`Source.homeSections`, а не из кеша главной.
+
+Порция одного блока — для вкладки страницы «Подборки». Блок, который сайт отдаёт порциями,
+парсер листает сам (`Parser.getHomeSection`); остальные берутся из той же главной одной порцией
+(`hasNextPage: false`, дальше первой страницы — пусто). `period` учитывается только у блока с
+`isPeriodSupported` (по умолчанию `day`), у остальных игнорируется. Кеш — `CACHE_TTL.selections`
+на `(источник, блок, период, страница)`. Статусы и таймаут — как у всей главной; неизвестный блок
+— 404 `sectionNotFound`.
 
 ### Прокси изображений
 
