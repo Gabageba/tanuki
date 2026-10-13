@@ -158,6 +158,9 @@ const SEEDS: TitleSeed[] = [
   },
 ];
 
+/** Общий набор тайтлов — им пользуются и макеты вкладок подборок. */
+export const MOCK_TITLE_SEEDS = SEEDS;
+
 /** Затравка по номеру, по кругу. */
 const seedAt = (index: number) => {
   const seed = SEEDS[index % SEEDS.length];

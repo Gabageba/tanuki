@@ -14,6 +14,7 @@ import MultiselectOptions from './MultiselectOptions';
 import Notifications from './Notifications';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
+import SelectionsTabs from './SelectionsTabs';
 import SortKeys from './SortKeys';
 import SourcesHealthTable from './SourcesHealthTable';
 import SourcesSetup from './SourcesSetup';
@@ -36,6 +37,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'selections-tabs',
+    Component: SelectionsTabs,
+    title: 'Подборки вкладками',
+    description:
+      'Как переложить страницу подборок на вкладки: что выбирается селектором (источник или блок) и каким, где он стоит, вид вкладок блоков, сетка блока с подгрузкой порций там, где сайт её даёт, и как выглядит конец блока без продолжения и ошибка подгрузки.',
+    createdAt: '2026-10-13',
+    decision: 'R1 + S2 + M1 + T1 + E2 + F1 + Z1a + H3 (кнопка «Каталог») + P2',
+  },
   {
     slug: 'home-page',
     Component: Home,
