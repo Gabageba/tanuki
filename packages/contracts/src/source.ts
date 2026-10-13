@@ -194,6 +194,28 @@ export const LinkLibSocialTokenRequestSchema = z.object({
 });
 export type LinkLibSocialTokenRequest = z.infer<typeof LinkLibSocialTokenRequestSchema>;
 
+/** Смысл блока главной — по нему фронт берёт иконку вкладки: названия у сайтов свои, вид общий. */
+export const HOME_SECTION_KIND = {
+  NEW: 'new',
+  TRENDING: 'trending',
+  POPULAR: 'popular',
+  TOP: 'top',
+  UPDATES: 'updates',
+} as const;
+export type HomeSectionKind = EnumLiteralsOf<typeof HOME_SECTION_KIND>;
+
+export const HomeSectionKindSchema = z.enum(HOME_SECTION_KIND);
+
+/** Период блока с выбором периода — как `time=` у сайта. */
+export const HOME_SECTION_PERIOD = {
+  DAY: 'day',
+  WEEK: 'week',
+  MONTH: 'month',
+} as const;
+export type HomeSectionPeriod = EnumLiteralsOf<typeof HOME_SECTION_PERIOD>;
+
+export const HomeSectionPeriodSchema = z.enum(HOME_SECTION_PERIOD);
+
 /**
  * Блок с главной страницы сайта («Горячие новинки», «В тренде»): id стабилен — по нему хранится
  * выбор пользователя (`sourceId:sectionId`), название — как у сайта, без перевода.
@@ -201,6 +223,9 @@ export type LinkLibSocialTokenRequest = z.infer<typeof LinkLibSocialTokenRequest
 export const HomeSectionInfoSchema = z.object({
   id: z.string(),
   title: z.string(),
+  kind: HomeSectionKindSchema,
+  /** У блока на сайте есть выбор периода («Сейчас читают» MangaLib) — запрос принимает `period`. */
+  isPeriodSupported: z.boolean(),
 });
 export type HomeSectionInfo = z.infer<typeof HomeSectionInfoSchema>;
 

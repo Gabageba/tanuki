@@ -118,6 +118,12 @@ export {
   SourceSchema,
   HomeSectionInfoSchema,
   type HomeSectionInfo,
+  HOME_SECTION_KIND,
+  HomeSectionKindSchema,
+  type HomeSectionKind,
+  HOME_SECTION_PERIOD,
+  HomeSectionPeriodSchema,
+  type HomeSectionPeriod,
   SourceContentTypeSchema,
   SourceStatusSchema,
   SourceStatusReasonSchema,
@@ -310,6 +316,10 @@ export {
   type HomeSection,
   SelectionsResponseSchema,
   type SelectionsResponse,
+  SelectionsSectionQuerySchema,
+  type SelectionsSectionQuery,
+  SelectionsSectionResponseSchema,
+  type SelectionsSectionResponse,
 } from './selections';
 export {
   ChapterReadRequestSchema,
