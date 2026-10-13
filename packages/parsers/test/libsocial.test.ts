@@ -6,6 +6,7 @@ import { LIBSOCIAL_API_HOST } from '../src/sources/libsocial/config';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
 import {
   FILTER_TYPE,
   TITLE_RESTRICTION,
@@ -489,5 +490,29 @@ describe('LibSocial parser conformance', () => {
     expect(url.searchParams.get('year_max')).toBe('2020');
     expect(url.searchParams.get('chap_count_max')).toBe('50');
     expect(url.searchParams.get('chap_count_min')).toBeNull();
+  });
+});
+
+describe('LibSocial getHome', () => {
+  it('maps the home payload into the described sections, «Сейчас читают» tabs by key', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${LIBSOCIAL_API_HOST}/api/`, {
+      status: 200,
+      body: readFixture('libsocial-home.json'),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    const sections = await parser.getHome!();
+
+    expect(sections.map(({ id }) => id)).toEqual(parser.info.homeSections.map(({ id }) => id));
+    for (const section of sections) {
+      expect(section.items.length).toBeGreaterThan(0);
+      for (const item of section.items) {
+        expect(item.chapters).toBeNull();
+        expect(item.title).toBeTruthy();
+        expect(item.coverUrl).toMatch(/^https:\/\//);
+      }
+    }
   });
 });

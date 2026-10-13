@@ -31,9 +31,21 @@ import { classifyResponse } from '../../core/http/classify';
 import { parseHtml } from '../../core/html/dom';
 import { currentSourceAccount } from '../../core/source-accounts';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { toHomeSections, uniqueByUrl } from '../../core/home';
 import { encodeCp1251, hasNudeMoonSession, loginNudeMoon } from './auth';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.NUDEMOON;
+
+/** Блоки главной nude-moon — проверено вживую 2026-10-12. На главной один список, «Новые
+ *  переводы»; «Популярные» живут на /top без обложек (везде noimage.jpg), так что блоком их не
+ *  показать. */
+export const NUDEMOON_HOME_SECTION = {
+  NEW_TRANSLATIONS: 'newTranslations',
+} as const;
+
+const NUDEMOON_HOME_SECTIONS = [
+  { id: NUDEMOON_HOME_SECTION.NEW_TRANSLATIONS, title: 'Новые переводы' },
+];
 /** The site's own `all_manga` pager advances `rowstart` by 30 raw rows per page. */
 const ROWSTART_STEP = 30;
 
@@ -771,6 +783,48 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     return groups;
   };
 
+  /** Плитка главной — `a.help` с обложкой; адрес без ведущего слэша, название в title обложки.
+   *  `table.news_pic2` на главной — лента комментариев, а не тайтлы. */
+  const parseHomeCard = ($card: Cheerio<AnyNode>, baseUrl: string): RawTitle | null => {
+    const hrefRaw = attrOrNull($card, 'href');
+    if (!hrefRaw) return null;
+    const publicUrl = new URL(hrefRaw, baseUrl).toString();
+    const relUrl = toRelativeUrl(publicUrl, domain);
+    if (!/^\/\d+-/.test(relUrl)) return null;
+    const $img = $card.find('img.news_pic2').first();
+    const { title, altTitle } = splitTitle(attrOrNull($img, 'title') ?? '');
+    if (!title) return null;
+    return {
+      id: generateUid(SOURCE_ID, relUrl),
+      title,
+      altTitles: altTitle ? [altTitle] : [],
+      url: relUrl,
+      publicUrl,
+      rating: RATING_UNKNOWN,
+      contentRating: CONTENT_RATING.ADULT,
+      coverUrl: absUrl($img, 'src', baseUrl),
+      tags: [],
+      releaseState: null,
+      authors: [],
+      largeCoverUrl: null,
+      description: null,
+      chapters: null,
+      source: SOURCE_ID,
+    };
+  };
+
+  const getHome = async () => {
+    const doc = await ctx.http.getHtml(`https://${domain}/`);
+    const items = doc
+      .$('td.news_pic a.help')
+      .toArray()
+      .map((el) => parseHomeCard(doc.$(el), doc.baseUrl))
+      .filter((m): m is RawTitle => m !== null);
+    return toHomeSections(NUDEMOON_HOME_SECTIONS, {
+      [NUDEMOON_HOME_SECTION.NEW_TRANSLATIONS]: uniqueByUrl(items),
+    });
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -796,11 +850,13 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: false,
+      homeSections: NUDEMOON_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

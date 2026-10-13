@@ -30,6 +30,8 @@ import { parseRuRelativeDate, parseRuFullDate, parseRuBareYear } from '../../cor
 import { parseIntOrNull, parseFloatOrNull } from '../../core/text/numbers';
 import { toTitleCase, nullIfEmpty, findGroupValue } from '../../core/text/strings';
 import { ParseError } from '../../errors';
+import { toHomeSections, uniqueByUrl } from '../../core/home';
+import { findHomeHeading } from '../../core/html/home';
 import { UserAgents } from '../../core/http/user-agents';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
@@ -69,6 +71,18 @@ type ReaderApiChapterJson = {
     pages: { page: number; url: string }[];
   };
 };
+
+/** Блоки главной desu — заголовок `.subheadline` и лента карточек сразу за ним; проверено вживую
+ *  2026-10-12. «Горячие новинки ранобэ» не берём: ранобэ читалка не открывает. */
+export const DESU_HOME_SECTION = {
+  POPULAR_UPDATES: 'popularUpdates',
+  HOT_NEW: 'hotNew',
+} as const;
+
+const DESU_HOME_SECTIONS = [
+  { id: DESU_HOME_SECTION.POPULAR_UPDATES, title: 'Обновления популярной манги' },
+  { id: DESU_HOME_SECTION.HOT_NEW, title: 'Горячие новинки манги' },
+];
 
 const toRelativePath = (href: string): string => {
   return href.startsWith('/') ? href : `/${href}`;
@@ -683,6 +697,58 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     }));
   };
 
+  /** Карточка главной: обложка и название, в `title` — «Русское (Original)». */
+  const parseHomeItem = ($article: Cheerio<AnyNode>, baseUrl: string): RawTitle | null => {
+    const $link = $article.find('a.title').first();
+    const href = attrOrNull($link, 'href');
+    if (!href) return null;
+    const path = new URL(href, baseUrl).pathname;
+    const id = CHAPTER_ID_REGEX.exec(path)?.[1];
+    const title = nullIfEmpty(textOrNull($link) ?? '');
+    if (!id || !title) return null;
+    const fullTitle = attrOrNull($link, 'title') ?? '';
+    const originalTitle = fullTitle.startsWith(`${title} (`)
+      ? nullIfEmpty(fullTitle.slice(title.length + 2, -1))
+      : null;
+    const coverUrl = attrOrNull($article.find('img').first(), 'src');
+    return {
+      id: generateUid(SOURCE_ID, id),
+      title,
+      altTitles: originalTitle ? [originalTitle] : [],
+      url: toRelativePath(path),
+      publicUrl: new URL(path, baseUrl).toString(),
+      rating: RATING_UNKNOWN,
+      contentRating: $article.hasClass('age_18_plus') ? CONTENT_RATING.ADULT : null,
+      coverUrl,
+      largeCoverUrl: coverUrl ? toLargeCoverUrl(coverUrl) : null,
+      tags: [],
+      releaseState: null,
+      authors: [],
+      description: null,
+      chapters: null,
+      source: SOURCE_ID,
+    };
+  };
+
+  const getHome = async () => {
+    const doc = await ctx.http.getHtml(`https://${domain}/`);
+    const itemsOf = (title: string) => {
+      const $block = findHomeHeading(doc, '.subheadline', title)?.next();
+      if (!$block?.length) return [];
+      return uniqueByUrl(
+        $block
+          .find('article')
+          .toArray()
+          .map((el) => parseHomeItem(doc.$(el), doc.baseUrl))
+          .filter((item): item is RawTitle => item !== null),
+      );
+    };
+    return toHomeSections(
+      DESU_HOME_SECTIONS,
+      Object.fromEntries(DESU_HOME_SECTIONS.map(({ id, title }) => [id, itemsOf(title)])),
+    );
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -705,11 +771,13 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: false,
+      homeSections: DESU_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     imageHeaders: () => ({ Referer: IMAGE_REFERER, 'User-Agent': UserAgents.KOTATSU }),
   };
 };

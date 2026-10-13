@@ -59,3 +59,33 @@ export type CatalogSearchResponseJson = {
   total: number;
   list: CatalogItemJson[];
 };
+
+/** Блоки главной сети Grouple — вёрстка одна на ReadManga, MintManga, SelfManga, SeiManga и
+ *  AllHentai (проверено вживую 2026-10-12). «Горячие новинки» и «Обновление популярного» —
+ *  вкладки карусели «Тренды», отдаются в `<template data-tab-content>`; «Сейчас читают» на
+ *  главной блоком нет — это пункт меню. */
+export const GROUPLE_HOME_SECTION = {
+  HOT_NEW: 'hotNew',
+  POPULAR_UPDATES: 'popularUpdates',
+  POPULAR_NOW: 'popularNow',
+  LATEST_UPDATES: 'latestUpdates',
+} as const;
+
+export const GROUPLE_HOME_SECTIONS = [
+  { id: GROUPLE_HOME_SECTION.HOT_NEW, title: 'Горячие новинки' },
+  { id: GROUPLE_HOME_SECTION.POPULAR_UPDATES, title: 'Обновление популярного' },
+  { id: GROUPLE_HOME_SECTION.POPULAR_NOW, title: 'Популярная сейчас манга' },
+  { id: GROUPLE_HOME_SECTION.LATEST_UPDATES, title: 'Последние обновления каталога' },
+];
+
+/** Вкладка карусели «Тренды» блока — `data-tab-content` её шаблона. */
+export const getGroupleTrendTab = (
+  section: typeof GROUPLE_HOME_SECTION.HOT_NEW | typeof GROUPLE_HOME_SECTION.POPULAR_UPDATES,
+) => {
+  switch (section) {
+    case GROUPLE_HOME_SECTION.HOT_NEW:
+      return 'hot-list';
+    case GROUPLE_HOME_SECTION.POPULAR_UPDATES:
+      return 'popular-latest';
+  }
+};

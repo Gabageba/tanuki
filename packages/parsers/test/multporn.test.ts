@@ -6,6 +6,8 @@ import type { MultpornConfig } from '../src/sources/multporn/config';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'multporn.example';
 
@@ -17,6 +19,7 @@ const CFG: MultpornConfig = {
   detailTagSelector: '.field-name-field-category a',
   authorSelector: '.field-name-field-author a',
   seriesSelector: '.field-name-field-com-group a',
+  home: { path: '/updated_comics', title: 'Updated comics' },
   filters: {
     tagListPath: '/category_comic?rule34=1',
     tagPathPrefix: '/category/',
@@ -196,6 +199,7 @@ const CFG_HENTAI: MultpornConfig = {
   detailTagSelector: '.field-name-field-h-category a',
   authorSelector: '.field-name-field-author-hentai a',
   seriesSelector: '.field-name-field-hentai-com-group a',
+  home: { path: '/updated_manga', title: 'Updated manga' },
   filters: {
     tagListPath: '/manga_tags?rule34=3',
     tagPathPrefix: '/category_hentai/',
@@ -768,5 +772,23 @@ describe('MultPorn Comics parser filters', () => {
     const request = http.requests.findLast((r) => r.url.includes('/comics/adventure_time'))!;
     expect(request.url).toContain('/comics/adventure_time');
     expect(request.url).toContain('sort_by=created');
+  });
+});
+
+describe('MultPorn getHome', () => {
+  it("reads its own type's «updated» grid into the one section titled from the config", async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/updated_comics`, {
+      status: 200,
+      body: readFixture('multporn-updated-comics.html'),
+    });
+    const parser = createMultpornParser(CFG, makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    expect(sections[0]!.title).toBe('Updated comics');
+    expect(sections[0]!.items).toHaveLength(2);
   });
 });

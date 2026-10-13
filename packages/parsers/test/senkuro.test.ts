@@ -12,6 +12,7 @@ import { SENKURO_CONFIGS } from '../src/sources/senkuro/config';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'senkuro.com';
 
@@ -374,5 +375,59 @@ describe('Senkognito config', () => {
     const parser = createSenkuroParser(SENKOGNITO_CONFIG, makeContext(new FakeHttpClient()));
     expect(parser.info.title).toBe('Senkognito');
     expect(parser.info.contentType).toBe(SOURCE_CONTENT_TYPE.HENTAI);
+  });
+});
+
+describe('Senkuro getHome', () => {
+  const card = (n: number) => ({
+    id: `TUFOR0E6${n}`,
+    slug: `manga-${n}`,
+    titles: [{ lang: 'RU', content: `Тайтл ${n}` }],
+    cover: { original: { url: `https://mirai.senkuro.net/manga/${n}/cover.jpg` } },
+    type: 'MANHWA',
+    chapters: 10,
+    rating: 'GENERAL',
+    score: 8.1,
+    status: 'ONGOING',
+  });
+  const homeResponse = JSON.stringify({
+    data: {
+      mangaPopularByPeriod: [card(1), card(2)],
+      mangas: { edges: [{ node: card(3) }] },
+    },
+  });
+
+  it('Senkuro: «Самое читаемое» and «Последние обновления» from one query', async () => {
+    const http = new FakeHttpClient();
+    http.register((_url, body) => body?.includes('fetchHome') ?? false, {
+      status: 200,
+      body: homeResponse,
+      contentType: 'application/json',
+    });
+    const parser = createSenkuroParser(SENKURO_CONFIG, makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    expect(sections.map(({ items }) => items.length)).toEqual([2, 1]);
+    expect(JSON.parse(http.requests[0]!.body!).variables.withPopular).toBe(true);
+  });
+
+  it('Senkognito: no «Самое читаемое» — the backend answers it with Senkuro titles', async () => {
+    const http = new FakeHttpClient();
+    http.register((_url, body) => body?.includes('fetchHome') ?? false, {
+      status: 200,
+      body: homeResponse,
+      contentType: 'application/json',
+    });
+    const parser = createSenkuroParser(SENKOGNITO_CONFIG, makeContext(http, 'ne.senkognito.com'));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    expect(sections.map(({ id }) => id)).toEqual(['latestUpdates']);
+    expect(JSON.parse(http.requests[0]!.body!).variables.withPopular).toBe(false);
   });
 });

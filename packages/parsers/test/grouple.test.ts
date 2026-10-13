@@ -7,6 +7,8 @@ import type { GroupleConfig } from '../src/sources/grouple/config';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'mintmanga.example';
 
@@ -577,5 +579,26 @@ describe('Grouple parser conformance', () => {
     const url = new URL(req.url);
     expect(url.searchParams.get('years')).toBe('1900,2100');
     expect(url.searchParams.has('includeElementIds')).toBe(false);
+  });
+});
+
+describe('Grouple getHome', () => {
+  it('reads the «Тренды» tab templates, «Популярная сейчас» and the latest updates feed', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: readFixture('grouple-home.html'),
+    });
+    const parser = createGroupleParser(CFG, makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    // Плитка соседнего сайта сети пропущена, ссылка на главу сведена к тайтлу.
+    expect(sections[0]!.items).toHaveLength(2);
+    for (const { items } of sections) {
+      for (const item of items) expect(item.url).toMatch(/^\/[^/]+$/);
+    }
   });
 });

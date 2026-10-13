@@ -30,6 +30,10 @@ import { generateUid } from '../../core/uid';
 import { toTitleCase } from '../../core/text/strings';
 import { ParseError } from '../../errors';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { toHomeSections } from '../../core/home';
+import { findHomeHeading } from '../../core/html/home';
+import { parseHtml } from '../../core/html/dom';
+import { attrOrNull } from '../../core/html/selectors';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.HENTAICHAN_CC;
 /**
@@ -259,6 +263,26 @@ const sortFieldFor = (order: string | undefined): string => {
 
 /** Directus takes direction as a `-` prefix on the field, not a separate param — verified live
  *  that `sort=<field>` and `sort=-<field>` both work for every field used below. */
+/** Блоки главной hentaichan.cc — проверено вживую 2026-10-12. «Новая манга» — каталог по дате
+ *  добавления; «Популярную мангу» сайт собирает сам (ни одна сортировка API её не повторяет),
+ *  поэтому её состав берётся из SSR-разметки, а сами тайтлы — из API. */
+export const HENTAICHAN_CC_HOME_SECTION = {
+  NEW: 'new',
+  POPULAR: 'popular',
+} as const;
+
+const HENTAICHAN_CC_HOME_SECTIONS = [
+  { id: HENTAICHAN_CC_HOME_SECTION.NEW, title: 'Новая манга' },
+  { id: HENTAICHAN_CC_HOME_SECTION.POPULAR, title: 'Популярная манга' },
+];
+
+const HOME_SECTION_SIZE = 20;
+
+/** Поля элемента списка — общие у каталога и главной. */
+const LIST_FIELDS =
+  'id,name,slug,cover.filename_disk,description,type,likes,views,pages,date_created,' +
+  'tags.tags_id.name,tags.tags_id.slug';
+
 const sortFor = (order: string | undefined, direction: string | undefined): string => {
   const field = sortFieldFor(order);
   return direction === SORT_DIRECTION.ASC ? field : `-${field}`;
@@ -389,9 +413,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       limit: String(params.limit),
       offset: String(params.offset),
       sort: sortFor(params.order, params.direction),
-      fields:
-        'id,name,slug,cover.filename_disk,description,type,likes,views,pages,date_created,' +
-        'tags.tags_id.name,tags.tags_id.slug',
+      fields: LIST_FIELDS,
       /** Excludes 4 live test/junk rows ("test", "1233", ...) sitting in `declined`/`moderation`
        *  status — verified live, never approved catalog entries a listing (filtered or not)
        *  should surface. */
@@ -401,6 +423,42 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
     Object.assign(query, buildFilterParams(params.filters));
     const res = await directusGet<DirectusListResponse<MangaListItem>>('/items/manga', query);
     return res.data.map(parseListItem);
+  };
+
+  /** Тайтлы по slug в порядке `slugs` — так блок сохраняет порядок сайта. */
+  const fetchBySlugs = async (slugs: string[]): Promise<RawTitle[]> => {
+    if (slugs.length === 0) return [];
+    const res = await directusGet<DirectusListResponse<MangaListItem>>('/items/manga', {
+      limit: String(slugs.length),
+      fields: LIST_FIELDS,
+      'filter[slug][_in]': slugs.join(','),
+    });
+    const bySlug = new Map(res.data.map((item) => [item.slug, parseListItem(item)]));
+    return slugs.flatMap((slug) => bySlug.get(slug) ?? []);
+  };
+
+  const getHome = async () => {
+    const [res, newest] = await Promise.all([
+      ctx.http.get(`https://${domain}/`),
+      getList({ offset: 0, limit: HOME_SECTION_SIZE, order: SORT_ORDER.RELEASED }),
+    ]);
+    const doc = parseHtml(res.text(), `https://${domain}/`);
+    const popularTitle = HENTAICHAN_CC_HOME_SECTIONS.find(
+      ({ id }) => id === HENTAICHAN_CC_HOME_SECTION.POPULAR,
+    )!.title;
+    // Заголовок и ссылка «Ещё» — в своей строке, лента — в общем блоке на уровень выше.
+    const $section = findHomeHeading(doc, 'h2', popularTitle)?.parent().parent().parent();
+    const slugs = [
+      ...new Set(
+        ($section?.find('a[href^="/manga/"]').toArray() ?? [])
+          .map((el) => attrOrNull(doc.$(el), 'href')?.split('/')[2])
+          .filter((slug): slug is string => !!slug),
+      ),
+    ];
+    return toHomeSections(HENTAICHAN_CC_HOME_SECTIONS, {
+      [HENTAICHAN_CC_HOME_SECTION.NEW]: newest,
+      [HENTAICHAN_CC_HOME_SECTION.POPULAR]: await fetchBySlugs(slugs).catch(() => []),
+    });
   };
 
   const parseMangaUrl = (url: string): { mangaId: string; slug: string } => {
@@ -660,11 +718,13 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections: HENTAICHAN_CC_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };

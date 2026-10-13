@@ -513,6 +513,7 @@ export const createSexKomix2Parser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: false,
+      homeSections: [],
     },
     getList,
     getDetails,

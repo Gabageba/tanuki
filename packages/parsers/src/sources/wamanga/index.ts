@@ -32,8 +32,23 @@ import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl } from '../../core/html/urls';
 import { toTitleCase } from '../../core/text/strings';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { toHomeSections } from '../../core/home';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.WAMANGA;
+
+/** Блоки главной wamanga.ru — `/api/v1/manga/homepage` отдаёт их разом, в форме элементов
+ *  каталога (проверено вживую 2026-10-12). «Онгоинг» на странице — метка статуса, не блок. */
+export const WAMANGA_HOME_SECTION = {
+  DAY_TOP: 'dayTop',
+  NEW: 'new',
+  FRESH_UPDATES: 'freshUpdates',
+} as const;
+
+const WAMANGA_HOME_SECTIONS = [
+  { id: WAMANGA_HOME_SECTION.DAY_TOP, title: 'Топ за день' },
+  { id: WAMANGA_HOME_SECTION.NEW, title: 'Новинки' },
+  { id: WAMANGA_HOME_SECTION.FRESH_UPDATES, title: 'Свежие обновления' },
+];
 const PAGE_SIZE = 20;
 const YEAR_RANGE_MIN = 1990;
 const YEAR_RANGE_CUTOFF = 2000;
@@ -84,6 +99,12 @@ type ChapterJson = {
   position?: number;
   title?: string;
   createdAt?: string;
+};
+
+type HomepageJson = {
+  dayTop?: MangaJson[];
+  latestPublished?: MangaJson[];
+  freshUpdates?: MangaJson[];
 };
 
 type MangaJson = {
@@ -459,6 +480,15 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
     });
   };
 
+  const getHome = async () => {
+    const json = await ctx.http.getJson<HomepageJson>(`${apiUrl}/manga/homepage`);
+    return toHomeSections(WAMANGA_HOME_SECTIONS, {
+      [WAMANGA_HOME_SECTION.DAY_TOP]: (json.dayTop ?? []).map(parseManga),
+      [WAMANGA_HOME_SECTION.NEW]: (json.latestPublished ?? []).map(parseManga),
+      [WAMANGA_HOME_SECTION.FRESH_UPDATES]: (json.freshUpdates ?? []).map(parseManga),
+    });
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -483,11 +513,13 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: false,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections: WAMANGA_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };

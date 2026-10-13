@@ -9,6 +9,7 @@ import {
   SOURCE_CONTENT_TYPE,
   type TitleState,
   SOURCE_LOCALE,
+  type EnumLiteralsOf,
   type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -31,8 +32,38 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { ParseError } from '../../errors';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { fetchHomeSections } from '../../core/home';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.TOMILOLIB;
+
+/** Блоки главной tomilo-lib.ru — страница рисуется в браузере, блоки берёт из своих
+ *  эндпоинтов (найдены в бандле главной, проверены вживую 2026-10-12). */
+export const TOMILOLIB_HOME_SECTION = {
+  POPULAR_WEEK: 'popularWeek',
+  TOP_WEEK: 'topWeek',
+  NEW_CHAPTERS: 'newChapters',
+} as const;
+type TomiloLibHomeSection = EnumLiteralsOf<typeof TOMILOLIB_HOME_SECTION>;
+
+const TOMILOLIB_HOME_SECTIONS: { id: TomiloLibHomeSection; title: string }[] = [
+  { id: TOMILOLIB_HOME_SECTION.POPULAR_WEEK, title: 'Популярное за неделю' },
+  { id: TOMILOLIB_HOME_SECTION.TOP_WEEK, title: 'Топ-5 недели' },
+  { id: TOMILOLIB_HOME_SECTION.NEW_CHAPTERS, title: 'Новые главы' },
+];
+
+/** Запрос блока — путь и параметры, как их шлёт сама главная. */
+const getTomiloLibHomeRequest = (
+  section: TomiloLibHomeSection,
+): { path: string; params: Record<string, string> } => {
+  switch (section) {
+    case TOMILOLIB_HOME_SECTION.POPULAR_WEEK:
+      return { path: 'titles/popular', params: { limit: '20' } };
+    case TOMILOLIB_HOME_SECTION.TOP_WEEK:
+      return { path: 'titles/top/week', params: { limit: '5' } };
+    case TOMILOLIB_HOME_SECTION.NEW_CHAPTERS:
+      return { path: 'titles/latest-updates', params: { page: '1', limit: '24' } };
+  }
+};
 const PAGE_SIZE = 24;
 const CDN_URL = 'https://s3.regru.cloud/tomilolib';
 const IMAGE_ACCEPT = 'image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5';
@@ -103,6 +134,19 @@ type MangaJson = {
   createdAt?: string | null;
   description?: string;
   chapters?: ChapterJson[];
+};
+
+/** Элемент блоков главной — короче элемента каталога: `id`/`title`/`cover` вместо
+ *  `_id`/`name`/`coverImage`, обложка уже полным адресом, рейтинг 0..10. */
+type HomeTitleJson = {
+  id?: string;
+  slug?: string;
+  title?: string;
+  cover?: string;
+  rating?: number;
+  type?: string;
+  releaseYear?: number;
+  totalChapters?: number;
 };
 
 const getApiSortBy = (order: string | undefined): string => {
@@ -535,6 +579,41 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       .filter((p): p is RawPage => p !== null);
   };
 
+  const parseHomeTitle = (jo: HomeTitleJson): RawTitle | null => {
+    if (!jo.slug || !jo.title) return null;
+    const url = `/titles/${jo.slug}`;
+    return {
+      id: generateUid(SOURCE_ID, url),
+      title: jo.title,
+      altTitles: [],
+      url,
+      publicUrl: `https://${domain}${url}`,
+      rating: jo.rating != null && jo.rating > 0 ? jo.rating / 10 : RATING_UNKNOWN,
+      contentRating: null,
+      coverUrl: jo.cover ?? null,
+      largeCoverUrl: null,
+      tags: [],
+      releaseState: null,
+      authors: [],
+      description: null,
+      chapters: null,
+      source: SOURCE_ID,
+      type: parseMangaType(jo.type),
+      year: jo.releaseYear ?? null,
+      chaptersCount: jo.totalChapters ?? null,
+    };
+  };
+
+  const fetchHomeSection = async (section: TomiloLibHomeSection): Promise<RawTitle[]> => {
+    const request = getTomiloLibHomeRequest(section);
+    const url = apiUrl(request.path);
+    for (const [key, value] of Object.entries(request.params)) url.searchParams.set(key, value);
+    const json = await ctx.http.getJson<{ data?: HomeTitleJson[] }>(url.toString());
+    return (json.data ?? []).map(parseHomeTitle).filter((item): item is RawTitle => item !== null);
+  };
+
+  const getHome = () => fetchHomeSections(TOMILOLIB_HOME_SECTIONS, fetchHomeSection);
+
   return {
     id: SOURCE_ID,
     info: {
@@ -563,7 +642,9 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections: TOMILOLIB_HOME_SECTIONS,
     },
+    getHome,
     getList,
     getDetails,
     getPages,

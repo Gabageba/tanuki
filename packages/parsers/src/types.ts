@@ -183,6 +183,17 @@ export type RawFilterGroup = {
   supportsDirection?: boolean;
 };
 
+/** Блок главной сайта: id стабилен (по нему хранится выбор пользователя), название — как у сайта. */
+export type RawHomeSectionInfo = {
+  id: string;
+  title: string;
+};
+
+/** Блок главной с тайтлами — элементы по тем же соглашениям, что у getList (`chapters: null`). */
+export type RawHomeSection = RawHomeSectionInfo & {
+  items: RawTitle[];
+};
+
 export type RawSourceInfo = {
   id: string;
   title: string;
@@ -204,4 +215,6 @@ export type RawSourceInfo = {
    *  silently dropped, so the UI doesn't offer filters while a query is typed. */
   isSearchWithFiltersSupported: boolean;
   isMultipleTagsSupported: boolean;
+  /** Блоки главной сайта в его порядке — mirrors Parser.getHome; пустой — главной нет. */
+  homeSections: RawHomeSectionInfo[];
 };

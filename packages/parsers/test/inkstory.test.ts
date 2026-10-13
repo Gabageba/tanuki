@@ -12,6 +12,8 @@ import { createInkStoryParser, INKSTORY_FILTER_GROUP } from '../src/sources/inks
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'inkstory.net';
 // The site's own api.<domain> host is gone — every sibling site of the "inuko" platform now reads
@@ -537,5 +539,30 @@ describe('Inkstory parser conformance', () => {
       'https://static.inuko.me/book/aaaa/poster/65ae6e4c-d952-4ef6-831a-0c982baa72b0.jpeg';
     const untouched = Buffer.from('not obfuscated');
     expect((await parser.decodeImage!(untouched, plainUrl)).equals(untouched)).toBe(true);
+  });
+});
+
+describe('Inkstory getHome', () => {
+  it('reads SSR blocks by heading, book id from the cover, latest updates from the feed', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: readFixture('inkstory-home.html'),
+    });
+    http.register((url) => url.includes('/v2/chapter-update-feed'), {
+      status: 200,
+      body: UPDATED_FEED_JSON,
+      contentType: 'application/json',
+    });
+    const parser = createInkStoryParser(makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    const ongoing = sections[0]!.items[0]!;
+    // id — тот же uuid книги, что в API каталога, а не slug из ссылки.
+    expect(ongoing.url).toMatch(/^[0-9a-f-]{36}$/);
+    expect(ongoing.coverUrl).not.toContain('?');
   });
 });

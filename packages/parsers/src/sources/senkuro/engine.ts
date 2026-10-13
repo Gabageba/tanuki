@@ -34,6 +34,7 @@ import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { ParseError, SourceUnavailableError } from '../../errors';
 import { catalogEntryFor } from '../catalog';
 import type { SenkuroConfig } from './config';
+import { toHomeSections } from '../../core/home';
 
 const URL_DELIMITER = ',,';
 // Every domain a Senkuro-family source registers in ../catalog.ts is a mirror of the same
@@ -787,6 +788,25 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
     return { items, nextCursor };
   };
 
+  const homeSections = cfg.hasPopularHome
+    ? [SENKURO_MOST_READ_SECTION, SENKURO_LATEST_UPDATES_SECTION]
+    : [SENKURO_LATEST_UPDATES_SECTION];
+
+  const getHome = async () => {
+    const data = await postGraphQl(HOME_QUERY, {
+      withPopular: cfg.hasPopularHome,
+      first: HOME_SECTION_SIZE,
+    });
+    const toItems = (cards: (MangaCardJson | undefined)[]) =>
+      cards.map(parseMangaCard).filter((item): item is RawTitle => item !== null);
+    const popular = (data['mangaPopularByPeriod'] as MangaCardJson[] | undefined) ?? [];
+    const latest = (data['mangas'] as { edges?: { node?: MangaCardJson }[] } | undefined)?.edges;
+    return toHomeSections(homeSections, {
+      [SENKURO_HOME_SECTION.MOST_READ]: toItems(popular),
+      [SENKURO_HOME_SECTION.LATEST_UPDATES]: toItems((latest ?? []).map((edge) => edge.node)),
+    });
+  };
+
   const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchCursorPaged(params, { maxPageSize: LIST_MAX_PAGE_SIZE }, (cursor, first) =>
       fetchListPage(cursor, first, params.order, params.direction, params.query, params.filters),
@@ -1089,11 +1109,13 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
@@ -1103,6 +1125,56 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
 // the chapters/releasedOn/completedOn range inputs) was found the same way MangaOrder was —
 // transcribed from senkuro.com's compiled catalog page (fetchMangas' own variable declarations),
 // then verified live against api.senkuro.com since introspection is disabled.
+/** Блоки главной senkuro — запросы взяты из бандла главной сайта (fetchPopularMangaByPeriod и
+ *  lastMangaChapters), проверено вживую 2026-10-12. «Самое читаемое» — период DAY, как в SSR. */
+export const SENKURO_HOME_SECTION = {
+  MOST_READ: 'mostRead',
+  LATEST_UPDATES: 'latestUpdates',
+} as const;
+
+const SENKURO_MOST_READ_SECTION = { id: SENKURO_HOME_SECTION.MOST_READ, title: 'Самое читаемое' };
+const SENKURO_LATEST_UPDATES_SECTION = {
+  id: SENKURO_HOME_SECTION.LATEST_UPDATES,
+  title: 'Последние обновления',
+};
+
+const HOME_SECTION_SIZE = 21;
+
+const MANGA_CARD_FIELDS = `
+  id
+  slug
+  titles {
+    lang
+    content
+  }
+  cover {
+    original {
+      url
+    }
+  }
+  type
+  releasedOn
+  chapters
+  rating
+  score
+  status
+`;
+
+const HOME_QUERY = `
+query fetchHome($withPopular: Boolean!, $first: Int) {
+  mangaPopularByPeriod(period: DAY) @include(if: $withPopular) {
+    ${MANGA_CARD_FIELDS}
+  }
+  mangas(first: $first, orderBy: { field: LAST_CHAPTER_AT, direction: DESC }) {
+    edges {
+      node {
+        ${MANGA_CARD_FIELDS}
+      }
+    }
+  }
+}
+`;
+
 const LIST_QUERY = `
 query fetchMangas(
   $after: String,

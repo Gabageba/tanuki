@@ -304,3 +304,53 @@ describe('Remanga parser conformance', () => {
     expect(url.searchParams.get('issue_year_lte')).toBe('2020');
   });
 });
+
+describe('Remanga getHome', () => {
+  const sliderTitle = (dir: string) => ({
+    title: {
+      dir,
+      main_name: dir,
+      avg_rating: '7.5',
+      cover: { mid: `/covers/${dir}.jpg` },
+      type: { id: 1 },
+    },
+  });
+
+  it('maps every described section in order, string ratings scaled to 0..1', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/v3/titles/?slider_type=hot_new'), {
+      status: 200,
+      body: JSON.stringify({ results: [sliderTitle('hot').title] }),
+      contentType: 'application/json',
+    });
+    http.register((url) => url.endsWith('/api/v2/titles/sliders/35/'), {
+      status: 404,
+      body: '{}',
+      contentType: 'application/json',
+    });
+    http.register((url) => url.includes('/api/v2/titles/sliders/'), {
+      status: 200,
+      body: JSON.stringify({ titles: [sliderTitle('slide')] }),
+      contentType: 'application/json',
+    });
+    const parser = createRemangaParser(makeContext(http));
+
+    const sections = await parser.getHome!();
+
+    expect(sections.map(({ id }) => id)).toEqual(parser.info.homeSections.map(({ id }) => id));
+    expect(sections[0]?.items[0]?.url).toBe('/manga/hot');
+    expect(sections[0]?.items[0]?.rating).toBeCloseTo(0.75);
+    expect(sections[0]?.items[0]?.chapters).toBeNull();
+    // «В тренде» не ответил — пустой блок, остальные на месте.
+    expect(sections.find(({ id }) => id === 'trending')?.items).toEqual([]);
+    expect(sections.find(({ id }) => id === 'popular')?.items).toHaveLength(1);
+  });
+
+  it('throws when every section failed', async () => {
+    const http = new FakeHttpClient();
+    http.register(() => true, { status: 500, body: '', contentType: 'application/json' });
+    const parser = createRemangaParser(makeContext(http));
+
+    await expect(parser.getHome!()).rejects.toThrow();
+  });
+});

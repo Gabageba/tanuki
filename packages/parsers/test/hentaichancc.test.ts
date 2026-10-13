@@ -12,6 +12,7 @@ import { createHentaichanCcParser, HENTAICHAN_CC_FILTER_GROUP } from '../src/sou
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'hentaichan.cc';
 const API_BASE = 'https://backend.hentaichan.cc';
@@ -352,5 +353,40 @@ describe('HentaiChan.cc parser conformance', () => {
     await createHentaichanCcParser(makeContext(fresh)).getList({ offset: 0, limit: 20 });
     const url = new URL(fresh.requests[0]!.url);
     expect(url.searchParams.get('filter[status][_nin]')).toBe('declined,moderation');
+  });
+});
+
+describe('HentaiChan.cc getHome', () => {
+  // Разметка главной урезана до блока «Популярная манга»: заголовок в своей строке, лента —
+  // соседом на уровень выше, как на живой странице.
+  const HOME_HTML = `<!doctype html><html><body>
+    <div><div><div><h2>Популярная манга</h2></div></div>
+      <div>
+        <a href="/manga/1-2-ato-no-futari"><img src="x.jpg"></a>
+        <a href="/manga/1-2-ato-no-futari">1 + 2</a>
+        <a href="/manga/missing-title"><img src="y.jpg"></a>
+      </div>
+    </div>
+  </body></html>`;
+
+  it('«Новая манга» from the catalog, «Популярная манга» in the page order via the API', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, { status: 200, body: HOME_HTML });
+    http.register((url) => url.startsWith(`${API_BASE}/items/manga?`), {
+      status: 200,
+      body: LIST_RESPONSE,
+      contentType: 'application/json',
+    });
+    const parser = createHentaichanCcParser(makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    expect(sections[1]!.items.map(({ url }) => url)).toEqual(['5243,,1-2-ato-no-futari']);
+    const popularRequest = http.requests.find(({ url }) => url.includes('filter%5Bslug%5D'));
+    expect(decodeURIComponent(popularRequest!.url)).toContain(
+      'filter[slug][_in]=1-2-ato-no-futari,missing-title',
+    );
   });
 });

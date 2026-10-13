@@ -5,6 +5,7 @@ import { createTomiloLibParser, TOMILOLIB_FILTER_GROUP } from '../src/sources/to
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'tomilo-lib.example';
 const TITLE_ID = 'title-1';
@@ -217,5 +218,39 @@ describe('TomiloLib parser conformance', () => {
     expect(url.searchParams.get('status')).toBe('ongoing');
     expect(url.searchParams.get('releaseYearFrom')).toBe('2015');
     expect(url.searchParams.get('chaptersTo')).toBe('200');
+  });
+});
+
+describe('TomiloLib getHome', () => {
+  const homeTitle = (slug: string) => ({
+    id: `id-${slug}`,
+    slug,
+    title: slug,
+    cover: `https://${DOMAIN}/api/shop/images/asset/${slug}?w=640`,
+    rating: 8.5,
+    type: 'manhwa',
+  });
+
+  it('maps each block endpoint onto its section, a failed one stays empty', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/titles/top/week'), {
+      status: 500,
+      body: '{}',
+      contentType: 'application/json',
+    });
+    http.register((url) => url.includes('/api/titles/'), {
+      status: 200,
+      body: JSON.stringify({ success: true, data: [homeTitle('one'), homeTitle('two')] }),
+      contentType: 'application/json',
+    });
+    const parser = createTomiloLibParser(makeContext(http));
+
+    const { sections, problems } = await checkHome(parser, ['popularWeek', 'newChapters']);
+
+    expect(problems).toEqual([]);
+
+    expect(sections[1]!.items).toEqual([]);
+    expect(sections[0]!.items[0]!.url).toBe('/titles/one');
+    expect(sections[0]!.items[0]!.rating).toBeCloseTo(0.85);
   });
 });

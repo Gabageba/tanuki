@@ -123,6 +123,7 @@ const buildDescriptor = (id: SourceId): SourceDescriptor => {
     isMultipleTagsSupported: true,
     isFiltersSupported: FILTERS_SUPPORTED_IDS.has(id),
     isSearchWithFiltersSupported: false,
+    homeSections: [],
   };
 
   if (groupleConfig) {

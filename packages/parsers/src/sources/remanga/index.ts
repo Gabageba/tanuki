@@ -10,6 +10,7 @@ import {
   SOURCE_CONTENT_TYPE,
   type TitleState,
   SOURCE_LOCALE,
+  type EnumLiteralsOf,
   type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -37,6 +38,7 @@ import { toAbsoluteUrl } from '../../core/html/urls';
 import { toTitleCase } from '../../core/text/strings';
 import { parseFloatOrNull } from '../../core/text/numbers';
 import { NotFoundError } from '../../errors';
+import { fetchHomeSections } from '../../core/home';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.REMANGA;
@@ -55,6 +57,48 @@ export const REMANGA_FILTER_GROUP = {
   YEAR: FILTER_GROUP.YEAR,
   CHAPTERS_COUNT: FILTER_GROUP.CHAPTERS_COUNT,
 } as const;
+
+/** Блоки главной remanga.org — проверено вживую 2026-10-12. «Горячие новинки» отдаёт v3
+ *  `slider_type=hot_new`, остальные — слайдеры v2 по id или dir. */
+export const REMANGA_HOME_SECTION = {
+  HOT_NEW: 'hotNew',
+  NEW_SEASON: 'newSeason',
+  TRENDING: 'trending',
+  POPULAR_TODAY: 'popularToday',
+  NEW_CHAPTERS: 'newChapters',
+  POPULAR: 'popular',
+} as const;
+type RemangaHomeSection = EnumLiteralsOf<typeof REMANGA_HOME_SECTION>;
+
+const REMANGA_HOME_SECTIONS: { id: RemangaHomeSection; title: string }[] = [
+  { id: REMANGA_HOME_SECTION.HOT_NEW, title: 'Горячие новинки' },
+  { id: REMANGA_HOME_SECTION.NEW_SEASON, title: 'Новый сезон' },
+  { id: REMANGA_HOME_SECTION.TRENDING, title: 'В тренде' },
+  { id: REMANGA_HOME_SECTION.POPULAR_TODAY, title: 'Популярно сегодня' },
+  { id: REMANGA_HOME_SECTION.NEW_CHAPTERS, title: 'Свежие главы' },
+  { id: REMANGA_HOME_SECTION.POPULAR, title: 'Популярное' },
+];
+
+/** Слайдер v2 блока — `/api/v2/titles/sliders/{dir}/`; у «Популярного» dir словом, не числом.
+ *  «Горячие новинки» живут в v3 и слайдера v2 не имеют. */
+const getRemangaSliderDir = (section: RemangaHomeSection): string | null => {
+  switch (section) {
+    case REMANGA_HOME_SECTION.HOT_NEW:
+      return null;
+    case REMANGA_HOME_SECTION.NEW_SEASON:
+      return '20';
+    case REMANGA_HOME_SECTION.TRENDING:
+      return '35';
+    case REMANGA_HOME_SECTION.POPULAR_TODAY:
+      return '22';
+    case REMANGA_HOME_SECTION.NEW_CHAPTERS:
+      return '26';
+    case REMANGA_HOME_SECTION.POPULAR:
+      return 'popular-anime';
+  }
+};
+
+const HOME_SECTION_SIZE = 20;
 
 const STATES: Record<number, TitleState> = {
   1: TITLE_STATE.FINISHED,
@@ -138,7 +182,8 @@ type MangaJson = {
   main_name: string;
   secondary_name?: string;
   another_name?: string;
-  avg_rating?: number;
+  /** Числом в каталоге, строкой («7.5») в слайдерах главной. */
+  avg_rating?: number | string;
   cover: CoverJson;
   type?: TypeJson;
   status?: StatusJson;
@@ -398,7 +443,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       altTitles: jo.secondary_name ? [jo.secondary_name] : [],
       url,
       publicUrl: `https://${domain}${url}/main`,
-      rating: jo.avg_rating != null ? jo.avg_rating / 10 : RATING_UNKNOWN,
+      rating: jo.avg_rating != null ? Number(jo.avg_rating) / 10 : RATING_UNKNOWN,
       contentRating: null,
       coverUrl: cover.mid ? toAbsoluteUrl(cover.mid, apiHost) : null,
       largeCoverUrl: cover.high ? toAbsoluteUrl(cover.high, apiHost) : null,
@@ -649,7 +694,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       altTitles,
       url,
       publicUrl: `https://${domain}${url}/main`,
-      rating: json.avg_rating != null ? json.avg_rating / 10 : RATING_UNKNOWN,
+      rating: json.avg_rating != null ? Number(json.avg_rating) / 10 : RATING_UNKNOWN,
       contentRating:
         json.age_limit?.id === 0
           ? CONTENT_RATING.SAFE
@@ -709,6 +754,22 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     return result;
   };
 
+  const fetchHomeSection = async (section: RemangaHomeSection): Promise<RawTitle[]> => {
+    const dir = getRemangaSliderDir(section);
+    if (dir === null) {
+      const json = await ctx.http.getJson<{ results: MangaJson[] }>(
+        `https://${apiHost}/api/v3/titles/?slider_type=hot_new&count=${HOME_SECTION_SIZE}`,
+      );
+      return json.results.map(parseManga);
+    }
+    const json = await ctx.http.getJson<{ titles?: { title: MangaJson }[] }>(
+      `https://${apiHost}/api/v2/titles/sliders/${dir}/`,
+    );
+    return (json.titles ?? []).map(({ title }) => parseManga(title));
+  };
+
+  const getHome = () => fetchHomeSections(REMANGA_HOME_SECTIONS, fetchHomeSection);
+
   return {
     id: SOURCE_ID,
     info: {
@@ -735,11 +796,13 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections: REMANGA_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };

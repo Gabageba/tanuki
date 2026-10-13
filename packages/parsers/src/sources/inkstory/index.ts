@@ -38,6 +38,12 @@ import { toTitleCase } from '../../core/text/strings';
 import { ParseError } from '../../errors';
 import { UserAgents } from '../../core/http/user-agents';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { parseHtml } from '../../core/html/dom';
+import { findHomeHeading } from '../../core/html/home';
+import { attrOrNull, textOrNull } from '../../core/html/selectors';
+import { parseFloatOrNull } from '../../core/text/numbers';
+import { nullIfEmpty } from '../../core/text/strings';
+import { toHomeSections, uniqueByUrl } from '../../core/home';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.INKSTORY;
 const PAGE_SIZE = 20;
@@ -50,6 +56,26 @@ const DECRYPTION_KEY_TTL_MS = 10 * 60 * 1000;
  *  what scopes a listing back down to this one; without it the feeds come back empty. */
 const API_HOST = 'api.inuko.me';
 const SERVICE_NAME = 'inkstory';
+
+/** Блоки главной inkstory.net — проверено вживую 2026-10-12. Онгоинги и завершённые подобраны
+ *  сайтом (с сортировками API не совпадают) — берутся из SSR-разметки; «Последние обновления»
+ *  дорисовываются в браузере — их отдаёт та же лента глав, что сортировка каталога «обновлено». */
+export const INKSTORY_HOME_SECTION = {
+  POPULAR_ONGOINGS: 'popularOngoings',
+  BEST_FINISHED: 'bestFinished',
+  RECENTLY_ADDED: 'recentlyAdded',
+  LATEST_UPDATES: 'latestUpdates',
+} as const;
+
+const INKSTORY_HOME_SECTIONS = [
+  { id: INKSTORY_HOME_SECTION.POPULAR_ONGOINGS, title: 'Популярные онгоинги' },
+  { id: INKSTORY_HOME_SECTION.BEST_FINISHED, title: 'Лучшие завершенные' },
+  { id: INKSTORY_HOME_SECTION.RECENTLY_ADDED, title: 'Недавно добавлено' },
+  { id: INKSTORY_HOME_SECTION.LATEST_UPDATES, title: 'Последние обновления каталога' },
+];
+
+/** Обложка карточки — `static.inuko.me/book/<id книги>/poster/...`: id книги тот же, что в API. */
+const BOOK_ID_FROM_COVER_REGEX = /\/book\/([0-9a-f-]{36})\//;
 
 export const INKSTORY_FILTER_GROUP = {
   GENRE: FILTER_GROUP.GENRE,
@@ -777,6 +803,61 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     }));
   };
 
+  const getHome = async () => {
+    const [res, latestUpdates] = await Promise.all([
+      ctx.http.get(`https://${domain}/`, { 'User-Agent': UserAgents.CHROME_DESKTOP }),
+      fetchUpdatedPage(FIRST_PAGE).catch(() => []),
+    ]);
+    const doc = parseHtml(res.text(), `https://${domain}/`);
+    const cardsAfter = (title: string): RawTitle[] => {
+      // Заголовок h2 и лента — в одной колонке на два уровня выше заголовка.
+      const $section = findHomeHeading(doc, 'h2', title)?.parent().parent().parent();
+      const cards = ($section?.find('a[href^="/content/"]').toArray() ?? []).map((el) => {
+        const $card = doc.$(el);
+        const $img = $card.find('img').first();
+        const src = attrOrNull($img, 'src');
+        const bookId = src ? BOOK_ID_FROM_COVER_REGEX.exec(src)?.[1] : undefined;
+        const name = nullIfEmpty(attrOrNull($img, 'alt') ?? '');
+        if (!src || !bookId || !name) return null;
+        const rating = parseFloatOrNull(textOrNull($card.find('[data-slot="badge"]').first()));
+        const item: RawTitle = {
+          id: generateUid(SOURCE_ID, bookId),
+          title: name,
+          altTitles: [],
+          url: bookId,
+          publicUrl: new URL(attrOrNull($card, 'href') ?? '', `https://${domain}/`).toString(),
+          rating: rating !== null ? rating / 10 : RATING_UNKNOWN,
+          contentRating: null,
+          coverUrl: src.split('?')[0] ?? src,
+          tags: [],
+          releaseState: null,
+          authors: [],
+          largeCoverUrl: null,
+          description: null,
+          chapters: null,
+          source: SOURCE_ID,
+        };
+        return item;
+      });
+      return uniqueByUrl(cards.filter((item): item is RawTitle => item !== null));
+    };
+    const titleOf = (id: string) =>
+      INKSTORY_HOME_SECTIONS.find((section) => section.id === id)!.title;
+
+    return toHomeSections(INKSTORY_HOME_SECTIONS, {
+      [INKSTORY_HOME_SECTION.POPULAR_ONGOINGS]: cardsAfter(
+        titleOf(INKSTORY_HOME_SECTION.POPULAR_ONGOINGS),
+      ),
+      [INKSTORY_HOME_SECTION.BEST_FINISHED]: cardsAfter(
+        titleOf(INKSTORY_HOME_SECTION.BEST_FINISHED),
+      ),
+      [INKSTORY_HOME_SECTION.RECENTLY_ADDED]: cardsAfter(
+        titleOf(INKSTORY_HOME_SECTION.RECENTLY_ADDED),
+      ),
+      [INKSTORY_HOME_SECTION.LATEST_UPDATES]: latestUpdates,
+    });
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -802,11 +883,13 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections: INKSTORY_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     decodeImage,

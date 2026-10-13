@@ -1,4 +1,4 @@
-import type { Cheerio, CheerioAPI } from 'cheerio';
+import { load, type Cheerio, type CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import {
   CONTENT_RATING,
@@ -40,7 +40,16 @@ import { catalogEntryFor, SOURCE_ID } from '../catalog';
 import { currentSourceAccount } from '../../core/source-accounts';
 import { authenticateGrouple, authenticateAllHentai } from './auth';
 import type { GroupleConfig } from './config';
-import { GROUPLE_ELEMENT_TYPE, GROUPLE_FILTER_GROUP, GROUPLE_TRANSLATION_STATUS } from './models';
+import {
+  GROUPLE_ELEMENT_TYPE,
+  GROUPLE_FILTER_GROUP,
+  GROUPLE_HOME_SECTION,
+  GROUPLE_HOME_SECTIONS,
+  GROUPLE_TRANSLATION_STATUS,
+  getGroupleTrendTab,
+} from './models';
+import { toHomeSections, uniqueByUrl } from '../../core/home';
+import { findHomeHeading } from '../../core/html/home';
 import type {
   CatalogItemJson,
   CatalogSearchResponseJson,
@@ -1178,6 +1187,105 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     return resolved;
   };
 
+  /**
+   * Карточка главной — плитка карусели или строка «Последних обновлений». Ссылка ведёт на тайтл,
+   * на главу («/slug/vol2/146») или на соседний сайт сети; тайтл — первый сегмент пути, чужие
+   * сайты пропускаются: их тайтлы в этом источнике не открыть.
+   */
+  const parseHomeTile = (
+    $: CheerioAPI,
+    $tile: Cheerio<AnyNode>,
+    $link: Cheerio<AnyNode>,
+    title: string | null,
+  ): RawTitle | null => {
+    const href = attrOrNull($link, 'href');
+    if (!href || !title) return null;
+    const target = new URL(href, `https://${domain}/`);
+    if (target.host !== domain) return null;
+    const slug = target.pathname.split('/')[1];
+    if (!slug) return null;
+    const relUrl = `/${slug}`;
+    // В шаблонах вкладок обложка — `<app-cover-lazy src>`, в остальной вёрстке — ленивый `<img>`.
+    const $img = $tile.find('img, app-cover-lazy').first();
+    const coverUrl = attrOrNull($img, 'data-src') ?? attrOrNull($img, 'src');
+    const rating = parseFloatOrNull(textOrNull($tile.find('.rating-badge span').first()));
+    const category = nullIfEmpty(
+      textOrNull(
+        $tile.find('.entity-card-tile__subtitle span, .inline-tile__meta strong').first(),
+      ) ?? '',
+    );
+    return {
+      id: generateUid(cfg.id, relUrl),
+      title,
+      altTitles: [],
+      url: relUrl,
+      publicUrl: `https://${domain}${relUrl}`,
+      rating: rating !== null && rating > 0 ? rating / 10 : RATING_UNKNOWN,
+      contentRating: cfg.isNsfw ? CONTENT_RATING.ADULT : null,
+      coverUrl,
+      tags: [],
+      releaseState: null,
+      authors: [],
+      largeCoverUrl: null,
+      description: null,
+      chapters: null,
+      source: cfg.id,
+      type: mangaTypeByCategory(category),
+    };
+  };
+
+  const parseCardTiles = ($: CheerioAPI, $scope: Cheerio<AnyNode>): RawTitle[] =>
+    uniqueByUrl(
+      $scope
+        .find('a.entity-card-tile')
+        .toArray()
+        .map((el) => {
+          const $tile = $(el);
+          const title = nullIfEmpty(textOrNull($tile.find('.entity-card-tile__title')) ?? '');
+          return parseHomeTile($, $tile, $tile, title);
+        })
+        .filter((item): item is RawTitle => item !== null),
+    );
+
+  const getHome = async () => {
+    const doc = await ctx.http.getHtml(`https://${domain}/`);
+    const { $ } = doc;
+
+    const trendTab = (section: Parameters<typeof getGroupleTrendTab>[0]) => {
+      const html = $(`template[data-tab-content="${getGroupleTrendTab(section)}"]`).html();
+      if (!html) return [];
+      const $tab = load(html);
+      return parseCardTiles($tab, $tab.root());
+    };
+    const popularNow = () => {
+      const title = GROUPLE_HOME_SECTIONS.find(({ id }) => id === GROUPLE_HOME_SECTION.POPULAR_NOW);
+      const $section = title
+        ? findHomeHeading(doc, '.feed-section .page-title__heading', title.title)?.closest(
+            '.feed-section',
+          )
+        : null;
+      return $section?.length ? parseCardTiles($, $section) : [];
+    };
+    const latestUpdates = () =>
+      uniqueByUrl(
+        $('.feed-latest-updates .inline-tile')
+          .toArray()
+          .map((el) => {
+            const $tile = $(el);
+            const $link = $tile.find('.inline-tile__title a').first();
+            return parseHomeTile($, $tile, $link, nullIfEmpty(textOrNull($link) ?? ''));
+          })
+          .filter((item): item is RawTitle => item !== null),
+      );
+
+    return toHomeSections(GROUPLE_HOME_SECTIONS, {
+      [GROUPLE_HOME_SECTION.HOT_NEW]: trendTab(GROUPLE_HOME_SECTION.HOT_NEW),
+      [GROUPLE_HOME_SECTION.POPULAR_UPDATES]: trendTab(GROUPLE_HOME_SECTION.POPULAR_UPDATES),
+      [GROUPLE_HOME_SECTION.POPULAR_NOW]: popularNow(),
+      [GROUPLE_HOME_SECTION.LATEST_UPDATES]: latestUpdates(),
+    });
+  };
+
   return {
     id: cfg.id,
     info: {
@@ -1209,10 +1317,12 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       // The catalog takes query and filters together; search criteria (types/states) aren't mapped
       // to Grouple's per-site element ids, so they stay unapplied (no resolveSearchFilters).
       isSearchWithFiltersSupported: true,
+      homeSections: GROUPLE_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
+    getHome,
     getFilters,
     imageHeaders: () => ({ Referer: `https://${domain}/`, 'User-Agent': UserAgents.GROUPLE_ARORA }),
     // Прогрев только сервисной учётки: init() зовётся при старте, вне запроса пользователя.

@@ -47,6 +47,7 @@ import { getValidAccessToken } from './auth';
 import { loginLibSocialWithPassword } from './login';
 import { fileTokenStore } from './token-store';
 import { currentSourceAccount } from '../../core/source-accounts';
+import { toHomeSections } from '../../core/home';
 
 const PAGE_SIZE = 60;
 
@@ -182,6 +183,54 @@ type MangaListItemJson = {
 type TagJson = {
   id: number;
   name: string;
+};
+
+/** `GET /api/` — вся главная сайта сети одним ответом, без входа (проверено вживую 2026-10-12).
+ *  «Сейчас читают» — три вкладки по три тайтла: 1 — новинки, 2 — набирающее популярность,
+ *  3 — популярное (видно по id и просмотрам). */
+type HomeJson = {
+  popular?: MangaListItemJson[];
+  newest?: MangaListItemJson[];
+  latest_updates?: MangaListItemJson[];
+  currently_views?: { items?: Partial<Record<string, { media: MangaListItemJson }[]>> };
+};
+
+export const LIBSOCIAL_HOME_SECTION = {
+  POPULAR: 'popular',
+  NEWEST: 'newest',
+  LATEST_UPDATES: 'latestUpdates',
+  READING_NOW_NEW: 'readingNowNew',
+  READING_NOW_RISING: 'readingNowRising',
+  READING_NOW_POPULAR: 'readingNowPopular',
+} as const;
+
+const LIBSOCIAL_HOME_SECTIONS = [
+  { id: LIBSOCIAL_HOME_SECTION.POPULAR, title: 'Популярное' },
+  { id: LIBSOCIAL_HOME_SECTION.NEWEST, title: 'Новинки' },
+  { id: LIBSOCIAL_HOME_SECTION.LATEST_UPDATES, title: 'Последние обновления' },
+  { id: LIBSOCIAL_HOME_SECTION.READING_NOW_NEW, title: 'Сейчас читают: новинки' },
+  {
+    id: LIBSOCIAL_HOME_SECTION.READING_NOW_RISING,
+    title: 'Сейчас читают: набирающее популярность',
+  },
+  { id: LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR, title: 'Сейчас читают: популярное' },
+];
+
+/** Вкладка «Сейчас читают» в `currently_views.items`. */
+const getReadingNowTabKey = (
+  section:
+    | typeof LIBSOCIAL_HOME_SECTION.READING_NOW_NEW
+    | typeof LIBSOCIAL_HOME_SECTION.READING_NOW_RISING
+    | typeof LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR,
+) => {
+  switch (section) {
+    case LIBSOCIAL_HOME_SECTION.READING_NOW_NEW:
+      return '1';
+    case LIBSOCIAL_HOME_SECTION.READING_NOW_RISING:
+      return '2';
+    case LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR:
+      return '3';
+  }
 };
 
 /** `/api/genres` and `/api/tags` — shared across the whole LibSocial network, so each entry
@@ -938,6 +987,34 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     });
   };
 
+  const getHome = async () => {
+    const json = await ctx.http.getJson<{ data: HomeJson }>(`https://${LIBSOCIAL_API_HOST}/api/`);
+    const {
+      popular,
+      newest,
+      latest_updates: latestUpdates,
+      currently_views: readingNow,
+    } = json.data;
+    const readingNowTab = (section: Parameters<typeof getReadingNowTabKey>[0]) =>
+      (readingNow?.items?.[getReadingNowTabKey(section)] ?? []).map(({ media }) =>
+        parseManga(media),
+      );
+    return toHomeSections(LIBSOCIAL_HOME_SECTIONS, {
+      [LIBSOCIAL_HOME_SECTION.POPULAR]: (popular ?? []).map(parseManga),
+      [LIBSOCIAL_HOME_SECTION.NEWEST]: (newest ?? []).map(parseManga),
+      [LIBSOCIAL_HOME_SECTION.LATEST_UPDATES]: (latestUpdates ?? []).map(parseManga),
+      [LIBSOCIAL_HOME_SECTION.READING_NOW_NEW]: readingNowTab(
+        LIBSOCIAL_HOME_SECTION.READING_NOW_NEW,
+      ),
+      [LIBSOCIAL_HOME_SECTION.READING_NOW_RISING]: readingNowTab(
+        LIBSOCIAL_HOME_SECTION.READING_NOW_RISING,
+      ),
+      [LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR]: readingNowTab(
+        LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR,
+      ),
+    });
+  };
+
   return {
     id: cfg.id,
     info: {
@@ -965,11 +1042,13 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections: LIBSOCIAL_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     async init() {
