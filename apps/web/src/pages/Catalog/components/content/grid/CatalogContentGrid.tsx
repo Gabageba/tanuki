@@ -1,7 +1,7 @@
 import PageLayout from '@/shared/ui/PageLayout';
 import type { CatalogParams, CatalogQuery } from '../../../models';
 import { VIEW_MODE } from '@/shared/lib/viewMode';
-import CatalogContentGridSkeleton from './CatalogContentGridSkeleton';
+import TitleCardsGridSkeleton from '@/entities/title/card/TitleCardsGridSkeleton';
 import TitleCard from '@/entities/title/card/TitleCard';
 import useTitleBookmarkFolders from '@/entities/bookmark/hooks/useTitleBookmarkFolders';
 import ViewModeGrid from '@/shared/ui/ViewModeGrid';
@@ -15,7 +15,7 @@ function CatalogContentGrid() {
   const getBookmarkFolder = useTitleBookmarkFolders(items.map(({ id }) => id));
 
   if (isFetching && !isFetchingNextPage) {
-    return <CatalogContentGridSkeleton viewMode={viewMode} />;
+    return <TitleCardsGridSkeleton viewMode={viewMode} />;
   }
 
   return (

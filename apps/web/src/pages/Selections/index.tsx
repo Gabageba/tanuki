@@ -3,7 +3,7 @@ import PageLayout from '@/shared/ui/PageLayout';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import SelectionsContent from './components/SelectionsContent';
 
-/** Подборки (P3a + K1 + L4 + Z1) — блоки с главных страниц сайтов, один источник за раз. */
+/** Подборки (R1) — блоки с главных страниц сайтов: источник селектором, блоки вкладками. */
 function Selections() {
   const { t } = useTranslation();
 

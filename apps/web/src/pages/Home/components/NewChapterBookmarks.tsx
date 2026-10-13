@@ -1,8 +1,7 @@
-import { Stack } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useNewChapterBookmarks from '../hooks/useNewChapterBookmarks';
-import HomeBlockHeading from './HomeBlockHeading';
+import HomeBlock from './HomeBlock';
 import NewChapterBookmarksList from './NewChapterBookmarksList';
 import NewChapterBookmarksSkeleton from './NewChapterBookmarksSkeleton';
 
@@ -16,17 +15,16 @@ function NewChapterBookmarks() {
   const { data, isPending } = useNewChapterBookmarks();
 
   return (
-    <Stack gap="sm">
-      <HomeBlockHeading
-        title={t('newChaptersInBookmarks')}
-        link={{ label: t('allBookmarks'), to: ROUTE_PATHS.BOOKMARKS }}
-      />
+    <HomeBlock
+      title={t('newChaptersInBookmarks')}
+      link={{ label: t('allBookmarks'), to: ROUTE_PATHS.BOOKMARKS }}
+    >
       {isPending ? (
         <NewChapterBookmarksSkeleton />
       ) : (
         <NewChapterBookmarksList items={data?.items ?? []} />
       )}
-    </Stack>
+    </HomeBlock>
   );
 }
 

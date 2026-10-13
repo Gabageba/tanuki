@@ -4,10 +4,10 @@ import {
   SOURCE_ACCESS,
   SOURCE_STATUS,
   type HomeSectionInfo,
-  type SearchGroupStatus,
   type Source,
   type UserSettings,
 } from '@tanuki/contracts';
+import type { MissStatus } from '@/entities/source/models';
 import { LAST_SELECTIONS_SOURCE_STORAGE_KEY } from './models';
 
 /** Блоки источника, которые пользователь не выключил, — в порядке сайта. */
@@ -41,7 +41,7 @@ export const getSelectionsSources = (
 
 /** Источник, который подборки не опрашивают, и почему; undefined — опрашивают. Тот же отбор,
  *  что на сервере: закрытый без аккаунта и нездоровый источник ответить не могут. */
-export const getSkippedSelectionsStatus = (source: Source): SearchGroupStatus | undefined => {
+export const getSkippedSelectionsStatus = (source: Source): MissStatus | undefined => {
   if (source.access !== SOURCE_ACCESS.AVAILABLE) return SEARCH_GROUP_STATUS.LOCKED;
   if (source.status !== SOURCE_STATUS.OK) return SEARCH_GROUP_STATUS.UNAVAILABLE;
   return undefined;

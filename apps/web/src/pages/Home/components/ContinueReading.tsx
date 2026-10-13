@@ -1,10 +1,10 @@
-import { Box, Group, Scroller, Stack } from '@mantine/core';
+import { Box, Group, Scroller } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import useContinueReading from '../hooks/useContinueReading';
 import useHideFromContinueReading from '../hooks/useHideFromContinueReading';
 import ContinueReadingCard from './ContinueReadingCard';
 import ContinueReadingSkeleton from './ContinueReadingSkeleton';
-import HomeBlockHeading from './HomeBlockHeading';
+import HomeBlock from './HomeBlock';
 
 /** «Продолжить чтение» — лента карточек C1a; ничего не читали или всё убрали — блока нет. */
 function ContinueReading() {
@@ -21,8 +21,7 @@ function ContinueReading() {
   }
 
   return (
-    <Stack gap="sm">
-      <HomeBlockHeading title={t('continueReading')} />
+    <HomeBlock title={t('continueReading')}>
       <Scroller>
         <Group gap="md" wrap="nowrap" align="flex-start">
           {data.items.map((item) => (
@@ -32,7 +31,7 @@ function ContinueReading() {
           ))}
         </Group>
       </Scroller>
-    </Stack>
+    </HomeBlock>
   );
 }
 

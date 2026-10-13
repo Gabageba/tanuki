@@ -1,4 +1,5 @@
 import { Badge, Box, Group, Text, Title } from '@mantine/core';
+import type { ReactNode } from 'react';
 import { type Source } from '@tanuki/contracts';
 import SourceStatusBadge from '../SourceStatusBadge';
 import SourceIcon from '../SourceIcon';
@@ -8,9 +9,11 @@ type Props = {
   source: Source;
   showStatus?: boolean;
   isPending?: boolean;
+  /** То, что идёт в строке названия после бейджей, — например, каретка меню. */
+  rightSection?: ReactNode;
 };
 
-function SourceTitle({ source, showStatus = false, isPending = false }: Props) {
+function SourceTitle({ source, showStatus = false, isPending = false, rightSection }: Props) {
   if (isPending) {
     return <SourceTitleSkeleton />;
   }
@@ -40,6 +43,7 @@ function SourceTitle({ source, showStatus = false, isPending = false }: Props) {
               <SourceStatusBadge source={source} />
             </Box>
           )}
+          {rightSection}
         </Group>
         <Text size="sm" c="dimmed" ff="monospace" truncate>
           {source.domain}
