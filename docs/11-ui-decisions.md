@@ -929,8 +929,9 @@ warning, «Перенести в папку» (Q4) — neutral.
   и общие запросы (`useBookmarkFolders`, `useBookmarksLookup`, `useTitleBookmarkFolders`);
 - `features/bookmark` — `FolderPickerSelect` (S4), `BookmarkMenuButton` + `FolderMenuItems` (R2c),
   `FolderModal` + `IconColorPicker` (P2), хуки закладки тайтла, тост с «Вернуть»;
-- `pages/Bookmarks` — `FolderTabs` (T2 + A1), `BookmarksToolbar`, `BookmarkGridCard` /
-  `BookmarkListCard` (C10h, U3a; точка — `BookmarkTitle` + `useFirstLineEnd`), `BookmarkActionsMenu` (Q4),
+- `pages/Bookmarks` — `FolderTabs` (T2 + A1), `BookmarksToolbar`, `BookmarkCard` — раскладки
+  `TitleGridCard` / `TitleListCard` со своими слотами (C10h, U3a: `BookmarkCover`, `BookmarkMetaLine`;
+  точка — `BookmarkTitle` + `useFirstLineEnd`), `BookmarkActionsMenu` (Q4),
   `ProgressMeta`, скелетоны и три пустых состояния (E);
 - страница тайтла — `FolderPickerSelect` на месте заглушки «Читаю», `useTitleBookmarkVisit`,
   `BookmarkFolderModal` (M1d) для 409 при подтверждении связи (`TitleLinkBookmarkModal`) и для
@@ -1188,7 +1189,7 @@ P3a + K1 + L4 + Z1 + H3a + B1 + T1a + E2 — подборки источнико
     тост «Тайтл убран из „Продолжить чтение“» с «Отменить», как у закладок (Q4).
   - «Новые главы в закладках» — список строк в две колонки на десктопе, в одну на телефоне:
     мини-обложка, название, источник, «+3 гл.» моноширинным акцентом; справа в заголовке «Все
-    закладки →». Нет новых глав — блока нет. Отдельная форма от ленты «Продолжить» нарочно — блоки
+    закладки →». Нет новых глав — заголовок остаётся, под ним `EmptyState` «Новых глав нет». Отдельная форма от ленты «Продолжить» нарочно — блоки
     различаются видом, а не только заголовком (W1 «всё лентами» отвергнут именно за это).
   - Две плитки рядом (на телефоне друг под другом): **«Подборки»** — искра, «Новинки, популярное
     и обновления с главных страниц сайтов», веер из трёх обложек, ведёт на `/selections`;
@@ -1223,3 +1224,23 @@ P3a + K1 + L4 + Z1 + H3a + B1 + T1a + E2 — подборки источнико
   `CompactMultiSelect` (T3), без переключателя (T4).
 - **Пусто (E2).** На странице подборок, когда все источники выключены: «Подборок нет», «Настроить
   подборки» и «Все источники».
+
+Реализовано 2026-10-13: главная — `pages/Home` (`ContinueReading`, `NewChapterBookmarks`,
+`SelectionsTile`, `SourcesTile`), подборки — `pages/Selections` (`SelectionsContent`,
+`SelectionsSource`, `SourceMissedState`), общее у них — `features/selections` (отбор источников
+по настройкам, запрос, последний выбранный источник). Шапка и нижняя панель —
+`app/Layout/Header/components/HeaderIconButton`, вкладка «Главная» в `Footer`. Вкладка настроек —
+`pages/Settings/components/SettingsSelections`. Карточка C1a — `TitleGridCard` со слотами `meta`
+и `actions`; лента обложек поиска вынесена в `entities/title/card/TitleCardsScroller`, тост
+«Отменить» — общий `shared/ui/UndoToastMessage` (закладки переведены на него). Отличия от макета:
+
+- **«Каталог: Реманга»** вместо «Каталог Реманги» — склонять названия источников не стали.
+- **Веер на плитке «Подборки»** — обложки подборок того источника, что откроется на их странице;
+  запрос заодно прогревает страницу. Пока ответа нет или источник не ответил — плитка без веера;
+  тайтлы 18+ в веер не берутся (там нет размытия).
+- **Подборки — продолжение главной:** на `/selections` домик в шапке и «Главная» в нижней панели
+  остаются выделенными. В нижней панели своя страница тоже залита (как в шапке, H3a).
+- **Названия блоков** — как на сайтах, но у MangaLib вкладки «Сейчас читают» стали тремя блоками
+  («Сейчас читают: новинки» и т. д.), у Grouple «Тренды» — заголовок вкладок, блоки — «Горячие
+  новинки» и «Обновление популярного». Набор блоков по источникам — в
+  [03-parsers.md](03-parsers.md#главная-сайта-gethome).
