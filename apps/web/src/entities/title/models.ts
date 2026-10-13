@@ -4,7 +4,11 @@ import type {
   LinkedReadingProgress,
   ReadingMarkConfidence,
   ReadingProgress,
+  Title,
 } from '@tanuki/contracts';
+
+/** «Продолжить чтение» на главной — сбрасывается, когда сохраняется позиция чтения. */
+export const CONTINUE_READING_QUERY_KEY = ['continue-reading'] as const;
 
 export const CHAPTER_READ_STATUS = {
   READ: 'read',
@@ -27,3 +31,9 @@ export type LinkedReadingMark = ReadingMark & {
 
 /** Размытие скрытой обложки 18+ в px — в каталоге и в закладках. */
 export const HIDDEN_COVER_BLUR = 20;
+
+/** Поля, которых хватает обложке, — их есть и у `Title`, и у закладки, и у «Продолжить чтение». */
+export type TitleCoverData = Pick<Title, 'coverUrl' | 'name' | 'sourceId' | 'contentRating'>;
+
+/** Оценка на обложке: рейтинг, а без него лайки. Бывает не у всех — у снимков тайтла её нет. */
+export type TitleScoreData = Partial<Pick<Title, 'rating' | 'likes'>>;

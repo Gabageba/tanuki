@@ -1,21 +1,15 @@
 import type { BoxProps } from '@mantine/core';
-import { Box } from '@mantine/core';
 import type { SourceId } from '@tanuki/contracts';
-import { type Title } from '@tanuki/contracts';
 import TitleAdultBadge from './markers/TitleAdultBadge';
 import TitleScoreBadge from './markers/TitleScoreBadge';
 import TitleSourceRibbon from './markers/TitleSourceRibbon';
 import TitleBookmarkMarker from './markers/TitleBookmarkMarker';
 import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
-import CoverImage from '@/shared/ui/CoverImage';
-import useIsAdultTitleHidden from './hooks/useIsAdultTitleHidden';
-import HiddenCoverOverlay from './HiddenCoverOverlay';
-import BlurredCover from './BlurredCover';
-import { HIDDEN_COVER_BLUR } from './models';
-import styles from './Title.module.scss';
+import TitleCover from './TitleCover';
+import type { TitleCoverData, TitleScoreData } from './models';
 
 type Props = {
-  title: Title;
+  title: TitleCoverData & TitleScoreData;
   showBadges?: boolean;
   showSource?: boolean;
   /** Папка закладки тайтла — метка в левом нижнем углу; null — не в закладках. */
@@ -29,10 +23,8 @@ function TitleCardImage({
   bookmarkFolder,
   ...restProps
 }: Props) {
-  const isHidden = useIsAdultTitleHidden(title);
-
   return (
-    <Box pos="relative" className={styles.imageWrapper} {...restProps}>
+    <TitleCover cover={title} {...restProps}>
       {showSource && <TitleSourceRibbon sourceId={title.sourceId as SourceId} />}
       {showBadges && (
         <>
@@ -40,12 +32,8 @@ function TitleCardImage({
           <TitleScoreBadge title={title} />
         </>
       )}
-      <BlurredCover blur={isHidden ? HIDDEN_COVER_BLUR : 0}>
-        <CoverImage src={title.coverUrl} alt={title.name} className={styles.image} />
-      </BlurredCover>
-      {isHidden && <HiddenCoverOverlay />}
       {bookmarkFolder && <TitleBookmarkMarker folder={bookmarkFolder} compact={!showBadges} />}
-    </Box>
+    </TitleCover>
   );
 }
 

@@ -12,7 +12,7 @@ type Props = {
  */
 function NumericMeta({ children }: Props) {
   return (
-    <Box component="span" ff="monospace">
+    <Box component="span" ff="monospace" lh="tight">
       {children}
     </Box>
   );

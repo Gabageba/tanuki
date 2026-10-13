@@ -27,7 +27,7 @@ function VerifyEmail() {
       }),
     onSuccess: (user) => {
       queryClient.setQueryData(CURRENT_USER_QUERY_KEY, user);
-      navigate(ROUTE_PATHS.SOURCES, { replace: true });
+      navigate(ROUTE_PATHS.HOME, { replace: true });
     },
   });
 

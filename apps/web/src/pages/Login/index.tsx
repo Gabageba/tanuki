@@ -53,7 +53,7 @@ function Login() {
     login.mutate(values, {
       onSuccess: () => {
         const redirect = searchParams.get('redirect');
-        navigate(redirect ? decodeURIComponent(redirect) : ROUTE_PATHS.SOURCES, {
+        navigate(redirect ? decodeURIComponent(redirect) : ROUTE_PATHS.HOME, {
           replace: true,
         });
       },

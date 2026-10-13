@@ -1,5 +1,5 @@
 import { AppShell, Group, Indicator } from '@mantine/core';
-import { BellIcon, BookmarkSimpleIcon } from '@phosphor-icons/react';
+import { BellIcon, BookmarkSimpleIcon, HouseIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import UnreadNotificationsIndicator from '@/entities/notification/UnreadNotifica
 import { closeAllDrawers } from '@/shared/lib/drawerRegistry';
 import MobileNavigationButton from './components/MobileNavigationButton';
 import MobileSourceSelect from './components/MobileSourceSelect';
-import useIsActiveUrl from './hooks/useIsActiveUrl';
+import useIsActiveUrl from '../hooks/useIsActiveUrl';
 import MobileMenuButton from './components/MobileMenuButton';
 import styles from './Footer.module.scss';
 
@@ -22,6 +22,8 @@ function Footer() {
     ROUTE_PATHS.CATALOG,
     ROUTE_PATHS.TITLE,
   ]);
+  // Подборки открываются с главной и «Назад» ведут туда же — для панели это та же вкладка.
+  const isHomeActive = useIsActiveUrl([ROUTE_PATHS.HOME, ROUTE_PATHS.SELECTIONS]);
   const isBookmarksActive = useIsActiveUrl(ROUTE_PATHS.BOOKMARKS);
   const isNotificationsActive = useIsActiveUrl(ROUTE_PATHS.NOTIFICATIONS);
   const isMenuActive = useIsActiveUrl([
@@ -59,6 +61,12 @@ function Footer() {
   return (
     <AppShell.Footer hiddenFrom="md" withBorder className={styles.footer}>
       <Group h="100%" px="xs" gap={4} onClick={closeAllDrawers}>
+        <MobileNavigationButton
+          onClick={() => navigateFromFooter(ROUTE_PATHS.HOME, isHomeActive)}
+          title={t('home')}
+          isActive={isHomeActive && !isSourcesOpened && !isMenuOpened}
+          leftSection={<HouseIcon size={20} weight={isHomeActive ? 'fill' : 'regular'} />}
+        />
         <MobileSourceSelect
           isActive={(isSourcesActive || isSourcesOpened) && !isMenuOpened}
           isOpened={isSourcesOpened}
@@ -73,7 +81,7 @@ function Footer() {
           isActive={isBookmarksActive && !isSourcesOpened && !isMenuOpened}
           leftSection={
             <Indicator size={8} offset={{ x: 5, y: 3 }} disabled={!bookmarkFolders?.hasNew}>
-              <BookmarkSimpleIcon size={20} />
+              <BookmarkSimpleIcon size={20} weight={isBookmarksActive ? 'fill' : 'regular'} />
             </Indicator>
           }
         />
@@ -83,7 +91,7 @@ function Footer() {
           isActive={isNotificationsActive && !isSourcesOpened && !isMenuOpened}
           leftSection={
             <UnreadNotificationsIndicator>
-              <BellIcon size={20} />
+              <BellIcon size={20} weight={isNotificationsActive ? 'fill' : 'regular'} />
             </UnreadNotificationsIndicator>
           }
         />

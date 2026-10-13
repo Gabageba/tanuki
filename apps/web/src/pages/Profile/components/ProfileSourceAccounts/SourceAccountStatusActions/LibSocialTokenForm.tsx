@@ -79,7 +79,7 @@ function LibSocialTokenForm({ sources, defaultSourceId, onClose }: Props) {
           <List.Item>
             <Trans
               i18nKey="copyAuthKeyValue"
-              components={{ key: <Text span ff="monospace" fz="sm" /> }}
+              components={{ key: <Text span inherit ff="monospace" /> }}
             />
           </List.Item>
           <List.Item>{t('closeWindowWithoutLoggingOut')}</List.Item>

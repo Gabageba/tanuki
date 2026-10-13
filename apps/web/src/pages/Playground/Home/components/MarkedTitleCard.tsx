@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Badge, Box, Stack, Text } from '@mantine/core';
-import type { Title } from '@tanuki/contracts';
+import { VIEW_MODE, type Title } from '@tanuki/contracts';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
 import TitleCardImage from '@/entities/title/TitleCardImage';
 import TitleMetaItems from '@/entities/title/TitleMetaItems';
@@ -17,7 +17,7 @@ type Props = {
 /** Узкая карточка ленты главной (W1): как у подборок, с меткой на обложке или своей мета-строкой. */
 function MarkedTitleCard({ title, badge, meta = [] }: Props) {
   return (
-    <NavigateToTitleCard title={title} data-view-mode="grid" className={styles.card}>
+    <NavigateToTitleCard titleId={title.id} viewMode={VIEW_MODE.GRID}>
       <Stack gap={8}>
         <Box pos="relative">
           <TitleCardImage title={title} showSource />

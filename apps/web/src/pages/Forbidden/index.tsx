@@ -19,7 +19,7 @@ function Forbidden() {
             <Button onClick={() => navigate(-1)} leftSection={<CaretLeftIcon />} variant="default">
               {t('back')}
             </Button>
-            <Button component={Link} to={ROUTE_PATHS.SOURCES} leftSection={<HouseIcon />}>
+            <Button component={Link} to={ROUTE_PATHS.HOME} leftSection={<HouseIcon />}>
               {t('toMainPage')}
             </Button>
           </Group>

@@ -32,7 +32,7 @@ function AccountDeletionScheduled() {
       {
         onSuccess: () => {
           const redirect = searchParams.get('redirect');
-          navigate(redirect ? decodeURIComponent(redirect) : ROUTE_PATHS.SOURCES, {
+          navigate(redirect ? decodeURIComponent(redirect) : ROUTE_PATHS.HOME, {
             replace: true,
           });
         },

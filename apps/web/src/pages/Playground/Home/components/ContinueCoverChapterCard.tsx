@@ -1,4 +1,5 @@
 import { Box, Stack, Text } from '@mantine/core';
+import { VIEW_MODE } from '@tanuki/contracts';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
 import TitleCardImage from '@/entities/title/TitleCardImage';
 import type { ContinueItem } from '../models';
@@ -15,7 +16,7 @@ type Props = {
 function ContinueCoverChapterCard({ item, onRemove }: Props) {
   return (
     <Stack gap={4}>
-      <NavigateToTitleCard title={item.title} data-view-mode="grid" className={styles.card}>
+      <NavigateToTitleCard titleId={item.title.id} viewMode={VIEW_MODE.GRID}>
         <Stack gap={8}>
           <Box pos="relative" bdrs="md" style={{ overflow: 'hidden' }}>
             <TitleCardImage title={item.title} showBadges showSource />

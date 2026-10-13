@@ -1,15 +1,16 @@
 import { Box, Group, Scroller } from '@mantine/core';
 import type { Title } from '@tanuki/contracts';
 import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
-import TitleCard from '@/entities/title/card/TitleCard';
+import TitleCard from './TitleCard';
 
 type Props = {
   items: Title[];
   getBookmarkFolder: (titleId: string) => ResolvedBookmarkFolder | null;
 };
 
-/** Лента обложек: у краёв стрелки с затуханием, мышью её можно тянуть, на телефоне — пальцем. */
-function ResultsScroller({ items, getBookmarkFolder }: Props) {
+/** Лента обложек: у краёв стрелки с затуханием, мышью её можно тянуть, на телефоне — пальцем.
+ *  Короткий список — короткая лента, без растяжки на всю ширину. */
+function TitleCardsScroller({ items, getBookmarkFolder }: Props) {
   return (
     <Scroller>
       <Group gap="md" wrap="nowrap" align="flex-start">
@@ -23,4 +24,4 @@ function ResultsScroller({ items, getBookmarkFolder }: Props) {
   );
 }
 
-export default ResultsScroller;
+export default TitleCardsScroller;

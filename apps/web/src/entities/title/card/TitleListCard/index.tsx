@@ -1,66 +1,42 @@
-import { Badge, Group, Stack, Text } from '@mantine/core';
+import { Badge, Group, Stack } from '@mantine/core';
 import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { CONTENT_RATING, type Title } from '@tanuki/contracts';
+import { CONTENT_RATING, VIEW_MODE, type ContentRating } from '@tanuki/contracts';
 import NavigateToTitleCard from '../../NavigateToTitleCard';
-import TitleCardImage from '../../TitleCardImage';
-import NumericMeta from '../../NumericMeta';
-import TitleMetaItems from '../../TitleMetaItems';
-import { getLabelByTitleType } from '@/entities/source/lib';
-import TitleCardTags from '../TitleCardTags';
-import TitleScoreMeta from '../../TitleScoreMeta';
-import TitleState from '../../TitleState';
-import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
-import styles from '../../Title.module.scss';
 
 type Props = {
-  title: Title;
-  bookmarkFolder?: ResolvedBookmarkFolder | null;
+  titleId: string;
+  /** Взрослому тайтлу — бейдж 18+ перед мета-строкой. */
+  contentRating: ContentRating;
+  /** Обложка слева — `TitleCardImage` или своя, как у закладки. */
+  cover: ReactNode;
+  meta: ReactNode;
+  name: ReactNode;
+  description?: ReactNode;
+  /** Нижняя строка, прижата к низу карточки — теги и оценка в каталоге. */
+  footer?: ReactNode;
 };
 
-function TitleListCard({ title, bookmarkFolder }: Props) {
-  const { t } = useTranslation();
-  const metaItems: ReactNode[] = [
-    getLabelByTitleType(title.type, t),
-    !!title.year && <NumericMeta key="year">{title.year}</NumericMeta>,
-    !!title.chaptersCount && (
-      <NumericMeta key="volume">
-        {t('countChaptersAbbrev', { count: title.chaptersCount })}
-      </NumericMeta>
-    ),
-    !title.chaptersCount && !!title.pages && (
-      <NumericMeta key="volume">{t('countPagesAbbrev', { count: title.pages })}</NumericMeta>
-    ),
-  ].filter(Boolean);
-
+/** Карточка тайтла строкой списка: обложка слева, справа мета-строка, название, описание и
+ *  нижняя строка. Что в них — решает вызывающий. */
+function TitleListCard({ titleId, contentRating, cover, meta, name, description, footer }: Props) {
   return (
-    <NavigateToTitleCard title={title} className={styles.card} data-view-mode="list" withBorder>
+    <NavigateToTitleCard titleId={titleId} viewMode={VIEW_MODE.LIST}>
       <Group align="stretch" wrap="nowrap" gap={0}>
-        <TitleCardImage title={title} w={120} bookmarkFolder={bookmarkFolder} />
+        {cover}
         <Stack p="sm" flex={1} miw={0} gap={8}>
           <Stack gap={8} flex={1}>
-            <Group gap={8}>
-              {title.contentRating === CONTENT_RATING.ADULT && (
-                <Badge color="red" ff="monospace">
+            <Group gap={8} wrap="nowrap">
+              {contentRating === CONTENT_RATING.ADULT && (
+                <Badge variant="muted" color="red" ff="monospace" flex="none">
                   18+
                 </Badge>
               )}
-              <TitleMetaItems gap={6} items={metaItems} />
-              <TitleState state={title.releaseState} visibleFrom="xxs" />
+              {meta}
             </Group>
-            <Text className={styles.title} lineClamp={title.description ? 1 : 2} lh="tight" fz="sm">
-              {title.name}
-            </Text>
-            {!!title.description && (
-              <Text lh="tight" lineClamp={4} c="dimmed">
-                {title.description}
-              </Text>
-            )}
+            {name}
+            {description}
           </Stack>
-          <Group gap={8}>
-            <TitleCardTags tags={title.tags} />
-            <TitleScoreMeta title={title} />
-          </Group>
+          {footer}
         </Stack>
       </Group>
     </NavigateToTitleCard>

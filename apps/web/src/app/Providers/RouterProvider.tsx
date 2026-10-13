@@ -11,6 +11,8 @@ import GuestOnly from '@/app/GuestOnly';
 import RouteError from '@/app/RouteError';
 import { MANAGEMENT_INVITES_PATH, ROUTE_PATHS } from '@/shared/lib/routes';
 import SearchPage from '@/pages/Search/SearchPage';
+import Home from '@/pages/Home';
+import Selections from '@/pages/Selections';
 import Sources from '@/pages/Sources';
 import SourcesHealth from '@/pages/SourcesHealth';
 import Notifications from '@/pages/Notifications';
@@ -58,8 +60,12 @@ const router = createBrowserRouter([
             element: <Layout />,
             children: [
               {
-                path: '/',
-                element: <Navigate to={ROUTE_PATHS.SOURCES} replace />,
+                path: ROUTE_PATHS.HOME,
+                element: <Home />,
+              },
+              {
+                path: ROUTE_PATHS.SELECTIONS,
+                element: <Selections />,
               },
               {
                 path: ROUTE_PATHS.SOURCES,

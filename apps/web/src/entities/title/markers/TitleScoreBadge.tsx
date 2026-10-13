@@ -1,11 +1,11 @@
 import { Badge, Text } from '@mantine/core';
 import { HeartIcon, StarFourIcon } from '@phosphor-icons/react';
 import { isEmpty } from '@/shared/lib/isEmpty';
-import type { Title } from '@tanuki/contracts';
+import type { TitleScoreData } from '../models';
 import { COVER_BADGE_COLOR } from './models';
 
 type Props = {
-  title: Title;
+  title: TitleScoreData;
 };
 
 function TitleScoreBadge({ title }: Props) {

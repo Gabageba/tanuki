@@ -18,7 +18,7 @@ function TitleScoreMeta({ title }: Props) {
   return (
     <Group gap={4}>
       {isRatingEmpty ? <HeartIcon weight="fill" /> : <StarFourIcon weight="fill" />}
-      <Text span ff="monospace">
+      <Text span ff="monospace" lh="tight">
         {isRatingEmpty ? title.likes : title.rating}
       </Text>
     </Group>

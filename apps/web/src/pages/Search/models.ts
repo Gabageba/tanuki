@@ -1,9 +1,8 @@
 import type useSearchPageQuery from './hooks/useSearchPageQuery';
-import type { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
+import type { MissStatus } from '@/entities/source/models';
 import {
   type FilterSelection,
   type SearchFilterGroup,
-  type SearchGroupStatus,
   type Source,
   type Title,
   type TitleState,
@@ -23,8 +22,6 @@ export const EMPTY_SEARCH_FILTERS: SearchFilters = { sources: [], types: [], sta
 
 /** Сколько карточек видно в виде «список» до «Показать ещё». */
 export const LIST_PREVIEW_COUNT = 3;
-
-export type MissStatus = Exclude<SearchGroupStatus, typeof SEARCH_GROUP_STATUS.OK>;
 
 /** Источник, где что-то нашлось. */
 export type FoundGroup = {

@@ -45,6 +45,7 @@ export const makeSource = (
   position,
   isEnabled: true,
   access: SOURCE_ACCESS.AVAILABLE,
+  homeSections: [],
 });
 
 export type TitleSeed = {

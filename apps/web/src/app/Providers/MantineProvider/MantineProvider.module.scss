@@ -64,6 +64,35 @@
   }
 }
 
+// A checked chip narrows its padding to make room for the check icon; with `icon={null}` there is
+// no icon, so it keeps the regular padding and doesn't shrink on select.
+.chipLabel[data-checked]:not(:has(.chipIconWrapper)) {
+  padding-inline: var(--chip-padding);
+}
+
+// `Chip` keeps `variant` on the root (`data-variant`) and only picks a `label--<variant>` class for the
+// label, which Mantine ships for `filled`/`outline`/`light` alone. So the `muted` look is wired here:
+// an unchecked chip is a neutral outline one, a checked one takes the `--chip-*` colors that
+// `THEME.variantColorResolver` resolved for `muted`.
+.chip[data-variant='muted'] .chipLabel:not([data-disabled]) {
+  border: 1px solid var(--mantine-color-default-border);
+  background-color: var(--mantine-color-default);
+
+  &:hover {
+    background-color: var(--mantine-color-default-hover);
+  }
+
+  &[data-checked] {
+    border: var(--chip-bd);
+    color: var(--chip-color);
+    background-color: var(--chip-bg);
+
+    &:hover {
+      background-color: var(--chip-hover);
+    }
+  }
+}
+
 // `Radio.Card` skips `variantColorResolver` the same way `Tabs` does — it only forwards `variant`
 // down to `Box` as `data-variant`. Its own base look (border, radius) already matches the variant,
 // so only the checked tint is needed here; the state comes from `data-checked`, not `data-active`.

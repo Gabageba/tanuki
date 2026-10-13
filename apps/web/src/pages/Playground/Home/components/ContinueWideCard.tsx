@@ -1,5 +1,5 @@
 import { Box, Group, Stack, Text } from '@mantine/core';
-import { catalogEntryFor } from '@tanuki/contracts';
+import { catalogEntryFor, VIEW_MODE } from '@tanuki/contracts';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
 import TitleCardImage from '@/entities/title/TitleCardImage';
@@ -24,13 +24,7 @@ function ContinueWideCard({ item, coverWidth = 72, onRemove }: Props) {
 
   return (
     <Group gap={4} wrap="nowrap" align="flex-start">
-      <NavigateToTitleCard
-        title={item.title}
-        data-view-mode="grid"
-        className={styles.card}
-        flex={1}
-        miw={0}
-      >
+      <NavigateToTitleCard titleId={item.title.id} viewMode={VIEW_MODE.GRID} flex={1} miw={0}>
         <Group gap="sm" wrap="nowrap" align="flex-start">
           <Box w={coverWidth} flex="none">
             <TitleCardImage title={item.title} showBadges={isLarge} />

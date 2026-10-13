@@ -18,7 +18,7 @@ function NotFound() {
           title={t('pageNotFound')}
           description={t('maybeDeletedOrWrongLink')}
         >
-          <Button component={Link} to={ROUTE_PATHS.SOURCES} leftSection={<HouseIcon />}>
+          <Button component={Link} to={ROUTE_PATHS.HOME} leftSection={<HouseIcon />}>
             {t('toMainPage')}
           </Button>
         </StatusScreen>

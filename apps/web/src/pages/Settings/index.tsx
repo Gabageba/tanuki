@@ -7,6 +7,7 @@ import {
   BookOpenTextIcon,
   GearIcon,
   PlugsIcon,
+  SparkleIcon,
 } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import usePushConfig from '@/entities/notification/hooks/usePushConfig';
@@ -17,6 +18,7 @@ import SettingsBookmarks from './components/SettingsBookmarks';
 import SettingsNotifications from './components/SettingsNotifications';
 import SettingsGeneral from './components/SettingsGeneral';
 import SettingsReader from './components/SettingsReader';
+import SettingsSelections from './components/SettingsSelections';
 import SettingsSources from './components/SettingsSources';
 import { isSettingsTab } from './lib';
 
@@ -46,6 +48,12 @@ function Settings() {
         title: t('sources'),
         icon: <PlugsIcon />,
         content: <SettingsSources />,
+      },
+      {
+        id: SETTINGS_TABS.SELECTIONS,
+        title: t('selections'),
+        icon: <SparkleIcon />,
+        content: <SettingsSelections />,
       },
       {
         id: SETTINGS_TABS.READER,

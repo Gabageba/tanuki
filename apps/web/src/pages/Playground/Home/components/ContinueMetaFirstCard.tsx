@@ -1,4 +1,5 @@
 import { AspectRatio, Box, Group, Stack, Text } from '@mantine/core';
+import { VIEW_MODE } from '@tanuki/contracts';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
 import TitleCardImage from '@/entities/title/TitleCardImage';
 import TitleMetaItems from '@/entities/title/TitleMetaItems';
@@ -18,7 +19,7 @@ type Props = {
 function ContinueMetaFirstCard({ item, onRemove }: Props) {
   return (
     <Box pos="relative">
-      <NavigateToTitleCard title={item.title} data-view-mode="grid" className={styles.card}>
+      <NavigateToTitleCard titleId={item.title.id} viewMode={VIEW_MODE.GRID}>
         <Stack gap={8}>
           <TitleCardImage title={item.title} showBadges showSource />
           <Stack gap={4}>

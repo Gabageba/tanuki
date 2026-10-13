@@ -1,6 +1,8 @@
 import type { EnumLiteralsOf } from '@tanuki/contracts';
 
 export const ROUTE_PATHS = {
+  HOME: '/',
+  SELECTIONS: '/selections',
   SOURCES: '/sources',
   SOURCES_HEALTH: '/sources/health',
   SEARCH: '/search',
@@ -45,11 +47,21 @@ export const SETTINGS_TABS = {
   READER: 'reader',
   BOOKMARKS: 'bookmarks',
   NOTIFICATIONS: 'notifications',
+  SELECTIONS: 'selections',
 } as const;
 export type SettingsTab = EnumLiteralsOf<typeof SETTINGS_TABS>;
 
 /** Вкладка настроек с папками закладок — на неё ведёт шестерёнка на /bookmarks. */
 export const SETTINGS_BOOKMARKS_PATH = `${ROUTE_PATHS.SETTINGS}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.BOOKMARKS}`;
+
+/** Вкладка настроек подборок — на неё ведёт пустая страница подборок. */
+export const SETTINGS_SELECTIONS_PATH = `${ROUTE_PATHS.SETTINGS}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.SELECTIONS}`;
+
+/** Вкладка настроек «Источники» — там меняется общий порядок источников. */
+export const SETTINGS_SOURCES_PATH = `${ROUTE_PATHS.SETTINGS}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.SOURCES}`;
+
+/** Открытый источник на /selections — в адресе, чтобы на подборки источника можно было сослаться. */
+export const SELECTIONS_SOURCE_SEARCH_PARAM = 'source';
 
 /** Открытая папка на /bookmarks — в адресе, чтобы на неё можно было сослаться из профиля. */
 export const BOOKMARKS_FOLDER_SEARCH_PARAM = 'folder';

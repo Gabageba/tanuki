@@ -59,7 +59,7 @@ function QueryError({ error, onRetry }: Props) {
   if (isNotFoundError(error)) {
     return (
       <StatusScreen code="404" title={t('pageNotFound')} description={error.message}>
-        <Button component={Link} to={ROUTE_PATHS.SOURCES}>
+        <Button component={Link} to={ROUTE_PATHS.HOME}>
           {t('toMainPage')}
         </Button>
       </StatusScreen>

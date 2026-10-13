@@ -17,21 +17,7 @@ import {
 } from '@tanuki/contracts';
 import { getLabelByTitleType } from '@/entities/source/lib';
 import { getTitleStateLabel } from '@/entities/title/card/lib';
-import type { FoundGroup, MissStatus, MissedGroup, SearchFilters } from './models';
-
-/** Причина в блоке «Не ответили». */
-export const getMissReasonLabel = (status: MissStatus, t: TFunction) => {
-  switch (status) {
-    case SEARCH_GROUP_STATUS.TIMEOUT:
-      return t('timedOut');
-    case SEARCH_GROUP_STATUS.ERROR:
-      return t('error');
-    case SEARCH_GROUP_STATUS.LOCKED:
-      return t('loginRequired');
-    case SEARCH_GROUP_STATUS.UNAVAILABLE:
-      return t('unavailable');
-  }
-};
+import type { FoundGroup, MissedGroup, SearchFilters } from './models';
 
 export const getSearchFilterGroupTitle = (group: SearchFilterGroup, t: TFunction) => {
   switch (group) {

@@ -15,7 +15,7 @@ function FoundOnChip({ group: { source, items } }: Props) {
       size="compact-sm"
       leftSection={<SourceIcon id={source.id} title={source.title} size={16} />}
       rightSection={
-        <Text span fz="xs" ff="monospace" c="dimmed">
+        <Text span fz="xs" ff="monospace" lh="tight" c="dimmed">
           {items.length}
         </Text>
       }
