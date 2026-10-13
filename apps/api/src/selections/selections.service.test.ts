@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SEARCH_GROUP_STATUS, SOURCE_ACCESS, SOURCE_STATUS, type Source } from '@tanuki/contracts';
+import {
+  HOME_SECTION_KIND,
+  HOME_SECTION_PERIOD,
+  SEARCH_GROUP_STATUS,
+  SOURCE_ACCESS,
+  SOURCE_STATUS,
+  type Source,
+} from '@tanuki/contracts';
 import { SourceAccountRequiredException } from '../common/errors';
 import type { Env } from '../config/env';
 import type { ParsersClientService } from '../parsers-client/parsers-client.service';
@@ -13,7 +20,20 @@ const source = (patch: Partial<Source> = {}) =>
     id: 'remanga',
     access: SOURCE_ACCESS.AVAILABLE,
     status: SOURCE_STATUS.OK,
-    homeSections: [{ id: 'hotNew', title: 'Горячие новинки' }],
+    homeSections: [
+      {
+        id: 'hotNew',
+        title: 'Горячие новинки',
+        kind: HOME_SECTION_KIND.NEW,
+        isPeriodSupported: false,
+      },
+      {
+        id: 'readingNow',
+        title: 'Сейчас читают',
+        kind: HOME_SECTION_KIND.TRENDING,
+        isPeriodSupported: true,
+      },
+    ],
     ...patch,
   }) as Source;
 
@@ -35,11 +55,15 @@ const rawTitle = {
   source: 'remanga',
 };
 
-const createService = (sources: Source[], getHome: ParsersClientService['getHome']) =>
+const createService = (
+  sources: Source[],
+  getHome: ParsersClientService['getHome'],
+  getHomeSection: ParsersClientService['getHomeSection'] = vi.fn(),
+) =>
   new SelectionsService(
     ENV,
     { listSources: () => Promise.resolve(sources) } as unknown as SourcesService,
-    { getHome } as unknown as ParsersClientService,
+    { getHome, getHomeSection } as unknown as ParsersClientService,
   );
 
 describe('SelectionsService', () => {
@@ -118,5 +142,92 @@ describe('SelectionsService', () => {
     });
     await expect(service.get('user', 'nope')).rejects.toThrow();
     expect(getHome).not.toHaveBeenCalled();
+  });
+});
+
+describe('SelectionsService.getSection', () => {
+  const homeWith = (items: unknown[]) =>
+    vi.fn().mockResolvedValue({
+      data: { sections: [{ id: 'hotNew', title: 'Горячие новинки', items }] },
+      stale: false,
+    });
+  const sectionPage = (page: unknown) =>
+    vi.fn().mockResolvedValue({ data: { page }, stale: false });
+
+  it('блок, который парсер листает сам, — его порция и признак продолжения', async () => {
+    const getHome = vi.fn();
+    const getHomeSection = sectionPage({ items: [rawTitle], hasNextPage: true });
+    const service = createService([source()], getHome, getHomeSection);
+
+    const response = await service.getSection('user', 'remanga', 'hotNew', { page: 2 });
+
+    expect(response).toMatchObject({ status: SEARCH_GROUP_STATUS.OK, hasNextPage: true });
+    expect(response.items[0]).toMatchObject({ name: 'Ван-Пис', sourceId: 'remanga' });
+    expect(getHomeSection).toHaveBeenCalledWith('remanga', 'hotNew', {
+      page: 2,
+      period: undefined,
+    });
+    expect(getHome).not.toHaveBeenCalled();
+  });
+
+  it('блок без своих порций — из главной одной порцией, дальше пусто', async () => {
+    const getHome = homeWith([rawTitle]);
+    const service = createService([source()], getHome, sectionPage(null));
+
+    await expect(
+      service.getSection('user', 'remanga', 'hotNew', { page: 1 }),
+    ).resolves.toMatchObject({ items: [{ name: 'Ван-Пис' }], hasNextPage: false });
+    await expect(
+      service.getSection('user', 'remanga', 'hotNew', { page: 2 }),
+    ).resolves.toMatchObject({ items: [], hasNextPage: false });
+    expect(getHome).toHaveBeenCalledTimes(1);
+  });
+
+  it('период — только у блока с выбором периода, по умолчанию «за день»', async () => {
+    const getHomeSection = sectionPage({ items: [], hasNextPage: false });
+    const service = createService([source()], vi.fn(), getHomeSection);
+
+    await service.getSection('user', 'remanga', 'readingNow', { page: 1 });
+    await service.getSection('user', 'remanga', 'readingNow', {
+      page: 1,
+      period: HOME_SECTION_PERIOD.MONTH,
+    });
+    await service.getSection('user', 'remanga', 'hotNew', {
+      page: 1,
+      period: HOME_SECTION_PERIOD.MONTH,
+    });
+
+    expect(getHomeSection.mock.calls.map(([, , params]) => params.period)).toEqual([
+      HOME_SECTION_PERIOD.DAY,
+      HOME_SECTION_PERIOD.MONTH,
+      undefined,
+    ]);
+  });
+
+  it('пропущенный и упавший источник — статус с пустой порцией', async () => {
+    const getHomeSection = vi.fn().mockRejectedValue(new Error('boom'));
+    const service = createService(
+      [source(), source({ id: 'locked', access: SOURCE_ACCESS.LOCKED })],
+      vi.fn(),
+      getHomeSection,
+    );
+
+    await expect(
+      service.getSection('user', 'locked', 'hotNew', { page: 1 }),
+    ).resolves.toMatchObject({ status: SEARCH_GROUP_STATUS.LOCKED, items: [] });
+    await expect(service.getSection('user', 'remanga', 'hotNew', { page: 3 })).resolves.toEqual({
+      sourceId: 'remanga',
+      sectionId: 'hotNew',
+      status: SEARCH_GROUP_STATUS.ERROR,
+      items: [],
+      hasNextPage: false,
+    });
+    expect(getHomeSection).toHaveBeenCalledTimes(1);
+  });
+
+  it('неизвестный блок — 404', async () => {
+    const service = createService([source()], vi.fn());
+
+    await expect(service.getSection('user', 'remanga', 'nope', { page: 1 })).rejects.toThrow();
   });
 });

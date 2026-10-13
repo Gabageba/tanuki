@@ -186,7 +186,14 @@ export class SourcesService {
       isEnabled: !disabled.has(raw.id),
       position,
       // Сломанный источник не парсится в принципе — в подборках ему делать нечего.
-      homeSections: raw.isBroken ? [] : raw.homeSections,
+      homeSections: raw.isBroken
+        ? []
+        : raw.homeSections.map(({ id, title, kind, isPeriodSupported }) => ({
+            id,
+            title,
+            kind,
+            isPeriodSupported: isPeriodSupported ?? false,
+          })),
       ...loginOf(raw.id),
     };
   }

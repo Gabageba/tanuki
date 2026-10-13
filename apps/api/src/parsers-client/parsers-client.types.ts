@@ -13,4 +13,6 @@ export type {
   RawFilterGroup,
   RawFilterOption,
   RawHomeSection,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '@tanuki/parsers';
