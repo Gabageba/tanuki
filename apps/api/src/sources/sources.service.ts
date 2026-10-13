@@ -185,6 +185,8 @@ export class SourcesService {
       loginBenefits: catalogEntry.loginBenefits,
       isEnabled: !disabled.has(raw.id),
       position,
+      // Сломанный источник не парсится в принципе — в подборках ему делать нечего.
+      homeSections: raw.isBroken ? [] : raw.homeSections,
       ...loginOf(raw.id),
     };
   }

@@ -12,6 +12,9 @@ export const CACHE_TTL = {
   catalog: { freshSeconds: minutes(2), staleSeconds: hours(6) },
   details: { freshSeconds: minutes(15), staleSeconds: hours(24) },
   tags: { freshSeconds: hours(1), staleSeconds: days(7) },
+  // Блоки главных сайтов («Горячие новинки», «В тренде») — меняются за часы, а не минуты, и
+  // ручного обновления у подборок нет: полчаса свежести и stale-while-revalidate до 6 часов.
+  selections: { freshSeconds: minutes(30), staleSeconds: hours(6) },
   // Filter groups/options change about as rarely as tags (they're scraped off the same catalog
   // page on most sources) — same TTL.
   filters: { freshSeconds: hours(1), staleSeconds: days(7) },

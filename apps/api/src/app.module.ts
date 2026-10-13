@@ -18,6 +18,7 @@ import { ReadingProgressModule } from './reading-progress/reading-progress.modul
 import { ReadingStatisticsModule } from './reading-statistics/reading-statistics.module';
 import { ResilienceModule } from './resilience/resilience.module';
 import { SearchModule } from './search/search.module';
+import { SelectionsModule } from './selections/selections.module';
 import { SourceProbeModule } from './source-probe/source-probe.module';
 import { SourcesModule } from './sources/sources.module';
 import { UserSettingsModule } from './user-settings/user-settings.module';
@@ -40,6 +41,7 @@ import { ViewerContextInterceptor } from './source-accounts/viewer-context.inter
     SourceProbeModule,
     CatalogModule,
     SearchModule,
+    SelectionsModule,
     MatchesModule,
     ImgProxyModule,
     ReaderSettingsModule,

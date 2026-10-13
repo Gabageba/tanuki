@@ -1,7 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
+  CONTENT_RATING,
+  CONTINUE_READING_LIMIT,
   DEFAULT_BRANCH_ID,
+  type ContinueReadingItem,
+  type ContinueReadingResponse,
   type LinkedReadingProgress,
   type ReadingProgress,
   type ReadingProgressProjection,
@@ -9,6 +13,8 @@ import {
   type UpdateReadingProgressRequest,
 } from '@tanuki/contracts';
 import { AdultContentService, isAdultSourceHidden } from '../adult-content/adult-content.service';
+import type { Env } from '../config/env';
+import { ENV } from '../config/env.module';
 import { toServerDateTime } from '../common/dates';
 import { NotFoundApiException, StorageUnavailableException } from '../common/errors';
 import { groupByBranch, normalizeChapter, titleIdOf } from '../common/normalize';
@@ -16,12 +22,31 @@ import { decodeChapterId, decodeTitleId, splitCompositeId } from '../common/opaq
 import { DatabaseService } from '../database/database.service';
 import { BookmarksService } from '../library/bookmarks.service';
 import { readingProgress } from '../database/schema';
+import { IMAGE_FORMAT } from '../img-proxy/models';
+import { buildSignedImageUrl } from '../img-proxy/sign.util';
+import { SourcesService } from '../sources/sources.service';
 import { linkKeyOf, parseLinkKey, TitleLinksService } from '../matches/title-links.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
-import type { RawChapter } from '../parsers-client/parsers-client.types';
+import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.types';
 import { alignBySnapshot, alignChapter } from './chapter-alignment';
+import { pickContinueReadingRows } from './continue-reading';
+import type { ReadingProgressRow } from './models';
 
-type ReadingProgressRow = typeof readingProgress.$inferSelect;
+/**
+ * Сколько строк прогресса смотрится ради «Продолжить чтение». С запасом против
+ * CONTINUE_READING_LIMIT: строки одной группы склеиваются, а часть отсеивается (источник
+ * выключен, тайтл убран из ленты).
+ */
+const CONTINUE_READING_SCAN_LIMIT = 200;
+
+/** Снимок тайтла для «Продолжить чтение» — из деталей, которые источник уже отдал. */
+const toTitleSnapshot = (titleId: string, raw: RawTitle) => ({
+  titleId,
+  titleName: raw.title,
+  coverUrl: raw.coverUrl,
+  contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
+  type: raw.type ?? null,
+});
 
 export const toReadingProgress = (row: ReadingProgressRow): ReadingProgress => ({
   sourceId: row.sourceId,
@@ -105,11 +130,13 @@ export const findTitleChapter = async (
 @Injectable()
 export class ReadingProgressService {
   constructor(
+    @Inject(ENV) private readonly env: Env,
     private readonly database: DatabaseService,
     private readonly links: TitleLinksService,
     private readonly parsersClient: ParsersClientService,
     private readonly adultContent: AdultContentService,
     private readonly bookmarks: BookmarksService,
+    private readonly sources: SourcesService,
   ) {}
 
   /**
@@ -199,7 +226,7 @@ export class ReadingProgressService {
     titleId: string,
     body: UpdateReadingProgressRequest,
   ): Promise<ReadingProgress> {
-    const { titleRef, chapter } = await findTitleChapter(
+    const { titleRef, details, chapter } = await findTitleChapter(
       this.parsersClient,
       sourceId,
       titleId,
@@ -207,6 +234,8 @@ export class ReadingProgressService {
     );
 
     const values = {
+      // Снимок обновляется вместе с отметкой: «Продолжить чтение» рисует карточку по нему.
+      ...toTitleSnapshot(`${sourceId}:${titleId}`, details),
       sourceId,
       chapterId: body.chapterId,
       chapterVolume: chapter.volume,
@@ -235,5 +264,127 @@ export class ReadingProgressService {
     // уже сохранена, так что неудача здесь её не отменяет.
     await this.bookmarks.touchVisit(userId, row.titleKey).catch(() => undefined);
     return toReadingProgress(row);
+  }
+
+  /**
+   * «Продолжить чтение» — последние тайтлы, которые читал пользователь: группа совпадений —
+   * одна карточка с источником и главой самой свежей отметки. Строкам без снимка (прогресс
+   * старше снимков) он досниматься из деталей источника; не вышло — строка ждёт следующего
+   * чтения. Недоступная база — пустая лента: главная из-за этого падать не должна.
+   */
+  async listRecent(userId: string): Promise<ContinueReadingResponse> {
+    const rows = await this.database.withFallback(
+      () =>
+        this.database.db
+          .select()
+          .from(readingProgress)
+          .where(eq(readingProgress.userId, userId))
+          .orderBy(desc(readingProgress.updatedAt))
+          .limit(CONTINUE_READING_SCAN_LIMIT),
+      [],
+    );
+    if (rows.length === 0) return { items: [] };
+
+    const [canonical, sources] = await Promise.all([
+      this.links.listCanonicalKeys([...new Set(rows.map(({ titleKey }) => titleKey))]),
+      this.sources.listSources(userId),
+    ]);
+    const shownSources = new Set(sources.filter(({ isEnabled }) => isEnabled).map(({ id }) => id));
+    const picked = pickContinueReadingRows(rows, canonical, (sourceId) =>
+      shownSources.has(sourceId),
+    );
+
+    const items: ContinueReadingItem[] = [];
+    for (let start = 0; start < picked.length && items.length < CONTINUE_READING_LIMIT;) {
+      const batch = picked.slice(start, start + CONTINUE_READING_LIMIT - items.length);
+      start += batch.length;
+      const resolved = await Promise.all(batch.map((row) => this.withSnapshot(row)));
+      for (const row of resolved) {
+        if (row) items.push(this.toContinueReadingItem(row));
+      }
+    }
+    return { items };
+  }
+
+  /** Убирает тайтл из «Продолжить чтение» — всю его группу; прогресс остаётся как был. */
+  async hideFromContinueReading(userId: string, sourceId: string, titleId: string) {
+    await this.setHiddenAt(userId, sourceId, titleId, sql`now()`);
+  }
+
+  /** «Отменить» в тосте: тайтл возвращается в ленту на прежнее место. */
+  async restoreToContinueReading(userId: string, sourceId: string, titleId: string) {
+    await this.setHiddenAt(userId, sourceId, titleId, null);
+  }
+
+  private async setHiddenAt(
+    userId: string,
+    sourceId: string,
+    titleId: string,
+    hiddenAt: ReturnType<typeof sql> | null,
+  ) {
+    const titleKey = linkKeyOf(sourceId, decodeTitleId(titleId).url);
+    const group = await this.links.listConfirmedGroup(titleKey);
+    const applied = await this.database.withFallback(async () => {
+      await this.database.db
+        .update(readingProgress)
+        // updated_at не трогаем: по нему тайтл и возвращается в ленту при следующем чтении.
+        .set({ hiddenAt })
+        .where(
+          and(
+            eq(readingProgress.userId, userId),
+            inArray(readingProgress.titleKey, [titleKey, ...group]),
+          ),
+        );
+      return true;
+    }, false);
+    if (!applied) throw new StorageUnavailableException();
+  }
+
+  /** Строка со снимком тайтла; без снимка — дописывает его из деталей источника. */
+  private async withSnapshot(row: ReadingProgressRow): Promise<ReadingProgressRow | null> {
+    if (row.titleId && row.titleName) return row;
+    try {
+      const { url } = parseLinkKey(row.titleKey);
+      const { data } = await this.parsersClient.getDetails(row.sourceId, url);
+      const snapshot = toTitleSnapshot(titleIdOf(row.sourceId, data), data);
+      // Не записался (база недоступна) — карточку всё равно отдаём, снимок допишется в следующий раз.
+      await this.database.withFallback(async () => {
+        await this.database.db
+          .update(readingProgress)
+          .set(snapshot)
+          .where(
+            and(eq(readingProgress.userId, row.userId), eq(readingProgress.titleKey, row.titleKey)),
+          );
+      }, undefined);
+      return { ...row, ...snapshot };
+    } catch {
+      return null;
+    }
+  }
+
+  private toContinueReadingItem(row: ReadingProgressRow): ContinueReadingItem {
+    return {
+      title: {
+        id: row.titleId ?? '',
+        sourceId: row.sourceId,
+        name: row.titleName ?? '',
+        // Обложка подписывается при чтении: подпись прокси живёт час, а снимок — годами.
+        coverUrl: row.coverUrl
+          ? buildSignedImageUrl(this.env.IMG_SIGN_SECRET, row.sourceId, row.coverUrl, {
+              width: 360,
+              format: IMAGE_FORMAT.WEBP,
+            })
+          : '',
+        contentRating: row.contentRating ?? CONTENT_RATING.SAFE,
+        type: row.type,
+      },
+      chapter: {
+        id: row.chapterId,
+        number: row.chapterNumber,
+        volume: row.chapterVolume,
+        title: row.chapterTitle,
+      },
+      updatedAt: toServerDateTime(row.updatedAt.getTime()),
+    };
   }
 }

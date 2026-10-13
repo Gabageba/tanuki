@@ -34,7 +34,13 @@ import { VIEWER_KIND } from '../source-accounts/models';
 import { getViewer } from '../source-accounts/viewer-context';
 import { toApiException } from './parser-error.mapper';
 import { PARSERS } from './parsers.provider';
-import type { RawFilterGroup, RawTitle, RawPage, RawSourceInfo } from './parsers-client.types';
+import type {
+  RawFilterGroup,
+  RawHomeSection,
+  RawTitle,
+  RawPage,
+  RawSourceInfo,
+} from './parsers-client.types';
 
 /**
  * Общая для всех часть деталей: без глав, купленных тем, от чьего имени шёл запрос. Если после
@@ -66,10 +72,11 @@ export class ParsersClientService {
   // /sources само по себе не бьёт по внешним сайтам (статические метаданные реестра),
   // поэтому идёт напрямую в кеш, без breaker/rate-limiter — как и раньше.
   async getSources(): Promise<CachedResult<{ items: RawSourceInfo[] }>> {
-    // v3 — RawSourceInfo обзавёлся полем `isSearchWithFiltersSupported` (до него — `domain`); без
-    // смены ключа записи, залитые до деплоя, ещё сутки (staleSeconds) отдавались бы без поля.
+    // v4 — RawSourceInfo обзавёлся полем `homeSections` (до него — `isSearchWithFiltersSupported`
+    // и `domain`); без смены ключа записи, залитые до деплоя, ещё сутки (staleSeconds)
+    // отдавались бы без поля.
     const result = await this.cache.getOrSet(
-      cacheKey('sources', 'all', 'v3'),
+      cacheKey('sources', 'all', 'v4'),
       CACHE_TTL.sources,
       () => Promise.resolve({ items: this.parsers.listSources() }),
     );
@@ -156,6 +163,15 @@ export class ParsersClientService {
   resolveSearchFilters(sourceId: string, criteria: SearchFilterCriteria): ResolvedSearchFilters {
     const parser = this.parsers.get(sourceId);
     return parser.resolveSearchFilters?.(criteria) ?? unappliedSearchFilters(criteria);
+  }
+
+  /** Блоки главной сайта — один ответ на источник, общий для всех: какие блоки показывать,
+   *  решают настройки на фронте. */
+  async getHome(sourceId: string): Promise<CachedResult<{ sections: RawHomeSection[] }>> {
+    const key = cacheKey('selections', sourceId);
+    return this.fetchCached(key, CACHE_TTL.selections, sourceId, async (parser) => ({
+      sections: (await parser.getHome?.()) ?? [],
+    }));
   }
 
   async getFilters(sourceId: string): Promise<CachedResult<{ groups: RawFilterGroup[] }>> {
