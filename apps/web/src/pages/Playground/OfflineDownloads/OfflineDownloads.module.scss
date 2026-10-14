@@ -1,0 +1,75 @@
+.frame {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  overflow: hidden;
+}
+
+.row {
+  border-radius: var(--mantine-radius-sm);
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+/* D — не скачанная глава без сети. */
+.offlineRow {
+  opacity: 0.45;
+}
+
+/* C4 — полоса прогресса по низу строки. */
+.rowBar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* N4 — шапка без сети: приглушена целиком, логотип серый. */
+.mutedHeader {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
+/* H4 — стрелка нижнего листа указывает на кнопку «Поделиться» в панели Safari. */
+.sheetArrow {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border-right: 1px solid var(--mantine-color-default-border);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-body);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* Тёмный фон читалки — всегда чёрный, как в настоящей читалке. */
+.readerEnd {
+  background: #000;
+  color: var(--mantine-color-gray-4);
+}
+
+.sortableRow {
+  position: relative;
+  background: var(--mantine-color-body);
+
+  &[data-dragging] {
+    z-index: 1;
+    box-shadow: var(--mantine-shadow-md);
+  }
+}
+
+/* N7 — капсула висит под шапкой поверх начала страницы. */
+.capsule {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 1;
+  transform: translateX(-50%);
+}

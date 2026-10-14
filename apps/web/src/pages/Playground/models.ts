@@ -12,6 +12,7 @@ import InvitesTable from './InvitesTable';
 import LoginBadge from './LoginBadge';
 import MultiselectOptions from './MultiselectOptions';
 import Notifications from './Notifications';
+import OfflineDownloads from './OfflineDownloads';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
 import SelectionsTabs from './SelectionsTabs';
@@ -37,6 +38,16 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'offline-downloads',
+    Component: OfflineDownloads,
+    title: 'Скачивание глав и офлайн',
+    description:
+      'Как выглядят скачивание и работа без сети по плану docs/plans/offline-downloads.md: иконка состояния в строке главы, плашка на тайтле, модалка «Скачать главы», страница «Загрузки», строка в профиле и вкладка настроек, индикация «Нет сети», каталог и поиск без сети, обновление и установка приложения.',
+    createdAt: '2026-10-14',
+    decision:
+      'C2e + D2 + B3 + M2 + Q2 + L4 + E2 + P2 + S2a + N2b + U1 + K·пусто + T1 + T2 + I1 + H1 + H11',
+  },
   {
     slug: 'selections-tabs',
     Component: SelectionsTabs,
