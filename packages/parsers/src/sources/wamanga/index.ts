@@ -38,7 +38,8 @@ import { toHomeSections } from '../../core/home';
 const SOURCE_ID = CATALOG_SOURCE_ID.WAMANGA;
 
 /** Блоки главной wamanga.ru — `/api/v1/manga/homepage` отдаёт их разом, в форме элементов
- *  каталога (проверено вживую 2026-10-12). «Онгоинг» на странице — метка статуса, не блок. */
+ *  каталога (проверено вживую 2026-10-12). «Онгоинг» на странице — метка статуса, не блок.
+ *  Поле `dayTop` вопреки имени — «Топ за всё время» (так блок подписан на сайте). */
 export const WAMANGA_HOME_SECTION = {
   DAY_TOP: 'dayTop',
   NEW: 'new',
@@ -46,7 +47,7 @@ export const WAMANGA_HOME_SECTION = {
 } as const;
 
 const WAMANGA_HOME_SECTIONS = [
-  { id: WAMANGA_HOME_SECTION.DAY_TOP, title: 'Топ за день', kind: HOME_SECTION_KIND.TOP },
+  { id: WAMANGA_HOME_SECTION.DAY_TOP, title: 'Топ за всё время', kind: HOME_SECTION_KIND.TOP },
   { id: WAMANGA_HOME_SECTION.NEW, title: 'Новинки', kind: HOME_SECTION_KIND.NEW },
   {
     id: WAMANGA_HOME_SECTION.FRESH_UPDATES,

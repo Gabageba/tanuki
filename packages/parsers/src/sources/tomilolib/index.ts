@@ -11,6 +11,7 @@ import {
   type TitleState,
   SOURCE_LOCALE,
   type EnumLiteralsOf,
+  type HomeSectionVariant,
   type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -29,6 +30,8 @@ import type {
   RawFilterOption,
   RawTitleType,
   RawHomeSectionInfo,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -39,13 +42,48 @@ import { fetchHomeSections } from '../../core/home';
 const SOURCE_ID = CATALOG_SOURCE_ID.TOMILOLIB;
 
 /** Блоки главной tomilo-lib.ru — страница рисуется в браузере, блоки берёт из своих
- *  эндпоинтов (найдены в бандле главной, проверены вживую 2026-10-12). */
+ *  эндпоинтов (найдены в бандле главной, проверены вживую 2026-10-12; «Читают на этой неделе»,
+ *  «Недооценённые» и «Топ тайтлов» — 2026-10-14). */
 export const TOMILOLIB_HOME_SECTION = {
   POPULAR_WEEK: 'popularWeek',
   TOP_WEEK: 'topWeek',
   NEW_CHAPTERS: 'newChapters',
+  READING_WEEK: 'readingWeek',
+  UNDERRATED: 'underrated',
+  TOP_TITLES: 'topTitles',
 } as const;
 type TomiloLibHomeSection = EnumLiteralsOf<typeof TOMILOLIB_HOME_SECTION>;
+
+/** Вкладки «Топа тайтлов» — каталог по просмотрам: тайтлы текущего года, манхва, маньхуа. */
+const TOMILOLIB_TOP_TITLES_TAB = {
+  CURRENT_YEAR: 'currentYear',
+  MANHWA: 'manhwa',
+  MANHUA: 'manhua',
+} as const;
+type TomiloLibTopTitlesTab = EnumLiteralsOf<typeof TOMILOLIB_TOP_TITLES_TAB>;
+
+const TOMILOLIB_TOP_TITLES_TABS: (HomeSectionVariant & { id: TomiloLibTopTitlesTab })[] = [
+  // Сайт пишет год числом («Топ-2026»), но info собирается один раз при старте процесса и
+  // пережил бы Новый год — поэтому подпись без числа, а год берётся в момент запроса.
+  { id: TOMILOLIB_TOP_TITLES_TAB.CURRENT_YEAR, title: 'Топ года' },
+  { id: TOMILOLIB_TOP_TITLES_TAB.MANHWA, title: 'Топ манхвы' },
+  { id: TOMILOLIB_TOP_TITLES_TAB.MANHUA, title: 'Топ маньхуа' },
+];
+
+/** Отбор каталога вкладки «Топа тайтлов»; чужая вкладка — первая. */
+const getTopTitlesTabParams = (variant: string | undefined): Record<string, string> => {
+  const tab =
+    TOMILOLIB_TOP_TITLES_TABS.find(({ id }) => id === variant)?.id ??
+    TOMILOLIB_TOP_TITLES_TAB.CURRENT_YEAR;
+  switch (tab) {
+    case TOMILOLIB_TOP_TITLES_TAB.CURRENT_YEAR:
+      return { releaseYear: String(new Date().getFullYear()) };
+    case TOMILOLIB_TOP_TITLES_TAB.MANHWA:
+      return { types: 'manhwa' };
+    case TOMILOLIB_TOP_TITLES_TAB.MANHUA:
+      return { types: 'manhua' };
+  }
+};
 
 const TOMILOLIB_HOME_SECTIONS: (RawHomeSectionInfo & { id: TomiloLibHomeSection })[] = [
   {
@@ -59,21 +97,42 @@ const TOMILOLIB_HOME_SECTIONS: (RawHomeSectionInfo & { id: TomiloLibHomeSection 
     title: 'Новые главы',
     kind: HOME_SECTION_KIND.UPDATES,
   },
+  {
+    id: TOMILOLIB_HOME_SECTION.READING_WEEK,
+    title: 'Читают на этой неделе',
+    kind: HOME_SECTION_KIND.TRENDING,
+  },
+  { id: TOMILOLIB_HOME_SECTION.UNDERRATED, title: 'Недооценённые', kind: HOME_SECTION_KIND.TOP },
+  {
+    id: TOMILOLIB_HOME_SECTION.TOP_TITLES,
+    title: 'Топ тайтлов',
+    kind: HOME_SECTION_KIND.TOP,
+    variants: TOMILOLIB_TOP_TITLES_TABS,
+  },
 ];
 
-/** Запрос блока — путь и параметры, как их шлёт сама главная. */
-const getTomiloLibHomeRequest = (
-  section: TomiloLibHomeSection,
-): { path: string; params: Record<string, string> } => {
-  switch (section) {
-    case TOMILOLIB_HOME_SECTION.POPULAR_WEEK:
-      return { path: 'titles/popular', params: { limit: '20' } };
-    case TOMILOLIB_HOME_SECTION.TOP_WEEK:
-      return { path: 'titles/top/week', params: { limit: '5' } };
-    case TOMILOLIB_HOME_SECTION.NEW_CHAPTERS:
-      return { path: 'titles/latest-updates', params: { page: '1', limit: '24' } };
-  }
+/** `/titles/top/week` отдаёт не больше 50 тайтлов и не по порядку — сайт сам сортирует их по
+ *  `views`. */
+const READING_WEEK_LIMIT = 50;
+/** Кандидаты «Недооценённых» — первая страница каталога по рейтингу: больше 50 API не отдаёт. */
+const UNDERRATED_CANDIDATES_LIMIT = 50;
+const UNDERRATED_SIZE = 20;
+
+/** «Недооценённые» — как их отбирает сам сайт: рейтинг от 7.5 и просмотров не больше, чем у
+ *  35% кандидатов; не нашлось таких — рейтинг от 7, самые малопросматриваемые первыми. */
+const pickUnderrated = (candidates: MangaJson[]): MangaJson[] => {
+  const getViews = (item: MangaJson) => item.views ?? 0;
+  const getRating = (item: MangaJson) => item.averageRating ?? 0;
+  const views = candidates.map(getViews).sort((a, b) => a - b);
+  const maxViews = views[Math.floor(views.length * 0.35)] ?? 0;
+  const picked = candidates.filter((item) => getRating(item) >= 7.5 && getViews(item) <= maxViews);
+  if (picked.length > 0) return picked.slice(0, UNDERRATED_SIZE);
+  return candidates
+    .filter((item) => getRating(item) >= 7)
+    .sort((a, b) => getViews(a) - getViews(b))
+    .slice(0, UNDERRATED_SIZE);
 };
+
 const PAGE_SIZE = 24;
 const CDN_URL = 'https://s3.regru.cloud/tomilolib';
 const IMAGE_ACCEPT = 'image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5';
@@ -147,7 +206,8 @@ type MangaJson = {
 };
 
 /** Элемент блоков главной — короче элемента каталога: `id`/`title`/`cover` вместо
- *  `_id`/`name`/`coverImage`, обложка уже полным адресом, рейтинг 0..10. */
+ *  `_id`/`name`/`coverImage`, рейтинг 0..10. Обложка — то полным адресом, то путём `/uploads/`,
+ *  как в каталоге. */
 type HomeTitleJson = {
   id?: string;
   slug?: string;
@@ -157,6 +217,12 @@ type HomeTitleJson = {
   type?: string;
   releaseYear?: number;
   totalChapters?: number;
+  views?: number;
+};
+
+/** Ответ каталога `/titles`. */
+type CatalogJson = {
+  data?: { titles?: MangaJson[]; pagination?: { pages?: number } };
 };
 
 const getApiSortBy = (order: string | undefined): string => {
@@ -600,7 +666,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       publicUrl: `https://${domain}${url}`,
       rating: jo.rating != null && jo.rating > 0 ? jo.rating / 10 : RATING_UNKNOWN,
       contentRating: null,
-      coverUrl: jo.cover ?? null,
+      coverUrl: jo.cover ? toCdnUrl(jo.cover) : null,
       largeCoverUrl: null,
       tags: [],
       releaseState: null,
@@ -614,15 +680,78 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     };
   };
 
-  const fetchHomeSection = async (section: TomiloLibHomeSection): Promise<RawTitle[]> => {
-    const request = getTomiloLibHomeRequest(section);
-    const url = apiUrl(request.path);
-    for (const [key, value] of Object.entries(request.params)) url.searchParams.set(key, value);
+  const fetchHomeList = async (
+    path: string,
+    params: Record<string, string>,
+  ): Promise<HomeTitleJson[]> => {
+    const url = apiUrl(path);
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
     const json = await ctx.http.getJson<{ data?: HomeTitleJson[] }>(url.toString());
-    return (json.data ?? []).map(parseHomeTitle).filter((item): item is RawTitle => item !== null);
+    return json.data ?? [];
+  };
+
+  const fetchCatalog = async (params: Record<string, string>) => {
+    const url = apiUrl('titles');
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+    const json = await ctx.http.getJson<CatalogJson>(url.toString());
+    return { titles: json.data?.titles ?? [], pages: json.data?.pagination?.pages ?? 0 };
+  };
+
+  const parseHomeTitles = (items: HomeTitleJson[]) =>
+    items.map(parseHomeTitle).filter((item): item is RawTitle => item !== null);
+
+  const parseMangas = (items: MangaJson[]) =>
+    items.map(parseManga).filter((item): item is RawTitle => item !== null);
+
+  /** Порция «Топа тайтлов» — страница каталога по просмотрам с отбором вкладки. */
+  const fetchTopTitles = async ({
+    page,
+    variant,
+  }: RawHomeSectionParams): Promise<RawHomeSectionPage> => {
+    const { titles, pages } = await fetchCatalog({
+      ...getTopTitlesTabParams(variant),
+      sortBy: 'views',
+      sortOrder: 'desc',
+      page: String(page),
+      limit: String(PAGE_SIZE),
+    });
+    return { items: parseMangas(titles), hasNextPage: page < pages };
+  };
+
+  const fetchHomeSection = async (section: TomiloLibHomeSection): Promise<RawTitle[]> => {
+    switch (section) {
+      case TOMILOLIB_HOME_SECTION.POPULAR_WEEK:
+        return parseHomeTitles(await fetchHomeList('titles/popular', { limit: '20' }));
+      case TOMILOLIB_HOME_SECTION.TOP_WEEK:
+        return parseHomeTitles(await fetchHomeList('titles/top/week', { limit: '5' }));
+      case TOMILOLIB_HOME_SECTION.NEW_CHAPTERS:
+        return parseHomeTitles(
+          await fetchHomeList('titles/latest-updates', { page: '1', limit: '24' }),
+        );
+      case TOMILOLIB_HOME_SECTION.READING_WEEK: {
+        const items = await fetchHomeList('titles/top/week', {
+          limit: String(READING_WEEK_LIMIT),
+        });
+        return parseHomeTitles(items.sort((a, b) => (b.views ?? 0) - (a.views ?? 0)));
+      }
+      case TOMILOLIB_HOME_SECTION.UNDERRATED: {
+        const { titles } = await fetchCatalog({
+          sortBy: 'averageRating',
+          sortOrder: 'desc',
+          limit: String(UNDERRATED_CANDIDATES_LIMIT),
+        });
+        return parseMangas(pickUnderrated(titles));
+      }
+      case TOMILOLIB_HOME_SECTION.TOP_TITLES:
+        return (await fetchTopTitles({ page: 1 })).items;
+    }
   };
 
   const getHome = () => fetchHomeSections(TOMILOLIB_HOME_SECTIONS, fetchHomeSection);
+
+  /** Порциями и по вкладкам листается только «Топ тайтлов», остальные блоки — один список. */
+  const getHomeSection = async (id: string, params: RawHomeSectionParams) =>
+    id === TOMILOLIB_HOME_SECTION.TOP_TITLES ? fetchTopTitles(params) : null;
 
   return {
     id: SOURCE_ID,
@@ -655,6 +784,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
       homeSections: TOMILOLIB_HOME_SECTIONS,
     },
     getHome,
+    getHomeSection,
     getList,
     getDetails,
     getPages,

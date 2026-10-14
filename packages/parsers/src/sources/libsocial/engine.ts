@@ -1,8 +1,6 @@
 import { join } from 'node:path';
 import {
   HOME_SECTION_KIND,
-  HOME_SECTION_PERIOD,
-  type HomeSectionPeriod,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_RESTRICTION,
@@ -17,6 +15,8 @@ import {
   type TitleState,
   SOURCE_AUTH_FAMILY,
   SOURCE_LOCALE,
+  type EnumLiteralsOf,
+  type HomeSectionVariant,
   type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -53,7 +53,7 @@ import { getValidAccessToken } from './auth';
 import { loginLibSocialWithPassword } from './login';
 import { fileTokenStore } from './token-store';
 import { currentSourceAccount } from '../../core/source-accounts';
-import { toHomeSections, uniqueByUrl } from '../../core/home';
+import { toHomeSections } from '../../core/home';
 
 const PAGE_SIZE = 60;
 
@@ -210,6 +210,20 @@ export const LIBSOCIAL_HOME_SECTION = {
   READING_NOW_POPULAR: 'readingNowPopular',
 } as const;
 
+/** Период «Сейчас читают» — как `time=` у `/api/media/top-views`. */
+const READING_NOW_PERIOD = {
+  DAY: 'day',
+  WEEK: 'week',
+  MONTH: 'month',
+} as const;
+type ReadingNowPeriod = EnumLiteralsOf<typeof READING_NOW_PERIOD>;
+
+const READING_NOW_PERIODS: (HomeSectionVariant & { id: ReadingNowPeriod })[] = [
+  { id: READING_NOW_PERIOD.DAY, title: 'За день' },
+  { id: READING_NOW_PERIOD.WEEK, title: 'За неделю' },
+  { id: READING_NOW_PERIOD.MONTH, title: 'За месяц' },
+];
+
 const LIBSOCIAL_HOME_SECTIONS: RawHomeSectionInfo[] = [
   { id: LIBSOCIAL_HOME_SECTION.POPULAR, title: 'Популярное', kind: HOME_SECTION_KIND.POPULAR },
   { id: LIBSOCIAL_HOME_SECTION.NEWEST, title: 'Новинки', kind: HOME_SECTION_KIND.NEW },
@@ -222,23 +236,23 @@ const LIBSOCIAL_HOME_SECTIONS: RawHomeSectionInfo[] = [
     id: LIBSOCIAL_HOME_SECTION.READING_NOW_NEW,
     title: 'Сейчас читают: новинки',
     kind: HOME_SECTION_KIND.TRENDING,
-    isPeriodSupported: true,
+    variants: READING_NOW_PERIODS,
   },
   {
     id: LIBSOCIAL_HOME_SECTION.READING_NOW_RISING,
     title: 'Сейчас читают: набирающее популярность',
     kind: HOME_SECTION_KIND.TRENDING,
-    isPeriodSupported: true,
+    variants: READING_NOW_PERIODS,
   },
   {
     id: LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR,
     title: 'Сейчас читают: популярное',
     kind: HOME_SECTION_KIND.TOP,
-    isPeriodSupported: true,
+    variants: READING_NOW_PERIODS,
   },
 ];
 
-/** Вкладка «Сейчас читают» в `currently_views.items`. */
+/** Вкладка «Сейчас читают»: ключ в `currently_views.items` и `popularity=` у `/api/media/top-views`. */
 const getReadingNowTabKey = (
   section:
     | typeof LIBSOCIAL_HOME_SECTION.READING_NOW_NEW
@@ -255,13 +269,15 @@ const getReadingNowTabKey = (
   }
 };
 
-/** «Сейчас читают» за период — `/api/media/top-views?time=`: по 3 тайтла на вкладку за страницу,
- *  страниц около десяти, за последней сайт повторяет её же (проверено вживую 2026-10-13).
- *  Собираем блок целиком, пока страница не повторится, — с запасом на рост. */
-const READING_NOW_MAX_PAGES = 15;
+/** «Сейчас читают» за период — `/api/media/top-views?time=&popularity=&page=`, как на странице
+ *  `/top-views` сайта: одна вкладка, по 56 тайтлов, `has_next_page` не кончается никогда, но
+ *  сама страница сайта листает только 9 порций — дальше порядок уже не по просмотрам (проверено
+ *  вживую 2026-10-13). Без `popularity` тот же адрес отдаёт виджет главной — по 3 на вкладку. */
+const READING_NOW_MAX_PAGES = 9;
 
 type TopViewsJson = {
-  items?: Partial<Record<string, { media: MangaListItemJson }[]>>;
+  data: MangaListItemJson[];
+  meta?: { has_next_page?: boolean };
 };
 
 /** `/api/latest-updates?page=` — за последней страницей сайт отдаёт её же с её `current_page`. */
@@ -1057,36 +1073,29 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     });
   };
 
-  /** Вся вкладка «Сейчас читают» за период: страницы подряд, пока сайт не повторит прошлую. */
+  /** Порция вкладки «Сейчас читают» за период; чужой период — за день. */
   const fetchReadingNow = async (
     section: Parameters<typeof getReadingNowTabKey>[0],
-    period: HomeSectionPeriod,
-  ): Promise<RawTitle[]> => {
-    const tabKey = getReadingNowTabKey(section);
-    const items: RawTitle[] = [];
-    let previousKey = '';
-    for (let page = 1; page <= READING_NOW_MAX_PAGES; page++) {
-      const json = await ctx.http.getJson<{ data: TopViewsJson }>(
-        `https://${LIBSOCIAL_API_HOST}/api/media/top-views?time=${period}&page=${page}`,
-      );
-      const tab = json.data.items?.[tabKey] ?? [];
-      const pageKey = tab.map(({ media }) => media.id).join(',');
-      if (tab.length === 0 || pageKey === previousKey) break;
-      previousKey = pageKey;
-      items.push(...tab.map(({ media }) => parseManga(media)));
-    }
-    return uniqueByUrl(items);
+    variant: string | undefined,
+    page: number,
+  ): Promise<RawHomeSectionPage> => {
+    const period =
+      READING_NOW_PERIODS.find(({ id }) => id === variant)?.id ?? READING_NOW_PERIOD.DAY;
+    if (page > READING_NOW_MAX_PAGES) return { items: [], hasNextPage: false };
+    const json = await ctx.http.getJson<TopViewsJson>(
+      `https://${LIBSOCIAL_API_HOST}/api/media/top-views?time=${period}&popularity=${getReadingNowTabKey(section)}&page=${page}`,
+    );
+    return {
+      items: json.data.map(parseManga),
+      hasNextPage: page < READING_NOW_MAX_PAGES && Boolean(json.meta?.has_next_page),
+    };
   };
 
   const getHomeSection = async (
     id: string,
-    { page, period = HOME_SECTION_PERIOD.DAY }: RawHomeSectionParams,
+    { page, variant }: RawHomeSectionParams,
   ): Promise<RawHomeSectionPage | null> => {
-    if (isReadingNowSection(id)) {
-      // Вкладка собирается целиком за раз — продолжения у неё нет.
-      if (page > 1) return { items: [], hasNextPage: false };
-      return { items: await fetchReadingNow(id, period), hasNextPage: false };
-    }
+    if (isReadingNowSection(id)) return fetchReadingNow(id, variant, page);
     if (id === LIBSOCIAL_HOME_SECTION.LATEST_UPDATES) {
       const json = await ctx.http.getJson<LatestUpdatesJson>(
         `https://${LIBSOCIAL_API_HOST}/api/latest-updates?page=${page}`,

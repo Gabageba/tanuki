@@ -390,44 +390,70 @@ describe('Senkuro getHome', () => {
     score: 8.1,
     status: 'ONGOING',
   });
-  const homeResponse = JSON.stringify({
-    data: {
-      mangaPopularByPeriod: [card(1), card(2)],
-      mangas: { edges: [{ node: card(3) }] },
-    },
-  });
-
-  it('Senkuro: «Самое читаемое» and «Последние обновления» from one query', async () => {
-    const http = new FakeHttpClient();
-    http.register((_url, body) => body?.includes('fetchHome') ?? false, {
+  const registerHome = (http: FakeHttpClient) => {
+    http.register((_url, body) => body?.includes('fetchPopularMangaByPeriod') ?? false, {
       status: 200,
-      body: homeResponse,
+      body: JSON.stringify({ data: { mangaPopularByPeriod: [card(1), card(2)] } }),
       contentType: 'application/json',
     });
+    http.register((_url, body) => body?.includes('fetchMangas') ?? false, {
+      status: 200,
+      body: JSON.stringify({
+        data: { mangas: { edges: [{ node: card(3) }], pageInfo: { hasNextPage: false } } },
+      }),
+      contentType: 'application/json',
+    });
+  };
+  const requestVariables = (http: FakeHttpClient) =>
+    http.requests.map(({ body }) => JSON.parse(body!).variables as Record<string, unknown>);
+
+  it('Senkuro: «Самое читаемое» by period, the rest — from the catalog', async () => {
+    const http = new FakeHttpClient();
+    registerHome(http);
     const parser = createSenkuroParser(SENKURO_CONFIG, makeContext(http));
 
     const { sections, problems } = await checkHome(parser);
 
     expect(problems).toEqual([]);
+    expect(sections.map(({ items }) => items.length)).toEqual([2, 1, 1, 1, 1, 1, 1]);
+    const variables = requestVariables(http);
+    expect(variables).toContainEqual({ period: 'DAY' });
+    expect(variables).toContainEqual(
+      expect.objectContaining({
+        orderBy: { field: 'POPULARITY_SCORE', direction: 'DESC' },
+        type: { include: ['MANHWA'], exclude: [] },
+      }),
+    );
+  });
 
-    expect(sections.map(({ items }) => items.length)).toEqual([2, 1]);
-    expect(JSON.parse(http.requests[0]!.body!).variables.withPopular).toBe(true);
+  it('Senkuro: «Самое читаемое» takes the period, catalog blocks page on', async () => {
+    const http = new FakeHttpClient();
+    registerHome(http);
+    const parser = createSenkuroParser(SENKURO_CONFIG, makeContext(http));
+
+    const mostRead = await parser.getHomeSection!('mostRead', { page: 1, variant: 'month' });
+    const newest = await parser.getHomeSection!('newest', { page: 1 });
+
+    expect(mostRead).toEqual({ items: expect.any(Array), hasNextPage: false });
+    expect(newest?.items).toHaveLength(1);
+    expect(requestVariables(http)).toEqual([
+      { period: 'MONTH' },
+      expect.objectContaining({ orderBy: { field: 'CREATED_AT', direction: 'DESC' } }),
+    ]);
   });
 
   it('Senkognito: no «Самое читаемое» — the backend answers it with Senkuro titles', async () => {
     const http = new FakeHttpClient();
-    http.register((_url, body) => body?.includes('fetchHome') ?? false, {
-      status: 200,
-      body: homeResponse,
-      contentType: 'application/json',
-    });
+    registerHome(http);
     const parser = createSenkuroParser(SENKOGNITO_CONFIG, makeContext(http, 'ne.senkognito.com'));
 
     const { sections, problems } = await checkHome(parser);
 
     expect(problems).toEqual([]);
-
-    expect(sections.map(({ id }) => id)).toEqual(['latestUpdates']);
-    expect(JSON.parse(http.requests[0]!.body!).variables.withPopular).toBe(false);
+    expect(sections.map(({ id }) => id)).not.toContain('mostRead');
+    expect(http.requests.some(({ body }) => body?.includes('fetchPopularMangaByPeriod'))).toBe(
+      false,
+    );
+    expect(await parser.getHomeSection!('mostRead', { page: 1 })).toBeNull();
   });
 });

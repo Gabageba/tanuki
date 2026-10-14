@@ -356,20 +356,27 @@ describe('HentaiChan.cc parser conformance', () => {
   });
 });
 
-describe('HentaiChan.cc getHome', () => {
-  // Разметка главной урезана до блока «Популярная манга»: заголовок в своей строке, лента —
-  // соседом на уровень выше, как на живой странице.
+describe('HentaiChan.cc home sections', () => {
+  // Главная урезана до RSC-данных слайдера «Популярной манги»: запись `id:[…]` разрезана на два
+  // `self.__next_f.push`, как бывает на живой странице.
+  const POPULAR_ROW = `3e:${JSON.stringify([
+    '$',
+    '$L6a',
+    null,
+    {
+      week: [{ slug: '1-2-ato-no-futari' }, { slug: 'missing-title' }],
+      month: [{ slug: 'month-title' }],
+    },
+  ])}\n`;
+  const pushScript = (chunk: string) =>
+    `<script>self.__next_f.push(${JSON.stringify([1, chunk])})</script>`;
   const HOME_HTML = `<!doctype html><html><body>
-    <div><div><div><h2>Популярная манга</h2></div></div>
-      <div>
-        <a href="/manga/1-2-ato-no-futari"><img src="x.jpg"></a>
-        <a href="/manga/1-2-ato-no-futari">1 + 2</a>
-        <a href="/manga/missing-title"><img src="y.jpg"></a>
-      </div>
-    </div>
+    <script>(self.__next_f=self.__next_f||[]).push([0])</script>
+    ${pushScript(`1:"$Sreact.fragment"\n${POPULAR_ROW.slice(0, 40)}`)}
+    ${pushScript(POPULAR_ROW.slice(40))}
   </body></html>`;
 
-  it('«Новая манга» from the catalog, «Популярная манга» in the page order via the API', async () => {
+  const makeHomeParser = () => {
     const http = new FakeHttpClient();
     http.register((url) => url === `https://${DOMAIN}/`, { status: 200, body: HOME_HTML });
     http.register((url) => url.startsWith(`${API_BASE}/items/manga?`), {
@@ -377,16 +384,43 @@ describe('HentaiChan.cc getHome', () => {
       body: LIST_RESPONSE,
       contentType: 'application/json',
     });
-    const parser = createHentaichanCcParser(makeContext(http));
+    return { http, parser: createHentaichanCcParser(makeContext(http)) };
+  };
+
+  const slugRequest = (http: FakeHttpClient) =>
+    decodeURIComponent(http.requests.find(({ url }) => url.includes('filter%5Bslug%5D'))!.url);
+
+  it('«Новая манга» from the catalog, «Популярная манга» for the week in the page order', async () => {
+    const { http, parser } = makeHomeParser();
 
     const { sections, problems } = await checkHome(parser);
 
     expect(problems).toEqual([]);
-
     expect(sections[1]!.items.map(({ url }) => url)).toEqual(['5243,,1-2-ato-no-futari']);
-    const popularRequest = http.requests.find(({ url }) => url.includes('filter%5Bslug%5D'));
-    expect(decodeURIComponent(popularRequest!.url)).toContain(
-      'filter[slug][_in]=1-2-ato-no-futari,missing-title',
-    );
+    expect(slugRequest(http)).toContain('filter[slug][_in]=1-2-ato-no-futari,missing-title');
+  });
+
+  it('«Популярная манга» for the month variant, one portion only', async () => {
+    const { http, parser } = makeHomeParser();
+
+    const page = await parser.getHomeSection!('popular', { page: 1, variant: 'month' });
+
+    expect(page?.hasNextPage).toBe(false);
+    expect(slugRequest(http)).toContain('filter[slug][_in]=month-title');
+    expect(await parser.getHomeSection!('popular', { page: 2, variant: 'month' })).toEqual({
+      items: [],
+      hasNextPage: false,
+    });
+  });
+
+  it('«Новая манга» pages through the catalog by upload date', async () => {
+    const { http, parser } = makeHomeParser();
+
+    await parser.getHomeSection!('new', { page: 3 });
+
+    const url = new URL(http.requests[0]!.url);
+    expect(url.searchParams.get('offset')).toBe('40');
+    expect(url.searchParams.get('limit')).toBe('20');
+    expect(url.searchParams.get('sort')).toBe('-date_created');
   });
 });

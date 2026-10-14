@@ -521,34 +521,60 @@ describe('LibSocial getHomeSection', () => {
   const ITEM = JSON.parse(LIST_JSON).data[0] as Record<string, unknown>;
   const topViewsPage = (ids: number[]) =>
     JSON.stringify({
-      data: {
-        time_filter: 'week',
-        items: { '1': ids.map((id) => ({ media: { ...ITEM, id, slug_url: `${id}--t` } })) },
-      },
+      data: ids.map((id) => ({ ...ITEM, id, slug_url: `${id}--t` })),
+      meta: { has_next_page: true },
     });
 
-  it('«Сейчас читают»: collects pages until the site repeats the last one', async () => {
+  it('«Сейчас читают»: one page of the tab per request, period variant and tab in the query', async () => {
     const http = new FakeHttpClient();
-    const pages: Record<string, number[]> = { '1': [1, 2, 3], '2': [4, 5, 6], '3': [7], '4': [7] };
-    http.register(
-      (url) => url.includes('/api/media/top-views'),
-      () => {
-        const page = new URL(http.requests.at(-1)!.url).searchParams.get('page') ?? '1';
-        return {
-          status: 200,
-          body: topViewsPage(pages[page] ?? [7]),
-          contentType: 'application/json',
-        };
-      },
-    );
+    http.register((url) => url.includes('/api/media/top-views'), {
+      status: 200,
+      body: topViewsPage([1, 2, 3]),
+      contentType: 'application/json',
+    });
     const parser = createLibSocialParser(CFG, makeContext(http));
 
-    const section = await parser.getHomeSection!('readingNowNew', { page: 1, period: 'week' });
+    const section = await parser.getHomeSection!('readingNowRising', { page: 2, variant: 'week' });
 
-    expect(section?.items.map(({ url }) => url)).toHaveLength(7);
-    expect(section?.hasNextPage).toBe(false);
-    expect(http.requests[0]!.url).toContain('time=week');
-    expect(http.requests).toHaveLength(4);
+    expect(section?.items.map(({ url }) => url)).toEqual(['1--t', '2--t', '3--t']);
+    expect(section?.hasNextPage).toBe(true);
+    const query = new URL(http.requests[0]!.url).searchParams;
+    expect(query.get('time')).toBe('week');
+    expect(query.get('popularity')).toBe('2');
+    expect(query.get('page')).toBe('2');
+  });
+
+  it('«Сейчас читают»: an unknown period variant falls back to the day', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/media/top-views'), {
+      status: 200,
+      body: topViewsPage([1]),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    await parser.getHomeSection!('readingNowNew', { page: 1, variant: 'year' });
+
+    expect(new URL(http.requests[0]!.url).searchParams.get('time')).toBe('day');
+  });
+
+  it('«Сейчас читают»: stops at the 9th page like the site does', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/media/top-views'), {
+      status: 200,
+      body: topViewsPage([1]),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    await expect(parser.getHomeSection!('readingNowNew', { page: 9 })).resolves.toMatchObject({
+      hasNextPage: false,
+    });
+    await expect(parser.getHomeSection!('readingNowNew', { page: 10 })).resolves.toEqual({
+      items: [],
+      hasNextPage: false,
+    });
+    expect(http.requests).toHaveLength(1);
   });
 
   it('«Последние обновления»: a page past the end comes back clamped — empty, no next', async () => {

@@ -67,10 +67,11 @@ const getSortKey = (order: string | undefined): string => {
   }
 };
 
-/** Блоки главной mangabuff.ru — проверено вживую 2026-10-12. Карусели обложек («Горячие
- *  новинки», «Новое на сайте») — те же `.cards__item`, что в каталоге; списки сбоку и лента
- *  обновлений — свои строки с маленькой обложкой. */
+/** Блоки главной mangabuff.ru — проверено вживую 2026-10-13. Карусели обложек («Манга онлайн»,
+ *  «Горячие новинки», «Новое на сайте») — те же `.cards__item`, что в каталоге; списки сбоку и
+ *  лента обновлений — свои строки с маленькой обложкой. */
 export const MANGABUFF_HOME_SECTION = {
+  MANGA_ONLINE: 'mangaOnline',
   HOT_NEW: 'hotNew',
   POPULAR_WEEK: 'popularWeek',
   BEST_ONGOINGS: 'bestOngoings',
@@ -79,6 +80,11 @@ export const MANGABUFF_HOME_SECTION = {
 } as const;
 
 const MANGABUFF_HOME_SECTIONS = [
+  {
+    id: MANGABUFF_HOME_SECTION.MANGA_ONLINE,
+    title: 'Манга онлайн',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
   { id: MANGABUFF_HOME_SECTION.HOT_NEW, title: 'Горячие новинки', kind: HOME_SECTION_KIND.NEW },
   {
     id: MANGABUFF_HOME_SECTION.POPULAR_WEEK,
@@ -710,6 +716,9 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       MANGABUFF_HOME_SECTIONS.find((section) => section.id === id)!.title;
 
     return toHomeSections(MANGABUFF_HOME_SECTIONS, {
+      [MANGABUFF_HOME_SECTION.MANGA_ONLINE]: uniqueByUrl(
+        cardsAfter(titleOf(MANGABUFF_HOME_SECTION.MANGA_ONLINE)),
+      ),
       [MANGABUFF_HOME_SECTION.HOT_NEW]: uniqueByUrl(
         cardsAfter(titleOf(MANGABUFF_HOME_SECTION.HOT_NEW)),
       ),

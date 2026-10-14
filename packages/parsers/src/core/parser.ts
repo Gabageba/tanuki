@@ -80,7 +80,7 @@ export type Parser = {
    *  RawSourceInfo.homeSections, in that order. A block the page no longer has comes back with
    *  empty `items` rather than an error. Omit on sources without a home page worth showing. */
   getHome?(): Promise<RawHomeSection[]>;
-  /** One portion of a single home block, for blocks the site serves in pages (or by period).
+  /** One portion of a single home block, for blocks the site serves in pages (or by variant).
    *  null — this block isn't fetched on its own: the caller takes it from getHome() as a single
    *  portion. Omit on sources where every block is a fixed list on the home page. */
   getHomeSection?(id: string, params: RawHomeSectionParams): Promise<RawHomeSectionPage | null>;

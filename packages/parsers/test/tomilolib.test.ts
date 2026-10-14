@@ -254,3 +254,63 @@ describe('TomiloLib getHome', () => {
     expect(sections[0]!.items[0]!.rating).toBeCloseTo(0.85);
   });
 });
+
+describe('TomiloLib home sections from the catalog', () => {
+  const catalogTitle = (slug: string, averageRating: number, views: number) => ({
+    _id: `id-${slug}`,
+    slug,
+    name: slug,
+    coverImage: `/titles/${slug}/cover.jpg`,
+    averageRating,
+    views,
+  });
+
+  it('picks underrated titles the way the site does: high rating, few views', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('sortBy=averageRating'), {
+      status: 200,
+      body: JSON.stringify({
+        data: {
+          titles: [
+            catalogTitle('popular', 9.5, 100000),
+            catalogTitle('hidden', 9, 100),
+            catalogTitle('weak', 6, 50),
+            catalogTitle('mid', 8, 5000),
+          ],
+          pagination: { pages: 1 },
+        },
+      }),
+      contentType: 'application/json',
+    });
+    const parser = createTomiloLibParser(makeContext(http));
+
+    const sections = await parser.getHome!();
+
+    const underrated = sections.find(({ id }) => id === 'underrated')!;
+    expect(underrated.items.map(({ url }) => url)).toEqual(['/titles/hidden']);
+  });
+
+  it('pages «Топ тайтлов» by tab through the catalog sorted by views', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/titles?'), {
+      status: 200,
+      body: JSON.stringify({
+        data: { titles: [catalogTitle('one', 9, 1000)], pagination: { pages: 3 } },
+      }),
+      contentType: 'application/json',
+    });
+    const parser = createTomiloLibParser(makeContext(http));
+
+    const portion = await parser.getHomeSection!('topTitles', { page: 2, variant: 'manhua' });
+    const url = new URL(http.requests.at(-1)!.url);
+
+    expect(portion).toEqual({
+      items: [expect.objectContaining({ url: '/titles/one' })],
+      hasNextPage: true,
+    });
+    expect(url.searchParams.get('types')).toBe('manhua');
+    expect(url.searchParams.get('sortBy')).toBe('views');
+    expect(url.searchParams.get('page')).toBe('2');
+    expect(await parser.getHomeSection!('newChapters', { page: 2 })).toBeNull();
+  });
+});

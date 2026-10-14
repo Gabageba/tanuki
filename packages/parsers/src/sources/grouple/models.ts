@@ -1,5 +1,7 @@
 import { HOME_SECTION_KIND, type EnumLiteralsOf } from '@tanuki/contracts';
 import { FILTER_GROUP } from '../../core/filters/group';
+import type { RawHomeSectionInfo } from '../../types';
+import type { GroupleTrendTab } from './config';
 
 export const GROUPLE_ELEMENT_TYPE = {
   GENRE: 'genre',
@@ -88,6 +90,21 @@ export const GROUPLE_HOME_SECTIONS = [
     title: 'Последние обновления каталога',
     kind: HOME_SECTION_KIND.UPDATES,
   },
+];
+
+/** Блок жанровой вкладки «Трендов» — по id элемента сайта. */
+export const getGroupleTrendTabSectionId = (elementId: number) => `element${elementId}`;
+
+/** Блоки главной сайта: жанровые вкладки «Трендов» встают сразу за двумя её локальными
+ *  вкладками — в том же порядке, что на сайте. */
+export const getGroupleHomeSections = (trendTabs: GroupleTrendTab[]): RawHomeSectionInfo[] => [
+  ...GROUPLE_HOME_SECTIONS.slice(0, 2),
+  ...trendTabs.map(({ elementId, title }) => ({
+    id: getGroupleTrendTabSectionId(elementId),
+    title,
+    kind: HOME_SECTION_KIND.TRENDING,
+  })),
+  ...GROUPLE_HOME_SECTIONS.slice(2),
 ];
 
 /** Вкладка карусели «Тренды» блока — `data-tab-content` её шаблона. */

@@ -601,4 +601,43 @@ describe('Grouple getHome', () => {
       for (const item of items) expect(item.url).toMatch(/^\/[^/]+$/);
     }
   });
+
+  it('loads the genre tabs of «Тренды» right after its local tabs; a failed tab stays empty', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: readFixture('grouple-home.html'),
+    });
+    http.register((url) => url === `https://${DOMAIN}/internal/elementList/1313`, {
+      status: 200,
+      body: readFixture('grouple-trend-tab.html'),
+    });
+    http.register((url) => url === `https://${DOMAIN}/internal/elementList/1328`, {
+      status: 500,
+      body: '',
+    });
+    const parser = createGroupleParser(
+      {
+        ...CFG,
+        trendTabs: [
+          { elementId: 1313, title: 'Романтика' },
+          { elementId: 1328, title: 'Комедия' },
+        ],
+      },
+      makeContext(http),
+    );
+
+    const { sections, problems } = await checkHome(parser, ['element1313']);
+
+    expect(problems).toEqual([]);
+    expect(sections.slice(2, 4).map(({ id, title }) => [id, title])).toEqual([
+      ['element1313', 'Романтика'],
+      ['element1328', 'Комедия'],
+    ]);
+    expect(sections[2]!.items.map(({ url }) => url)).toEqual([
+      '/cvetenie_beloi_nochi',
+      '/ohotnik_hochet_tiho_mirno_jit',
+    ]);
+    expect(sections[3]!.items).toEqual([]);
+  });
 });

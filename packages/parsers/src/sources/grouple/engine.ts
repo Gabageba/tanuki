@@ -46,7 +46,9 @@ import {
   GROUPLE_HOME_SECTION,
   GROUPLE_HOME_SECTIONS,
   GROUPLE_TRANSLATION_STATUS,
+  getGroupleHomeSections,
   getGroupleTrendTab,
+  getGroupleTrendTabSectionId,
 } from './models';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
 import { findHomeHeading } from '../../core/html/home';
@@ -379,6 +381,8 @@ const parsePagesV3 = (data: string, pos: number, domain: string, sourceId: strin
 
 export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
+  const trendTabs = cfg.trendTabs ?? [];
+  const homeSections = getGroupleHomeSections(trendTabs);
   let cachedPagesServer: string | null = null;
 
   const authFamily = catalogEntryFor(cfg.id).authFamily;
@@ -1266,6 +1270,15 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
         : null;
       return $section?.length ? parseCardTiles($, $section) : [];
     };
+    // Жанровые вкладки сайт не кладёт в шаблоны — подгружает по клику, одной порцией. Упавшая
+    // вкладка — пустой блок, остальная главная не страдает.
+    const remoteTrendTab = async (elementId: number) => {
+      const tab = await ctx.http.getHtml(`https://${domain}/internal/elementList/${elementId}`);
+      return parseCardTiles(tab.$, tab.$.root());
+    };
+    const remoteTrendTabs = await Promise.allSettled(
+      trendTabs.map(({ elementId }) => remoteTrendTab(elementId)),
+    );
     const latestUpdates = () =>
       uniqueByUrl(
         $('.feed-latest-updates .inline-tile')
@@ -1278,7 +1291,16 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
           .filter((item): item is RawTitle => item !== null),
       );
 
-    return toHomeSections(GROUPLE_HOME_SECTIONS, {
+    return toHomeSections(homeSections, {
+      ...Object.fromEntries(
+        trendTabs.map(({ elementId }, index) => {
+          const result = remoteTrendTabs[index];
+          return [
+            getGroupleTrendTabSectionId(elementId),
+            result?.status === 'fulfilled' ? result.value : [],
+          ];
+        }),
+      ),
       [GROUPLE_HOME_SECTION.HOT_NEW]: trendTab(GROUPLE_HOME_SECTION.HOT_NEW),
       [GROUPLE_HOME_SECTION.POPULAR_UPDATES]: trendTab(GROUPLE_HOME_SECTION.POPULAR_UPDATES),
       [GROUPLE_HOME_SECTION.POPULAR_NOW]: popularNow(),
@@ -1317,7 +1339,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
       // The catalog takes query and filters together; search criteria (types/states) aren't mapped
       // to Grouple's per-site element ids, so they stay unapplied (no resolveSearchFilters).
       isSearchWithFiltersSupported: true,
-      homeSections: GROUPLE_HOME_SECTIONS,
+      homeSections,
     },
     getList,
     getDetails,

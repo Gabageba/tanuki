@@ -17,7 +17,7 @@ import type {
   FilterGroupSettings,
   FilterType,
   HomeSectionKind,
-  HomeSectionPeriod,
+  HomeSectionVariant,
   TitleRestriction,
   TitleState,
   TitleType,
@@ -191,15 +191,16 @@ export type RawHomeSectionInfo = {
   title: string;
   /** Смысл блока — по нему фронт выбирает иконку вкладки. */
   kind: HomeSectionKind;
-  /** У блока на сайте есть выбор периода — getHomeSection принимает `period`. */
-  isPeriodSupported?: true;
+  /** Переключатель внутри блока на сайте (период, страна) — getHomeSection принимает `variant`.
+   *  Первый — по умолчанию: его же отдаёт getHome. */
+  variants?: HomeSectionVariant[];
 };
 
-/** Какую порцию блока просить у getHomeSection: `page` с 1, `period` — только у блока с
- *  `isPeriodSupported`. */
+/** Какую порцию блока просить у getHomeSection: `page` с 1, `variant` — id из `variants` блока;
+ *  без него — первый вариант. */
 export type RawHomeSectionParams = {
   page: number;
-  period?: HomeSectionPeriod;
+  variant?: string;
 };
 
 /** Порция блока главной: `hasNextPage` — сайт отдаёт блок порциями и следующая есть. */

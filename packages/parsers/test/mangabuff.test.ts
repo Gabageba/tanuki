@@ -345,7 +345,7 @@ describe('MangaBuff parser conformance', () => {
 });
 
 describe('MangaBuff getHome', () => {
-  it('reads both carousels, both side lists and the updates feed', async () => {
+  it('reads all three carousels, both side lists and the updates feed', async () => {
     const http = new FakeHttpClient();
     http.register((url) => url === `https://${DOMAIN}/`, {
       status: 200,
@@ -361,6 +361,6 @@ describe('MangaBuff getHome', () => {
       for (const item of items) expect(item.url).toMatch(/^\/manga\/[^/]+$/);
     }
     // Строки списков приходят с обложкой x70 — в карточку берём x180.
-    expect(sections[1]!.items[0]!.coverUrl).toContain('/x180/');
+    expect(sections[2]!.items[0]!.coverUrl).toContain('/x180/');
   });
 });
