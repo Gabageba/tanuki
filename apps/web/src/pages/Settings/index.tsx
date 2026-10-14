@@ -8,6 +8,7 @@ import {
   GearIcon,
   PlugsIcon,
   SparkleIcon,
+  TrayArrowDownIcon,
 } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import usePushConfig from '@/entities/notification/hooks/usePushConfig';
@@ -15,6 +16,7 @@ import PageLayout from '@/shared/ui/PageLayout';
 import useUserSettings from '@/shared/hooks/useUserSettings';
 import { SETTINGS_TAB_SEARCH_PARAM, SETTINGS_TABS } from '@/shared/lib/routes';
 import SettingsBookmarks from './components/SettingsBookmarks';
+import SettingsDownloads from './components/SettingsDownloads';
 import SettingsNotifications from './components/SettingsNotifications';
 import SettingsGeneral from './components/SettingsGeneral';
 import SettingsReader from './components/SettingsReader';
@@ -66,6 +68,12 @@ function Settings() {
         title: t('bookmarks'),
         icon: <BookmarkSimpleIcon />,
         content: <SettingsBookmarks />,
+      },
+      {
+        id: SETTINGS_TABS.DOWNLOADS,
+        title: t('downloads'),
+        icon: <TrayArrowDownIcon />,
+        content: <SettingsDownloads />,
       },
       ...(pushConfig?.enabled
         ? [

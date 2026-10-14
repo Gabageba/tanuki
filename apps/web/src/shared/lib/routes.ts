@@ -49,8 +49,25 @@ export const SETTINGS_TABS = {
   BOOKMARKS: 'bookmarks',
   NOTIFICATIONS: 'notifications',
   SELECTIONS: 'selections',
+  DOWNLOADS: 'downloads',
 } as const;
 export type SettingsTab = EnumLiteralsOf<typeof SETTINGS_TABS>;
+
+/** Вкладка «Загрузок» и раскрытый скачанный тайтл — в адресе: на них ведёт карточка на тайтле. */
+export const DOWNLOADS_TAB_SEARCH_PARAM = 'tab';
+export const DOWNLOADS_TITLE_SEARCH_PARAM = 'title';
+
+export const DOWNLOADS_TABS = {
+  QUEUE: 'queue',
+  DOWNLOADED: 'downloaded',
+} as const;
+export type DownloadsTab = EnumLiteralsOf<typeof DOWNLOADS_TABS>;
+
+export const getDownloadsPath = (tab: DownloadsTab, titleId?: string) => {
+  const params = new URLSearchParams({ [DOWNLOADS_TAB_SEARCH_PARAM]: tab });
+  if (titleId) params.set(DOWNLOADS_TITLE_SEARCH_PARAM, titleId);
+  return `${ROUTE_PATHS.DOWNLOADS}?${params.toString()}`;
+};
 
 /** Вкладка настроек с папками закладок — на неё ведёт шестерёнка на /bookmarks. */
 export const SETTINGS_BOOKMARKS_PATH = `${ROUTE_PATHS.SETTINGS}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.BOOKMARKS}`;

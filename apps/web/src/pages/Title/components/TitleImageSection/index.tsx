@@ -1,34 +1,16 @@
 import { useState } from 'react';
-import {
-  ActionIcon,
-  Alert,
-  Box,
-  Center,
-  Grid,
-  Group,
-  Image,
-  Menu,
-  Overlay,
-  Stack,
-} from '@mantine/core';
-import {
-  ArrowsClockwiseIcon,
-  DotsThreeIcon,
-  HardDrivesIcon,
-  ShareNetworkIcon,
-} from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
+import { Box, Center, Grid, Group, Image, Overlay, Stack } from '@mantine/core';
 import FolderPickerSelect from '@/features/bookmark/FolderPickerSelect';
 import CoverImage from '@/shared/ui/CoverImage';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { TitleDetailsQuery } from '../../models';
 import TitleImageSectionSkeleton from './TitleImageSectionSkeleton';
+import TitleDownloadsCard from './TitleDownloadsCard';
+import TitleMoreMenu from './TitleMoreMenu';
 import TitleReadingActions from './TitleReadingActions';
-import MidDotGroup from '@/shared/ui/MidDotGroup';
 import styles from '../../Title.module.scss';
 
 function TitleImageSection() {
-  const { t } = useTranslation();
   const { data, isFetching } = PageLayout.useQuery<TitleDetailsQuery>();
   const [isBackgroundLoaded, setIsBackgroundLoaded] = useState(false);
 
@@ -74,31 +56,9 @@ function TitleImageSection() {
           <TitleReadingActions titleId={title.id} />
           <Group gap={8}>
             <FolderPickerSelect titleId={title.id} />
-            <Menu>
-              <Menu.Target>
-                <ActionIcon size={36} variant="default">
-                  <DotsThreeIcon />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item leftSection={<ArrowsClockwiseIcon />}>{t('update')}</Menu.Item>
-                <Menu.Item leftSection={<ShareNetworkIcon />}>{t('share')}</Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+            <TitleMoreMenu titleId={title.id} name={title.name} />
           </Group>
-          <Alert variant="transparent" px={10} py={0}>
-            <Group gap={8} c="dimmed">
-              <HardDrivesIcon size={16} />
-              <MidDotGroup
-                separatorProps={{ c: 'dimmed', fz: 12 }}
-                text={{
-                  c: 'dimmed',
-                  fz: 12,
-                }}
-                items={[t('downloadedChaptersAbbrev', { count: 42 }), t('sizeGb', { size: 1.8 })]}
-              />
-            </Group>
-          </Alert>
+          <TitleDownloadsCard titleId={title.id} />
         </Stack>
       </Stack>
     </Grid.Col>

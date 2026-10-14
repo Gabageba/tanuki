@@ -1,0 +1,20 @@
+.row {
+  border-radius: var(--mantine-radius-sm);
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+/* Перетаскиваемая строка очереди поверх соседних. */
+.sortableRow {
+  &[data-dragging] {
+    z-index: 1;
+    box-shadow: var(--mantine-shadow-md);
+  }
+}
+
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}

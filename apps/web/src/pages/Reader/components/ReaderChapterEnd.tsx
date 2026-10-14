@@ -1,13 +1,14 @@
-import { Stack, Text } from '@mantine/core';
+import { Button, Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { CloudSlashIcon } from '@phosphor-icons/react';
+import { Link } from 'react-router';
+import { CloudSlashIcon, TrayArrowDownIcon } from '@phosphor-icons/react';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import ReaderNextChapterButton from './ReaderNextChapterButton';
 
 type Props = {
   titleId: string;
   nextChapterId: string | null;
-  /** Без сети, и следующая глава не скачана: перехода нет (U1). Кнопка «Открыть загрузки» появится
-   *  вместе со страницей `/downloads`. */
+  /** Без сети, и следующая глава не скачана: вместо перехода — «Открыть загрузки» (U1). */
   isNextUnavailable?: boolean;
 };
 
@@ -26,6 +27,15 @@ function ReaderChapterEnd({ titleId, nextChapterId, isNextUnavailable = false }:
         <Text fz="sm" ta="center">
           {t('nextChapterNotDownloaded')}
         </Text>
+        <Button
+          component={Link}
+          to={ROUTE_PATHS.DOWNLOADS}
+          variant="default"
+          size="xs"
+          leftSection={<TrayArrowDownIcon />}
+        >
+          {t('openDownloads')}
+        </Button>
       </Stack>
     );
   }

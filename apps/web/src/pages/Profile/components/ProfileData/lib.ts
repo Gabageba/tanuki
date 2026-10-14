@@ -1,5 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query';
-import type { TFunction } from 'i18next';
 import { SETTINGS_STORAGE_KEY } from '@/shared/lib/settings';
 import { OFFLINE_CACHE_NAME } from '@/entities/download/models';
 import { LAST_USER_STORAGE_KEY } from '@/entities/user/lastUser';
@@ -49,17 +48,4 @@ export const getExportFormatLabel = (format: ExportFormat) => {
     case EXPORT_FORMAT.CSV:
       return 'CSV';
   }
-};
-
-const BYTES_IN_MB = 1024 * 1024;
-const BYTES_IN_GB = 1024 * BYTES_IN_MB;
-
-/** «1,8 ГБ», «340 МБ» — занятое место в хранилище браузера. */
-export const getStorageSizeLabel = (bytes: number, t: TFunction, language: string) => {
-  const format = (value: number) =>
-    new Intl.NumberFormat(language, { maximumFractionDigits: 1 }).format(value);
-
-  return bytes >= BYTES_IN_GB
-    ? t('sizeGb', { size: format(bytes / BYTES_IN_GB) })
-    : t('sizeMb', { size: format(bytes / BYTES_IN_MB) });
 };

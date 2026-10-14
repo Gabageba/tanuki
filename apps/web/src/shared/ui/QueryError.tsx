@@ -9,15 +9,19 @@ import {
   isNotFoundError,
   isSourceAccountRequiredError,
   isSourceAuthRequiredError,
+  isNetworkError,
   isSourceReloginRequiredError,
   NETWORK_ERROR_STATUS,
 } from '@/shared/api/client';
 import { ROUTE_PATHS, SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
+import OfflineEmptyState from './OfflineEmptyState';
 import StatusScreen from './StatusScreen';
 
 type Props = {
   error: Error;
   onRetry?: () => unknown;
+  /** Что именно не сохранено на устройстве, когда страница без сети не открылась из кеша. */
+  offlineDescription?: string;
 };
 
 /** Код фоном: HTTP-статус ответа; без ответа сервера (сеть) — 503, сбой на фронте — 500. */
@@ -50,10 +54,15 @@ const getSourceLock = (error: Error, t: TFunction) => {
  * блоках страницы экран не нужен — там хватает уведомления. Текст ошибки API приходит с сервера
  * уже переведённым.
  */
-function QueryError({ error, onRetry }: Props) {
+function QueryError({ error, onRetry, offlineDescription }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isApiError = error instanceof ApiRequestError;
+
+  // Без сети это не сбой: страницы просто нет в кеше. Повтор не поможет, а скачанное — доступно.
+  if (isNetworkError(error) && !navigator.onLine) {
+    return <OfflineEmptyState title={t('noNetwork')} description={offlineDescription} />;
+  }
 
   // Объекта нет — это не сбой, и повтор вернёт то же самое: уводим на главную.
   if (isNotFoundError(error)) {

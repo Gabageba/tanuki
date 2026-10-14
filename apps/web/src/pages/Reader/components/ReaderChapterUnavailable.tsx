@@ -1,17 +1,14 @@
-import { EmptyState } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { CloudSlashIcon } from '@phosphor-icons/react';
+import OfflineEmptyState from '@/shared/ui/OfflineEmptyState';
 
-/** Глава без сети и не скачана (U1): открыть её нечем. Кнопка «Открыть загрузки» появится вместе
- *  со страницей `/downloads`. */
+/** Глава без сети и не скачана (U1): открыть её нечем. */
 function ReaderChapterUnavailable() {
   const { t } = useTranslation();
 
   return (
-    <EmptyState
+    <OfflineEmptyState
       title={t('chapterNotDownloaded')}
       description={t('onlyDownloadedChaptersOpenOffline')}
-      icon={<CloudSlashIcon />}
     />
   );
 }

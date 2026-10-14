@@ -4,6 +4,7 @@ import { Outlet } from 'react-router';
 import Header from './Header';
 import Footer from './Footer';
 import DevCacheResetButton from './components/DevCacheResetButton';
+import OfflineStrip from './components/OfflineStrip';
 import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 
 function Layout() {
@@ -14,6 +15,7 @@ function Layout() {
     >
       <Header />
       <AppShell.Main>
+        <OfflineStrip />
         <Outlet />
       </AppShell.Main>
       <Footer />

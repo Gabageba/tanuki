@@ -50,6 +50,7 @@ function TitleChaptersList({ titleId, branch }: Props) {
       : (chaptersData?.items ?? []);
   const numbering = chaptersData?.numbering ?? CHAPTER_NUMBERING.GLOBAL;
   const unplacedLinked = getUnplacedLinkedProgress(progress, chapters, branch.id);
+  const ownMark = resolveOwnMark(progress, chapters, numbering);
 
   if (isChaptersPending) {
     return (
@@ -70,7 +71,17 @@ function TitleChaptersList({ titleId, branch }: Props) {
 
         <Card withBorder padding={0} bg="transparent">
           <Card.Section withBorder px="sm" py="xs">
-            <TitleChaptersSettings />
+            <TitleChaptersSettings
+              download={
+                chaptersData && {
+                  titleId,
+                  branchId: branch.id,
+                  chaptersList: chaptersData,
+                  downloads,
+                  ownChapterId: ownMark?.chapter.id,
+                }
+              }
+            />
           </Card.Section>
           <ChaptersList
             chapters={chapters}
@@ -79,7 +90,7 @@ function TitleChaptersList({ titleId, branch }: Props) {
             mah="70vh"
             showDate
             direction={direction}
-            ownMark={resolveOwnMark(progress, chapters, numbering)}
+            ownMark={ownMark}
             linkedMarks={resolveLinkedMarks(progress, chapters, branch.id)}
             newChapterIds={newChapterIds}
             onMarkChapter={(chapter) =>

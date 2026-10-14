@@ -11,9 +11,18 @@ type Props = {
   actions?: ReactNode;
   showLoading?: boolean;
   goBack?: boolean | { path: string };
+  /** Пояснение «Нет сети», когда основной запрос без сети не нашёлся в кеше. */
+  offlineDescription?: string;
 };
 
-function Content({ children, title, actions, showLoading = true, goBack }: Props) {
+function Content({
+  children,
+  title,
+  actions,
+  showLoading = true,
+  goBack,
+  offlineDescription,
+}: Props) {
   // Запрос у PageLayout необязателен — без него контент просто рендерится сразу.
   const query = useContext(PageLayoutQueryContext);
   const isPending = query?.isPending ?? false;
@@ -27,11 +36,11 @@ function Content({ children, title, actions, showLoading = true, goBack }: Props
     }
 
     if (error) {
-      return <QueryError error={error} onRetry={refetch} />;
+      return <QueryError error={error} onRetry={refetch} offlineDescription={offlineDescription} />;
     }
 
     return children;
-  }, [children, error, isPending, refetch, showLoading]);
+  }, [children, error, isPending, refetch, showLoading, offlineDescription]);
 
   return (
     <Container py="md" size="xl">
