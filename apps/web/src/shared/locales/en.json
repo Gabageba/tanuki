@@ -736,5 +736,19 @@
   "setUpSelections": "Set up featured",
   "showSourceInSelections": "Show {{source}} in featured",
   "selectionsAreBlocksFromSiteHomePages": "Featured are the blocks from the sites' home pages. Turned-off sources and blocks aren't shown there.",
-  "sourceOrderIsSharedChangeInSourcesTab": "The source order is shared across the app — change it in the <link>“Sources”</link> tab."
+  "sourceOrderIsSharedChangeInSourcesTab": "The source order is shared across the app — change it in the <link>“Sources”</link> tab.",
+  "downloadChapter": "Download chapter",
+  "queuedClickToCancel": "Queued. Click to cancel",
+  "downloadingClickToCancel": "Downloading. Click to cancel",
+  "reasonClickToRetry": "{{reason}}. Click to retry",
+  "chapterDownloaded": "Chapter downloaded",
+  "deleteDownloadedChapter": "Delete downloaded chapter",
+  "downloadFailedConnectionDropped": "Couldn't download: the connection kept dropping",
+  "sourceDidNotReturnPages": "The source didn't return the pages",
+  "deviceOutOfSpace": "The device ran out of space",
+  "chapterNotDownloadedCantOpenOffline": "Chapter not downloaded — can't open without a connection",
+  "noNetworkLogInWhenBack": "No connection — you can log in once it's back",
+  "chapterNotDownloaded": "Chapter not downloaded",
+  "onlyDownloadedChaptersOpenOffline": "Only downloaded chapters open without a connection",
+  "nextChapterNotDownloaded": "Next chapter isn't downloaded"
 }

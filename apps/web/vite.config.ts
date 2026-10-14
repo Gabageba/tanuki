@@ -6,14 +6,20 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   plugins: [
     react(),
-    // Пока сервис-воркер нужен только для push: ни precache, ни офлайн-кэша (они придут с PWA
-    // Фазы 4, docs/06-pwa-offline.md). Регистрирует его само приложение (shared/lib/serviceWorker.ts).
+    // Воркер держит push, precache app shell, кеш по таблице docs/06-pwa-offline.md и скачивание
+    // глав. Регистрирует его само приложение (shared/lib/serviceWorker.ts) и само же предлагает
+    // обновление — поэтому 'prompt', а не autoUpdate.
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src/sw',
       filename: 'sw.ts',
+      registerType: 'prompt',
       injectRegister: false,
-      injectManifest: { injectionPoint: undefined },
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Без сети нужен весь app shell; главный чанк больше лимита по умолчанию (2 МБ).
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       devOptions: { enabled: true, type: 'module' },
       manifest: {
         name: 'Tanuki — читалка манги',

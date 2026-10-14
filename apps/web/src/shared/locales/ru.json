@@ -774,5 +774,19 @@
   "setUpSelections": "Настроить подборки",
   "showSourceInSelections": "Показывать {{source}} в подборках",
   "selectionsAreBlocksFromSiteHomePages": "Подборки — блоки с главных страниц сайтов. Выключенные источники и блоки в подборках не показываются.",
-  "sourceOrderIsSharedChangeInSourcesTab": "Порядок источников общий для всего приложения — он меняется во вкладке <link>«Источники»</link>."
+  "sourceOrderIsSharedChangeInSourcesTab": "Порядок источников общий для всего приложения — он меняется во вкладке <link>«Источники»</link>.",
+  "downloadChapter": "Скачать главу",
+  "queuedClickToCancel": "В очереди. Нажмите, чтобы отменить",
+  "downloadingClickToCancel": "Скачивается. Нажмите, чтобы отменить",
+  "reasonClickToRetry": "{{reason}}. Нажмите, чтобы повторить",
+  "chapterDownloaded": "Глава скачана",
+  "deleteDownloadedChapter": "Удалить скачанную главу",
+  "downloadFailedConnectionDropped": "Не удалось скачать: сеть обрывалась",
+  "sourceDidNotReturnPages": "Источник не отдал страницы",
+  "deviceOutOfSpace": "Кончилось место на устройстве",
+  "chapterNotDownloadedCantOpenOffline": "Глава не скачана — без сети не открыть",
+  "noNetworkLogInWhenBack": "Нет сети — войти получится, когда она появится",
+  "chapterNotDownloaded": "Глава не скачана",
+  "onlyDownloadedChaptersOpenOffline": "Без сети открываются только скачанные главы",
+  "nextChapterNotDownloaded": "Следующая глава не скачана"
 }

@@ -11,6 +11,7 @@ export const ROUTE_PATHS = {
   READER: '/title/:titleId/read/:chapterId',
   NOTIFICATIONS: '/notifications',
   BOOKMARKS: '/bookmarks',
+  DOWNLOADS: '/downloads',
   LOGIN: '/login',
   REGISTER: '/register',
   VERIFY_EMAIL: '/verify-email',

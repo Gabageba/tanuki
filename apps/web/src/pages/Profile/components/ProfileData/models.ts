@@ -17,6 +17,3 @@ export const MOCK_IMPORT_PREVIEW: { status: BuiltInBookmarkFolder; count: number
   { status: BUILT_IN_BOOKMARK_FOLDER.READING, count: 12 },
   { status: BUILT_IN_BOOKMARK_FOLDER.DROPPED, count: 8 },
 ];
-
-/** Кеш офлайн-глав из docs/06-pwa-offline.md — «очистка кеша» его не трогает, у него своя кнопка. */
-export const OFFLINE_CACHE_NAME = 'tanuki-offline-v1';

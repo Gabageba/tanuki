@@ -1,7 +1,7 @@
 import { Button, Group, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
-import { useMediaQuery } from '@mantine/hooks';
+import { useMediaQuery, useNetwork } from '@mantine/hooks';
 import type { Chapter, ChapterNumbering } from '@tanuki/contracts';
 import { isEmpty } from '@/shared/lib/isEmpty';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
@@ -9,6 +9,7 @@ import ChaptersList from '@/shared/ui/ChaptersList';
 import { XXS_QUERY } from '@/shared/lib/breakpoints';
 import ResponsiveDrawer from '@/shared/ui/ResponsiveDrawer';
 import { DRAWER_POSITION, SHEET_HEIGHT } from '@/shared/ui/ResponsiveDrawer/models';
+import useChapters from '@/entities/title/hooks/useChapters';
 import useReadingProgress from '@/entities/title/hooks/useReadingProgress';
 import useUpdateReadingProgress from '@/entities/title/hooks/useUpdateReadingProgress';
 import {
@@ -17,6 +18,10 @@ import {
   resolveLinkedMarks,
   resolveOwnMark,
 } from '@/entities/title/readingProgress';
+import useTitleDownloads from '@/entities/download/hooks/useTitleDownloads';
+import { getUnavailableChapterIds } from '@/entities/download/lib';
+import { DEFAULT_CHAPTERS_LIST_KEY } from '@/entities/download/models';
+import ChapterDownloadControl from '@/features/download/ChapterDownloadControl';
 
 type Props = {
   chapters: Chapter[];
@@ -32,6 +37,10 @@ function ReaderChapterName({ chapters, numbering, currentChapter, titleId }: Pro
   const [isDrawerOpened, setIsDrawerOpened] = useState(false);
   const { data: progress } = useReadingProgress({ titleId });
   const { mutate: updateProgress } = useUpdateReadingProgress({ titleId });
+  // Тот же запрос ветки по умолчанию, что дал главы шапке, — из кеша.
+  const { data: chaptersData } = useChapters({ titleId });
+  const downloads = useTitleDownloads(titleId);
+  const { online } = useNetwork();
 
   return (
     <>
@@ -69,6 +78,18 @@ function ReaderChapterName({ chapters, numbering, currentChapter, titleId }: Pro
           linkedMarks={resolveLinkedMarks(progress, chapters, getChapterBranchId(currentChapter))}
           onMarkChapter={(chapter) =>
             updateProgress({ chapterId: chapter.id, pageIndex: 0, chapter })
+          }
+          unavailableChapterIds={online ? undefined : getUnavailableChapterIds(chapters, downloads)}
+          getChapterAction={(chapter) =>
+            chaptersData && (
+              <ChapterDownloadControl
+                titleId={titleId}
+                chapter={chapter}
+                download={downloads?.get(chapter.id)}
+                chaptersList={chaptersData}
+                chaptersListKey={DEFAULT_CHAPTERS_LIST_KEY}
+              />
+            )
           }
         />
       </ResponsiveDrawer>

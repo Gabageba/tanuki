@@ -14,6 +14,10 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** До сервера не достучались: нет сети или он лежит. */
+export const isNetworkError = (error: unknown) =>
+  error instanceof ApiRequestError && error.status === NETWORK_ERROR_STATUS;
+
 /** Запрошенного объекта нет — повтор запроса ответит тем же. */
 export const isNotFoundError = (error: unknown) =>
   error instanceof ApiRequestError && error.code === API_ERROR_CODE.NOT_FOUND;

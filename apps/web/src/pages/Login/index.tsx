@@ -11,6 +11,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { useNetwork } from '@mantine/hooks';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { SignInIcon, UserIcon } from '@phosphor-icons/react';
@@ -35,6 +36,8 @@ function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const login = useLogin();
+  // Без сети сюда попадают, только если в этом браузере ещё никто не входил.
+  const { online } = useNetwork();
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   // Срок и причина блокировки — текст с сервера уже на языке интерфейса.
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
@@ -102,7 +105,7 @@ function Login() {
 
         <Stack w="100%" align="center">
           <Stack gap="sm" w="100%">
-            <FormErrorAlert error={blockedMessage} />
+            <FormErrorAlert error={online ? blockedMessage : t('noNetworkLogInWhenBack')} />
             <TextInput
               autoComplete="username"
               {...form.getInputProps('login')}

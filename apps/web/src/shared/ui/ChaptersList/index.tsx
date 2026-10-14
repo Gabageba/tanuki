@@ -1,7 +1,7 @@
 import type { MantineStyleProps } from '@mantine/core';
 import { Box, EmptyState, NavLink, ScrollArea } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { EmptyIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +36,13 @@ type Props = {
   /** Главы, вышедшие с прошлого визита: у узла — точка (N3). */
   newChapterIds?: ReadonlySet<string>;
   onMarkChapter?: (chapter: Chapter) => void;
+  /** Что стоит в конце строки главы — например, состояние скачивания. */
+  getChapterAction?: (chapter: Chapter) => ReactNode;
+  /** Главы, которые сейчас не открыть (без сети и не скачаны): строка приглушена. */
+  unavailableChapterIds?: ReadonlySet<string>;
 };
+
+const UNAVAILABLE_OPACITY = 0.45;
 
 function ChaptersList({
   chapters,
@@ -51,6 +57,8 @@ function ChaptersList({
   direction = SORT_DIRECTION.DESC,
   newChapterIds,
   onMarkChapter,
+  getChapterAction,
+  unavailableChapterIds,
 }: Props) {
   const { t } = useTranslation();
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -123,6 +131,7 @@ function ChaptersList({
                 data-last={virtualItem.index === chapters.length - 1 || undefined}
                 component={Link}
                 to={getReaderPath(titleId, chapter.id, pageIndex)}
+                opacity={unavailableChapterIds?.has(chapter.id) ? UNAVAILABLE_OPACITY : undefined}
                 label={
                   <ChapterItem
                     chapter={chapter}
@@ -137,6 +146,7 @@ function ChaptersList({
                     isFirst={virtualItem.index === 0}
                     isLast={virtualItem.index === chapters.length - 1}
                     onMark={onMarkChapter && (() => onMarkChapter(chapter))}
+                    action={getChapterAction?.(chapter)}
                   />
                 }
                 onClick={onChapterSelect}

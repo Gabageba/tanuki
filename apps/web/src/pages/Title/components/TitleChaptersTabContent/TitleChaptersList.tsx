@@ -1,4 +1,5 @@
 import { Card, Group, Stack, Tabs } from '@mantine/core';
+import { useNetwork } from '@mantine/hooks';
 import { useSearchParams } from 'react-router';
 import {
   CHAPTER_NUMBERING,
@@ -16,6 +17,9 @@ import {
   resolveOwnMark,
 } from '@/entities/title/readingProgress';
 import ChaptersList from '@/shared/ui/ChaptersList';
+import useTitleDownloads from '@/entities/download/hooks/useTitleDownloads';
+import { getUnavailableChapterIds } from '@/entities/download/lib';
+import ChapterDownloadControl from '@/features/download/ChapterDownloadControl';
 import useTitleBookmarkVisit from '../../hooks/useTitleBookmarkVisit';
 import TitleChaptersListSkeleton from './TitleChaptersListSkeleton';
 import TitleChaptersSettings from './TitleChaptersSettings';
@@ -34,6 +38,8 @@ function TitleChaptersList({ titleId, branch }: Props) {
   const { data: progress } = useReadingProgress({ titleId });
   const { mutate: updateProgress } = useUpdateReadingProgress({ titleId });
   const { data: newChapterIds } = useTitleBookmarkVisit(titleId);
+  const downloads = useTitleDownloads(titleId);
+  const { online } = useNetwork();
 
   const parsedDirection = SortDirectionSchema.safeParse(searchParams.get('direction'));
   const direction = parsedDirection.success ? parsedDirection.data : SORT_DIRECTION.DESC;
@@ -78,6 +84,20 @@ function TitleChaptersList({ titleId, branch }: Props) {
             newChapterIds={newChapterIds}
             onMarkChapter={(chapter) =>
               updateProgress({ chapterId: chapter.id, pageIndex: 0, chapter })
+            }
+            unavailableChapterIds={
+              online ? undefined : getUnavailableChapterIds(chapters, downloads)
+            }
+            getChapterAction={(chapter) =>
+              chaptersData && (
+                <ChapterDownloadControl
+                  titleId={titleId}
+                  chapter={chapter}
+                  download={downloads?.get(chapter.id)}
+                  chaptersList={chaptersData}
+                  chaptersListKey={branch.id}
+                />
+              )
             }
           />
         </Card>

@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import type { Chapter, ReadingProgress, TitleReadingProgressResponse } from '@tanuki/contracts';
-import { apiFetch } from '@/shared/api/client';
+import type { TitleReadingProgressResponse } from '@tanuki/contracts';
 import { SILENT_ERROR_META, type ErrorMeta } from '@/shared/api/errorMeta';
+import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import { CONTINUE_READING_QUERY_KEY } from '../models';
+import { sendReadingProgress, type ProgressPosition } from '../progressSync';
 import { toOptimisticProgress } from '../readingProgress';
 import { getReadingProgressQueryKey } from './useReadingProgress';
 
@@ -14,43 +15,24 @@ type Params = {
   notifyOnError?: boolean;
 };
 
-type ProgressPosition = {
-  chapterId: string;
-  pageIndex: number;
-};
-
-/** Запрос уходит синхронно, в момент вызова: так его можно слать из pagehide, когда на
- *  промисы мутации (onMutate ждёт cancelQueries) времени уже нет. keepalive не даёт браузеру
- *  оборвать его вместе с закрывающейся вкладкой. */
-export const saveReadingProgress = (titleId: string, { chapterId, pageIndex }: ProgressPosition) =>
-  apiFetch<ReadingProgress>(`/titles/${titleId}/progress`, {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ chapterId, pageIndex }),
-    keepalive: true,
-  });
-
-type Variables = {
-  chapterId: string;
-  pageIndex: number;
-  /** Глава целиком, если она под рукой: тогда отметка переезжает сразу, до ответа сервера. */
-  chapter?: Chapter;
-};
-
 /**
  * Переносит отметку «остановился здесь». Если сохранение упало, кеш откатывается к прежней
- * отметке — список глав не останется в состоянии, которого нет на сервере.
+ * отметке — список глав не останется в состоянии, которого нет на сервере. Без сети отметка встаёт
+ * в очередь отправки и остаётся на месте: уйдёт, когда сеть появится.
  */
 function useUpdateReadingProgress({ titleId, notifyOnError = true }: Params) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { data: user } = useCurrentUser();
   const queryKey = getReadingProgressQueryKey(titleId);
 
   return useMutation({
+    // Без сети мутация не встаёт на паузу: её mutationFn сама кладёт отметку в очередь отправки.
+    networkMode: 'offlineFirst',
     meta: notifyOnError
       ? ({ errorTitle: t('failedToSave') } satisfies ErrorMeta)
       : SILENT_ERROR_META,
-    mutationFn: (variables: Variables) => saveReadingProgress(titleId, variables),
+    mutationFn: (variables: ProgressPosition) => sendReadingProgress(user?.id, titleId, variables),
     onMutate: async ({ chapter, pageIndex }) => {
       // Иначе уже летящий GET приземлится поверх и вернёт отметку на прежнее место.
       await queryClient.cancelQueries({ queryKey });
@@ -64,6 +46,7 @@ function useUpdateReadingProgress({ titleId, notifyOnError = true }: Params) {
       return { previous };
     },
     onSuccess: (own) => {
+      if (!own) return;
       queryClient.setQueryData<TitleReadingProgressResponse>(queryKey, (current) => ({
         own,
         linked: current?.linked ?? [],

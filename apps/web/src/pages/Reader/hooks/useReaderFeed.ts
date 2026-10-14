@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
+import { useNetwork } from '@mantine/hooks';
 import { generatePath, useNavigate, useSearchParams } from 'react-router';
 import { READER_READING_MODE, type ReaderReadingMode } from '@tanuki/contracts';
 import { READER_PAGE_SEARCH_PARAM, ROUTE_PATHS } from '@/shared/lib/routes';
+import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
+import useTitleDownloads from '@/entities/download/hooks/useTitleDownloads';
+import { isDownloadDone } from '@/entities/download/lib';
 import {
   CHAPTER_PRELOAD_REMAINING_PAGES,
   getChapterPagesQueryOptions,
@@ -50,9 +54,19 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
     onChange: setPosition,
   });
 
+  const { data: user } = useCurrentUser();
   const results = useQueries({
-    queries: chapterIds.map((id) => getChapterPagesQueryOptions(titleId, id)),
+    queries: chapterIds.map((id) => getChapterPagesQueryOptions(titleId, id, user?.id)),
   });
+
+  // Без сети открывается только скачанное: не скачанную следующую главу лента не подклеивает, а в
+  // конце главы об этом говорит экран конца.
+  const { online } = useNetwork();
+  const downloads = useTitleDownloads(titleId);
+  const isChapterUnavailable = useCallback(
+    (id: string) => !online && !isDownloadDone(downloads?.get(id)),
+    [online, downloads],
+  );
 
   const chapters: ReaderFeedChapter[] = chapterIds.map((id, index) => ({
     chapterId: id,
@@ -116,7 +130,11 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
     position.pageIndex >= lastChapter.pages.length - CHAPTER_PRELOAD_REMAINING_PAGES,
   );
   const chapterIdToAppend = (isNearFeedEnd && lastChapter?.nextChapterId) || null;
-  if (chapterIdToAppend && !chapterIds.includes(chapterIdToAppend)) {
+  if (
+    chapterIdToAppend &&
+    !chapterIds.includes(chapterIdToAppend) &&
+    !isChapterUnavailable(chapterIdToAppend)
+  ) {
     setChapterIds([...chapterIds, chapterIdToAppend]);
   }
 
@@ -175,6 +193,7 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
     setPosition,
     prependChapter,
     registerPage,
+    isChapterUnavailable,
     /** Лента сама держит страницу на месте, и прокрутка сейчас не от читателя. */
     isPinned,
     /** Скелетон во весь экран — только для первой загрузки, когда показать нечего в принципе.
