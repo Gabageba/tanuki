@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SearchGroupStatusSchema } from './search';
-import { HomeSectionInfoSchema, HomeSectionPeriodSchema } from './source';
+import { HomeSectionInfoSchema } from './source';
 import { TitleSchema } from './title';
 
 /** Блок главной сайта с тайтлами. Пустой блок (на странице не нашёлся) фронт не рисует. */
@@ -22,10 +22,13 @@ export const SelectionsResponseSchema = z.object({
 });
 export type SelectionsResponse = z.infer<typeof SelectionsResponseSchema>;
 
-/** Порция одного блока: `page` с 1, `period` — только у блока с `isPeriodSupported`. */
+/**
+ * Порция одного блока: `page` с 1, `variant` — id одного из `variants` блока; у блока без
+ * вариантов не учитывается, чужой или пропущенный — первый вариант.
+ */
 export const SelectionsSectionQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  period: HomeSectionPeriodSchema.optional(),
+  variant: z.string().optional(),
 });
 export type SelectionsSectionQuery = z.infer<typeof SelectionsSectionQuerySchema>;
 

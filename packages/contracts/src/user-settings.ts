@@ -74,12 +74,17 @@ export const UserSettingsSchema = z.object({
   selectionsDisabledSources: z.array(z.string()).optional(),
   /** Выключенные блоки подборок: `sourceId:sectionId` (`getSelectionsSectionKey`). */
   selectionsDisabledSections: z.array(z.string()).optional(),
+  /**
+   * Порядок блоков подборок: ключи `sourceId:sectionId` по порядку. Блоки, которых здесь нет
+   * (новые), встают в конец в порядке сайта.
+   */
+  selectionsSectionOrder: z.array(z.string()).optional(),
 });
 export type UserSettings = z.infer<typeof UserSettingsSchema>;
 
 export const UpdateUserSettingsRequestSchema = UserSettingsSchema;
 export type UpdateUserSettingsRequest = z.infer<typeof UpdateUserSettingsRequestSchema>;
 
-/** Ключ блока подборок в `selectionsDisabledSections`. */
+/** Ключ блока подборок в `selectionsDisabledSections` и `selectionsSectionOrder`. */
 export const getSelectionsSectionKey = (sourceId: string, sectionId: string) =>
   `${sourceId}:${sectionId}`;

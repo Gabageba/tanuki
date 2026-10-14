@@ -206,15 +206,15 @@ export type HomeSectionKind = EnumLiteralsOf<typeof HOME_SECTION_KIND>;
 
 export const HomeSectionKindSchema = z.enum(HOME_SECTION_KIND);
 
-/** Период блока с выбором периода — как `time=` у сайта. */
-export const HOME_SECTION_PERIOD = {
-  DAY: 'day',
-  WEEK: 'week',
-  MONTH: 'month',
-} as const;
-export type HomeSectionPeriod = EnumLiteralsOf<typeof HOME_SECTION_PERIOD>;
-
-export const HomeSectionPeriodSchema = z.enum(HOME_SECTION_PERIOD);
+/**
+ * Вариант блока — вкладка переключателя внутри блока на сайте: период у «Сейчас читают» MangaLib,
+ * страна у «Топа тайтлов» Реманги. id стабилен в пределах блока, название — как у сайта.
+ */
+export const HomeSectionVariantSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+});
+export type HomeSectionVariant = z.infer<typeof HomeSectionVariantSchema>;
 
 /**
  * Блок с главной страницы сайта («Горячие новинки», «В тренде»): id стабилен — по нему хранится
@@ -224,8 +224,8 @@ export const HomeSectionInfoSchema = z.object({
   id: z.string(),
   title: z.string(),
   kind: HomeSectionKindSchema,
-  /** У блока на сайте есть выбор периода («Сейчас читают» MangaLib) — запрос принимает `period`. */
-  isPeriodSupported: z.boolean(),
+  /** Переключатель внутри блока на сайте; пустой — переключателя нет. Первый — по умолчанию. */
+  variants: z.array(HomeSectionVariantSchema),
 });
 export type HomeSectionInfo = z.infer<typeof HomeSectionInfoSchema>;
 
