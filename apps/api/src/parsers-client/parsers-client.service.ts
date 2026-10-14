@@ -74,11 +74,12 @@ export class ParsersClientService {
   // /sources само по себе не бьёт по внешним сайтам (статические метаданные реестра),
   // поэтому идёт напрямую в кеш, без breaker/rate-limiter — как и раньше.
   async getSources(): Promise<CachedResult<{ items: RawSourceInfo[] }>> {
-    // v5 — у блоков `homeSections` появились `kind` и `isPeriodSupported` (v4 — сами
-    // `homeSections`, до них — `isSearchWithFiltersSupported` и `domain`); без смены ключа
-    // записи, залитые до деплоя, ещё сутки (staleSeconds) отдавались бы без полей.
+    // v6 — у блоков `homeSections` появились `variants` вместо `isPeriodSupported` (v5 — `kind`
+    // и `isPeriodSupported`, v4 — сами `homeSections`, до них — `isSearchWithFiltersSupported` и
+    // `domain`); без смены ключа записи, залитые до деплоя, ещё сутки (staleSeconds) отдавались
+    // бы без полей.
     const result = await this.cache.getOrSet(
-      cacheKey('sources', 'all', 'v5'),
+      cacheKey('sources', 'all', 'v6'),
       CACHE_TTL.sources,
       () => Promise.resolve({ items: this.parsers.listSources() }),
     );
@@ -170,14 +171,14 @@ export class ParsersClientService {
   /** Блоки главной сайта — один ответ на источник, общий для всех: какие блоки показывать,
    *  решают настройки на фронте. */
   async getHome(sourceId: string): Promise<CachedResult<{ sections: RawHomeSection[] }>> {
-    const key = cacheKey('selections', sourceId);
+    const key = cacheKey('selections', 'v2', sourceId);
     return this.fetchCached(key, CACHE_TTL.selections, sourceId, async (parser) => ({
       sections: (await parser.getHome?.()) ?? [],
     }));
   }
 
   /**
-   * Порция одного блока главной — для блоков, которые сайт отдаёт порциями или по периоду.
+   * Порция одного блока главной — для блоков, которые сайт отдаёт порциями или по вариантам.
    * null — парсер этот блок отдельно не листает: он берётся из getHome одной порцией.
    */
   async getHomeSection(
@@ -185,7 +186,14 @@ export class ParsersClientService {
     sectionId: string,
     params: RawHomeSectionParams,
   ): Promise<CachedResult<{ page: RawHomeSectionPage | null }>> {
-    const key = cacheKey('selections', sourceId, sectionId, params.period ?? '', params.page);
+    const key = cacheKey(
+      'selections',
+      'v2',
+      sourceId,
+      sectionId,
+      params.variant ?? '',
+      params.page,
+    );
     return this.fetchCached(key, CACHE_TTL.selections, sourceId, async (parser) => ({
       page: (await parser.getHomeSection?.(sectionId, params)) ?? null,
     }));

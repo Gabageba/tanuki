@@ -197,6 +197,13 @@
       "when": 1791816018513,
       "tag": "0027_continue_reading_and_selections",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791899324532,
+      "tag": "0028_selections_section_order",
+      "breakpoints": true
     }
   ]
 }

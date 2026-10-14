@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  HOME_SECTION_PERIOD,
   SEARCH_GROUP_STATUS,
   SOURCE_ACCESS,
   SOURCE_STATUS,
@@ -75,9 +74,9 @@ export class SelectionsService {
   }
 
   /**
-   * Порция одного блока. Блок, который сайт отдаёт порциями (или по периоду), парсер листает
+   * Порция одного блока. Блок, который сайт отдаёт порциями (или по вариантам), парсер листает
    * сам; остальные берутся из общей главной одной порцией — дальше первой страницы у них
-   * пусто. Период у блока без выбора периода не учитывается.
+   * пусто. Вариант у блока без вариантов не учитывается, чужой или пропущенный — первый.
    */
   async getSection(
     userId: string,
@@ -95,7 +94,7 @@ export class SelectionsService {
 
     const params = {
       page: query.page,
-      period: section.isPeriodSupported ? (query.period ?? HOME_SECTION_PERIOD.DAY) : undefined,
+      variant: (section.variants.find(({ id }) => id === query.variant) ?? section.variants[0])?.id,
     };
     try {
       const { items, hasNextPage } = await withSelectionsTimeout(

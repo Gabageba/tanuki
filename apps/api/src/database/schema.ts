@@ -285,6 +285,8 @@ export const userSettings = pgTable('user_settings', {
   selectionsDisabledSources: text('selections_disabled_sources').array(),
   /** Выключенные блоки подборок — `sourceId:sectionId` (getSelectionsSectionKey); null — все. */
   selectionsDisabledSections: text('selections_disabled_sections').array(),
+  /** Порядок блоков подборок — ключи `sourceId:sectionId`; null — порядок сайта. */
+  selectionsSectionOrder: text('selections_section_order').array(),
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

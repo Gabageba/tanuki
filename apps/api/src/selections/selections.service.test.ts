@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   HOME_SECTION_KIND,
-  HOME_SECTION_PERIOD,
   SEARCH_GROUP_STATUS,
   SOURCE_ACCESS,
   SOURCE_STATUS,
@@ -25,13 +24,16 @@ const source = (patch: Partial<Source> = {}) =>
         id: 'hotNew',
         title: 'Горячие новинки',
         kind: HOME_SECTION_KIND.NEW,
-        isPeriodSupported: false,
+        variants: [],
       },
       {
         id: 'readingNow',
         title: 'Сейчас читают',
         kind: HOME_SECTION_KIND.TRENDING,
-        isPeriodSupported: true,
+        variants: [
+          { id: 'day', title: 'За день' },
+          { id: 'month', title: 'За месяц' },
+        ],
       },
     ],
     ...patch,
@@ -165,7 +167,7 @@ describe('SelectionsService.getSection', () => {
     expect(response.items[0]).toMatchObject({ name: 'Ван-Пис', sourceId: 'remanga' });
     expect(getHomeSection).toHaveBeenCalledWith('remanga', 'hotNew', {
       page: 2,
-      period: undefined,
+      variant: undefined,
     });
     expect(getHome).not.toHaveBeenCalled();
   });
@@ -183,23 +185,19 @@ describe('SelectionsService.getSection', () => {
     expect(getHome).toHaveBeenCalledTimes(1);
   });
 
-  it('период — только у блока с выбором периода, по умолчанию «за день»', async () => {
+  it('вариант — только у блока с вариантами, чужой или пропущенный — первый', async () => {
     const getHomeSection = sectionPage({ items: [], hasNextPage: false });
     const service = createService([source()], vi.fn(), getHomeSection);
 
     await service.getSection('user', 'remanga', 'readingNow', { page: 1 });
-    await service.getSection('user', 'remanga', 'readingNow', {
-      page: 1,
-      period: HOME_SECTION_PERIOD.MONTH,
-    });
-    await service.getSection('user', 'remanga', 'hotNew', {
-      page: 1,
-      period: HOME_SECTION_PERIOD.MONTH,
-    });
+    await service.getSection('user', 'remanga', 'readingNow', { page: 1, variant: 'month' });
+    await service.getSection('user', 'remanga', 'readingNow', { page: 1, variant: 'year' });
+    await service.getSection('user', 'remanga', 'hotNew', { page: 1, variant: 'month' });
 
-    expect(getHomeSection.mock.calls.map(([, , params]) => params.period)).toEqual([
-      HOME_SECTION_PERIOD.DAY,
-      HOME_SECTION_PERIOD.MONTH,
+    expect(getHomeSection.mock.calls.map(([, , params]) => params.variant)).toEqual([
+      'day',
+      'month',
+      'day',
       undefined,
     ]);
   });

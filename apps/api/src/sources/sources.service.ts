@@ -188,11 +188,11 @@ export class SourcesService {
       // Сломанный источник не парсится в принципе — в подборках ему делать нечего.
       homeSections: raw.isBroken
         ? []
-        : raw.homeSections.map(({ id, title, kind, isPeriodSupported }) => ({
+        : raw.homeSections.map(({ id, title, kind, variants }) => ({
             id,
             title,
             kind,
-            isPeriodSupported: isPeriodSupported ?? false,
+            variants: variants ?? [],
           })),
       ...loginOf(raw.id),
     };

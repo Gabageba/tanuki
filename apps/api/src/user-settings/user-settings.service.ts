@@ -33,6 +33,7 @@ export class UserSettingsService {
         pushDisabledCategories: row.pushDisabledCategories ?? undefined,
         selectionsDisabledSources: row.selectionsDisabledSources ?? undefined,
         selectionsDisabledSections: row.selectionsDisabledSections ?? undefined,
+        selectionsSectionOrder: row.selectionsSectionOrder ?? undefined,
       };
     }, {});
   }
