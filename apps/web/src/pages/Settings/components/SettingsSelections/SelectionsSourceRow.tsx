@@ -1,30 +1,63 @@
-import { Checkbox, Stack, Switch, Text } from '@mantine/core';
+import { Stack, Switch, Text } from '@mantine/core';
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
-import type { Source } from '@tanuki/contracts';
+import type { HomeSectionInfo, Source } from '@tanuki/contracts';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import GroupedList from '@/shared/ui/GroupedList';
+import SelectionsSectionItem from './SelectionsSectionItem';
 
 type Props = {
   source: Source;
+  sections: HomeSectionInfo[];
   isSourceOn: boolean;
   isSectionOn: (sectionId: string) => boolean;
   onSourceChange: (isOn: boolean) => void;
   onSectionChange: (sectionId: string, isOn: boolean) => void;
+  onSectionsReorder: (sectionIds: string[]) => void;
 };
 
 /**
  * Строка источника (T1a): как во вкладке «Источники», только без ручки перетаскивания — порядок
- * меняют там. Переключатель «Показывать в подборках», под ним галочки блоков одной колонкой.
- * Выключен источник — галочки гаснут, но выбор в них сохраняется.
+ * источников меняют там. Переключатель «Показывать в подборках», под ним галочки блоков одной
+ * колонкой в порядке пользователя; блоки перетаскиваются за ручку. Выключен источник — галочки
+ * и ручки гаснут, но выбор и порядок в них сохраняются.
  */
 function SelectionsSourceRow({
   source,
+  sections,
   isSourceOn,
   isSectionOn,
   onSourceChange,
   onSectionChange,
+  onSectionsReorder,
 }: Props) {
   const { t } = useTranslation();
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const sectionIds = sections.map((section) => section.id);
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = sectionIds.indexOf(String(active.id));
+    const to = sectionIds.indexOf(String(over.id));
+    onSectionsReorder(arrayMove(sectionIds, from, to));
+  };
 
   return (
     <GroupedList.Row
@@ -47,18 +80,21 @@ function SelectionsSourceRow({
         />
       }
     >
-      <Stack gap={8}>
-        {source.homeSections.map((section) => (
-          <Checkbox
-            key={section.id}
-            size="xs"
-            label={section.title}
-            disabled={!isSourceOn}
-            checked={isSectionOn(section.id)}
-            onChange={(event) => onSectionChange(section.id, event.currentTarget.checked)}
-          />
-        ))}
-      </Stack>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+          <Stack gap={8}>
+            {sections.map((section) => (
+              <SelectionsSectionItem
+                key={section.id}
+                section={section}
+                isOn={isSectionOn(section.id)}
+                disabled={!isSourceOn}
+                onChange={(isOn) => onSectionChange(section.id, isOn)}
+              />
+            ))}
+          </Stack>
+        </SortableContext>
+      </DndContext>
     </GroupedList.Row>
   );
 }

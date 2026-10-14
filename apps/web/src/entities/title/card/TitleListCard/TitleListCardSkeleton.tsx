@@ -11,7 +11,7 @@ function TitleListCardSkeleton() {
           <Stack gap={8} flex={1}>
             <TextSkeleton fz={12} lh="tight" w="40%" />
             <TextSkeleton fz="sm" lh="tight" w="80%" />
-            <TextSkeleton lh="tight" lines={4} />
+            <TextSkeleton lh="tight" lines={3} />
           </Stack>
           <Group gap={8}>
             <TitleCardTagsSkeleton />

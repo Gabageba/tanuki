@@ -3,12 +3,15 @@ import type { UserSettings } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { USER_SETTINGS_QUERY_KEY } from '@/shared/hooks/useUserSettings';
 
-type Patch = Pick<UserSettings, 'selectionsDisabledSources' | 'selectionsDisabledSections'>;
+type Patch = Pick<
+  UserSettings,
+  'selectionsDisabledSources' | 'selectionsDisabledSections' | 'selectionsSectionOrder'
+>;
 
 const MUTATION_KEY = ['user-settings', 'selections'] as const;
 
 /**
- * Сохраняет выбор подборок. Переключатель и галочки откликаются сразу, не дожидаясь сервера.
+ * Сохраняет выбор и порядок блоков подборок. Переключатель, галочки и перетаскивание откликаются сразу, не дожидаясь сервера.
  * Патч считается от кеша в момент клика, поэтому быстрые клики подряд не теряют друг друга, а
  * запросы идут по очереди: сервер видит их в том же порядке. Ответ пишется в кеш только от
  * последнего запроса, ошибка перечитывает настройки. В localStorage не пишется: подборки —

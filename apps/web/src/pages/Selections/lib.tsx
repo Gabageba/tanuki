@@ -5,14 +5,11 @@ import {
   TrendUpIcon,
   TrophyIcon,
 } from '@phosphor-icons/react';
-import type { TFunction } from 'i18next';
 import {
   HOME_SECTION_KIND,
-  HOME_SECTION_PERIOD,
-  HomeSectionPeriodSchema,
   type HomeSectionInfo,
   type HomeSectionKind,
-  type HomeSectionPeriod,
+  type HomeSectionVariant,
 } from '@tanuki/contracts';
 
 /** Иконка вкладки по смыслу блока: названия у сайтов свои, вид — общий. */
@@ -31,22 +28,12 @@ export const getHomeSectionKindIcon = (kind: HomeSectionKind, size = 16) => {
   }
 };
 
-export const getHomeSectionPeriodLabel = (period: HomeSectionPeriod, t: TFunction) => {
-  switch (period) {
-    case HOME_SECTION_PERIOD.DAY:
-      return t('pastDay');
-    case HOME_SECTION_PERIOD.WEEK:
-      return t('pastWeek');
-    case HOME_SECTION_PERIOD.MONTH:
-      return t('pastMonth');
-  }
-};
-
-/** Период из адреса; чужое значение — как будто его нет. */
-export const parseHomeSectionPeriod = (value: string | null): HomeSectionPeriod | undefined => {
-  const parsed = HomeSectionPeriodSchema.safeParse(value);
-  return parsed.success ? parsed.data : undefined;
-};
+/** Вариант открытого блока: из адреса, если он у блока есть, иначе первый; без вариантов — нет. */
+export const resolveSectionVariant = (
+  section: HomeSectionInfo,
+  requestedId: string | null,
+): HomeSectionVariant | undefined =>
+  section.variants.find(({ id }) => id === requestedId) ?? section.variants[0];
 
 /** Открытый блок: из адреса, если он среди показываемых, иначе первый. */
 export const resolveSelectionsSection = (

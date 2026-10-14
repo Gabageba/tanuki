@@ -63,10 +63,10 @@ export const SETTINGS_SOURCES_PATH = `${ROUTE_PATHS.SETTINGS}?${SETTINGS_TAB_SEA
 /** Открытый источник на /selections — в адресе, чтобы на подборки источника можно было сослаться. */
 export const SELECTIONS_SOURCE_SEARCH_PARAM = 'source';
 
-/** Открытый блок и период «Сейчас читают» на /selections — в адресе, чтобы возврат со страницы
- *  тайтла открывал ту же вкладку. */
+/** Открытый блок и его вариант (период, страна) на /selections — в адресе, чтобы возврат со
+ *  страницы тайтла открывал ту же вкладку. */
 export const SELECTIONS_SECTION_SEARCH_PARAM = 'section';
-export const SELECTIONS_PERIOD_SEARCH_PARAM = 'period';
+export const SELECTIONS_VARIANT_SEARCH_PARAM = 'variant';
 
 /** Открытая папка на /bookmarks — в адресе, чтобы на неё можно было сослаться из профиля. */
 export const BOOKMARKS_FOLDER_SEARCH_PARAM = 'folder';

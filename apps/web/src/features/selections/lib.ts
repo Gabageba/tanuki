@@ -10,13 +10,28 @@ import {
 import type { MissStatus } from '@/entities/source/models';
 import { LAST_SELECTIONS_SOURCE_STORAGE_KEY } from './models';
 
-/** Блоки источника, которые пользователь не выключил, — в порядке сайта. */
+/** Все блоки источника в порядке пользователя; не попавшие в его порядок (новые) — в конце, в
+ *  порядке сайта. */
+export const getOrderedSections = (
+  source: Source,
+  settings: UserSettings | undefined,
+): HomeSectionInfo[] => {
+  const order = settings?.selectionsSectionOrder ?? [];
+  const getPosition = ({ id }: HomeSectionInfo) => {
+    const index = order.indexOf(getSelectionsSectionKey(source.id, id));
+    return index === -1 ? order.length : index;
+  };
+  // sort стабилен: блоки вне порядка пользователя остаются в порядке сайта.
+  return [...source.homeSections].sort((a, b) => getPosition(a) - getPosition(b));
+};
+
+/** Блоки источника, которые пользователь не выключил, — в его порядке. */
 export const getEnabledSections = (
   source: Source,
   settings: UserSettings | undefined,
 ): HomeSectionInfo[] => {
   const disabled = settings?.selectionsDisabledSections ?? [];
-  return source.homeSections.filter(
+  return getOrderedSections(source, settings).filter(
     ({ id }) => !disabled.includes(getSelectionsSectionKey(source.id, id)),
   );
 };

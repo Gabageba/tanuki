@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { Stack } from '@mantine/core';
-import {
-  HOME_SECTION_PERIOD,
-  SEARCH_GROUP_STATUS,
-  type HomeSectionPeriod,
-  type Source,
-  type UserSettings,
-} from '@tanuki/contracts';
+import { SEARCH_GROUP_STATUS, type Source, type UserSettings } from '@tanuki/contracts';
 import { getEnabledSections, getSkippedSelectionsStatus } from '@/features/selections/lib';
 import {
   getStoredViewMode,
@@ -15,7 +9,7 @@ import {
   type ViewMode,
 } from '@/shared/lib/viewMode';
 import useSelectionsSection from '../hooks/useSelectionsSection';
-import { resolveSelectionsSection } from '../lib';
+import { resolveSectionVariant, resolveSelectionsSection } from '../lib';
 import SectionFeed from './SectionFeed';
 import SectionPanel from './SectionPanel';
 import SectionTabs from './SectionTabs';
@@ -25,9 +19,9 @@ type Props = {
   source: Source;
   settings: UserSettings | undefined;
   requestedSectionId: string | null;
-  requestedPeriod: HomeSectionPeriod | undefined;
+  requestedVariant: string | null;
   onSectionChange: (sectionId: string) => void;
-  onPeriodChange: (period: HomeSectionPeriod) => void;
+  onVariantChange: (variant: string) => void;
 };
 
 /**
@@ -40,19 +34,19 @@ function SelectionsSource({
   source,
   settings,
   requestedSectionId,
-  requestedPeriod,
+  requestedVariant,
   onSectionChange,
-  onPeriodChange,
+  onVariantChange,
 }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredViewMode() ?? VIEW_MODE.GRID);
   const sections = getEnabledSections(source, settings);
   const section = resolveSelectionsSection(sections, requestedSectionId);
-  const period = requestedPeriod ?? HOME_SECTION_PERIOD.DAY;
+  const variant = section && resolveSectionVariant(section, requestedVariant);
   const skipped = getSkippedSelectionsStatus(source);
   const query = useSelectionsSection({
     sourceId: source.id,
     sectionId: section?.id ?? '',
-    period: section?.isPeriodSupported ? period : undefined,
+    variant: variant?.id,
     enabled: !skipped && Boolean(section),
   });
   const status = query.data?.pages[0]?.status;
@@ -80,8 +74,8 @@ function SelectionsSource({
       <SectionTabs sections={sections} activeId={section.id} onChange={onSectionChange} />
       <SectionPanel
         section={section}
-        period={period}
-        onPeriodChange={onPeriodChange}
+        variant={variant?.id ?? ''}
+        onVariantChange={onVariantChange}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
       />
