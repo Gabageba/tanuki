@@ -14,6 +14,7 @@ function Sources() {
     <PageLayout useQuery={useSources}>
       <PageLayout.Content
         title={t('sources')}
+        goBack={{ path: ROUTE_PATHS.HOME }}
         showLoading={false}
         actions={
           <Button

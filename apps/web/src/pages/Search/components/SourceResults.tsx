@@ -7,7 +7,7 @@ import { getSourceSectionId } from '../lib';
 import type { FoundGroup } from '../models';
 import AllResultsLink from './AllResultsLink';
 import ResultsListPreview from './ResultsListPreview';
-import ResultsScroller from './ResultsScroller';
+import TitleCardsScroller from '@/entities/title/card/TitleCardsScroller';
 import UnappliedFiltersNote from './UnappliedFiltersNote';
 import styles from '../Search.module.scss';
 
@@ -51,7 +51,7 @@ function SourceResults({
           {viewMode === VIEW_MODE.LIST ? (
             <ResultsListPreview items={items} getBookmarkFolder={getBookmarkFolder} />
           ) : (
-            <ResultsScroller items={items} getBookmarkFolder={getBookmarkFolder} />
+            <TitleCardsScroller items={items} getBookmarkFolder={getBookmarkFolder} />
           )}
         </Stack>
       </Collapse>

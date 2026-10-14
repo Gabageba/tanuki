@@ -1,5 +1,7 @@
-import type { EnumLiteralsOf } from '@tanuki/contracts';
+import { HOME_SECTION_KIND, type EnumLiteralsOf } from '@tanuki/contracts';
 import { FILTER_GROUP } from '../../core/filters/group';
+import type { RawHomeSectionInfo } from '../../types';
+import type { GroupleTrendTab } from './config';
 
 export const GROUPLE_ELEMENT_TYPE = {
   GENRE: 'genre',
@@ -58,4 +60,61 @@ export type CatalogItemJson = {
 export type CatalogSearchResponseJson = {
   total: number;
   list: CatalogItemJson[];
+};
+
+/** Блоки главной сети Grouple — вёрстка одна на ReadManga, MintManga, SelfManga, SeiManga и
+ *  AllHentai (проверено вживую 2026-10-12). «Горячие новинки» и «Обновление популярного» —
+ *  вкладки карусели «Тренды», отдаются в `<template data-tab-content>`; «Сейчас читают» на
+ *  главной блоком нет — это пункт меню. */
+export const GROUPLE_HOME_SECTION = {
+  HOT_NEW: 'hotNew',
+  POPULAR_UPDATES: 'popularUpdates',
+  POPULAR_NOW: 'popularNow',
+  LATEST_UPDATES: 'latestUpdates',
+} as const;
+
+export const GROUPLE_HOME_SECTIONS = [
+  { id: GROUPLE_HOME_SECTION.HOT_NEW, title: 'Горячие новинки', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: GROUPLE_HOME_SECTION.POPULAR_UPDATES,
+    title: 'Обновление популярного',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
+  {
+    id: GROUPLE_HOME_SECTION.POPULAR_NOW,
+    title: 'Популярная сейчас манга',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
+  {
+    id: GROUPLE_HOME_SECTION.LATEST_UPDATES,
+    title: 'Последние обновления каталога',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
+];
+
+/** Блок жанровой вкладки «Трендов» — по id элемента сайта. */
+export const getGroupleTrendTabSectionId = (elementId: number) => `element${elementId}`;
+
+/** Блоки главной сайта: жанровые вкладки «Трендов» встают сразу за двумя её локальными
+ *  вкладками — в том же порядке, что на сайте. */
+export const getGroupleHomeSections = (trendTabs: GroupleTrendTab[]): RawHomeSectionInfo[] => [
+  ...GROUPLE_HOME_SECTIONS.slice(0, 2),
+  ...trendTabs.map(({ elementId, title }) => ({
+    id: getGroupleTrendTabSectionId(elementId),
+    title,
+    kind: HOME_SECTION_KIND.TRENDING,
+  })),
+  ...GROUPLE_HOME_SECTIONS.slice(2),
+];
+
+/** Вкладка карусели «Тренды» блока — `data-tab-content` её шаблона. */
+export const getGroupleTrendTab = (
+  section: typeof GROUPLE_HOME_SECTION.HOT_NEW | typeof GROUPLE_HOME_SECTION.POPULAR_UPDATES,
+) => {
+  switch (section) {
+    case GROUPLE_HOME_SECTION.HOT_NEW:
+      return 'hot-list';
+    case GROUPLE_HOME_SECTION.POPULAR_UPDATES:
+      return 'popular-latest';
+  }
 };

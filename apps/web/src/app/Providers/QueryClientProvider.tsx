@@ -57,7 +57,10 @@ const queryClient: QueryClient = new QueryClient({
         logOutExpiredSession();
         return;
       }
-      const { silentError, errorTitle } = readErrorMeta(query.meta);
+      const { silentError, silentNextPageError, errorTitle } = readErrorMeta(query.meta);
+      if (silentNextPageError && query.state.fetchMeta?.fetchMore?.direction === 'forward') {
+        return;
+      }
       // Закрытый источник и скрытый контент 18+ объясняет экран QueryError со своей кнопкой —
       // уведомление лишнее.
       if (silentError || isSourceAccountRequiredError(error) || isAdultContentHiddenError(error)) {

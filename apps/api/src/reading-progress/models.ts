@@ -1,4 +1,5 @@
 import type { ReadingMarkConfidence } from '@tanuki/contracts';
+import type { readingProgress } from '../database/schema';
 import type { RawChapter } from '../parsers-client/parsers-client.types';
 
 /** Пара глав, совпавших однозначно: индексы в порядке чтения первого и второго списка. */
@@ -19,3 +20,5 @@ export type AlignedChapter = {
 
 /** То, что о главе отметки известно без полного списка глав её источника. */
 export type ChapterSnapshot = Pick<RawChapter, 'volume' | 'number' | 'title'>;
+
+export type ReadingProgressRow = typeof readingProgress.$inferSelect;

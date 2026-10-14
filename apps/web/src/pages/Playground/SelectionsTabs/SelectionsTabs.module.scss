@@ -1,0 +1,10 @@
+// Как у ArrowLink: в покое серая, акцент — только при наведении. Цвет здесь, а не в `c`:
+// style prop ставится инлайном и перебил бы :hover.
+.quietLink {
+  color: var(--mantine-color-dimmed);
+  transition: color 150ms ease;
+
+  &:hover {
+    color: var(--mantine-primary-color-filled);
+  }
+}

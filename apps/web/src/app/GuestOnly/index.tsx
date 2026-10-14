@@ -7,7 +7,7 @@ function GuestOnly() {
   const { data: user, isPending } = useCurrentUser();
 
   if (isPending) return <FullScreenLoader />;
-  if (user) return <Navigate to={ROUTE_PATHS.SOURCES} replace />;
+  if (user) return <Navigate to={ROUTE_PATHS.HOME} replace />;
 
   return <Outlet />;
 }

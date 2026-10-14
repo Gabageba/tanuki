@@ -84,6 +84,55 @@ describe('BookmarksService.prepareLinkMerge', () => {
   });
 });
 
+describe('BookmarksService.listNewChapters', () => {
+  /** Группа с посчитанными главами — как её отдаёт loadGroups. */
+  const group = (key: string, newChaptersCount: number, latestNewAt: string | null) => ({
+    key,
+    folderId: 'reading',
+    folderIds: ['reading'],
+    snapshot: { ...row(key, 'reading'), name: key },
+    target: {
+      titleKey: key,
+      sourceId: 'a',
+      titleId: `${key}-id`,
+      availability: BOOKMARK_AVAILABILITY.AVAILABLE,
+    },
+    otherSources: [],
+    progress: null,
+    visitedAt: new Date(0),
+    createdAt: new Date(0),
+    readAt: null,
+    checkedAt: null,
+    rows: [],
+    branchTotal: 10,
+    branchPosition: null,
+    newChaptersCount,
+    latestNewAt: latestNewAt ? new Date(latestNewAt) : null,
+  });
+
+  it('только группы с новыми главами, свежая глава первой, не больше восьми', async () => {
+    const { service } = createService([]);
+    const groups = [
+      group('a:/old', 2, '2026-10-01T00:00:00Z'),
+      group('a:/none', 0, null),
+      group('a:/new', 5, '2026-10-10T00:00:00Z'),
+      ...Array.from({ length: 10 }, (_, index) =>
+        group(`a:/bulk-${index}`, 1, '2026-09-01T00:00:00Z'),
+      ),
+    ];
+    vi.spyOn(service as unknown as { loadGroups: () => unknown }, 'loadGroups').mockResolvedValue({
+      folders: [],
+      groups,
+    });
+
+    const { items } = await service.listNewChapters('user');
+
+    expect(items).toHaveLength(8);
+    expect(items.slice(0, 2).map(({ name }) => name)).toEqual(['a:/new', 'a:/old']);
+    expect(items.every(({ newChaptersCount }) => newChaptersCount > 0)).toBe(true);
+  });
+});
+
 describe('toSourceAvailability', () => {
   const source = (overrides: Partial<Source>) =>
     ({ id: 'remanga', isEnabled: true, status: SOURCE_STATUS.OK, ...overrides }) as Source;

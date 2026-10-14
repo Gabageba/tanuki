@@ -26,7 +26,7 @@ function CancelAccountDeletion() {
       }}
       onSuccess={() => {
         notifications.show({ color: 'green', message: t('deletionCancelled') });
-        navigate(ROUTE_PATHS.SOURCES, { replace: true });
+        navigate(ROUTE_PATHS.HOME, { replace: true });
       }}
     />
   );

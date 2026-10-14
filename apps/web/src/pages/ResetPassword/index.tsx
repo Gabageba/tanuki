@@ -28,7 +28,7 @@ function ResetPassword() {
     resetPassword.mutate(
       { token, password: values.password },
       {
-        onSuccess: () => navigate(ROUTE_PATHS.SOURCES, { replace: true }),
+        onSuccess: () => navigate(ROUTE_PATHS.HOME, { replace: true }),
         onError: (error) =>
           form.setFieldError(
             'password',

@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import type { ContentRating, TitleType, SourceLocale } from '@tanuki/contracts';
 import {
   CONTENT_RATING,
+  SEARCH_GROUP_STATUS,
   TITLE_TYPE,
   SOURCE_CONTENT_TYPE,
   SOURCE_LOCALE,
@@ -21,7 +22,7 @@ import {
   type SourceStatusReason,
 } from '@tanuki/contracts';
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
-import { SOURCE_LOGIN_MARK, type SourceLoginMark } from './models';
+import { SOURCE_LOGIN_MARK, type MissStatus, type SourceLoginMark } from './models';
 
 /**
  * /sources отдаёт группы по contentType — для поиска источника по id нужен плоский список.
@@ -225,3 +226,17 @@ export const isTitleSearchLocked = (sourceId: string, source: Source | undefined
   !!(SOURCE_CATALOG as Record<string, CatalogEntry | undefined>)[sourceId]?.loginBenefits.includes(
     SOURCE_LOGIN_BENEFIT.TITLE_SEARCH,
   ) && !source?.isLoggedIn;
+
+/** Почему источник не ответил — строка «Не ответили» в поиске и пустые подборки. */
+export const getMissReasonLabel = (status: MissStatus, t: TFunction) => {
+  switch (status) {
+    case SEARCH_GROUP_STATUS.TIMEOUT:
+      return t('timedOut');
+    case SEARCH_GROUP_STATUS.ERROR:
+      return t('error');
+    case SEARCH_GROUP_STATUS.LOCKED:
+      return t('loginRequired');
+    case SEARCH_GROUP_STATUS.UNAVAILABLE:
+      return t('unavailable');
+  }
+};

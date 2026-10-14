@@ -115,7 +115,8 @@ GET /sources
               status: 'ok'|'degraded'|'down',
               statusReason: 'broken'|'probeFailed'|'requestFailures'|'recovered'|null,
               statusChangedAt: string|null, checkedAt: string|null,
-              failedProbeStreak: number, lastError: string|null }
+              failedProbeStreak: number, lastError: string|null,
+              homeSections: { id, title }[] }
 
 POST /sources/probe             → SourcesResponse # прогнать проверку по всем
 POST /sources/:sourceId/probe   → Source          # прогнать проверку по одному
@@ -138,6 +139,11 @@ POST /sources/:sourceId/probe   → Source          # прогнать пров�
 
 Возможности источника (поддержка поиска, доступные сортировки) наружу не отдаются: фронт их
 никак не использовал, а мультипоиск отбирает источники по этим флагам сам, внутри API.
+
+`homeSections` — блоки главной сайта для подборок, в порядке сайта, с названиями как у сайта
+(`{ id: "hotNew", title: "Горячие новинки" }`). Описаны статически в парсере — вкладка настроек и
+скелетон страницы подборок показывают их без запроса к сайту. Пустой массив — у источника нет
+главной (или он `isBroken`).
 
 `domain` — текущий хост источника без схемы (`web.usagi.one`). Источники регулярно переезжают
 на новые зеркала, так что для всего, что переживает запрос (закладки, история), ключ — `id`.
@@ -335,6 +341,62 @@ LinkedReadingProgress = ReadingProgress & {
 Том, номер, название и ветку главы при записи сервер берёт из деталей источника сам — клиент шлёт
 только id главы и страницу. Чтение при недоступной базе отдаёт пустой прогресс, запись отвечает
 `STORAGE_UNAVAILABLE`.
+
+#### «Продолжить чтение»
+
+```
+GET    /reading-progress/recent           → { items: ContinueReadingItem[] }
+PUT    /titles/:titleId/progress/hidden   — убрать из «Продолжить чтение» → 204
+DELETE /titles/:titleId/progress/hidden   — «Отменить» в тосте → 204
+
+ContinueReadingItem = {
+  title: { id, sourceId, name, coverUrl, contentRating, type },
+  chapter: { id, number, volume, title },
+  updatedAt
+}
+```
+
+- До 20 тайтлов, свежие первыми; группа подтверждённых совпадений — одна карточка с источником и
+  главой самой свежей отметки. Тайтлы выключенных и скрытых настройкой 18+ источников не
+  попадают. Дочитанные не отсеиваются — их убирают руками.
+- Снимок названия, обложки, рейтинга и типа пишет `PUT /progress` из деталей источника (как у
+  закладок; обложка — сырым адресом, подпись прокси ставится при чтении). Строкам без снимка он
+  досниматься из деталей при выдаче; не вышло — строка ждёт следующего чтения.
+- «Убрать» пишет `hidden_at = now()` во все строки группы, прогресс не трогает. Тайтл
+  возвращается, когда `updated_at > hidden_at` — при следующем сохранении прогресса; `DELETE`
+  сбрасывает `hidden_at`. Недоступная база — пустая лента; «Убрать» — `STORAGE_UNAVAILABLE`.
+
+### Подборки
+
+```
+GET /selections/:sourceId → { sourceId, status, sections: HomeSection[] }
+    status: "ok" | "timeout" | "error" | "locked" | "unavailable"   — как у группы поиска
+    HomeSection = { id, title, kind, variants: { id, title }[], items: Title[] }
+    kind: "new" | "trending" | "popular" | "top" | "updates"         — иконка вкладки на фронте
+
+GET /selections/:sourceId/:sectionId?page=1&variant=<id из variants>
+    → { sourceId, sectionId, status, items: Title[], hasNextPage }
+```
+
+Блоки главной сайта одного источника (`Parser.getHome`). Отдаются все описанные блоки: какие
+показывать и в каком порядке, решают настройки пользователя на фронте
+(`selectionsDisabledSources`, `selectionsDisabledSections`, `selectionsSectionOrder`), а кеш общий — `CACHE_TTL.selections`, 30 минут свежести,
+stale-while-revalidate до 6 часов. Не ответивший источник — не ошибка запроса, а `status` с
+пустыми `sections`: страница рисует причину на месте блоков, а глобальный обработчик ошибок не
+показывает тост. `locked` — источник закрыт без аккаунта (парсер не вызывается), `unavailable` —
+`degraded`/`down` (тоже без запроса), `timeout` — главная не пришла за 15 с (запрос доживает в
+фоне и прогревает кеш). Блок, которого не нашлось на странице, приходит пустым. Неизвестный или
+скрытый источник — 404 `sourceNotFound`. Описание блоков (`kind`, `variants`) берётся из
+`Source.homeSections`, а не из кеша главной.
+
+Порция одного блока — для вкладки страницы «Подборки». Блок, который сайт отдаёт порциями,
+парсер листает сам (`Parser.getHomeSection`); остальные берутся из той же главной одной порцией
+(`hasNextPage: false`, дальше первой страницы — пусто). `variants` — переключатель внутри блока
+на сайте (период «Сейчас читают» MangaLib, страна «Топа тайтлов» Реманги): подписи — как у сайта,
+без перевода, как и `title`; пустой — переключателя нет. `variant` учитывается только у блока с
+вариантами: чужой или пропущенный — первый вариант, у блока без вариантов игнорируется. Кеш —
+`CACHE_TTL.selections` на `(источник, блок, вариант, страница)`. Статусы и таймаут — как у всей главной; неизвестный блок
+— 404 `sectionNotFound`.
 
 ### Прокси изображений
 
@@ -546,6 +608,7 @@ PUT    /bookmark-folders/order           { ids: string[] } — все папки
 DELETE /bookmark-folders/:id?moveTo=<id> без moveTo закладки папки удаляются → 204
 
 GET    /bookmarks?folderId=&sort=&query=&page=   → { items: BookmarkItem[], page, total }
+GET    /bookmarks/new-chapters  → { items: BookmarkItem[] } — до 8, для главной
 POST   /bookmarks/lookup     { titleIds }        → { [titleId]: folderId } — метки на карточках
 POST   /bookmarks/restore    { rows }            — «Вернуть» после удаления → 204
 
@@ -587,6 +650,10 @@ BookmarkItem = { titleId, sourceId, name, coverUrl, contentRating, type, folderI
 bookmarkFolderConflict`, фронт спрашивает папку и повторяет запрос. У остальных пользователей
   папки группы остаются разошедшимися: `GET /titles/:id/bookmark` отдаёт `conflict`, и фронт
   спрашивает при следующем открытии тайтла; до выбора группа лежит в папке самой свежей строки.
+
+- **«Новые главы в закладках» на главной** — `GET /bookmarks/new-chapters`: группы с
+  `newChaptersCount > 0` (у неотслеживаемых папок счётчик всегда 0), свежая новая глава первой,
+  до 8.
 
 ### Уведомления
 

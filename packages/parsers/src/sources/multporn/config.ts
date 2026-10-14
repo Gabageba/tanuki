@@ -47,6 +47,9 @@ export type MultpornConfig = {
   seriesSelector: string;
   /** Omitted where this type's taxonomy routes aren't verified live — see MultpornFilterConfig. */
   filters?: MultpornFilterConfig;
+  /** Блок главной этого типа: на самой главной в нём видно четыре тайтла, поэтому берётся его
+   *  страница «ещё» — та же сетка `views-view-grid`, что у страниц тегов. */
+  home: { path: string; title: string };
 };
 
 // title/domains/contentType live in SOURCE_CATALOG (../catalog) — look them up by id, don't
@@ -60,6 +63,7 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
     detailTagSelector: '.field-name-field-category a',
     authorSelector: '.field-name-field-author a',
     seriesSelector: '.field-name-field-com-group a',
+    home: { path: '/updated_comics', title: 'Updated comics' },
     filters: {
       tagListPath: '/category_comic?rule34=1',
       tagPathPrefix: '/category/',
@@ -77,6 +81,7 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
     detailTagSelector: '.field-name-field-h-category a',
     authorSelector: '.field-name-field-author-hentai a',
     seriesSelector: '.field-name-field-hentai-com-group a',
+    home: { path: '/updated_manga', title: 'Updated manga' },
     filters: {
       tagListPath: '/manga_tags?rule34=3',
       tagPathPrefix: '/category_hentai/',

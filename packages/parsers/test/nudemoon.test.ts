@@ -7,6 +7,8 @@ import type { ParserContext } from '../src/core/parser';
 import { runWithSourceAccounts } from '../src/core/source-accounts';
 import { SourceAuthRequiredError } from '../src/errors';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'nude-moon.example';
 
@@ -344,5 +346,24 @@ describe('Nude-Moon parser: cross-page dedup', () => {
     for (const id of ids1) {
       expect(ids2.has(id)).toBe(false);
     }
+  });
+});
+
+describe('Nude-Moon getHome', () => {
+  it('reads the «Новые переводы» tiles and skips the comment feed rows', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: readFixture('nudemoon-home.html'),
+    });
+    const parser = createNudeMoonParser(makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    // Три плитки, и строка комментария (тот же тайтл, другая вёрстка) не добавила дубля.
+    expect(sections[0]!.items).toHaveLength(3);
+    expect(sections[0]!.items[0]!.url).toMatch(/^\/\d+--.+\.html$/);
   });
 });

@@ -1,10 +1,15 @@
-import { Body, Controller, Get, Param, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Put } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import type { ReadingProgress, TitleReadingProgressResponse } from '@tanuki/contracts';
+import type {
+  ContinueReadingResponse,
+  ReadingProgress,
+  TitleReadingProgressResponse,
+} from '@tanuki/contracts';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionUser } from '../auth/session.service';
 import { splitCompositeId } from '../common/opaque-id';
 import {
+  ContinueReadingResponseDto,
   ReadingProgressDto,
   TitleReadingProgressResponseDto,
   UpdateReadingProgressRequestDto,
@@ -43,5 +48,40 @@ export class ReadingProgressController {
   ): Promise<ReadingProgress> {
     const { sourceId, opaqueId } = splitCompositeId(titleId);
     return this.readingProgressService.update(user.id, sourceId, opaqueId, body);
+  }
+
+  @ApiOperation({
+    summary: 'Убирает тайтл (всю группу совпадений) из «Продолжить чтение» — до следующего чтения',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Put('hidden')
+  async hide(@CurrentUser() user: SessionUser, @Param('titleId') titleId: string): Promise<void> {
+    const { sourceId, opaqueId } = splitCompositeId(titleId);
+    await this.readingProgressService.hideFromContinueReading(user.id, sourceId, opaqueId);
+  }
+
+  @ApiOperation({ summary: 'Возвращает тайтл в «Продолжить чтение» — «Отменить» в тосте' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('hidden')
+  async restore(
+    @CurrentUser() user: SessionUser,
+    @Param('titleId') titleId: string,
+  ): Promise<void> {
+    const { sourceId, opaqueId } = splitCompositeId(titleId);
+    await this.readingProgressService.restoreToContinueReading(user.id, sourceId, opaqueId);
+  }
+}
+
+/** Лента главной — не про один тайтл, поэтому вне `titles/:titleId/progress`. */
+@ApiTags('reading-progress')
+@Controller('reading-progress')
+export class ContinueReadingController {
+  constructor(private readonly readingProgressService: ReadingProgressService) {}
+
+  @ApiOperation({ summary: '«Продолжить чтение»: последние тайтлы, группа совпадений — одна' })
+  @ApiOkResponse({ type: ContinueReadingResponseDto })
+  @Get('recent')
+  async recent(@CurrentUser() user: SessionUser): Promise<ContinueReadingResponse> {
+    return this.readingProgressService.listRecent(user.id);
   }
 }

@@ -772,6 +772,7 @@ export const createChanParser = (cfg: ChanConfig, ctx: ParserContext): Parser =>
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: false,
+      homeSections: [],
     },
     getList,
     getDetails,

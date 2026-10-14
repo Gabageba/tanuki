@@ -11,6 +11,8 @@ import { createMangaBuffParser, MANGABUFF_FILTER_GROUP } from '../src/sources/ma
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'mangabuff.example';
 
@@ -339,5 +341,26 @@ describe('MangaBuff parser conformance', () => {
       const url = new URL(catalogRequest.url);
       expect(url.searchParams.get('sort')).toBe(sort);
     }
+  });
+});
+
+describe('MangaBuff getHome', () => {
+  it('reads all three carousels, both side lists and the updates feed', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: readFixture('mangabuff-home.html'),
+    });
+    const parser = createMangaBuffParser(makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    for (const { items } of sections) {
+      for (const item of items) expect(item.url).toMatch(/^\/manga\/[^/]+$/);
+    }
+    // Строки списков приходят с обложкой x70 — в карточку берём x180.
+    expect(sections[2]!.items[0]!.coverUrl).toContain('/x180/');
   });
 });

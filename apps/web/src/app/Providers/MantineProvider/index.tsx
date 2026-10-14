@@ -209,10 +209,18 @@ const createAppTheme = (t: TFunction) =>
           padding: 'sm',
         },
       },
+      // Цвета выбранного `muted` чипа приходят из `variantColorResolver` в `--chip-*`, но своего
+      // класса под этот вариант у Mantine нет — применяет их `.chipLabel` в модуле стилей. Там же
+      // отступ выбранного чипа без галочки.
       Chip: {
         defaultProps: {
           radius: 'md',
           color: PRIMARY_COLOR,
+        },
+        classNames: {
+          root: styles.chip,
+          label: styles.chipLabel,
+          iconWrapper: styles.chipIconWrapper,
         },
       },
       // `muted` — тот же тон, что у `Badge`/`Button`: у Pill нет `color` и `variantColorResolver`,

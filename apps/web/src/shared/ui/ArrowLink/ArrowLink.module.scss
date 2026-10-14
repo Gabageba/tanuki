@@ -1,0 +1,10 @@
+// В покое ссылка серая и не спорит с заголовком блока; акцентный цвет — только при наведении.
+// Цвет здесь, а не в `c`: style prop ставится инлайном и перебил бы :hover.
+.link {
+  color: var(--mantine-color-dimmed);
+  transition: color 150ms ease;
+
+  &:hover {
+    color: var(--mantine-primary-color-filled);
+  }
+}

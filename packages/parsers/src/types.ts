@@ -16,6 +16,8 @@ import type {
   ContentRating,
   FilterGroupSettings,
   FilterType,
+  HomeSectionKind,
+  HomeSectionVariant,
   TitleRestriction,
   TitleState,
   TitleType,
@@ -183,6 +185,35 @@ export type RawFilterGroup = {
   supportsDirection?: boolean;
 };
 
+/** Блок главной сайта: id стабилен (по нему хранится выбор пользователя), название — как у сайта. */
+export type RawHomeSectionInfo = {
+  id: string;
+  title: string;
+  /** Смысл блока — по нему фронт выбирает иконку вкладки. */
+  kind: HomeSectionKind;
+  /** Переключатель внутри блока на сайте (период, страна) — getHomeSection принимает `variant`.
+   *  Первый — по умолчанию: его же отдаёт getHome. */
+  variants?: HomeSectionVariant[];
+};
+
+/** Какую порцию блока просить у getHomeSection: `page` с 1, `variant` — id из `variants` блока;
+ *  без него — первый вариант. */
+export type RawHomeSectionParams = {
+  page: number;
+  variant?: string;
+};
+
+/** Порция блока главной: `hasNextPage` — сайт отдаёт блок порциями и следующая есть. */
+export type RawHomeSectionPage = {
+  items: RawTitle[];
+  hasNextPage: boolean;
+};
+
+/** Блок главной с тайтлами — элементы по тем же соглашениям, что у getList (`chapters: null`). */
+export type RawHomeSection = RawHomeSectionInfo & {
+  items: RawTitle[];
+};
+
 export type RawSourceInfo = {
   id: string;
   title: string;
@@ -204,4 +235,6 @@ export type RawSourceInfo = {
    *  silently dropped, so the UI doesn't offer filters while a query is typed. */
   isSearchWithFiltersSupported: boolean;
   isMultipleTagsSupported: boolean;
+  /** Блоки главной сайта в его порядке — mirrors Parser.getHome; пустой — главной нет. */
+  homeSections: RawHomeSectionInfo[];
 };

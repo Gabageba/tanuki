@@ -10,7 +10,7 @@ import { SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
 import GroupedList from '@/shared/ui/GroupedList';
 import useToggleSource from './hooks/useToggleSource';
 import { isSourceLoginOffered } from './lib';
-import styles from './SettingsSources.module.scss';
+import styles from '../../Settings.module.scss';
 
 type Props = {
   source: Source;

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { Chapter, ReadingProgress, TitleReadingProgressResponse } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { SILENT_ERROR_META, type ErrorMeta } from '@/shared/api/errorMeta';
+import { CONTINUE_READING_QUERY_KEY } from '../models';
 import { toOptimisticProgress } from '../readingProgress';
 import { getReadingProgressQueryKey } from './useReadingProgress';
 
@@ -67,6 +68,7 @@ function useUpdateReadingProgress({ titleId, notifyOnError = true }: Params) {
         own,
         linked: current?.linked ?? [],
       }));
+      void queryClient.invalidateQueries({ queryKey: CONTINUE_READING_QUERY_KEY });
     },
     onError: (_error, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);

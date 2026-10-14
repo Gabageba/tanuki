@@ -7,6 +7,10 @@ export type {
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
+  RawHomeSection,
+  RawHomeSectionInfo,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from './types';
 export { RATING_UNKNOWN } from './types';
 

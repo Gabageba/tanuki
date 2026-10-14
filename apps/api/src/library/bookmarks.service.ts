@@ -2,8 +2,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   BOOKMARK_AVAILABILITY,
+  BOOKMARK_SORT,
   BOOKMARKS_PAGE_SIZE,
   CONTENT_RATING,
+  NEW_CHAPTER_BOOKMARKS_LIMIT,
   SOURCE_STATUS,
   type BookmarkAvailability,
   type BookmarkFoldersResponse,
@@ -12,6 +14,7 @@ import {
   type BookmarksLookupResponse,
   type BookmarksQuery,
   type BookmarksResponse,
+  type NewChapterBookmarksResponse,
   type Source,
   type TitleBookmark,
 } from '@tanuki/contracts';
@@ -125,6 +128,22 @@ export class BookmarksService {
       items: matching.slice(start, start + BOOKMARKS_PAGE_SIZE).map((group) => this.toItem(group)),
       page: query.page,
       total: matching.length,
+    };
+  }
+
+  /**
+   * «Новые главы в закладках» на главной: группы отслеживаемых папок, где вышли главы, — свежая
+   * глава первой (порядок UPDATED, как на /bookmarks). Счётчик у неотслеживаемых папок всегда 0,
+   * так что фильтра по папке здесь не нужно.
+   */
+  async listNewChapters(userId: string): Promise<NewChapterBookmarksResponse> {
+    const { groups } = await this.loadGroups(userId);
+    const withNew = sortBookmarkGroups(
+      groups.filter(({ newChaptersCount }) => newChaptersCount > 0),
+      BOOKMARK_SORT.UPDATED,
+    );
+    return {
+      items: withNew.slice(0, NEW_CHAPTER_BOOKMARKS_LIMIT).map((group) => this.toItem(group)),
     };
   }
 

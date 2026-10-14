@@ -1,4 +1,5 @@
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_TYPE,
@@ -7,7 +8,9 @@ import {
   SORT_ORDER,
   SOURCE_CONTENT_TYPE,
   formatCompactNumber,
+  type EnumLiteralsOf,
   type FilterRangePreset,
+  type HomeSectionVariant,
   SOURCE_LOCALE,
   type TitleType,
 } from '@tanuki/contracts';
@@ -24,12 +27,17 @@ import type {
   RawTitleType,
   RawPage,
   RawTag,
+  RawHomeSectionInfo,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toTitleCase } from '../../core/text/strings';
 import { ParseError } from '../../errors';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { toHomeSections } from '../../core/home';
+import { parseHtml } from '../../core/html/dom';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.HENTAICHAN_CC;
 /**
@@ -257,6 +265,78 @@ const sortFieldFor = (order: string | undefined): string => {
   }
 };
 
+/** Блоки главной hentaichan.cc — проверено вживую 2026-10-14. «Новая манга» — каталог по дате
+ *  добавления, листается как он. «Популярную мангу» сайт собирает сам (ни одна сортировка API её
+ *  не повторяет): по пять тайтлов за неделю и за месяц лежат в RSC-данных главной, а сами
+ *  тайтлы берутся из API. */
+export const HENTAICHAN_CC_HOME_SECTION = {
+  NEW: 'new',
+  POPULAR: 'popular',
+} as const;
+
+/** Вкладки «Популярной манги» — ключи списков в RSC-данных главной. */
+const POPULAR_PERIOD = {
+  WEEK: 'week',
+  MONTH: 'month',
+} as const;
+type PopularPeriod = EnumLiteralsOf<typeof POPULAR_PERIOD>;
+
+const POPULAR_PERIODS: (HomeSectionVariant & { id: PopularPeriod })[] = [
+  { id: POPULAR_PERIOD.WEEK, title: 'За неделю' },
+  { id: POPULAR_PERIOD.MONTH, title: 'За месяц' },
+];
+
+const HENTAICHAN_CC_HOME_SECTIONS: RawHomeSectionInfo[] = [
+  { id: HENTAICHAN_CC_HOME_SECTION.NEW, title: 'Новая манга', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: HENTAICHAN_CC_HOME_SECTION.POPULAR,
+    title: 'Популярная манга',
+    kind: HOME_SECTION_KIND.POPULAR,
+    variants: POPULAR_PERIODS,
+  },
+];
+
+/** Пропсы клиентского слайдера «Популярной манги» в RSC-данных главной. */
+type PopularSliderProps = Partial<Record<PopularPeriod, { slug: string }[]>>;
+
+/** RSC-данные Next.js — строки `self.__next_f.push([1, "<кусок>"])`; кусок может оборваться
+ *  посреди записи, поэтому склеиваются все. */
+const NEXT_FLIGHT_PREFIX = 'self.__next_f.push(';
+
+/**
+ * Slug'и «Популярной манги» за период в порядке сайта. В разметке есть только активная вкладка
+ * (неделя) — месяц приходит лишь в RSC-данных, поэтому оба периода берутся оттуда: запись вида
+ * `3e:["$","$L6a",null,{"week":[…],"month":[…]}]`, одна на строку.
+ */
+const parsePopularSlugs = (html: string, period: PopularPeriod): string[] => {
+  const doc = parseHtml(html, '');
+  const flight = doc
+    .$('script')
+    .toArray()
+    .map((el) => doc.$(el).text().trim())
+    .filter((text) => text.startsWith(NEXT_FLIGHT_PREFIX))
+    .map((text) => {
+      const [, chunk] = JSON.parse(text.slice(NEXT_FLIGHT_PREFIX.length, -1)) as [number, unknown];
+      return typeof chunk === 'string' ? chunk : '';
+    })
+    .join('');
+  for (const line of flight.split('\n')) {
+    if (!line.includes(`"${POPULAR_PERIOD.WEEK}":[`)) continue;
+    const row = JSON.parse(line.slice(line.indexOf(':') + 1)) as unknown[];
+    const props = row[3] as PopularSliderProps | undefined;
+    const items = props?.[period];
+    if (items) return [...new Set(items.map(({ slug }) => slug))];
+  }
+  return [];
+};
+
+const HOME_SECTION_SIZE = 20;
+
+/** Поля элемента списка — общие у каталога и главной. */
+const LIST_FIELDS =
+  'id,name,slug,cover.filename_disk,description,type,likes,views,pages,date_created,' +
+  'tags.tags_id.name,tags.tags_id.slug';
+
 /** Directus takes direction as a `-` prefix on the field, not a separate param — verified live
  *  that `sort=<field>` and `sort=-<field>` both work for every field used below. */
 const sortFor = (order: string | undefined, direction: string | undefined): string => {
@@ -389,9 +469,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       limit: String(params.limit),
       offset: String(params.offset),
       sort: sortFor(params.order, params.direction),
-      fields:
-        'id,name,slug,cover.filename_disk,description,type,likes,views,pages,date_created,' +
-        'tags.tags_id.name,tags.tags_id.slug',
+      fields: LIST_FIELDS,
       /** Excludes 4 live test/junk rows ("test", "1233", ...) sitting in `declined`/`moderation`
        *  status — verified live, never approved catalog entries a listing (filtered or not)
        *  should surface. */
@@ -401,6 +479,62 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
     Object.assign(query, buildFilterParams(params.filters));
     const res = await directusGet<DirectusListResponse<MangaListItem>>('/items/manga', query);
     return res.data.map(parseListItem);
+  };
+
+  /** Тайтлы по slug в порядке `slugs` — так блок сохраняет порядок сайта. */
+  const fetchBySlugs = async (slugs: string[]): Promise<RawTitle[]> => {
+    if (slugs.length === 0) return [];
+    const res = await directusGet<DirectusListResponse<MangaListItem>>('/items/manga', {
+      limit: String(slugs.length),
+      fields: LIST_FIELDS,
+      'filter[slug][_in]': slugs.join(','),
+    });
+    const bySlug = new Map(res.data.map((item) => [item.slug, parseListItem(item)]));
+    return slugs.flatMap((slug) => bySlug.get(slug) ?? []);
+  };
+
+  /** Порция «Новой манги» — страница каталога по дате добавления. */
+  const fetchNewest = async (page: number): Promise<RawHomeSectionPage> => {
+    const items = await getList({
+      offset: (page - 1) * HOME_SECTION_SIZE,
+      limit: HOME_SECTION_SIZE,
+      order: SORT_ORDER.RELEASED,
+    });
+    return { items, hasNextPage: items.length === HOME_SECTION_SIZE };
+  };
+
+  /** «Популярная манга» за период; чужой период — за неделю. */
+  const fetchPopular = async (variant: string | undefined): Promise<RawTitle[]> => {
+    const period = POPULAR_PERIODS.find(({ id }) => id === variant)?.id ?? POPULAR_PERIOD.WEEK;
+    const res = await ctx.http.get(`https://${domain}/`);
+    return fetchBySlugs(parsePopularSlugs(res.text(), period));
+  };
+
+  const getHome = async () => {
+    const [newest, popular] = await Promise.all([
+      fetchNewest(1),
+      fetchPopular(undefined).catch(() => []),
+    ]);
+    return toHomeSections(HENTAICHAN_CC_HOME_SECTIONS, {
+      [HENTAICHAN_CC_HOME_SECTION.NEW]: newest.items,
+      [HENTAICHAN_CC_HOME_SECTION.POPULAR]: popular,
+    });
+  };
+
+  /** «Новая манга» листается порциями, «Популярная» — пять тайтлов за выбранный период. */
+  const getHomeSection = async (
+    id: string,
+    { page, variant }: RawHomeSectionParams,
+  ): Promise<RawHomeSectionPage | null> => {
+    switch (id) {
+      case HENTAICHAN_CC_HOME_SECTION.NEW:
+        return fetchNewest(page);
+      case HENTAICHAN_CC_HOME_SECTION.POPULAR:
+        if (page > 1) return { items: [], hasNextPage: false };
+        return { items: await fetchPopular(variant), hasNextPage: false };
+      default:
+        return null;
+    }
   };
 
   const parseMangaUrl = (url: string): { mangaId: string; slug: string } => {
@@ -660,11 +794,14 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections: HENTAICHAN_CC_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
+    getHomeSection,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };

@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import {
+  ContinueReadingResponseSchema,
   ReadingProgressSchema,
   TitleReadingProgressResponseSchema,
   UpdateReadingProgressRequestSchema,
@@ -14,3 +15,5 @@ export class TitleReadingProgressResponseDto extends createZodDto(
 export class UpdateReadingProgressRequestDto extends createZodDto(
   UpdateReadingProgressRequestSchema,
 ) {}
+
+export class ContinueReadingResponseDto extends createZodDto(ContinueReadingResponseSchema) {}

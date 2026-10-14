@@ -281,6 +281,12 @@ export const userSettings = pgTable('user_settings', {
   sourceOrder: text('source_order').array(),
   /** Категории уведомлений с выключенным push; null — включены все. */
   pushDisabledCategories: text('push_disabled_categories').array().$type<NotificationCategory[]>(),
+  /** Источники, убранные из подборок; null — показываются все. */
+  selectionsDisabledSources: text('selections_disabled_sources').array(),
+  /** Выключенные блоки подборок — `sourceId:sectionId` (getSelectionsSectionKey); null — все. */
+  selectionsDisabledSections: text('selections_disabled_sections').array(),
+  /** Порядок блоков подборок — ключи `sourceId:sectionId`; null — порядок сайта. */
+  selectionsSectionOrder: text('selections_section_order').array(),
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -371,9 +377,29 @@ export const readingProgress = pgTable(
     branchId: text('branch_id').notNull(),
     pageIndex: integer('page_index').notNull(),
 
+    /**
+     * Снимок тайтла для «Продолжить чтение», как у закладок: карточка рисуется без похода к
+     * источнику. Пишет PUT /progress из закешированных деталей; у старых строк null — снимок
+     * досниматься при выдаче ленты.
+     */
+    titleId: text('title_id'),
+    titleName: text('title_name'),
+    /** Адрес обложки на источнике, без подписи прокси: подпись ставит чтение. */
+    coverUrl: text('cover_url'),
+    contentRating: text('content_rating').$type<ContentRating>(),
+    type: text('type').$type<TitleType>(),
+    /**
+     * Когда тайтл убрали из «Продолжить чтение»; null — не убирали. Пишется во все строки
+     * группы. Тайтл снова в ленте, как только updated_at станет позже — при следующем чтении.
+     */
+    hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.titleKey] })],
+  (table) => [
+    primaryKey({ columns: [table.userId, table.titleKey] }),
+    index('reading_progress_user_updated_at_idx').on(table.userId, table.updatedAt.desc()),
+  ],
 );
 
 /**

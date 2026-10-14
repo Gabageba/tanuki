@@ -116,6 +116,13 @@ export {
 export { PageSchema, type Page } from './page';
 export {
   SourceSchema,
+  HomeSectionInfoSchema,
+  type HomeSectionInfo,
+  HOME_SECTION_KIND,
+  HomeSectionKindSchema,
+  type HomeSectionKind,
+  HomeSectionVariantSchema,
+  type HomeSectionVariant,
   SourceContentTypeSchema,
   SourceStatusSchema,
   SourceStatusReasonSchema,
@@ -281,6 +288,7 @@ export {
   DEFAULT_SHOW_ADULT_SOURCES,
   DEFAULT_SAVE_SEARCH_HISTORY,
   DEFAULT_HIDE_ADULT_TITLES,
+  getSelectionsSectionKey,
 } from './user-settings';
 export {
   ReadingProgressSchema,
@@ -296,7 +304,22 @@ export {
   type TitleReadingProgressResponse,
   UpdateReadingProgressRequestSchema,
   type UpdateReadingProgressRequest,
+  CONTINUE_READING_LIMIT,
+  ContinueReadingItemSchema,
+  type ContinueReadingItem,
+  ContinueReadingResponseSchema,
+  type ContinueReadingResponse,
 } from './reading-progress';
+export {
+  HomeSectionSchema,
+  type HomeSection,
+  SelectionsResponseSchema,
+  type SelectionsResponse,
+  SelectionsSectionQuerySchema,
+  type SelectionsSectionQuery,
+  SelectionsSectionResponseSchema,
+  type SelectionsSectionResponse,
+} from './selections';
 export {
   ChapterReadRequestSchema,
   type ChapterReadRequest,
@@ -356,6 +379,9 @@ export {
   type BookmarkItem,
   BookmarksResponseSchema,
   type BookmarksResponse,
+  NEW_CHAPTER_BOOKMARKS_LIMIT,
+  NewChapterBookmarksResponseSchema,
+  type NewChapterBookmarksResponse,
   BookmarksLookupRequestSchema,
   type BookmarksLookupRequest,
   BookmarksLookupResponseSchema,

@@ -126,3 +126,31 @@ describe.each(RUN_SOURCE_IDS)('contract: %s', (sourceId) => {
     await expect(runSourceContract(registry.get(sourceId))).resolves.toBeUndefined();
   });
 });
+
+/**
+ * Главная сайта для подборок: каждый описанный блок непуст, у тайтлов есть название, адрес и
+ * обложка. Ловит переезд вёрстки главной — блок, которого не нашлось, парсер отдаёт пустым, и в
+ * приложении он просто пропал бы молча.
+ */
+const HOME_SOURCE_IDS = RUN_SOURCE_IDS.filter(
+  (id) => registry.get(id).info.homeSections.length > 0,
+);
+
+describe.each(HOME_SOURCE_IDS)('contract home: %s', (sourceId) => {
+  it('getHome fills every described section', async () => {
+    await registry.init();
+    const parser = registry.get(sourceId);
+
+    const sections = await parser.getHome!();
+
+    expect(sections.map(({ id }) => id)).toEqual(parser.info.homeSections.map(({ id }) => id));
+    for (const section of sections) {
+      expect(section.items.length, section.id).toBeGreaterThan(0);
+      for (const item of section.items) {
+        expect(item.title, section.id).toBeTruthy();
+        expect(item.url, section.id).toBeTruthy();
+        expect(item.coverUrl, section.id).toBeTruthy();
+      }
+    }
+  });
+});

@@ -1,58 +1,60 @@
-import { Stack, Text } from '@mantine/core';
-import { useMemo, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { TITLE_TYPE, type Title } from '@tanuki/contracts';
-import NavigateToTitleCard from '../../NavigateToTitleCard';
-import TitleMetaItems from '../../TitleMetaItems';
-import { getLabelByTitleType } from '@/entities/source/lib';
-import TitleCardImage from '../../TitleCardImage';
-import NumericMeta from '../../NumericMeta';
-import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
-import styles from '../../Title.module.scss';
+import { AspectRatio, Box, Group, Stack } from '@mantine/core';
+import type { ReactNode } from 'react';
+import TitleGridCardLink from './TitleGridCardLink';
 
 type Props = {
-  title: Title;
-  showSource?: boolean;
-  bookmarkFolder?: ResolvedBookmarkFolder | null;
+  titleId: string;
+  /** Обложка 3:4 — `TitleCardImage` или своя, как у закладки. */
+  cover: ReactNode;
+  /** Мета-строка над названием — `TitleCardMeta` в каталоге, «Гл. 12 · 2 дня назад» в
+   *  «Продолжить чтение». */
+  meta: ReactNode;
+  name: ReactNode;
+  /** Кнопка «⋯» на высоте мета-строки. Лежит поверх карточки, а не внутри: кнопка внутри
+   *  ссылки недопустима. */
+  actions?: ReactNode;
 };
 
-function TitleGridCard({ title, showSource = false, bookmarkFolder }: Props) {
-  const { t } = useTranslation();
-  const metaItems: ReactNode[] = [
-    getLabelByTitleType(title.type, t),
-    !!title.year && <NumericMeta key="year">{title.year}</NumericMeta>,
-    !!title.chaptersCount && (
-      <NumericMeta key="volume">
-        {t('countChaptersAbbrev', { count: title.chaptersCount })}
-      </NumericMeta>
-    ),
-    !title.chaptersCount && !!title.pages && (
-      <NumericMeta key="volume">{t('countPagesAbbrev', { count: title.pages })}</NumericMeta>
-    ),
-  ].filter(Boolean);
-
-  const metaGap = useMemo(
-    () => (title.type === TITLE_TYPE.MANHUA && (title.chaptersCount || 0) >= 1000 ? 2 : 4),
-    [title.type, title.chaptersCount],
+/** Карточка тайтла плиткой: обложка, мета-строка, название. Что в них — решает вызывающий. */
+function TitleGridCard({ titleId, cover, meta, name, actions }: Props) {
+  const card = (
+    <TitleGridCardLink
+      titleId={titleId}
+      cover={cover}
+      meta={meta}
+      name={name}
+      withActions={!!actions}
+    />
   );
 
+  if (!actions) {
+    return card;
+  }
+
+  // Прозрачный слой повторяет обложку, чтобы кнопка встала ровно на мета-строку; клики сквозь
+  // него доходят до ссылки, кроме самой кнопки.
   return (
-    <NavigateToTitleCard title={title} data-view-mode="grid" className={styles.card}>
-      <Stack gap={8}>
-        <TitleCardImage
-          title={title}
-          showBadges
-          showSource={showSource}
-          bookmarkFolder={bookmarkFolder}
-        />
-        <Stack gap={4}>
-          <TitleMetaItems items={metaItems} gap={metaGap} />
-          <Text className={styles.title} lineClamp={2} lh="tight">
-            {title.name}
-          </Text>
-        </Stack>
+    <Box pos="relative">
+      {card}
+      <Stack gap={8} pos="absolute" top={0} left={0} right={0} style={{ pointerEvents: 'none' }}>
+        {/* Пропорцию `AspectRatio` задаёт ребёнку: пустой схлопнулся бы в ноль. */}
+        <AspectRatio ratio={3 / 4}>
+          <Box />
+        </AspectRatio>
+        {/* Шрифт и интервал как у мета-строки, чтобы `1lh` дал её высоту: кнопка садится на
+            середину строки и выступает за неё, не раздвигая карточку. */}
+        <Group
+          h="1lh"
+          fz="xs"
+          lh="tight"
+          w="fit-content"
+          ml="auto"
+          style={{ pointerEvents: 'auto' }}
+        >
+          {actions}
+        </Group>
       </Stack>
-    </NavigateToTitleCard>
+    </Box>
   );
 }
 

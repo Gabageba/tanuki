@@ -6,6 +6,7 @@ import AdultContent from './AdultContent';
 import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
 import HeaderBackground from './HeaderBackground';
+import Home from './Home';
 import ImportSourcePicker from './ImportSourcePicker';
 import InvitesTable from './InvitesTable';
 import LoginBadge from './LoginBadge';
@@ -13,6 +14,7 @@ import MultiselectOptions from './MultiselectOptions';
 import Notifications from './Notifications';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
+import SelectionsTabs from './SelectionsTabs';
 import SortKeys from './SortKeys';
 import SourcesHealthTable from './SourcesHealthTable';
 import SourcesSetup from './SourcesSetup';
@@ -35,6 +37,25 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'selections-tabs',
+    Component: SelectionsTabs,
+    title: 'Подборки вкладками',
+    description:
+      'Как переложить страницу подборок на вкладки: что выбирается селектором (источник или блок) и каким, где он стоит, вид вкладок блоков, сетка блока с подгрузкой порций там, где сайт её даёт, и как выглядит конец блока без продолжения и ошибка подгрузки.',
+    createdAt: '2026-10-13',
+    decision: 'R1 + S2 + M1 + T1 + E4 + F1 + Z1a + H3 (кнопка «Каталог») + P2',
+  },
+  {
+    slug: 'home-page',
+    Component: Home,
+    title: 'Главная',
+    description:
+      'Как устроены главная и подборки источников по плану docs/plans/home-page.md: «Продолжить чтение» и как убрать из него, подборки — на главной или отдельной страницей, входы с главной и её наполнение, кнопка «Главная» в шапке и нижней панели, вкладка настроек, пустые состояния.',
+    createdAt: '2026-10-12',
+    decision:
+      'P4a + V2a + W2 (без «Из подборок» и «Давно не открывали») + C1a + U1 + P3a + K1 + L4 + Z1 + H3a + B1 + T1a + E2',
+  },
   {
     slug: 'notifications',
     Component: Notifications,

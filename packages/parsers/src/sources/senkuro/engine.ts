@@ -1,4 +1,5 @@
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_STATE,
@@ -8,6 +9,9 @@ import {
   SORT_ORDER,
   type TitleState,
   SOURCE_LOCALE,
+  type EnumLiteralsOf,
+  type HomeSectionVariant,
+  type SortOrder,
   type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -25,6 +29,9 @@ import type {
   RawFilterGroup,
   RawFilterOption,
   RawTitleType,
+  RawHomeSectionInfo,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -34,6 +41,7 @@ import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { ParseError, SourceUnavailableError } from '../../errors';
 import { catalogEntryFor } from '../catalog';
 import type { SenkuroConfig } from './config';
+import { fetchHomeSections } from '../../core/home';
 
 const URL_DELIMITER = ',,';
 // Every domain a Senkuro-family source registers in ../catalog.ts is a mirror of the same
@@ -787,6 +795,59 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
     return { items, nextCursor };
   };
 
+  const homeSections = cfg.hasPopularHome
+    ? SENKURO_HOME_SECTIONS
+    : SENKURO_HOME_SECTIONS.filter(({ id }) => id !== SENKURO_HOME_SECTION.MOST_READ);
+
+  /** «Самое читаемое» — 12 тайтлов за период, порций не знает. */
+  const fetchMostRead = async (variant: string | undefined): Promise<RawTitle[]> => {
+    const data = await postGraphQl(POPULAR_QUERY, { period: getSenkuroPopularPeriod(variant) });
+    return ((data['mangaPopularByPeriod'] as MangaCardJson[] | undefined) ?? [])
+      .map(parseMangaCard)
+      .filter((item): item is RawTitle => item !== null);
+  };
+
+  /** Остальные блоки сайт собирает из каталога — листаются курсором, как он. Лишний тайтл в
+   *  запросе говорит, есть ли следующая порция. */
+  const fetchCatalogSectionPage = async (
+    section: SenkuroCatalogSection,
+    page: number,
+  ): Promise<RawHomeSectionPage> => {
+    const { order, types } = getSenkuroCatalogSectionQuery(section);
+    const filters = types.map((key) => ({ groupId: SENKURO_FILTER_GROUP.TYPE, key }));
+    const items = await fetchCursorPaged(
+      { offset: (page - 1) * HOME_SECTION_SIZE, limit: HOME_SECTION_SIZE + 1 },
+      { maxPageSize: LIST_MAX_PAGE_SIZE },
+      (cursor, first) => fetchListPage(cursor, first, order, undefined, undefined, filters),
+    );
+    return {
+      items: items.slice(0, HOME_SECTION_SIZE),
+      hasNextPage: items.length > HOME_SECTION_SIZE,
+    };
+  };
+
+  const fetchHomeSectionPage = async (
+    section: SenkuroHomeSection,
+    { page, variant }: RawHomeSectionParams,
+  ): Promise<RawHomeSectionPage> =>
+    section === SENKURO_HOME_SECTION.MOST_READ
+      ? { items: await fetchMostRead(variant), hasNextPage: false }
+      : fetchCatalogSectionPage(section, page);
+
+  const getHome = () =>
+    fetchHomeSections(
+      homeSections,
+      async (section) => (await fetchHomeSectionPage(section, { page: 1 })).items,
+    );
+
+  const getHomeSection = async (
+    id: string,
+    params: RawHomeSectionParams,
+  ): Promise<RawHomeSectionPage | null> => {
+    const section = homeSections.find((item) => item.id === id);
+    return section ? fetchHomeSectionPage(section.id, params) : null;
+  };
+
   const getList = async (params: ListParams): Promise<RawTitle[]> => {
     return fetchCursorPaged(params, { maxPageSize: LIST_MAX_PAGE_SIZE }, (cursor, first) =>
       fetchListPage(cursor, first, params.order, params.direction, params.query, params.filters),
@@ -1089,11 +1150,14 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
+    getHomeSection,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
@@ -1103,6 +1167,124 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
 // the chapters/releasedOn/completedOn range inputs) was found the same way MangaOrder was —
 // transcribed from senkuro.com's compiled catalog page (fetchMangas' own variable declarations),
 // then verified live against api.senkuro.com since introspection is disabled.
+/** Блоки главной senkuro — проверено вживую 2026-10-14. «Самое читаемое» — `mangaPopularByPeriod`
+ *  с периодом, как переключатель на сайте. Остальные сайт отдаёт подборками
+ *  (`experimentalSpotlights`, по 12 тайтлов без продолжения), но каждая из них — ровно первая
+ *  страница каталога с сортировкой и типом: берём их из каталога, так они листаются. Senkognito
+ *  отдаёт те же подборки по своему каталогу. */
+export const SENKURO_HOME_SECTION = {
+  MOST_READ: 'mostRead',
+  LATEST_UPDATES: 'latestUpdates',
+  NEWEST: 'newest',
+  POPULAR_NEW: 'popularNew',
+  TOP_MANHWA: 'topManhwa',
+  TOP_MANHUA: 'topManhua',
+  TOP_MANGA: 'topManga',
+} as const;
+type SenkuroHomeSection = EnumLiteralsOf<typeof SENKURO_HOME_SECTION>;
+type SenkuroCatalogSection = Exclude<SenkuroHomeSection, typeof SENKURO_HOME_SECTION.MOST_READ>;
+
+/** Период «Самого читаемого» — вкладки переключателя на сайте. */
+const SENKURO_MOST_READ_PERIOD = {
+  DAY: 'day',
+  WEEK: 'week',
+  MONTH: 'month',
+} as const;
+type SenkuroMostReadPeriod = EnumLiteralsOf<typeof SENKURO_MOST_READ_PERIOD>;
+
+const SENKURO_MOST_READ_PERIODS: (HomeSectionVariant & { id: SenkuroMostReadPeriod })[] = [
+  { id: SENKURO_MOST_READ_PERIOD.DAY, title: 'За день' },
+  { id: SENKURO_MOST_READ_PERIOD.WEEK, title: 'За неделю' },
+  { id: SENKURO_MOST_READ_PERIOD.MONTH, title: 'За месяц' },
+];
+
+/** `MangaPopularPeriod` периода; чужой период — первый. */
+const getSenkuroPopularPeriod = (variant: string | undefined) => {
+  const period =
+    SENKURO_MOST_READ_PERIODS.find(({ id }) => id === variant)?.id ?? SENKURO_MOST_READ_PERIOD.DAY;
+  switch (period) {
+    case SENKURO_MOST_READ_PERIOD.DAY:
+      return 'DAY';
+    case SENKURO_MOST_READ_PERIOD.WEEK:
+      return 'WEEK';
+    case SENKURO_MOST_READ_PERIOD.MONTH:
+      return 'MONTH';
+  }
+};
+
+/** Сортировка и типы каталога, из которых собран блок (типы — ключи группы TYPE). */
+const getSenkuroCatalogSectionQuery = (
+  section: SenkuroCatalogSection,
+): { order: SortOrder; types: string[] } => {
+  switch (section) {
+    case SENKURO_HOME_SECTION.LATEST_UPDATES:
+      return { order: SORT_ORDER.UPDATED, types: [] };
+    case SENKURO_HOME_SECTION.NEWEST:
+      return { order: SORT_ORDER.ADDED, types: [] };
+    case SENKURO_HOME_SECTION.POPULAR_NEW:
+      return { order: SORT_ORDER.POPULARITY, types: ['MANGA', 'MANHWA', 'MANHUA'] };
+    case SENKURO_HOME_SECTION.TOP_MANHWA:
+      return { order: SORT_ORDER.POPULARITY, types: ['MANHWA'] };
+    case SENKURO_HOME_SECTION.TOP_MANHUA:
+      return { order: SORT_ORDER.POPULARITY, types: ['MANHUA'] };
+    case SENKURO_HOME_SECTION.TOP_MANGA:
+      return { order: SORT_ORDER.POPULARITY, types: ['MANGA'] };
+  }
+};
+
+const SENKURO_HOME_SECTIONS: (RawHomeSectionInfo & { id: SenkuroHomeSection })[] = [
+  {
+    id: SENKURO_HOME_SECTION.MOST_READ,
+    title: 'Самое читаемое',
+    kind: HOME_SECTION_KIND.TOP,
+    variants: SENKURO_MOST_READ_PERIODS,
+  },
+  {
+    id: SENKURO_HOME_SECTION.LATEST_UPDATES,
+    title: 'Последние обновления',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
+  { id: SENKURO_HOME_SECTION.NEWEST, title: 'Последние манги', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: SENKURO_HOME_SECTION.POPULAR_NEW,
+    title: 'Популярные новинки манги',
+    kind: HOME_SECTION_KIND.TRENDING,
+  },
+  { id: SENKURO_HOME_SECTION.TOP_MANHWA, title: 'Топ манхв', kind: HOME_SECTION_KIND.TOP },
+  { id: SENKURO_HOME_SECTION.TOP_MANHUA, title: 'Топ маньхуа', kind: HOME_SECTION_KIND.TOP },
+  { id: SENKURO_HOME_SECTION.TOP_MANGA, title: 'Топ манг', kind: HOME_SECTION_KIND.TOP },
+];
+
+const HOME_SECTION_SIZE = 21;
+
+const MANGA_CARD_FIELDS = `
+  id
+  slug
+  titles {
+    lang
+    content
+  }
+  cover {
+    original {
+      url
+    }
+  }
+  type
+  releasedOn
+  chapters
+  rating
+  score
+  status
+`;
+
+const POPULAR_QUERY = `
+query fetchPopularMangaByPeriod($period: MangaPopularPeriod!) {
+  mangaPopularByPeriod(period: $period) {
+    ${MANGA_CARD_FIELDS}
+  }
+}
+`;
+
 const LIST_QUERY = `
 query fetchMangas(
   $after: String,

@@ -31,6 +31,9 @@ export class UserSettingsService {
         saveSearchHistory: row.saveSearchHistory ?? undefined,
         collapsedSearchSources: row.collapsedSearchSources ?? undefined,
         pushDisabledCategories: row.pushDisabledCategories ?? undefined,
+        selectionsDisabledSources: row.selectionsDisabledSources ?? undefined,
+        selectionsDisabledSections: row.selectionsDisabledSections ?? undefined,
+        selectionsSectionOrder: row.selectionsSectionOrder ?? undefined,
       };
     }, {});
   }

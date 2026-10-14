@@ -12,6 +12,8 @@ import { createWaMangaParser, WAMANGA_FILTER_GROUP } from '../src/sources/wamang
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'wamanga.example';
 const MANGA_ID = 'manga-1';
@@ -286,5 +288,19 @@ describe('WaManga parser conformance', () => {
     expect(url.searchParams.getAll('pegiRatings')).toEqual(['16+']);
     expect(url.searchParams.get('releaseYearFrom')).toBe('2015');
     expect(url.searchParams.get('releaseYearTo')).toBe('2020');
+  });
+});
+
+describe('WaManga getHome', () => {
+  it('maps the homepage payload onto the described sections', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/api/v1/manga/homepage`, {
+      status: 200,
+      body: readFixture('wamanga-home.json'),
+      contentType: 'application/json',
+    });
+    const { problems } = await checkHome(createWaMangaParser(makeContext(http)));
+
+    expect(problems).toEqual([]);
   });
 });

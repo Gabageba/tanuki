@@ -1,0 +1,37 @@
+.tile {
+  transition: background-color 150ms ease;
+
+  .arrow,
+  .visual {
+    transition: transform 200ms ease;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      // Тот же фон наведения, что у карточки тайтла в режиме списка. `!important` — фон `Paper`
+      // тема задаёт через `bg`, а он приходит inline-стилем.
+      background-color: var(--tanuki-color-hover) !important;
+
+      .arrow {
+        transform: translateX(3px);
+      }
+
+      .visual {
+        transform: translateY(-2px) scale(1.04);
+      }
+    }
+  }
+
+  &:focus-visible {
+    border-color: var(--mantine-primary-color-filled);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    .arrow,
+    .visual {
+      transition: none;
+    }
+  }
+}

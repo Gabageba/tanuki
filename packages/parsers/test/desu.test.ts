@@ -5,6 +5,8 @@ import { createDesuParser, DESU_FILTER_GROUP } from '../src/sources/desu';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
+import { checkHome } from './support/home';
 
 const DOMAIN = 'desu.uno';
 
@@ -343,5 +345,35 @@ describe('Desu parser conformance', () => {
       expect(page.url).toMatch(/^https?:\/\//);
     }
     expect(pages[0]!.url).toBe('https://static.desu.uno/manga/123/vol1/ch1/001.jpg');
+  });
+});
+
+describe('Desu getHome', () => {
+  it('finds both manga blocks by heading, original title from the link title', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: readFixture('desu-home.html'),
+    });
+    const parser = createDesuParser(makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+
+    const first = sections[0]!.items[0]!;
+    expect(first.url).toMatch(/^\/manga\/[^/]+\.\d+\/$/);
+    expect(first.altTitles).toHaveLength(1);
+  });
+
+  it('a block missing from the page comes back empty', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: '<html><body><div class="subheadline">Горячие новинки манги</div><div></div></body></html>',
+    });
+    const sections = await createDesuParser(makeContext(http)).getHome!();
+
+    expect(sections.every(({ items }) => items.length === 0)).toBe(true);
   });
 });

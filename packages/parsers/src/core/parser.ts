@@ -1,6 +1,15 @@
 import type { CookieJar } from 'tough-cookie';
 import type { ResolvedSearchFilters, SearchFilterCriteria } from '@tanuki/contracts';
-import type { RawTitle, RawChapter, RawPage, RawSourceInfo, RawFilterGroup } from '../types';
+import type {
+  RawTitle,
+  RawChapter,
+  RawPage,
+  RawSourceInfo,
+  RawFilterGroup,
+  RawHomeSection,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
+} from '../types';
 import type { ListParams, FilterSelection } from './paging';
 import type { HttpClient } from './http/client';
 
@@ -67,6 +76,14 @@ export type Parser = {
    *  sources that don't expose a catalog filter UI — RawSourceInfo.isFiltersSupported mirrors
    *  whether this is present. */
   getFilters?(): Promise<RawFilterGroup[]>;
+  /** Blocks of the source's own home page («Горячие новинки», «В тренде») — exactly the ones in
+   *  RawSourceInfo.homeSections, in that order. A block the page no longer has comes back with
+   *  empty `items` rather than an error. Omit on sources without a home page worth showing. */
+  getHome?(): Promise<RawHomeSection[]>;
+  /** One portion of a single home block, for blocks the site serves in pages (or by variant).
+   *  null — this block isn't fetched on its own: the caller takes it from getHome() as a single
+   *  portion. Omit on sources where every block is a fixed list on the home page. */
+  getHomeSection?(id: string, params: RawHomeSectionParams): Promise<RawHomeSectionPage | null>;
   /** Search criteria (title type / state) as this source's own filters — no network. Omit on
    *  sources whose search doesn't combine with filters (RawSourceInfo.isSearchWithFiltersSupported
    *  false); the caller then treats every criterion as unapplied. */
@@ -84,4 +101,13 @@ export type Parser = {
   close?(): Promise<void>;
 };
 
-export type { RawTitle, RawChapter, RawPage, RawSourceInfo, RawFilterGroup };
+export type {
+  RawTitle,
+  RawChapter,
+  RawPage,
+  RawSourceInfo,
+  RawFilterGroup,
+  RawHomeSection,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
+};

@@ -3,16 +3,27 @@ import { READING_MARK_CONFIDENCE } from '@tanuki/contracts';
 import type { AdultContentService } from '../adult-content/adult-content.service';
 import { encodeChapterId, encodeTitleId } from '../common/opaque-id';
 import type { DatabaseService } from '../database/database.service';
+import type { Env } from '../config/env';
 import type { BookmarksService } from '../library/bookmarks.service';
 import type { TitleLinksService } from '../matches/title-links.service';
 import type { ParsersClientService } from '../parsers-client/parsers-client.service';
+import type { SourcesService } from '../sources/sources.service';
+import { pickContinueReadingRows } from './continue-reading';
+import type { ReadingProgressRow } from './models';
 import {
   projectLinkedRow,
   ReadingProgressService,
   splitProgressRows,
 } from './reading-progress.service';
 
-const row = (titleKey: string, sourceId: string, chapterNumber: number, updatedAt: string) => ({
+const ENV = { IMG_SIGN_SECRET: 'secret-secret-secret' } as Env;
+
+const row = (
+  titleKey: string,
+  sourceId: string,
+  chapterNumber: number,
+  updatedAt: string,
+): ReadingProgressRow => ({
   userId: 'user',
   titleKey,
   sourceId,
@@ -22,6 +33,12 @@ const row = (titleKey: string, sourceId: string, chapterNumber: number, updatedA
   chapterTitle: null,
   branchId: 'default',
   pageIndex: 3,
+  titleId: null,
+  titleName: null,
+  coverUrl: null,
+  contentRating: null,
+  type: null,
+  hiddenAt: null,
   updatedAt: new Date(updatedAt),
 });
 
@@ -128,11 +145,13 @@ describe('ReadingProgressService при недоступной базе', () => 
   const bookmarks = { touchVisit: () => Promise.resolve() } as unknown as BookmarksService;
 
   const service = new ReadingProgressService(
+    ENV,
     unavailable,
     links,
     parsersClient,
     adultContent,
     bookmarks,
+    {} as SourcesService,
   );
   const titleId = encodeTitleId({ id: 1, url: '/title' });
 
@@ -148,5 +167,135 @@ describe('ReadingProgressService при недоступной базе', () => 
     await expect(
       service.update('user', 'readmanga_ru', titleId, { chapterId, pageIndex: 0 }),
     ).rejects.toThrow('Хранилище недоступно');
+  });
+
+  it('«Продолжить чтение» при недоступной базе пустое, а «Убрать» — ошибка', async () => {
+    await expect(service.listRecent('user')).resolves.toEqual({ items: [] });
+    await expect(service.hideFromContinueReading('user', 'readmanga_ru', titleId)).rejects.toThrow(
+      'Хранилище недоступно',
+    );
+  });
+});
+
+describe('pickContinueReadingRows', () => {
+  const at = (iso: string) => new Date(iso);
+  const shown = () => true;
+
+  it('одна строка на группу совпадений — самая свежая', () => {
+    const rows = [
+      row('mangalib:/b', 'mangalib', 90, '2026-09-22T10:00:00Z'),
+      row('desume:/c', 'desume', 40, '2026-09-21T10:00:00Z'),
+      row('readmanga_ru:/a', 'readmanga_ru', 12, '2026-09-20T10:00:00Z'),
+    ];
+    const canonical = new Map([
+      ['mangalib:/b', 'readmanga_ru:/a'],
+      ['readmanga_ru:/a', 'readmanga_ru:/a'],
+      ['desume:/c', 'desume:/c'],
+    ]);
+
+    const picked = pickContinueReadingRows(rows, canonical, shown);
+
+    expect(picked.map(({ titleKey }) => titleKey)).toEqual(['mangalib:/b', 'desume:/c']);
+  });
+
+  it('убранный тайтл скрыт, пока его не читали снова', () => {
+    const hidden = {
+      ...row('desume:/c', 'desume', 40, '2026-09-21T10:00:00Z'),
+      hiddenAt: at('2026-09-22T00:00:00Z'),
+    };
+    const readAgain = {
+      ...row('mangalib:/b', 'mangalib', 91, '2026-09-23T10:00:00Z'),
+      hiddenAt: at('2026-09-22T00:00:00Z'),
+    };
+
+    const picked = pickContinueReadingRows([readAgain, hidden], new Map(), shown);
+
+    expect(picked.map(({ titleKey }) => titleKey)).toEqual(['mangalib:/b']);
+  });
+
+  it('тайтлы выключенных и скрытых источников не показываются', () => {
+    const rows = [
+      row('mangalib:/b', 'mangalib', 90, '2026-09-22T10:00:00Z'),
+      row('desume:/c', 'desume', 40, '2026-09-21T10:00:00Z'),
+    ];
+
+    const picked = pickContinueReadingRows(rows, new Map(), (id) => id !== 'mangalib');
+
+    expect(picked.map(({ sourceId }) => sourceId)).toEqual(['desume']);
+  });
+});
+
+describe('ReadingProgressService.listRecent', () => {
+  /** select()…limit() отдаёт строки, update()…where() — пишет снимок в журнал. */
+  const fakeDatabase = (rows: ReadingProgressRow[], updates: unknown[]) => {
+    const chain = (result: unknown) => {
+      const node: Record<string, unknown> = {};
+      for (const method of ['from', 'where', 'orderBy', 'limit', 'set']) {
+        node[method] = (value: unknown) => {
+          if (method === 'set') updates.push(value);
+          return node;
+        };
+      }
+      node['then'] = (resolve: (value: unknown) => void) => resolve(result);
+      return node;
+    };
+    return {
+      withFallback: <T>(operation: () => Promise<T>) => operation(),
+      db: { select: () => chain(rows), update: () => chain(undefined) },
+    } as unknown as DatabaseService;
+  };
+
+  const sources = {
+    listSources: () =>
+      Promise.resolve([
+        { id: 'readmanga_ru', isEnabled: true },
+        { id: 'mangalib', isEnabled: false },
+      ]),
+  } as unknown as SourcesService;
+  const links = {
+    listCanonicalKeys: (keys: string[]) => Promise.resolve(new Map(keys.map((k) => [k, k]))),
+  } as unknown as TitleLinksService;
+
+  const withSnapshot = (titleKey: string, updatedAt: string) => ({
+    ...row(titleKey, 'readmanga_ru', 5, updatedAt),
+    titleId: `readmanga_ru:${titleKey}`,
+    titleName: 'Есть снимок',
+    coverUrl: 'https://cdn.example/cover.jpg',
+    contentRating: 'safe' as const,
+  });
+
+  it('отдаёт снимок с подписанной обложкой, дописывает пропущенный и пропускает недоступное', async () => {
+    const updates: unknown[] = [];
+    const rows = [
+      withSnapshot('readmanga_ru:/fresh', '2026-09-25T10:00:00Z'),
+      row('readmanga_ru:/old', 'readmanga_ru', 3, '2026-09-24T10:00:00Z'),
+      row('readmanga_ru:/gone', 'readmanga_ru', 1, '2026-09-23T10:00:00Z'),
+      row('mangalib:/off', 'mangalib', 9, '2026-09-22T10:00:00Z'),
+    ];
+    const parsersClient = {
+      getDetails: (_sourceId: string, url: string) =>
+        url === '/old'
+          ? Promise.resolve({
+              data: { id: 1, url: '/old', title: 'Дописан', coverUrl: null, contentRating: null },
+            })
+          : Promise.reject(new Error('not found')),
+    } as unknown as ParsersClientService;
+    const service = new ReadingProgressService(
+      ENV,
+      fakeDatabase(rows, updates),
+      links,
+      parsersClient,
+      {} as AdultContentService,
+      {} as BookmarksService,
+      sources,
+    );
+
+    const { items } = await service.listRecent('user');
+
+    expect(items.map(({ title }) => title.name)).toEqual(['Есть снимок', 'Дописан']);
+    expect(items[0]!.title.coverUrl).toContain('/img');
+    expect(items[0]!.chapter).toMatchObject({ number: 5, id: 'readmanga_ru:chapter' });
+    expect(items[1]!.title.id).toMatch(/^readmanga_ru:/);
+    expect(updates).toEqual([expect.objectContaining({ titleName: 'Дописан' })]);
   });
 });

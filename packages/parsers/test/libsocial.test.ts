@@ -6,6 +6,7 @@ import { LIBSOCIAL_API_HOST } from '../src/sources/libsocial/config';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
+import { readFixture } from './support/fixtures';
 import {
   FILTER_TYPE,
   TITLE_RESTRICTION,
@@ -489,5 +490,114 @@ describe('LibSocial parser conformance', () => {
     expect(url.searchParams.get('year_max')).toBe('2020');
     expect(url.searchParams.get('chap_count_max')).toBe('50');
     expect(url.searchParams.get('chap_count_min')).toBeNull();
+  });
+});
+
+describe('LibSocial getHome', () => {
+  it('maps the home payload into the described sections, «Сейчас читают» tabs by key', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${LIBSOCIAL_API_HOST}/api/`, {
+      status: 200,
+      body: readFixture('libsocial-home.json'),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    const sections = await parser.getHome!();
+
+    expect(sections.map(({ id }) => id)).toEqual(parser.info.homeSections.map(({ id }) => id));
+    for (const section of sections) {
+      expect(section.items.length).toBeGreaterThan(0);
+      for (const item of section.items) {
+        expect(item.chapters).toBeNull();
+        expect(item.title).toBeTruthy();
+        expect(item.coverUrl).toMatch(/^https:\/\//);
+      }
+    }
+  });
+});
+
+describe('LibSocial getHomeSection', () => {
+  const ITEM = JSON.parse(LIST_JSON).data[0] as Record<string, unknown>;
+  const topViewsPage = (ids: number[]) =>
+    JSON.stringify({
+      data: ids.map((id) => ({ ...ITEM, id, slug_url: `${id}--t` })),
+      meta: { has_next_page: true },
+    });
+
+  it('«Сейчас читают»: one page of the tab per request, period variant and tab in the query', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/media/top-views'), {
+      status: 200,
+      body: topViewsPage([1, 2, 3]),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    const section = await parser.getHomeSection!('readingNowRising', { page: 2, variant: 'week' });
+
+    expect(section?.items.map(({ url }) => url)).toEqual(['1--t', '2--t', '3--t']);
+    expect(section?.hasNextPage).toBe(true);
+    const query = new URL(http.requests[0]!.url).searchParams;
+    expect(query.get('time')).toBe('week');
+    expect(query.get('popularity')).toBe('2');
+    expect(query.get('page')).toBe('2');
+  });
+
+  it('«Сейчас читают»: an unknown period variant falls back to the day', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/media/top-views'), {
+      status: 200,
+      body: topViewsPage([1]),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    await parser.getHomeSection!('readingNowNew', { page: 1, variant: 'year' });
+
+    expect(new URL(http.requests[0]!.url).searchParams.get('time')).toBe('day');
+  });
+
+  it('«Сейчас читают»: stops at the 9th page like the site does', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/media/top-views'), {
+      status: 200,
+      body: topViewsPage([1]),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    await expect(parser.getHomeSection!('readingNowNew', { page: 9 })).resolves.toMatchObject({
+      hasNextPage: false,
+    });
+    await expect(parser.getHomeSection!('readingNowNew', { page: 10 })).resolves.toEqual({
+      items: [],
+      hasNextPage: false,
+    });
+    expect(http.requests).toHaveLength(1);
+  });
+
+  it('«Последние обновления»: a page past the end comes back clamped — empty, no next', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/latest-updates'), {
+      status: 200,
+      body: JSON.stringify({ data: [ITEM], meta: { current_page: 9, has_next_page: true } }),
+      contentType: 'application/json',
+    });
+    const parser = createLibSocialParser(CFG, makeContext(http));
+
+    await expect(parser.getHomeSection!('latestUpdates', { page: 9 })).resolves.toMatchObject({
+      hasNextPage: true,
+    });
+    await expect(parser.getHomeSection!('latestUpdates', { page: 10 })).resolves.toEqual({
+      items: [],
+      hasNextPage: false,
+    });
+  });
+
+  it('blocks that come only with the home payload — null', async () => {
+    const parser = createLibSocialParser(CFG, makeContext(new FakeHttpClient()));
+
+    await expect(parser.getHomeSection!('popular', { page: 1 })).resolves.toBeNull();
   });
 });

@@ -13,5 +13,7 @@ export type PageLayoutRefreshableQuery = PageLayoutBaseQuery & {
 export type PageLayoutPaginatedQuery = PageLayoutBaseQuery & {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  /** Следующая страница не загрузилась — на месте подгрузки строка с повтором. */
+  isFetchNextPageError: boolean;
   fetchNextPage: () => unknown;
 };

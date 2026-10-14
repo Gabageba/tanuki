@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { SEARCH_GROUP_STATUS } from '@tanuki/contracts';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import { SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
-import { getMissReasonLabel } from '../lib';
+import { getMissReasonLabel } from '@/entities/source/lib';
 import type { MissedGroup } from '../models';
 
 type Props = {

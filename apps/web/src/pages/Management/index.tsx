@@ -45,7 +45,7 @@ function Management() {
       <PageLayout.Content
         title={t('management')}
         actions={activeTab === MANAGEMENT_TABS.INVITES && <CreateInviteButton />}
-        goBack={{ path: ROUTE_PATHS.SOURCES }}
+        goBack={{ path: ROUTE_PATHS.HOME }}
       >
         <Tabs value={activeTab} onChange={handleTabChange}>
           <Tabs.List>

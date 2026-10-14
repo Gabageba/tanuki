@@ -26,6 +26,7 @@ function TitleBreadcrumbs({ title }: Props) {
   const catalogPath = generatePath(ROUTE_PATHS.CATALOG, { sourceId: source.id });
 
   const items = [
+    { title: t('home'), href: ROUTE_PATHS.HOME },
     { title: t('allSources'), href: ROUTE_PATHS.SOURCES },
     { title: source.title, href: catalogPath },
     { title: title.name, href: '' },

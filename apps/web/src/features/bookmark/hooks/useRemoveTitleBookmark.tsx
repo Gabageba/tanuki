@@ -10,7 +10,7 @@ import { ApiRequestError, apiFetch } from '@/shared/api/client';
 import type { ErrorMeta } from '@/shared/api/errorMeta';
 import { invalidateBookmarks } from '@/entities/bookmark/lib';
 import { getTitleBookmarkQueryKey } from '@/entities/bookmark/models';
-import RemovedFromBookmarksMessage from '../RemovedFromBookmarksMessage';
+import UndoToastMessage from '@/shared/ui/UndoToastMessage';
 
 /** Сколько держится тост с «Вернуть». */
 const RESTORE_TOAST_MS = 6000;
@@ -59,7 +59,13 @@ function useRemoveTitleBookmark(titleId: string) {
       if (rows.length === 0) return;
       const toastId = notifications.show({
         autoClose: RESTORE_TOAST_MS,
-        message: <RemovedFromBookmarksMessage onRestore={() => void restore(rows, toastId)} />,
+        message: (
+          <UndoToastMessage
+            message={t('removedFromBookmarks')}
+            actionLabel={t('restore')}
+            onAction={() => void restore(rows, toastId)}
+          />
+        ),
       });
     },
     onSettled: () => invalidateBookmarks(queryClient),

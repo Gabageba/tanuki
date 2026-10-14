@@ -194,6 +194,41 @@ export const LinkLibSocialTokenRequestSchema = z.object({
 });
 export type LinkLibSocialTokenRequest = z.infer<typeof LinkLibSocialTokenRequestSchema>;
 
+/** Смысл блока главной — по нему фронт берёт иконку вкладки: названия у сайтов свои, вид общий. */
+export const HOME_SECTION_KIND = {
+  NEW: 'new',
+  TRENDING: 'trending',
+  POPULAR: 'popular',
+  TOP: 'top',
+  UPDATES: 'updates',
+} as const;
+export type HomeSectionKind = EnumLiteralsOf<typeof HOME_SECTION_KIND>;
+
+export const HomeSectionKindSchema = z.enum(HOME_SECTION_KIND);
+
+/**
+ * Вариант блока — вкладка переключателя внутри блока на сайте: период у «Сейчас читают» MangaLib,
+ * страна у «Топа тайтлов» Реманги. id стабилен в пределах блока, название — как у сайта.
+ */
+export const HomeSectionVariantSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+});
+export type HomeSectionVariant = z.infer<typeof HomeSectionVariantSchema>;
+
+/**
+ * Блок с главной страницы сайта («Горячие новинки», «В тренде»): id стабилен — по нему хранится
+ * выбор пользователя (`sourceId:sectionId`), название — как у сайта, без перевода.
+ */
+export const HomeSectionInfoSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  kind: HomeSectionKindSchema,
+  /** Переключатель внутри блока на сайте; пустой — переключателя нет. Первый — по умолчанию. */
+  variants: z.array(HomeSectionVariantSchema),
+});
+export type HomeSectionInfo = z.infer<typeof HomeSectionInfoSchema>;
+
 export const SourceSchema = z.object({
   id: z.string(), // "desume"
   title: z.string(),
@@ -241,6 +276,8 @@ export const SourceSchema = z.object({
   /** Пользователь не выключил источник в настройках. У гостя всегда true. */
   isEnabled: z.boolean(),
   access: SourceAccessSchema,
+  /** Блоки главной сайта в его порядке — для подборок; пустой — у источника нет главной. */
+  homeSections: z.array(HomeSectionInfoSchema),
 });
 
 export type Source = z.infer<typeof SourceSchema>;

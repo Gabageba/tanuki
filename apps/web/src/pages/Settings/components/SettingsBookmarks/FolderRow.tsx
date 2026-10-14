@@ -13,7 +13,7 @@ import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
 import GroupedList from '@/shared/ui/GroupedList';
 import useToggleFolderTracking from './hooks/useToggleFolderTracking';
 import { FOLDER_MENU_WIDTH } from './models';
-import styles from '../SettingsSources/SettingsSources.module.scss';
+import styles from '../../Settings.module.scss';
 
 type Props = {
   folder: ResolvedBookmarkFolder;

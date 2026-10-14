@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_RESTRICTION,
@@ -14,6 +15,8 @@ import {
   type TitleState,
   SOURCE_AUTH_FAMILY,
   SOURCE_LOCALE,
+  type EnumLiteralsOf,
+  type HomeSectionVariant,
   type TitleType,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
@@ -35,6 +38,9 @@ import type {
   RawFilterOption,
   RawTitleType,
   RawContentRating,
+  RawHomeSectionInfo,
+  RawHomeSectionPage,
+  RawHomeSectionParams,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -47,6 +53,7 @@ import { getValidAccessToken } from './auth';
 import { loginLibSocialWithPassword } from './login';
 import { fileTokenStore } from './token-store';
 import { currentSourceAccount } from '../../core/source-accounts';
+import { toHomeSections } from '../../core/home';
 
 const PAGE_SIZE = 60;
 
@@ -183,6 +190,106 @@ type TagJson = {
   id: number;
   name: string;
 };
+
+/** `GET /api/` — вся главная сайта сети одним ответом, без входа (проверено вживую 2026-10-12).
+ *  «Сейчас читают» — три вкладки по три тайтла: 1 — новинки, 2 — набирающее популярность,
+ *  3 — популярное (видно по id и просмотрам). */
+type HomeJson = {
+  popular?: MangaListItemJson[];
+  newest?: MangaListItemJson[];
+  latest_updates?: MangaListItemJson[];
+  currently_views?: { items?: Partial<Record<string, { media: MangaListItemJson }[]>> };
+};
+
+export const LIBSOCIAL_HOME_SECTION = {
+  POPULAR: 'popular',
+  NEWEST: 'newest',
+  LATEST_UPDATES: 'latestUpdates',
+  READING_NOW_NEW: 'readingNowNew',
+  READING_NOW_RISING: 'readingNowRising',
+  READING_NOW_POPULAR: 'readingNowPopular',
+} as const;
+
+/** Период «Сейчас читают» — как `time=` у `/api/media/top-views`. */
+const READING_NOW_PERIOD = {
+  DAY: 'day',
+  WEEK: 'week',
+  MONTH: 'month',
+} as const;
+type ReadingNowPeriod = EnumLiteralsOf<typeof READING_NOW_PERIOD>;
+
+const READING_NOW_PERIODS: (HomeSectionVariant & { id: ReadingNowPeriod })[] = [
+  { id: READING_NOW_PERIOD.DAY, title: 'За день' },
+  { id: READING_NOW_PERIOD.WEEK, title: 'За неделю' },
+  { id: READING_NOW_PERIOD.MONTH, title: 'За месяц' },
+];
+
+const LIBSOCIAL_HOME_SECTIONS: RawHomeSectionInfo[] = [
+  { id: LIBSOCIAL_HOME_SECTION.POPULAR, title: 'Популярное', kind: HOME_SECTION_KIND.POPULAR },
+  { id: LIBSOCIAL_HOME_SECTION.NEWEST, title: 'Новинки', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: LIBSOCIAL_HOME_SECTION.LATEST_UPDATES,
+    title: 'Последние обновления',
+    kind: HOME_SECTION_KIND.UPDATES,
+  },
+  {
+    id: LIBSOCIAL_HOME_SECTION.READING_NOW_NEW,
+    title: 'Сейчас читают: новинки',
+    kind: HOME_SECTION_KIND.TRENDING,
+    variants: READING_NOW_PERIODS,
+  },
+  {
+    id: LIBSOCIAL_HOME_SECTION.READING_NOW_RISING,
+    title: 'Сейчас читают: набирающее популярность',
+    kind: HOME_SECTION_KIND.TRENDING,
+    variants: READING_NOW_PERIODS,
+  },
+  {
+    id: LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR,
+    title: 'Сейчас читают: популярное',
+    kind: HOME_SECTION_KIND.TOP,
+    variants: READING_NOW_PERIODS,
+  },
+];
+
+/** Вкладка «Сейчас читают»: ключ в `currently_views.items` и `popularity=` у `/api/media/top-views`. */
+const getReadingNowTabKey = (
+  section:
+    | typeof LIBSOCIAL_HOME_SECTION.READING_NOW_NEW
+    | typeof LIBSOCIAL_HOME_SECTION.READING_NOW_RISING
+    | typeof LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR,
+) => {
+  switch (section) {
+    case LIBSOCIAL_HOME_SECTION.READING_NOW_NEW:
+      return '1';
+    case LIBSOCIAL_HOME_SECTION.READING_NOW_RISING:
+      return '2';
+    case LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR:
+      return '3';
+  }
+};
+
+/** «Сейчас читают» за период — `/api/media/top-views?time=&popularity=&page=`, как на странице
+ *  `/top-views` сайта: одна вкладка, по 56 тайтлов, `has_next_page` не кончается никогда, но
+ *  сама страница сайта листает только 9 порций — дальше порядок уже не по просмотрам (проверено
+ *  вживую 2026-10-13). Без `popularity` тот же адрес отдаёт виджет главной — по 3 на вкладку. */
+const READING_NOW_MAX_PAGES = 9;
+
+type TopViewsJson = {
+  data: MangaListItemJson[];
+  meta?: { has_next_page?: boolean };
+};
+
+/** `/api/latest-updates?page=` — за последней страницей сайт отдаёт её же с её `current_page`. */
+type LatestUpdatesJson = {
+  data: MangaListItemJson[];
+  meta?: { current_page?: number; has_next_page?: boolean };
+};
+
+const isReadingNowSection = (id: string): id is Parameters<typeof getReadingNowTabKey>[0] =>
+  id === LIBSOCIAL_HOME_SECTION.READING_NOW_NEW ||
+  id === LIBSOCIAL_HOME_SECTION.READING_NOW_RISING ||
+  id === LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR;
 
 /** `/api/genres` and `/api/tags` — shared across the whole LibSocial network, so each entry
  *  carries every member site's id and must be filtered down to `cfg.siteId`. */
@@ -938,6 +1045,71 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     });
   };
 
+  const getHome = async () => {
+    const json = await ctx.http.getJson<{ data: HomeJson }>(`https://${LIBSOCIAL_API_HOST}/api/`);
+    const {
+      popular,
+      newest,
+      latest_updates: latestUpdates,
+      currently_views: readingNow,
+    } = json.data;
+    const readingNowTab = (section: Parameters<typeof getReadingNowTabKey>[0]) =>
+      (readingNow?.items?.[getReadingNowTabKey(section)] ?? []).map(({ media }) =>
+        parseManga(media),
+      );
+    return toHomeSections(LIBSOCIAL_HOME_SECTIONS, {
+      [LIBSOCIAL_HOME_SECTION.POPULAR]: (popular ?? []).map(parseManga),
+      [LIBSOCIAL_HOME_SECTION.NEWEST]: (newest ?? []).map(parseManga),
+      [LIBSOCIAL_HOME_SECTION.LATEST_UPDATES]: (latestUpdates ?? []).map(parseManga),
+      [LIBSOCIAL_HOME_SECTION.READING_NOW_NEW]: readingNowTab(
+        LIBSOCIAL_HOME_SECTION.READING_NOW_NEW,
+      ),
+      [LIBSOCIAL_HOME_SECTION.READING_NOW_RISING]: readingNowTab(
+        LIBSOCIAL_HOME_SECTION.READING_NOW_RISING,
+      ),
+      [LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR]: readingNowTab(
+        LIBSOCIAL_HOME_SECTION.READING_NOW_POPULAR,
+      ),
+    });
+  };
+
+  /** Порция вкладки «Сейчас читают» за период; чужой период — за день. */
+  const fetchReadingNow = async (
+    section: Parameters<typeof getReadingNowTabKey>[0],
+    variant: string | undefined,
+    page: number,
+  ): Promise<RawHomeSectionPage> => {
+    const period =
+      READING_NOW_PERIODS.find(({ id }) => id === variant)?.id ?? READING_NOW_PERIOD.DAY;
+    if (page > READING_NOW_MAX_PAGES) return { items: [], hasNextPage: false };
+    const json = await ctx.http.getJson<TopViewsJson>(
+      `https://${LIBSOCIAL_API_HOST}/api/media/top-views?time=${period}&popularity=${getReadingNowTabKey(section)}&page=${page}`,
+    );
+    return {
+      items: json.data.map(parseManga),
+      hasNextPage: page < READING_NOW_MAX_PAGES && Boolean(json.meta?.has_next_page),
+    };
+  };
+
+  const getHomeSection = async (
+    id: string,
+    { page, variant }: RawHomeSectionParams,
+  ): Promise<RawHomeSectionPage | null> => {
+    if (isReadingNowSection(id)) return fetchReadingNow(id, variant, page);
+    if (id === LIBSOCIAL_HOME_SECTION.LATEST_UPDATES) {
+      const json = await ctx.http.getJson<LatestUpdatesJson>(
+        `https://${LIBSOCIAL_API_HOST}/api/latest-updates?page=${page}`,
+      );
+      const currentPage = json.meta?.current_page ?? page;
+      if (currentPage < page) return { items: [], hasNextPage: false };
+      return {
+        items: json.data.map(parseManga),
+        hasNextPage: Boolean(json.meta?.has_next_page),
+      };
+    }
+    return null;
+  };
+
   return {
     id: cfg.id,
     info: {
@@ -965,11 +1137,14 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
+      homeSections: LIBSOCIAL_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
+    getHomeSection,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     async init() {

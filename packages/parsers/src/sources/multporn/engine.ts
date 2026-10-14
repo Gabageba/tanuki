@@ -1,6 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   SORT_DIRECTION,
@@ -27,6 +28,7 @@ import { ParseError } from '../../errors';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { catalogEntryFor } from '../catalog';
 import type { MultpornConfig } from './config';
+import { toHomeSections, uniqueByUrl } from '../../core/home';
 
 const BROWSE_PAGE_SIZE = 15;
 /** Page size of every taxonomy-route listing (`/category_hentai/*`, `/characters_hentai/*`,
@@ -38,6 +40,12 @@ const TAXONOMY_PAGE_SIZE = 10;
  *  exists as a field on `/new`'s own exposed form — verified live that none of the four combine
  *  with each other (a taxonomy-route page's exposed form has no `language` field at all). */
 const ROUTE_EXCLUSIVE_GROUP = 'route';
+
+/** Блок главной multporn.net — проверено вживую 2026-10-12: у каждого типа свой блок
+ *  обновлений («Updated comics», «Updated manga»), название — из MultpornConfig.home. */
+export const MULTPORN_HOME_SECTION = {
+  UPDATED: 'updated',
+} as const;
 
 export const MULTPORN_FILTER_GROUP = {
   TAG: FILTER_GROUP.TAG,
@@ -670,6 +678,21 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     return pages;
   };
 
+  /** Единственный блок главной — обновления своего типа (MULTPORN_HOME_SECTION.UPDATED). */
+  const homeSections = [
+    { id: MULTPORN_HOME_SECTION.UPDATED, title: cfg.home.title, kind: HOME_SECTION_KIND.UPDATES },
+  ];
+
+  const getHome = async () => {
+    const doc = await ctx.http.getHtml(new URL(cfg.home.path, `https://${domain}/`).toString());
+    const items = doc
+      .$('table.views-view-grid td')
+      .toArray()
+      .map((el) => parseRow(doc.$(el), doc.$, doc.baseUrl))
+      .filter((m): m is RawTitle => m !== null);
+    return toHomeSections(homeSections, { [MULTPORN_HOME_SECTION.UPDATED]: uniqueByUrl(items) });
+  };
+
   return {
     id: cfg.id,
     info: {
@@ -696,7 +719,9 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
       isMultipleTagsSupported: true,
       isFiltersSupported: cfg.filters !== undefined,
       isSearchWithFiltersSupported: false,
+      homeSections,
     },
+    getHome,
     getList,
     getDetails,
     getPages,

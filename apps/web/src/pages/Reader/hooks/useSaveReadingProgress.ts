@@ -6,6 +6,7 @@ import { getReadingProgressQueryKey } from '@/entities/title/hooks/useReadingPro
 import useUpdateReadingProgress, {
   saveReadingProgress,
 } from '@/entities/title/hooks/useUpdateReadingProgress';
+import { CONTINUE_READING_QUERY_KEY } from '@/entities/title/models';
 import { toOptimisticProgress } from '@/entities/title/readingProgress';
 import { getReaderPageKey } from '../lib';
 import type { ReaderPosition } from '../models';
@@ -53,11 +54,15 @@ function useSaveReadingProgress({ titleId, position }: Params) {
   }, [takePending, mutate]);
 
   // Страница уходит: мутация стартует запрос только после await в onMutate и может не успеть,
-  // поэтому запрос шлётся напрямую, прямо в обработчике. Ответ уже некому принять.
+  // поэтому запрос шлётся напрямую, прямо в обработчике. Если вкладку только спрятали, приложение
+  // живёт дальше — «Продолжить чтение» на главной должна увидеть новую позицию.
   const flushOnExit = useCallback(() => {
     const target = takePending();
-    if (target) saveReadingProgress(titleId, target).catch(() => undefined);
-  }, [takePending, titleId]);
+    if (!target) return;
+    saveReadingProgress(titleId, target)
+      .then(() => queryClient.invalidateQueries({ queryKey: CONTINUE_READING_QUERY_KEY }))
+      .catch(() => undefined);
+  }, [takePending, titleId, queryClient]);
 
   const { chapterId, pageIndex } = position;
   const chapter = chaptersData?.items.find((item) => item.id === chapterId);

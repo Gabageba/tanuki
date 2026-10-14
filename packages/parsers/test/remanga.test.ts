@@ -304,3 +304,125 @@ describe('Remanga parser conformance', () => {
     expect(url.searchParams.get('issue_year_lte')).toBe('2020');
   });
 });
+
+describe('Remanga getHome', () => {
+  const sliderTitle = (dir: string) => ({
+    title: {
+      dir,
+      main_name: dir,
+      avg_rating: '7.5',
+      cover: { mid: `/covers/${dir}.jpg` },
+      type: { id: 1 },
+    },
+  });
+
+  it('maps every described section in order, string ratings scaled to 0..1', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/v3/titles/?slider_type=hot_new'), {
+      status: 200,
+      body: JSON.stringify({ results: [sliderTitle('hot').title] }),
+      contentType: 'application/json',
+    });
+    http.register((url) => url.includes('/api/v2/titles/sliders/35/'), {
+      status: 404,
+      body: '{}',
+      contentType: 'application/json',
+    });
+    http.register((url) => url.includes('/api/v2/titles/sliders/'), {
+      status: 200,
+      body: JSON.stringify({ titles: [sliderTitle('slide')] }),
+      contentType: 'application/json',
+    });
+    const parser = createRemangaParser(makeContext(http));
+
+    const sections = await parser.getHome!();
+
+    expect(sections.map(({ id }) => id)).toEqual(parser.info.homeSections.map(({ id }) => id));
+    expect(sections[0]?.items[0]?.url).toBe('/manga/hot');
+    expect(sections[0]?.items[0]?.rating).toBeCloseTo(0.75);
+    expect(sections[0]?.items[0]?.chapters).toBeNull();
+    // «В тренде» не ответил — пустой блок, остальные на месте.
+    expect(sections.find(({ id }) => id === 'trending')?.items).toEqual([]);
+    expect(sections.find(({ id }) => id === 'popular')?.items).toHaveLength(1);
+  });
+
+  it('throws when every section failed', async () => {
+    const http = new FakeHttpClient();
+    http.register(() => true, { status: 500, body: '', contentType: 'application/json' });
+    const parser = createRemangaParser(makeContext(http));
+
+    await expect(parser.getHome!()).rejects.toThrow();
+  });
+});
+
+describe('Remanga getHomeSection', () => {
+  const titles = (count: number) =>
+    Array.from({ length: count }, (_, index) => ({
+      dir: `t${index}`,
+      main_name: `t${index}`,
+      avg_rating: '7',
+      cover: { mid: `/covers/${index}.jpg` },
+      type: { id: 1 },
+    }));
+
+  it('«Горячие новинки»: page in the query, next page while the API returns `next`', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('slider_type=hot_new'), {
+      status: 200,
+      body: JSON.stringify({ results: titles(20), next: '/api/v3/titles/?page=3&count=20' }),
+      contentType: 'application/json',
+    });
+    const parser = createRemangaParser(makeContext(http));
+
+    const page = await parser.getHomeSection!('hotNew', { page: 2 });
+
+    expect(page?.items).toHaveLength(20);
+    expect(page?.hasNextPage).toBe(true);
+    expect(new URL(http.requests[0]!.url).searchParams.get('page')).toBe('2');
+  });
+
+  it('slider: a short page is the last one', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/v2/titles/sliders/26/'), {
+      status: 200,
+      body: JSON.stringify({ titles: titles(7).map((title) => ({ title })) }),
+      contentType: 'application/json',
+    });
+    const parser = createRemangaParser(makeContext(http));
+
+    const page = await parser.getHomeSection!('newChapters', { page: 4 });
+
+    expect(page?.items).toHaveLength(7);
+    expect(page?.hasNextPage).toBe(false);
+    expect(http.requests[0]!.url).toContain('/sliders/26/?page=4');
+  });
+
+  it('«Топ тайтлов»: each origin variant is its own slider, an unknown one is the first', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.includes('/api/v2/titles/sliders/'), {
+      status: 200,
+      body: JSON.stringify({ titles: titles(20).map((title) => ({ title })) }),
+      contentType: 'application/json',
+    });
+    const parser = createRemangaParser(makeContext(http));
+
+    const page = await parser.getHomeSection!('topTitles', { page: 2, variant: 'japan' });
+    await parser.getHomeSection!('topTitles', { page: 1, variant: 'china' });
+    await parser.getHomeSection!('topTitles', { page: 1, variant: 'mars' });
+    await parser.getHomeSection!('topTitles', { page: 1 });
+
+    expect(page?.hasNextPage).toBe(true);
+    expect(http.requests.map(({ url }) => new URL(url).pathname + new URL(url).search)).toEqual([
+      '/api/v2/titles/sliders/18/?page=2',
+      '/api/v2/titles/sliders/16/?page=1',
+      '/api/v2/titles/sliders/17/?page=1',
+      '/api/v2/titles/sliders/17/?page=1',
+    ]);
+  });
+
+  it('unknown section — null', async () => {
+    const parser = createRemangaParser(makeContext(new FakeHttpClient()));
+
+    await expect(parser.getHomeSection!('nope', { page: 1 })).resolves.toBeNull();
+  });
+});

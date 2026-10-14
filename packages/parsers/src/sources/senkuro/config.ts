@@ -6,6 +6,10 @@ export type SenkuroConfig = {
   apiEndpoint: string;
   /** Value of the `app-id` request header — this, not the host, selects the catalog. */
   appId: string;
+  /** Блок «Самое читаемое» на главной. У Senkognito `mangaPopularByPeriod` не смотрит на
+   *  app-id и отдаёт тайтлы Senkuro (сайт и сам их так показывает) — в его каталоге их не
+   *  открыть, поэтому там блока нет. */
+  hasPopularHome: boolean;
 };
 
 // title/domains/contentType live in SOURCE_CATALOG (../catalog) — look them up by id, don't
@@ -27,10 +31,12 @@ export const SENKURO_CONFIGS: SenkuroConfig[] = [
     id: SOURCE_ID.SENKURO,
     apiEndpoint: 'https://api.senkuro.com/graphql',
     appId: '4026531840100',
+    hasPopularHome: true,
   },
   {
     id: SOURCE_ID.SENKOGNITO,
     apiEndpoint: 'https://api.senkognito.com/graphql',
     appId: '5033164800100',
+    hasPopularHome: false,
   },
 ];

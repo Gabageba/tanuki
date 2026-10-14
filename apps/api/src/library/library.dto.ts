@@ -6,6 +6,7 @@ import {
   BookmarksLookupResponseSchema,
   BookmarksQuerySchema,
   BookmarksResponseSchema,
+  NewChapterBookmarksResponseSchema,
   CreateBookmarkFolderRequestSchema,
   DeleteBookmarkFolderQuerySchema,
   RemoveTitleBookmarkResponseSchema,
@@ -32,6 +33,10 @@ export class DeleteBookmarkFolderQueryDto extends createZodDto(DeleteBookmarkFol
 
 export class BookmarksQueryDto extends createZodDto(BookmarksQuerySchema) {}
 export class BookmarksResponseDto extends createZodDto(BookmarksResponseSchema) {}
+
+export class NewChapterBookmarksResponseDto extends createZodDto(
+  NewChapterBookmarksResponseSchema,
+) {}
 export class BookmarksLookupRequestDto extends createZodDto(BookmarksLookupRequestSchema) {}
 export class BookmarksLookupResponseDto extends createZodDto(BookmarksLookupResponseSchema) {}
 export class RestoreBookmarksRequestDto extends createZodDto(RestoreBookmarksRequestSchema) {}

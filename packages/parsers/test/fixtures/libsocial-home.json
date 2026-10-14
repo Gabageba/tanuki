@@ -1,0 +1,263 @@
+{
+  "data": {
+    "popular": [
+      {
+        "id": 65854,
+        "name": "agdang gongjaggaui silse magnaettal-ibnida",
+        "rus_name": "Истинная младшая дочь герцога-злодея",
+        "slug_url": "65854--agdang-gongjaggaui-silse-magnaettal-ibnida",
+        "cover": {
+          "default": "https://cover.cdnlibs.org/uploads/cover/agdang-gongjaggaui-silse-magnaettal-ibnida/cover/1d380bc3-ea2b-4cb8-beaa-5768ad389594.jpg"
+        },
+        "rating": {
+          "average": "0",
+          "averageFormated": "0",
+          "votes": 0,
+          "votesFormated": "0",
+          "user": 0
+        },
+        "status": {
+          "id": 1,
+          "label": "Онгоинг"
+        },
+        "type": {
+          "id": 5,
+          "label": "Манхва"
+        },
+        "ageRestriction": {
+          "id": 3,
+          "label": "16+"
+        }
+      },
+      {
+        "id": 179740,
+        "name": "Shuin bohosoeser namjurl ipyangha buriossda",
+        "rus_name": "Я забрала главного героя из приюта для заключенных",
+        "slug_url": "179740--shuin-bohosoeser-namjurl-ipyangha-buriossda",
+        "cover": {
+          "default": "https://cover.cdnlibs.org/uploads/cover/shuin-bohosoeser-namjurl-ipyangha-buriossda/cover/08de63f6-8189-4cec-953f-b8b841ae601f.jpg"
+        },
+        "rating": {
+          "average": "0",
+          "averageFormated": "0",
+          "votes": 0,
+          "votesFormated": "0",
+          "user": 0
+        },
+        "status": {
+          "id": 1,
+          "label": "Онгоинг"
+        },
+        "type": {
+          "id": 5,
+          "label": "Манхва"
+        },
+        "ageRestriction": {
+          "id": 3,
+          "label": "16+"
+        }
+      }
+    ],
+    "newest": [
+      {
+        "id": 276302,
+        "name": "Mahoutsukai no Yoru - Witch Rekōdzu",
+        "rus_name": "Ночь Волшебства - Записи Ведьмы",
+        "slug_url": "276302--mahoutsukai-no-yoru-witch-rekodzu",
+        "cover": {
+          "default": "https://cover.cdnlibs.org/uploads/cover/mahoutsukai-no-yoru-witch-rekodzu/cover/99795032-02d8-4995-afcb-b6c8af9faa9a.jpg"
+        },
+        "rating": {
+          "average": "0",
+          "averageFormated": "0",
+          "votes": 0,
+          "votesFormated": "0",
+          "user": 0
+        },
+        "status": {
+          "id": 3,
+          "label": "Анонс"
+        },
+        "type": {
+          "id": 1,
+          "label": "Манга"
+        },
+        "ageRestriction": {
+          "id": 3,
+          "label": "16+"
+        }
+      },
+      {
+        "id": 276301,
+        "name": "jeonjijeog 1inching sijeom",
+        "rus_name": "Всеведущая Точка Зрения от Первого Лица",
+        "slug_url": "276301--jeonjijeog-1inching-sijeom",
+        "cover": {
+          "default": "https://cover.cdnlibs.org/uploads/cover/jeonjijeog-1inching-sijeom/cover/ae9de044-09d9-4ae6-a43f-c1c20e867f2a.jpg"
+        },
+        "rating": {
+          "average": "0",
+          "averageFormated": "0",
+          "votes": 0,
+          "votesFormated": "0",
+          "user": 0
+        },
+        "status": {
+          "id": 3,
+          "label": "Анонс"
+        },
+        "type": {
+          "id": 5,
+          "label": "Манхва"
+        },
+        "ageRestriction": {
+          "id": 4,
+          "label": "18+"
+        }
+      }
+    ],
+    "latest_updates": [
+      {
+        "id": 253266,
+        "name": "pantaji ibsodae",
+        "rus_name": "Фэнтезийный отряд новобранцев",
+        "slug_url": "253266--pantaji-ibsodae",
+        "cover": {
+          "default": "https://cover.cdnlibs.org/uploads/cover/pantaji-ibsodae/cover/967b3a9a-78ed-42ba-ab57-794fd23d2908.jpg"
+        },
+        "rating": {
+          "average": "0",
+          "averageFormated": "0",
+          "votes": 0,
+          "votesFormated": "0",
+          "user": 0
+        },
+        "status": {
+          "id": 1,
+          "label": "Онгоинг"
+        },
+        "type": {
+          "id": 5,
+          "label": "Манхва"
+        },
+        "ageRestriction": {
+          "id": 4,
+          "label": "18+"
+        }
+      },
+      {
+        "id": 276265,
+        "name": "Ikinari Shinratsuchan",
+        "rus_name": "Неожиданно колкая девушка",
+        "slug_url": "276265--ikinari-shinratsuchan",
+        "cover": {
+          "default": "https://cover.cdnlibs.org/uploads/cover/ikinari-shinratsuchan/cover/0d191f1a-d8ee-48e7-9ff9-e72dffaebf33.jpg"
+        },
+        "rating": {
+          "average": "0",
+          "averageFormated": "0",
+          "votes": 0,
+          "votesFormated": "0",
+          "user": 0
+        },
+        "status": {
+          "id": 1,
+          "label": "Онгоинг"
+        },
+        "type": {
+          "id": 1,
+          "label": "Манга"
+        },
+        "ageRestriction": {
+          "id": 4,
+          "label": "18+"
+        }
+      }
+    ],
+    "currently_views": {
+      "time_filter": "day",
+      "items": {
+        "1": [
+          {
+            "views": 756,
+            "media": {
+              "id": 263976,
+              "name": "Ore ga Sodateta Saikyou Kyara ni Tensei Shita no de, Hamukau Yatsu wa Subete Bun na Gutte Ikiru Koto ni Shimashita",
+              "rus_name": "Я переродился в самом сильном персонаже, которого когда-либо создавал, поэтому решил прожить свою жизнь, избивая любого, кто осмелится мне противостоять.",
+              "slug_url": "263976--ore-ga-sodateta-saikyou-kyara-ni-tensei-shita-no-de-hamukau-yatsu-wa-subete-bun-na-gutte-ikiru-koto-ni-shimashita",
+              "cover": {
+                "default": "https://cover.cdnlibs.org/uploads/cover/ore-ga-sodateta-saikyou-kyara-ni-tensei-shita-no-de-hamukau-yatsu-wa-subete-bun-na-gutte-ikiru-koto-ni-shimashita/cover/fb0920fa-5c72-455c-8b5e-65d1c9f18732.jpg"
+              },
+              "status": {
+                "id": 1,
+                "label": "Онгоинг"
+              },
+              "type": {
+                "id": 1,
+                "label": "Манга"
+              },
+              "ageRestriction": {
+                "id": 4,
+                "label": "18+"
+              }
+            }
+          }
+        ],
+        "2": [
+          {
+            "views": 426,
+            "media": {
+              "id": 257714,
+              "name": "donjoneul geurineun hwaga",
+              "rus_name": "Художник, рисующий подземелья",
+              "slug_url": "257714--donjoneul-geurineun-hwaga",
+              "cover": {
+                "default": "https://cover.cdnlibs.org/uploads/cover/donjoneul-geurineun-hwaga/cover/c8d00e18-d8cd-4dfa-869c-5b4708eff2b8.jpg"
+              },
+              "status": {
+                "id": 1,
+                "label": "Онгоинг"
+              },
+              "type": {
+                "id": 5,
+                "label": "Манхва"
+              },
+              "ageRestriction": {
+                "id": 3,
+                "label": "16+"
+              }
+            }
+          }
+        ],
+        "3": [
+          {
+            "views": 1772,
+            "media": {
+              "id": 38359,
+              "name": "ibeon saeng-eun gajuga doegessseubnida",
+              "rus_name": "На сей раз я - хозяйка этой жизни",
+              "slug_url": "38359--ibeon-saeng-eun-gajuga-doegessseubnida",
+              "cover": {
+                "default": "https://cover.cdnlibs.org/uploads/cover/ibeon-saeng-eun-gajuga-doegessseubnida/cover/c6d44d3d-e373-4e94-a4a1-c1cb6fb1f749.jpg"
+              },
+              "status": {
+                "id": 1,
+                "label": "Онгоинг"
+              },
+              "type": {
+                "id": 5,
+                "label": "Манхва"
+              },
+              "ageRestriction": {
+                "id": 3,
+                "label": "16+"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "reviews": [],
+    "forum": []
+  }
+}

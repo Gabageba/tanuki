@@ -1,10 +1,9 @@
-import { Anchor, Group } from '@mantine/core';
-import { Link, generatePath } from 'react-router';
-import { ArrowRightIcon } from '@phosphor-icons/react';
+import { generatePath } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { FilterSelection } from '@tanuki/contracts';
 import { serializeFilters } from '@/features/filters/lib/filterSelection';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
+import ArrowLink from '@/shared/ui/ArrowLink';
 
 type Props = {
   sourceId: string;
@@ -19,14 +18,7 @@ function AllResultsLink({ sourceId, query, filters }: Props) {
   for (const value of serializeFilters(filters)) params.append('filters', value);
   const path = `${generatePath(ROUTE_PATHS.CATALOG, { sourceId })}?${params}`;
 
-  return (
-    <Anchor component={Link} to={path} fz="sm" flex="none">
-      <Group gap={4} wrap="nowrap">
-        {t('allResults')}
-        <ArrowRightIcon />
-      </Group>
-    </Anchor>
-  );
+  return <ArrowLink to={path}>{t('allResults')}</ArrowLink>;
 }
 
 export default AllResultsLink;

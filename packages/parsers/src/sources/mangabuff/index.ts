@@ -1,6 +1,7 @@
 import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import {
+  HOME_SECTION_KIND,
   CONTENT_RATING,
   FILTER_TYPE,
   TITLE_STATE,
@@ -34,6 +35,8 @@ import { parseDdMmYyyy } from '../../core/text/dates';
 import { ParseError, SourceUnavailableError } from '../../errors';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { toHomeSections, uniqueByUrl } from '../../core/home';
+import { findHomeHeading } from '../../core/html/home';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.MANGABUFF;
 const PAGE_SIZE = 24;
@@ -63,6 +66,39 @@ const getSortKey = (order: string | undefined): string => {
       return 'updated_at';
   }
 };
+
+/** Блоки главной mangabuff.ru — проверено вживую 2026-10-13. Карусели обложек («Манга онлайн»,
+ *  «Горячие новинки», «Новое на сайте») — те же `.cards__item`, что в каталоге; списки сбоку и
+ *  лента обновлений — свои строки с маленькой обложкой. */
+export const MANGABUFF_HOME_SECTION = {
+  MANGA_ONLINE: 'mangaOnline',
+  HOT_NEW: 'hotNew',
+  POPULAR_WEEK: 'popularWeek',
+  BEST_ONGOINGS: 'bestOngoings',
+  NEW_ON_SITE: 'newOnSite',
+  UPDATES: 'updates',
+} as const;
+
+const MANGABUFF_HOME_SECTIONS = [
+  {
+    id: MANGABUFF_HOME_SECTION.MANGA_ONLINE,
+    title: 'Манга онлайн',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
+  { id: MANGABUFF_HOME_SECTION.HOT_NEW, title: 'Горячие новинки', kind: HOME_SECTION_KIND.NEW },
+  {
+    id: MANGABUFF_HOME_SECTION.POPULAR_WEEK,
+    title: 'Популярно на неделе',
+    kind: HOME_SECTION_KIND.POPULAR,
+  },
+  {
+    id: MANGABUFF_HOME_SECTION.BEST_ONGOINGS,
+    title: 'Лучшие онгоинги',
+    kind: HOME_SECTION_KIND.TOP,
+  },
+  { id: MANGABUFF_HOME_SECTION.NEW_ON_SITE, title: 'Новое на сайте', kind: HOME_SECTION_KIND.NEW },
+  { id: MANGABUFF_HOME_SECTION.UPDATES, title: 'Обновления', kind: HOME_SECTION_KIND.UPDATES },
+];
 
 const parseStatus = (value: string): TitleState | null => {
   switch (value.toLowerCase().trim()) {
@@ -624,6 +660,81 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       .filter((p): p is RawPage => p !== null);
   };
 
+  /** Строка списка или ленты обновлений: ссылка на тайтл, название и обложка x70 — в карточку
+   *  берём x180, как в каталоге. */
+  const parseHomeRow = (
+    $row: Cheerio<AnyNode>,
+    nameSelector: string,
+    baseUrl: string,
+  ): RawTitle | null => {
+    const $name = $row.find(nameSelector).first();
+    const hrefRaw = attrOrNull($name, 'href');
+    const title = nullIfEmpty(textOrNull($name));
+    if (!hrefRaw || !title) return null;
+    const publicUrl = toAbsoluteUrl(hrefRaw, domain);
+    const relUrl = toRelativeUrl(publicUrl, domain);
+    const src = attrOrNull($row.find('img').first(), 'src');
+    return {
+      id: generateUid(SOURCE_ID, relUrl),
+      title,
+      altTitles: [],
+      url: relUrl,
+      publicUrl,
+      rating: RATING_UNKNOWN,
+      contentRating: null,
+      coverUrl: src ? new URL(src.replace('/x70/', '/x180/'), baseUrl).toString() : null,
+      tags: [],
+      releaseState: null,
+      authors: [],
+      largeCoverUrl: null,
+      description: null,
+      chapters: null,
+      source: SOURCE_ID,
+    };
+  };
+
+  const getHome = async () => {
+    const doc = await ctx.http.getHtml(`https://${domain}/`);
+    const { $, baseUrl } = doc;
+    const cardsAfter = (title: string) => {
+      const $cards = findHomeHeading(doc, '.secondary-title', title)?.nextAll('.cards').first();
+      return ($cards?.find('.cards__item').toArray() ?? [])
+        .map((el) => parseMangaCard($(el), baseUrl))
+        .filter((item): item is RawTitle => item !== null);
+    };
+    const listAfter = (title: string) => {
+      const $list = findHomeHeading(doc, '.secondary-title', title)?.nextAll('.list').first();
+      return ($list?.find('.list__item').toArray() ?? [])
+        .map((el) => parseHomeRow($(el), '.list__name', baseUrl))
+        .filter((item): item is RawTitle => item !== null);
+    };
+    const updates = $('.updates--all-list .updates__item')
+      .toArray()
+      .map((el) => parseHomeRow($(el), '.updates__name', baseUrl))
+      .filter((item): item is RawTitle => item !== null);
+    const titleOf = (id: string) =>
+      MANGABUFF_HOME_SECTIONS.find((section) => section.id === id)!.title;
+
+    return toHomeSections(MANGABUFF_HOME_SECTIONS, {
+      [MANGABUFF_HOME_SECTION.MANGA_ONLINE]: uniqueByUrl(
+        cardsAfter(titleOf(MANGABUFF_HOME_SECTION.MANGA_ONLINE)),
+      ),
+      [MANGABUFF_HOME_SECTION.HOT_NEW]: uniqueByUrl(
+        cardsAfter(titleOf(MANGABUFF_HOME_SECTION.HOT_NEW)),
+      ),
+      [MANGABUFF_HOME_SECTION.POPULAR_WEEK]: uniqueByUrl(
+        listAfter(titleOf(MANGABUFF_HOME_SECTION.POPULAR_WEEK)),
+      ),
+      [MANGABUFF_HOME_SECTION.BEST_ONGOINGS]: uniqueByUrl(
+        listAfter(titleOf(MANGABUFF_HOME_SECTION.BEST_ONGOINGS)),
+      ),
+      [MANGABUFF_HOME_SECTION.NEW_ON_SITE]: uniqueByUrl(
+        cardsAfter(titleOf(MANGABUFF_HOME_SECTION.NEW_ON_SITE)),
+      ),
+      [MANGABUFF_HOME_SECTION.UPDATES]: uniqueByUrl(updates),
+    });
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -641,11 +752,13 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: false,
+      homeSections: MANGABUFF_HOME_SECTIONS,
     },
     getList,
     getDetails,
     getPages,
     getFilters,
+    getHome,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };
