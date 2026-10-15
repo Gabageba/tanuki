@@ -5,6 +5,7 @@ import Bookmarks from './Bookmarks';
 import AdultContent from './AdultContent';
 import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
+import FolderRow from './FolderRow';
 import HeaderBackground from './HeaderBackground';
 import Home from './Home';
 import ImportSourcePicker from './ImportSourcePicker';
@@ -37,6 +38,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'folder-row',
+    Component: FolderRow,
+    title: 'Строка папки в настройках',
+    description:
+      'Как устроить строку папки в настройках закладок, чтобы у встроенных не оставалось пустого места под меню справа от тумблера, а тумблеры не вставали вразнобой.',
+    createdAt: '2026-10-15',
+    decision: 'V0a',
+  },
   {
     slug: 'selections-tabs',
     Component: SelectionsTabs,
