@@ -1,0 +1,17 @@
+// Стили приложения — общие для приложения и Storybook (.storybook/preview.tsx): слои Mantine,
+// шрифты и глобальные стили, в этом порядке.
+import '@mantine/core/styles.layer.css';
+import '@mantine/notifications/styles.layer.css';
+// Golos Text — интерфейс по умолчанию, без исключений на бренд-слой: 400 текст и навигация,
+// 600 акценты/кнопки/названия, 700 заголовки тайтлов и блоков.
+import '@fontsource/golos-text/400.css';
+import '@fontsource/golos-text/600.css';
+import '@fontsource/golos-text/700.css';
+// Unbounded — только лого, вес 600.
+import '@fontsource/unbounded/600.css';
+// JetBrains Mono — данные: номера, даты, счётчики, проценты, бейджи, мелкие капсом-лейблы.
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+// 800 — только огромный код ошибки фоном в StatusScreen.
+import '@fontsource/jetbrains-mono/800.css';
+import '@/styles/global.scss';

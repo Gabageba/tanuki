@@ -18,6 +18,7 @@
     "lint:styles": "stylelint \"apps/**/*.scss\" --allow-empty-input",
     "prepare": "husky",
     "start": "pnpm run docker && turbo run dev",
+    "storybook": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web storybook",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },

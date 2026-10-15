@@ -1,5 +1,8 @@
 dist
 build
 coverage
+storybook-static
+# Генерирует `msw init`, не правится руками.
+apps/web/.storybook/public/mockServiceWorker.js
 .turbo
 pnpm-lock.yaml
