@@ -338,3 +338,44 @@
   from that list by `app/PlaygroundRouter`, which `RouterProvider.tsx` mounts at `/playground/*`
   lazily and only under `import.meta.env.DEV`, so neither the pages nor their paths reach the
   production build. Keep it that way.
+
+## Storybook
+
+- Storybook (`pnpm storybook`, `apps/web/.storybook`) shows real components in states that are
+  hard to reach in the running app: modals and their steps, drawers, toasts, error screens. The
+  playground is for choosing between variants; Storybook is for checking what is already built.
+- A new page, modal, drawer, menu, toast or `shared/ui` component ships with a story. The story
+  file sits next to the component (`DeleteUserModal.stories.tsx`), titled
+  `<group>/<area>/<ComponentName>` with the groups «Страницы», «Страницы входа», «Модалки»,
+  «Дроверы», «Меню», «Тосты», «Экраны ошибок», «Карточки», «UI». A page is titled by its Russian
+  name instead (`Страницы/Каталог`, `Страницы входа/Вход`); the area is optional when the group
+  is enough (`UI/ListPagination`, `Карточки/TitleCard`). A component that opens an overlay goes
+  into that overlay's group (`ReaderSettingsButton` → «Дроверы», `FolderRow` → «Меню»).
+- A page story mounts the page on its real route inside the app's own frame: `parameters.route`
+  is a `StoryRoute` (`path` from `ROUTE_PATHS`, the opened `url`, `layout` from `STORY_LAYOUT`).
+  Every page has «Обычная» and «На телефоне» (`globals: MOBILE_GLOBALS`); a page with its own
+  data query adds «Загрузка» (`msw: LOADING_HANDLERS` — that is where its skeletons are checked)
+  and «Ошибка сервера» (`msw: ERROR_HANDLERS`), plus «Пусто» when the page has an empty state
+  and a story per tab. Static pages and auth forms have no loading or error story — they have
+  nothing to load.
+- A menu or popover story opens it in `play` (`clickFirstButton` from `shared/storybook/play.ts`
+  waits for the button to become enabled).
+- An overlay is rendered through `ModalStage` (`shared/storybook/ModalStage.tsx`): open at once,
+  closes like in the app, reopens with a button. Its render prop gives `opened`, `close` and
+  `setOpened`; the story maps them onto the component's own props (`user={opened ? USER : null}`).
+- Stories never hit the backend. Data comes from `shared/storybook/` — `fixtures.ts` (user,
+  sources, folders), `titles.ts` (titles, chapters, search, selections), `account.ts`
+  (statistics, notifications, bookmarks, users, invites); covers and chapter pages are SVG drawn
+  by `images.ts` and served at `/api/v1/img`. The network is
+  mocked by MSW — `DEFAULT_HANDLERS` (`shared/storybook/handlers.ts`) answer reads from the
+  fixtures and every write with success. A story overrides a response with `parameters.msw`
+  (`apiError(...)` for a server error). When a component needs a new GET, add it to
+  `DEFAULT_HANDLERS`, not to one story.
+- A state reached by a user action (the second step, a server error under a field) is a `play`
+  function with `userEvent`. Find elements by the translated text (`I18N.t('save')`), so the story
+  works in both languages; wait for a button to become enabled before clicking it.
+- The default export is `META`; stories are PascalCase named exports (Storybook's convention) with
+  a Russian `name`. The stories' own text — story names, `ModalStage`'s «Открыть», demo props
+  like a modal's `message` — is plain Russian literals and never goes into `shared/locales`, like
+  the playground; the components inside keep their `t()`.
+- `.storybook/` and `shared/storybook/` are dev-only: nothing in the app imports from them.
