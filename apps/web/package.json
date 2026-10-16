@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "storybook": "storybook dev -p 6006 --no-open",
     "storybook:build": "storybook build -o storybook-static",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.sw.json"
+    "test:visual": "pnpm storybook:build && sh visual/docker.sh",
+    "test:visual:update": "pnpm storybook:build && sh visual/docker.sh --update-snapshots",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.sw.json && tsc -p visual"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -36,9 +38,11 @@
     "react-router": "^8.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@storybook/react-vite": "10.6.2",
     "@tanuki/eslint-config": "workspace:*",
     "@tanuki/tsconfig": "workspace:*",
+    "@types/node": "^26.1.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react-swc": "^4.3.3",

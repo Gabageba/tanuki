@@ -16,3 +16,7 @@ contract-report.json
 !.vscode/extensions.json
 !.vscode/settings.json
 .idea/
+
+# Визуальные тесты: отчёт и диффы прогона (эталоны в __screenshots__ — в git).
+apps/web/visual/test-results/
+apps/web/visual/report/
