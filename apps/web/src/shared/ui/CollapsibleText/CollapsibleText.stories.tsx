@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Box } from '@mantine/core';
+import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
 import { TITLE } from '@/shared/storybook/titles';
 import CollapsibleTextSkeleton from './CollapsibleTextSkeleton';
 import CollapsibleText from '.';
@@ -30,11 +31,13 @@ export const Short: Story = {
   ),
 };
 
-export const Skeleton: Story = {
-  name: 'Скелетон',
+export const WithSkeleton: Story = {
+  name: 'Рядом со скелетоном',
   render: () => (
-    <Box p="md" maw={420}>
-      <CollapsibleTextSkeleton lines={3} />
-    </Box>
+    <SkeletonCompare
+      w={420}
+      item={<CollapsibleText lineClamp={3}>{TITLE.description}</CollapsibleText>}
+      skeleton={<CollapsibleTextSkeleton lines={3} />}
+    />
   ),
 };

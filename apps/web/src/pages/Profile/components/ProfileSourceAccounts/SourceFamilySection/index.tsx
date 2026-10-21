@@ -13,17 +13,9 @@ type Props = {
   sources: Source[];
   accounts: SourceAccount[];
   isLinkingAvailable: boolean;
-  isAccountsPending: boolean;
 };
 
-function SourceFamilySection({
-  title,
-  family,
-  sources,
-  accounts,
-  isLinkingAvailable,
-  isAccountsPending,
-}: Props) {
+function SourceFamilySection({ title, family, sources, accounts, isLinkingAvailable }: Props) {
   const { t } = useTranslation();
 
   const account = accounts.find((item) => item.family === family);
@@ -42,7 +34,7 @@ function SourceFamilySection({
   };
 
   return (
-    <GroupedList label={title} loading={isAccountsPending} skeletonRows={sources.length}>
+    <GroupedList label={title}>
       {sources.length > 0 && (
         <GroupedList.Header
           color={getSourceAccountStatusColor(account)}

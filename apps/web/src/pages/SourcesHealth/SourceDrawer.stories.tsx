@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { Source } from '@tanuki/contracts';
 import { DOWN_SOURCE, SOURCES } from '@/shared/storybook/fixtures';
 import ModalStage from '@/shared/storybook/ModalStage';
+import { MOBILE_GLOBALS } from '@/shared/storybook/models';
 import SourceDrawer from './SourceDrawer';
 
 const stageDrawer = (source: Source, isStaff: boolean) => (
@@ -28,4 +29,10 @@ export const Down: Story = {
 export const Ok: Story = {
   name: 'Работает, пользователь',
   render: () => stageDrawer(SOURCES[1]!, false),
+};
+
+export const Mobile: Story = {
+  name: 'На телефоне',
+  globals: MOBILE_GLOBALS,
+  render: () => stageDrawer(DOWN_SOURCE, true),
 };

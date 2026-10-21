@@ -58,3 +58,29 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run test
+
+  # Визуальные тесты историй Storybook (apps/web/visual): снимки сверяются с эталонами из git.
+  # Образ — тот же, что у `pnpm test:visual`; его версия совпадает с @playwright/test в apps/web.
+  visual:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build --filter=@tanuki/contracts
+      - run: pnpm --filter @tanuki/web storybook:build
+      - run: pnpm --filter @tanuki/web exec playwright test -c visual
+      # Отчёт с диффами: что именно съехало и на каких историях.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-report
+          path: apps/web/visual/report
+          retention-days: 14

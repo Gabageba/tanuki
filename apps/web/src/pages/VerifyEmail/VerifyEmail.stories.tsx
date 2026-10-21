@@ -12,10 +12,21 @@ const ROUTE: StoryRoute = {
   layout: STORY_LAYOUT.AUTH,
 };
 
+const VERIFY_PATH = apiPath('/auth/verify-email');
+
+// Своего экрана успеха у страницы нет: сразу переход на главную, которой в истории нет.
+// Поэтому смотреть здесь можно только проверку ссылки и ответ, что ссылка не годится.
 const META = {
   title: 'Страницы входа/Подтверждение почты',
   render: () => <VerifyEmail />,
-  parameters: { route: ROUTE },
+  parameters: {
+    route: ROUTE,
+    msw: [
+      http.post(VERIFY_PATH, () =>
+        apiError(API_ERROR_CODE.TOKEN_INVALID, 'Ссылка устарела или уже использована'),
+      ),
+    ],
+  },
 } satisfies Meta;
 
 export default META;
@@ -23,7 +34,7 @@ export default META;
 type Story = StoryObj<typeof META>;
 
 export const Default: Story = {
-  name: 'Обычная',
+  name: 'Ссылка устарела',
 };
 
 export const Mobile: Story = {
@@ -33,16 +44,5 @@ export const Mobile: Story = {
 
 export const Verifying: Story = {
   name: 'Проверка',
-  parameters: { msw: [http.post(apiPath('/auth/verify-email'), neverResolve)] },
-};
-
-export const InvalidToken: Story = {
-  name: 'Ссылка устарела',
-  parameters: {
-    msw: [
-      http.post(apiPath('/auth/verify-email'), () =>
-        apiError(API_ERROR_CODE.TOKEN_INVALID, 'Ссылка устарела или уже использована'),
-      ),
-    ],
-  },
+  parameters: { msw: [http.post(VERIFY_PATH, neverResolve)] },
 };

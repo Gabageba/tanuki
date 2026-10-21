@@ -10,6 +10,8 @@ type Props = {
     label: ReactNode;
     value: number;
     text: ReactNode;
+    /** Своя заливка полосы — вместо нейтральной и акцентной. */
+    color?: string;
   }[];
   highlightedIndex?: number;
   gap?: MantineBreakpoint | number;
@@ -29,7 +31,7 @@ function ProgressList({ items, highlightedIndex, gap }: Props) {
         alignItems: 'center',
       }}
     >
-      {items.map(({ key, label, value, text }, index) => (
+      {items.map(({ key, label, value, text, color }, index) => (
         <Fragment key={key}>
           {/* Подпись и значение — любые узлы (ссылка, иконка), а не только текст: не `<p>`. */}
           <Text component="div" truncate lh="tight">
@@ -40,7 +42,10 @@ function ProgressList({ items, highlightedIndex, gap }: Props) {
             radius="xl"
             value={(value / max) * 100}
             color={
-              index === highlightedIndex ? 'var(--mantine-primary-color-filled)' : NEUTRAL_BAR_COLOR
+              color ??
+              (index === highlightedIndex
+                ? 'var(--mantine-primary-color-filled)'
+                : NEUTRAL_BAR_COLOR)
             }
             bg="var(--tanuki-color-border-subtle)"
           />

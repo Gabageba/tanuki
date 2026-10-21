@@ -31,7 +31,7 @@ import {
   type BookmarkFolderIcon,
   type BuiltInBookmarkFolder,
 } from '@tanuki/contracts';
-import { getMutedBackground } from '@/shared/lib/palette';
+import { getMutedBackground, NEUTRAL_BAR_COLOR } from '@/shared/lib/palette';
 import {
   BOOKMARK_FOLDERS_QUERY_KEY,
   BOOKMARKS_QUERY_KEY,
@@ -176,6 +176,10 @@ export const getBookmarkFolderTextColor = (color: BookmarkFolderColor) =>
   color === BOOKMARK_FOLDER_COLOR.GRAY
     ? 'var(--mantine-color-dimmed)'
     : `var(--mantine-color-${color}-text)`;
+
+/** Заливка полосы или столбика папки; у серой — нейтральная, как у любой полосы без акцента. */
+export const getBookmarkFolderFillColor = (color: BookmarkFolderColor) =>
+  color === BOOKMARK_FOLDER_COLOR.GRAY ? NEUTRAL_BAR_COLOR : `var(--mantine-color-${color}-filled)`;
 
 /**
  * Выбранная папка в списке выбора — в её цвете, а не в акценте: подложка, рамка и текст. Тот же

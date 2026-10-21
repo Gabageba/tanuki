@@ -14,7 +14,7 @@ function ArrowLink({ to, children }: Props) {
   return (
     <Anchor component={Link} to={to} underline="never" fz="sm" flex="none" className={styles.link}>
       <Group gap={4} wrap="nowrap">
-        <ArrowLineRightIcon weight="bold" />
+        <ArrowLineRightIcon weight="bold" className={styles.arrow} />
         {children}
       </Group>
     </Anchor>

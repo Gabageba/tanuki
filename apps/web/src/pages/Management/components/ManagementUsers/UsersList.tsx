@@ -6,6 +6,7 @@ import {
   type SortDirection,
 } from '@tanuki/contracts';
 import ListPagination from '@/shared/ui/ListPagination';
+import QueryBlock from '@/shared/ui/QueryBlock';
 import type { UserHandlers } from './models';
 import UsersEmptyResult from './UsersEmptyResult';
 import UsersTable from './UsersTable';
@@ -23,7 +24,7 @@ type Props = {
   onReset: () => void;
 };
 
-/** Скелетон на первой загрузке, пустой результат или таблица с пагинацией. */
+/** Скелетон, пока ждём ответ, пустой результат или таблица с пагинацией. */
 function UsersList({
   users,
   selfId,
@@ -35,31 +36,32 @@ function UsersList({
   onOpen,
   onReset,
 }: Props) {
-  if (users.isPending) {
-    return <UsersTableSkeleton />;
-  }
-
-  if (!users.data?.total) {
-    return <UsersEmptyResult onReset={onReset} />;
-  }
-
   return (
-    <>
-      <UsersTable
-        users={users.data.items}
-        selfId={selfId}
-        sort={sort}
-        direction={direction}
-        onSortChange={onSortChange}
-        onOpen={onOpen}
-      />
-      <ListPagination
-        page={page}
-        total={users.data.total}
-        pageSize={MANAGED_USERS_PAGE_SIZE}
-        onChange={onPageChange}
-      />
-    </>
+    <QueryBlock
+      query={users}
+      skeleton={<UsersTableSkeleton />}
+      empty={<UsersEmptyResult onReset={onReset} />}
+      isEmpty={({ total }) => total === 0}
+    >
+      {({ items, total }) => (
+        <>
+          <UsersTable
+            users={items}
+            selfId={selfId}
+            sort={sort}
+            direction={direction}
+            onSortChange={onSortChange}
+            onOpen={onOpen}
+          />
+          <ListPagination
+            page={page}
+            total={total}
+            pageSize={MANAGED_USERS_PAGE_SIZE}
+            onChange={onPageChange}
+          />
+        </>
+      )}
+    </QueryBlock>
   );
 }
 

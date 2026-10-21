@@ -9,10 +9,11 @@ import {
   type InvitesSort,
   type SortDirection,
 } from '@tanuki/contracts';
-import BlockLoader from '@/shared/ui/BlockLoader';
 import ListPagination from '@/shared/ui/ListPagination';
+import QueryBlock from '@/shared/ui/QueryBlock';
 import InvitesEmptyResult from './InvitesEmptyResult';
 import InvitesTable from './InvitesTable';
+import InvitesTableSkeleton from './InvitesTableSkeleton';
 
 type Props = {
   invites: UseQueryResult<InvitesResponse>;
@@ -27,7 +28,7 @@ type Props = {
   onReset: () => void;
 };
 
-/** Спиннер на первой загрузке, «пока нет», «ничего не найдено» или таблица с пагинацией. */
+/** Скелетон, пока ждём ответ, «пока нет», «ничего не найдено» или таблица с пагинацией. */
 function InvitesList({
   invites,
   hasFilters,
@@ -41,39 +42,41 @@ function InvitesList({
 }: Props) {
   const { t } = useTranslation();
 
-  // Приглашений часто нет вовсе — таблица-скелетон сменилась бы пустым состоянием.
-  if (invites.isPending) {
-    return <BlockLoader />;
-  }
-
-  if (!invites.data?.total) {
-    return hasFilters ? (
-      <InvitesEmptyResult onReset={onReset} />
-    ) : (
-      <EmptyState
-        title={t('noInvitesYet')}
-        description={t('createInviteToInviteSomeone')}
-        icon={<TicketIcon />}
-      />
-    );
-  }
+  const empty = hasFilters ? (
+    <InvitesEmptyResult onReset={onReset} />
+  ) : (
+    <EmptyState
+      title={t('noInvitesYet')}
+      description={t('createInviteToInviteSomeone')}
+      icon={<TicketIcon />}
+    />
+  );
 
   return (
-    <>
-      <InvitesTable
-        invites={invites.data.items}
-        sort={sort}
-        direction={direction}
-        onSortChange={onSortChange}
-        onOpen={onOpen}
-      />
-      <ListPagination
-        page={page}
-        total={invites.data.total}
-        pageSize={INVITES_PAGE_SIZE}
-        onChange={onPageChange}
-      />
-    </>
+    <QueryBlock
+      query={invites}
+      skeleton={<InvitesTableSkeleton />}
+      empty={empty}
+      isEmpty={({ total }) => total === 0}
+    >
+      {({ items, total }) => (
+        <>
+          <InvitesTable
+            invites={items}
+            sort={sort}
+            direction={direction}
+            onSortChange={onSortChange}
+            onOpen={onOpen}
+          />
+          <ListPagination
+            page={page}
+            total={total}
+            pageSize={INVITES_PAGE_SIZE}
+            onChange={onPageChange}
+          />
+        </>
+      )}
+    </QueryBlock>
   );
 }
 

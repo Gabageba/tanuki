@@ -6,6 +6,11 @@ import {
   type FilterSelection,
 } from '@tanuki/contracts';
 
+/** Groups whose options cycle through include → exclude; their checkboxes mark inclusion green. */
+export const isExcludableGroup = (group: FilterGroup) =>
+  group.type === FILTER_TYPE.CHECKBOX_EXCLUDE ||
+  group.type === FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE;
+
 /** `"8".."10"`, `"8.5".."`, `".."2024"` — either bound may be blank, but not both. */
 const RANGE_SEPARATOR = '..';
 

@@ -2,20 +2,20 @@ import type { GroupProps } from '@mantine/core';
 import { Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
-import type { FilterSelection } from '@tanuki/contracts';
-import { countGroupSelections } from './lib/filterSelection';
+import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
+import { countGroupSelections, isExcludableGroup } from './lib/filterSelection';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 
 type Props = {
-  groupId: string;
+  group: FilterGroup;
   draft: FilterSelection[];
   renderEmpty?: ReactNode;
   mt?: GroupProps['mt'];
 };
 
-function SelectedFiltersCount({ groupId, draft, renderEmpty, mt }: Props) {
+function SelectedFiltersCount({ group, draft, renderEmpty, mt }: Props) {
   const { t } = useTranslation();
-  const { excluded, included } = countGroupSelections(draft, groupId);
+  const { excluded, included } = countGroupSelections(draft, group.id);
 
   if (!excluded && !included) {
     return renderEmpty ?? null;
@@ -24,10 +24,10 @@ function SelectedFiltersCount({ groupId, draft, renderEmpty, mt }: Props) {
   return (
     <MidDotGroup
       mt={mt}
-      separatorProps={{ c: 'terracotta' }}
+      separatorProps={{ c: 'dimmed' }}
       items={[
         !!included && (
-          <Text key="included" fz={12} c="terracotta">
+          <Text key="included" fz={12} c={isExcludableGroup(group) ? 'green' : 'terracotta'}>
             {t('countSelected', { count: included })}
           </Text>
         ),

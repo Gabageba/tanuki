@@ -22,7 +22,6 @@ function useRemoveSearchHistoryItem() {
     onError: (_error, _query, context) => {
       queryClient.setQueryData(SEARCH_HISTORY_QUERY_KEY, context?.previous);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: SEARCH_HISTORY_QUERY_KEY }),
   });
 }
 

@@ -55,11 +55,23 @@ export const SearchGroupSchema = z.object({
 
 export type SearchGroup = z.infer<typeof SearchGroupSchema>;
 
-export const SearchResponseSchema = z.object({
-  groups: z.array(SearchGroupSchema),
+/**
+ * События потока `GET /search` (SSE): сначала `sources` — порядок мест, затем по `group` на
+ * источник по мере ответов, в конце `done` — ответили все или вышел общий дедлайн.
+ */
+export const SEARCH_STREAM_EVENT = {
+  SOURCES: 'sources',
+  GROUP: 'group',
+  DONE: 'done',
+} as const;
+export type SearchStreamEvent = EnumLiteralsOf<typeof SEARCH_STREAM_EVENT>;
+
+/** Первое событие потока: источники, которые ответят, в порядке пользователя. */
+export const SearchSourcesEventSchema = z.object({
+  sourceIds: z.array(z.string()),
 });
 
-export type SearchResponse = z.infer<typeof SearchResponseSchema>;
+export type SearchSourcesEvent = z.infer<typeof SearchSourcesEventSchema>;
 
 /** Сколько недавних запросов хранится на пользователя: при вставке следующего старейший уходит. */
 export const SEARCH_HISTORY_LIMIT = 10;

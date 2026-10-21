@@ -1,11 +1,12 @@
-import { ScrollArea, Stack, TextInput } from '@mantine/core';
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { ScrollArea, Stack } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { Dispatch } from 'react';
 import type { ActiveSelection } from '../models';
 import { getFilteredSources } from '../models';
+import { flattenSources } from '@/entities/source/lib';
 import type { SourcesResponse } from '@tanuki/contracts';
 import SourceSelectOptionsList from './SourceSelectOptionsList';
+import SearchInput from '@/shared/ui/SearchInput';
 
 type Props = {
   query: string;
@@ -26,21 +27,20 @@ function SourceSelectMenu({
 }: Props) {
   const { t } = useTranslation();
   const filteredSources = getFilteredSources(sources, query);
+  // Пока список не пришёл (загрузка или ошибка), неизвестно, есть ли источники вообще.
+  const hasSources = sources && flattenSources(sources).length > 0;
 
   return (
     <Stack gap="xs" h={fillHeight ? '100%' : undefined}>
-      <TextInput
-        leftSection={<MagnifyingGlassIcon />}
-        placeholder={t('findSource')}
-        value={query}
-        onChange={(event) => setQuery(event.currentTarget.value)}
-      />
+      <SearchInput allowClear placeholder={t('findSource')} value={query} onChange={setQuery} />
       {fillHeight ? (
         <ScrollArea type="auto" flex={1} mih={0} offsetScrollbars="y">
           <SourceSelectOptionsList
             onClose={() => handleOpenedChange(false)}
             filteredSources={filteredSources}
+            hasSources={hasSources}
             activeSelection={activeSelection}
+            onResetQuery={() => setQuery('')}
           />
         </ScrollArea>
       ) : (
@@ -48,7 +48,9 @@ function SourceSelectMenu({
           <SourceSelectOptionsList
             onClose={() => handleOpenedChange(false)}
             filteredSources={filteredSources}
+            hasSources={hasSources}
             activeSelection={activeSelection}
+            onResetQuery={() => setQuery('')}
           />
         </ScrollArea.Autosize>
       )}

@@ -43,27 +43,31 @@ function ReaderControls({
 
   return (
     <Group visibleFrom={visibleFrom} hiddenFrom={hiddenFrom} h="100%" gap={outerGap} wrap="nowrap">
+      {/* Главы нет в списке — её читают из другой ветки или список не загрузился: навигации по
+      главам не на что опереться, а счётчик, закладка и настройки остаются. */}
       {currentChapter && (
-        <Group gap={innerGap} miw={0} wrap="nowrap">
-          <ReaderNavigateButton
-            icon={<CaretLeftIcon />}
-            titleId={titleId}
-            chapterId={prevChapterId}
-          />
-          <ReaderChapterName
-            currentChapter={currentChapter}
-            chapters={chapters}
-            numbering={numbering}
-            titleId={titleId}
-          />
-          <ReaderNavigateButton
-            icon={<CaretRightIcon />}
-            titleId={titleId}
-            chapterId={nextChapterId}
-          />
-        </Group>
+        <>
+          <Group gap={innerGap} miw={0} wrap="nowrap">
+            <ReaderNavigateButton
+              icon={<CaretLeftIcon />}
+              titleId={titleId}
+              chapterId={prevChapterId}
+            />
+            <ReaderChapterName
+              currentChapter={currentChapter}
+              chapters={chapters}
+              numbering={numbering}
+              titleId={titleId}
+            />
+            <ReaderNavigateButton
+              icon={<CaretRightIcon />}
+              titleId={titleId}
+              chapterId={nextChapterId}
+            />
+          </Group>
+          <Divider orientation="vertical" h={26} className={styles.divider} />
+        </>
       )}
-      <Divider orientation="vertical" h={26} className={styles.divider} />
       <Group gap={innerGap} wrap="nowrap" style={{ flexShrink: 0 }}>
         <ReaderPagesCount page={page} pagesLength={pagesLength} visibleFrom="md" />
         <BookmarkMenuButton titleId={titleId} />

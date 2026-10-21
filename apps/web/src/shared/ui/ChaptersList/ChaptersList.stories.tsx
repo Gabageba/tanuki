@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Box } from '@mantine/core';
+import { Box, Card, Divider } from '@mantine/core';
+import { Fragment } from 'react';
 import { fn, userEvent, within } from 'storybook/test';
 import { CHAPTER_NUMBERING, READING_MARK_CONFIDENCE } from '@tanuki/contracts';
 import type { LinkedReadingMark, ReadingMark } from '@/entities/title/models';
@@ -9,6 +10,8 @@ import {
   TITLE,
   TITLE_CHAPTERS,
 } from '@/shared/storybook/titles';
+import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
+import ChapterItemSkeleton from './ChapterItemSkeleton';
 import ChaptersList from '.';
 
 // Отметки — в верхней части списка: он виртуальный, и строки ниже экрана не отрисованы.
@@ -27,6 +30,8 @@ const LINKED_MARK: LinkedReadingMark = {
 };
 
 const ON_MARK = fn().mockName('onMarkChapter');
+
+const COMPARED_CHAPTERS = TITLE_CHAPTERS.slice(0, 3);
 
 const META = {
   title: 'UI/ChaptersList',
@@ -94,5 +99,35 @@ export const PerVolume: Story = {
         ownMark={OWN_MARK}
       />
     </Box>
+  ),
+};
+
+export const WithSkeleton: Story = {
+  name: 'Строки рядом со скелетоном',
+  render: () => (
+    <SkeletonCompare
+      w={480}
+      item={
+        <Card withBorder padding={0} bg="transparent">
+          <ChaptersList
+            chapters={COMPARED_CHAPTERS}
+            numbering={CHAPTER_NUMBERING.GLOBAL}
+            titleId={TITLE.id}
+            showDate
+            onMarkChapter={ON_MARK}
+          />
+        </Card>
+      }
+      skeleton={
+        <Card withBorder padding={0} bg="transparent">
+          {COMPARED_CHAPTERS.map(({ id }, index) => (
+            <Fragment key={id}>
+              {index > 0 && <Divider />}
+              <ChapterItemSkeleton />
+            </Fragment>
+          ))}
+        </Card>
+      }
+    />
   ),
 };

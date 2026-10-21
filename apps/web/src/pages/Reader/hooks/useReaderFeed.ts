@@ -180,6 +180,9 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
     /** Скелетон во весь экран — только для первой загрузки, когда показать нечего в принципе.
      *  Глава, подклеенная к уже прочитанным, ждёт лоадером и картинки из ленты не выкидывает. */
     isPending: chapters.every((chapter) => chapter.isPending),
+    /** Загрузка ленты для механизма скелетонов: первая доехавшая глава, пока не доехала ни одна —
+     *  первая в ленте (лента не бывает пустой: в ней всегда глава из адреса). */
+    query: results.find((result) => !result.isPending) ?? results[0]!,
   };
 }
 

@@ -175,7 +175,7 @@
 - [x] Возрастной фильтр: скрытие `ADULT` по умолчанию, блюр обложек, подтверждение
 - [ ] a11y-аудит: клавиатура, фокус, контраст, `prefers-reduced-motion`
 - [ ] Перф-аудит на реальном среднем Android: LCP, размер бандла, fps скролла
-- [x] Skeleton-состояния и осмысленные ошибки — по правилу «скелетон или `BlockLoader`» из `CLAUDE.md`
+- [x] Skeleton-состояния и осмысленные ошибки — по правилу **Loading** из `CLAUDE.md`: общий механизм `QueryBlock` / `skeleton` у `PageLayout.Content` ([план](./plans/loading-states.md))
 - [ ] Мониторинг: Sentry (self-hosted), счётчик `PARSER_FAILED` по источникам
 - [ ] Документация self-host: `docker compose up` на чистой машине — нет Dockerfile для `apps/api` и `apps/web`
 - [ ] `robots.txt` с `Disallow: /`, `noindex`

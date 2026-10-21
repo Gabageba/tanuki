@@ -20,6 +20,8 @@
     "start": "pnpm run docker && turbo run dev",
     "storybook": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web storybook",
     "test": "turbo run test",
+    "test:visual": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web test:visual",
+    "test:visual:update": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web test:visual:update",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {

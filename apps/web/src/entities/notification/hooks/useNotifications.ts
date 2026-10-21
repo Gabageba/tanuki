@@ -24,7 +24,7 @@ function useNotifications({ categories }: Params) {
       const loaded = allPages.reduce((sum, page) => sum + page.items.length, 0);
       return loaded < lastPage.total ? lastPage.page + 1 : undefined;
     },
-    // Смена фильтра не прячет страницу под спиннер: фильтр остаётся на месте, пока грузится список.
+    // Смена фильтра — 200 мс старый список, потом скелетон (см. QueryBlock).
     placeholderData: keepPreviousData,
     staleTime: 0,
   });

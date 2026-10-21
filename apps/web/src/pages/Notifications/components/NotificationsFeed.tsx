@@ -1,18 +1,18 @@
 import { Stack } from '@mantine/core';
 import type { NotificationCategory } from '@tanuki/contracts';
-import useNotifications from '@/entities/notification/hooks/useNotifications';
 import PushPrompt from '@/features/notification/PushPrompt';
 import PageLayout from '@/shared/ui/PageLayout';
 import NotificationsEmpty from './NotificationsEmpty';
 import NotificationsList from './NotificationsList';
 import NotificationsToolbar from './NotificationsToolbar';
+import type useNotificationsFeed from '../hooks/useNotificationsFeed';
 
 type Params = { categories: NotificationCategory[] };
 
 /** Содержимое ленты: предложение push, фильтр категорий, «убрать все», строки и подгрузка. */
 function NotificationsFeed() {
   const { params, setParams } = PageLayout.useParams<Params>();
-  const { data } = useNotifications(params);
+  const { data } = PageLayout.useQuery<ReturnType<typeof useNotificationsFeed>>();
 
   const items = data?.pages.flatMap((page) => page.items) ?? [];
 

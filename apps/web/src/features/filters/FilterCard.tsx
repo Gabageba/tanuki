@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { CheckIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
-import { countGroupSelections } from './lib/filterSelection';
+import { countGroupSelections, isExcludableGroup } from './lib/filterSelection';
 import { calcFilterMah } from './lib/calcFilterMah';
 import useExclusiveFilterConfirm from './hooks/useExclusiveFilterConfirm';
 import FilterRender from './FilterRender';
@@ -51,7 +51,7 @@ function FilterCard({ groups, selection, onClose, onChange }: Props) {
                       {(included || excluded) && (
                         <Group mt={1} gap={8}>
                           {!!included && (
-                            <Text fz={12} c="terracotta">
+                            <Text fz={12} c={isExcludableGroup(group) ? 'green' : 'terracotta'}>
                               {included}
                             </Text>
                           )}
@@ -73,7 +73,7 @@ function FilterCard({ groups, selection, onClose, onChange }: Props) {
               <Stack h="100%">
                 <Group>
                   <Title order={4}>{group.title}</Title>
-                  <SelectedFiltersCount groupId={group.id} draft={draft} mt={2} />
+                  <SelectedFiltersCount group={group} draft={draft} mt={2} />
                 </Group>
                 <FilterRender
                   group={group}

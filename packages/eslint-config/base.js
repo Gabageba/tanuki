@@ -52,6 +52,8 @@ export default tseslint.config(
             '**/*.stories.tsx',
             '**/.storybook/**',
             '**/shared/storybook/**',
+            // Визуальные тесты историй (Playwright) тоже не попадают в сборку.
+            '**/visual/**',
           ],
         },
       ],

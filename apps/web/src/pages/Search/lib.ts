@@ -1,8 +1,10 @@
 import type { TFunction } from 'i18next';
 import {
+  API_ERROR_CODE,
   FILTER_TYPE,
   SEARCH_FILTER_GROUP,
   SEARCH_GROUP_STATUS,
+  SEARCH_STREAM_EVENT,
   TITLE_STATE,
   TITLE_TYPE,
   TitleStateSchema,
@@ -15,9 +17,18 @@ import {
   type TitleState,
   type TitleType,
 } from '@tanuki/contracts';
+import { ApiRequestError, apiStream } from '@/shared/api/client';
+import { I18N } from '@/shared/lib/i18n';
 import { getLabelByTitleType } from '@/entities/source/lib';
 import { getTitleStateLabel } from '@/entities/title/card/lib';
-import type { FoundGroup, MissedGroup, SearchFilters } from './models';
+import type {
+  FoundGroup,
+  MissedGroup,
+  SearchFilters,
+  SearchPlace,
+  SearchStreamData,
+  SearchStreamMessage,
+} from './models';
 
 export const getSearchFilterGroupTitle = (group: SearchFilterGroup, t: TFunction) => {
   switch (group) {
@@ -138,4 +149,81 @@ export const writeSearchFilters = (searchParams: URLSearchParams, filters: Searc
     else next.delete(groupId);
   }
   return next;
+};
+
+/** Источник, чей ответ не дошёл из-за обрыва потока: его место уходит в «Не ответили». */
+export const createErrorGroupMessage = (sourceId: string): SearchStreamMessage => ({
+  type: SEARCH_STREAM_EVENT.GROUP,
+  data: {
+    sourceId,
+    status: SEARCH_GROUP_STATUS.ERROR,
+    items: [],
+    unappliedFilters: [],
+    filters: [],
+  },
+});
+
+/** Событие, которым Nest закрывает SSE-поток, когда обработчик упал. */
+const STREAM_ERROR_EVENT = 'error';
+
+const createStreamError = () =>
+  new ApiRequestError(I18N.t('somethingWentWrong'), API_ERROR_CODE.INTERNAL, 500);
+
+/**
+ * События потока поиска с разобранными данными; незнакомые пропускаются. Поток, упавший на
+ * сервере или оборвавшийся без `done`, — ошибка: иначе недоехавшая выдача сошла бы за полную.
+ */
+export async function* readSearchStream(path: string, signal?: AbortSignal) {
+  for await (const { event, data } of apiStream(path, { signal })) {
+    switch (event) {
+      case SEARCH_STREAM_EVENT.SOURCES:
+      case SEARCH_STREAM_EVENT.GROUP:
+        yield { type: event, data: JSON.parse(data) } as SearchStreamMessage;
+        break;
+      case SEARCH_STREAM_EVENT.DONE:
+        yield { type: event } satisfies SearchStreamMessage;
+        return;
+      case STREAM_ERROR_EVENT:
+        throw createStreamError();
+    }
+  }
+  signal?.throwIfAborted();
+  throw createStreamError();
+}
+
+/** Выдача после очередного события потока. Повторный ответ источника (повтор) заменяет прежний. */
+export const applySearchEvent = (
+  data: SearchStreamData,
+  message: SearchStreamMessage,
+): SearchStreamData => {
+  switch (message.type) {
+    case SEARCH_STREAM_EVENT.SOURCES:
+      return { ...data, sourceIds: message.data.sourceIds };
+    case SEARCH_STREAM_EVENT.GROUP:
+      return {
+        ...data,
+        groups: [
+          ...data.groups.filter(({ sourceId }) => sourceId !== message.data.sourceId),
+          message.data,
+        ],
+      };
+    case SEARCH_STREAM_EVENT.DONE:
+      return { ...data, isDone: true };
+  }
+};
+
+/**
+ * Выдача по местам источников: место ещё не ответившего — скелетон, нашедшего — его секция,
+ * ничего не нашедшего или не ответившего — схлопывается. «Нашлось на:» и «Не ответили» — в порядке
+ * мест, а не ответов.
+ */
+export const getSearchPlaces = ({ sourceIds, groups }: SearchStreamData, sources: Source[]) => {
+  const ordered = sourceIds.flatMap((id) => groups.filter(({ sourceId }) => sourceId === id));
+  const { found, missed } = splitSearchGroups(ordered, sources);
+  const places = sourceIds.flatMap((sourceId): SearchPlace[] => {
+    if (!groups.some((group) => group.sourceId === sourceId)) return [{ sourceId, found: null }];
+    const group = found.find(({ source }) => source.id === sourceId);
+    return group ? [{ sourceId, found: group }] : [];
+  });
+  return { found, missed, places };
 };

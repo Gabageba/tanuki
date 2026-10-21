@@ -6,11 +6,21 @@ import {
   USER_ROLE,
   type InvitableRole,
   type Invite,
+  type InvitesQuery,
   type InvitesSort,
   type InviteStatus,
 } from '@tanuki/contracts';
 import { STATUS_DEGRADED_COLOR, STATUS_DOWN_COLOR, STATUS_OK_COLOR } from '@/shared/lib/palette';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
+
+/** С чего начинается таблица: первая страница без фильтров, новые сверху. */
+export const DEFAULT_INVITES_QUERY = {
+  page: 1,
+  status: [],
+  role: [],
+  sort: INVITES_SORT.CREATED_AT,
+  direction: SORT_DIRECTION.DESC,
+} satisfies InvitesQuery;
 
 /** Ширины столбцов: таблица раскладывается по ним, а не по содержимому, — иначе при сортировке
  *  и смене страницы столбцы скачут вслед за новыми строками и подписью ключа в шапке. */

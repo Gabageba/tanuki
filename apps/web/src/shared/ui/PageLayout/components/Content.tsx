@@ -1,37 +1,48 @@
-import { Container, Flex, Group, Title } from '@mantine/core';
-import { useContext, useMemo, type ReactNode } from 'react';
-import BlockLoader from '../../BlockLoader';
+import { Box, Container, Flex, Group, Title } from '@mantine/core';
+import { useContext, type ReactNode } from 'react';
 import QueryError from '../../QueryError';
 import GoBackButton from '../../GoBackButton';
-import { PageLayoutQueryContext } from '../context';
+import OfflineState from '../../OfflineState';
+import useSkeletonTiming from '../../QueryBlock/hooks/useSkeletonTiming';
+import { PageLayoutStatusContext } from '../context';
+import type { PageLayoutBaseQuery } from '../models';
 
 type Props = {
   children: ReactNode;
   title?: ReactNode;
   actions?: ReactNode;
-  showLoading?: boolean;
   goBack?: boolean | { path: string };
+  /** Содержимое скелетоном, пока ждём главный запрос страницы (или все именованные). Без него
+   *  содержимое рисуется сразу, а загрузку блоки показывают сами (`QueryBlock`). */
+  skeleton?: ReactNode;
 };
 
-function Content({ children, title, actions, showLoading = true, goBack }: Props) {
-  // Запрос у PageLayout необязателен — без него контент просто рендерится сразу.
-  const query = useContext(PageLayoutQueryContext);
-  const isPending = query?.isPending ?? false;
-  // Упавший фоновый refetch не прячет уже загруженный контент — о нём сообщит уведомление.
-  const error = query?.isError && query.data === undefined ? query.error : null;
-  const refetch = query?.refetch;
+/** Страница без запроса: показывать нечего ждать. */
+const NO_QUERY: PageLayoutBaseQuery = {
+  data: null,
+  isPending: false,
+  isError: false,
+  error: null,
+  isPlaceholderData: false,
+  fetchStatus: 'idle',
+  refetch: () => undefined,
+};
 
-  const renderContent = useMemo(() => {
-    if (isPending && showLoading) {
-      return <BlockLoader />;
-    }
+/** Каркас страницы: заголовок и содержимое. Когда показать `skeleton`, решает тот же механизм,
+ *  что и у `QueryBlock`; без сети и без данных — «Нет соединения», упал без данных — экран ошибки. */
+function Content({ children, title, actions, goBack, skeleton }: Props) {
+  const query = useContext(PageLayoutStatusContext) ?? NO_QUERY;
+  const { ref, isSkeleton, isOffline, isFailed } = useSkeletonTiming<HTMLDivElement>(query);
 
-    if (error) {
-      return <QueryError error={error} onRetry={refetch} />;
-    }
-
-    return children;
-  }, [children, error, isPending, refetch, showLoading]);
+  let content = children;
+  if (isOffline) {
+    content = <OfflineState onRetry={query.refetch} />;
+  } else if (isFailed && query.error) {
+    // Упавший перезапрос при показанных данных их не прячет — о нём сообщит уведомление.
+    content = <QueryError error={query.error} onRetry={query.refetch} />;
+  } else if (isSkeleton && skeleton !== undefined) {
+    content = skeleton;
+  }
 
   return (
     <Container py="md" size="xl">
@@ -53,7 +64,15 @@ function Content({ children, title, actions, showLoading = true, goBack }: Props
           {actions}
         </Flex>
       )}
-      {renderContent}
+      <Box
+        // Без своего скелетона загрузку показывают блоки — прокручивать страницу незачем.
+        ref={skeleton === undefined ? undefined : ref}
+        style={{
+          scrollMarginTop: 'calc(var(--app-shell-header-height) + var(--mantine-spacing-md))',
+        }}
+      >
+        {content}
+      </Box>
     </Container>
   );
 }

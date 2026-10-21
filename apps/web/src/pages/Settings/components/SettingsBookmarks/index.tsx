@@ -18,6 +18,7 @@ import {
 import { FolderSimplePlusIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { CUSTOM_BOOKMARK_FOLDERS_LIMIT } from '@tanuki/contracts';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
 import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
 import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
 import FolderModal from '@/features/bookmark/FolderModal';
@@ -29,7 +30,9 @@ import useReorderBookmarkFolders from './hooks/useReorderBookmarkFolders';
 /** Настройки → «Закладки»: порядок вкладок-папок, слежение за обновлениями, свои папки. */
 function SettingsBookmarks() {
   const { t } = useTranslation();
-  const { data, isPending } = useBookmarkFolders();
+  const foldersQuery = useBookmarkFolders();
+  const { data } = foldersQuery;
+  const { isSkeleton } = useSkeletonTiming(foldersQuery);
   const reorderFolders = useReorderBookmarkFolders();
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -64,10 +67,10 @@ function SettingsBookmarks() {
   );
 
   return (
-    <Stack mt="lg" maw={640}>
+    <Stack maw={640}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={folderIds} strategy={verticalListSortingStrategy}>
-          <GroupedList label={t('folders')} loading={isPending}>
+          <GroupedList label={t('folders')} loading={isSkeleton}>
             <GroupedList.Header
               title={t('orderAndUpdates')}
               description={t('dragFolderToReorderTabs')}

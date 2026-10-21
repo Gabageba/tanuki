@@ -10,7 +10,7 @@ function SettingsSourcesSkeleton() {
   const { t } = useTranslation();
 
   return (
-    <Stack mt="lg" gap="lg">
+    <Stack gap="lg">
       <Stack gap={4}>
         <Text c="dimmed">{t('sourcesOrderIsUsedInListsSearchAndMatches')}</Text>
         <Text c="dimmed">{t('disabledSourcesAreHidden')}</Text>

@@ -4,14 +4,9 @@ import type { TitleDetailsQuery } from '../../models';
 import TitleName from '../TitleName';
 import TitleMeta from '../TitleMeta';
 import TitleContent from '../TitleContent';
-import TitleDetailsSectionSkeleton from './TitleDetailsSectionSkeleton';
 
 function TitleDetailsSection() {
-  const { data, isFetching } = PageLayout.useQuery<TitleDetailsQuery>();
-
-  if (isFetching) {
-    return <TitleDetailsSectionSkeleton />;
-  }
+  const { data } = PageLayout.useQuery<TitleDetailsQuery>();
 
   if (!data) {
     return null;

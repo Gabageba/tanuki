@@ -24,6 +24,7 @@ function UsernameInput({ form, usernameCheck }: Props) {
   return (
     <TextInput
       autoComplete="username"
+      placeholder={t('username')}
       leftSection={<UserIcon />}
       {...form.getInputProps('username')}
       error={isTaken ? t('taken') : form.errors.username}

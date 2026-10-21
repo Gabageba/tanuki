@@ -1,16 +1,13 @@
-import { Group, Progress, Stack, Text } from '@mantine/core';
-import { CHAPTER_NUMBERING } from '@tanuki/contracts';
+import type { TitleReadingProgressResponse } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
 import useReadingProgress from '@/entities/title/hooks/useReadingProgress';
-import {
-  getChapterBranchId,
-  resolveLinkedMarks,
-  resolveOwnMark,
-} from '@/entities/title/readingProgress';
-import ContinueReadingButton from './ContinueReadingButton';
-import OtherSourcesSplitButton from './OtherSourcesSplitButton';
-import ReadFromStartButton from './ReadFromStartButton';
+import QueryBlock from '@/shared/ui/QueryBlock';
+import { toOptionalQuery } from '@/shared/ui/QueryBlock/lib';
 import TitleReadingActionsSkeleton from './TitleReadingActionsSkeleton';
+import TitleReadingButtons from './TitleReadingButtons';
+
+/** Отметки нет: так же, как у тайтла, который ещё не читали. */
+const NO_READING_PROGRESS: TitleReadingProgressResponse = { own: null, linked: [] };
 
 type Props = {
   titleId: string;
@@ -23,63 +20,30 @@ type Props = {
  * чужую отметку сюда или нет, пользователь решает сам.
  */
 function TitleReadingActions({ titleId }: Props) {
-  const { data: progress, isPending: isProgressPending } = useReadingProgress({ titleId });
+  const progressQuery = useReadingProgress({ titleId });
   // Ветка известна только из отметки: без неё запрос ушёл бы в ветку по умолчанию и тут же
   // повторился бы в нужную.
-  const { data: chaptersData, isPending: isChaptersPending } = useChapters({
+  const chaptersQuery = useChapters({
     titleId,
-    branch: progress?.own?.branchId,
-    enabled: !isProgressPending,
+    branch: progressQuery.data?.own?.branchId,
+    enabled: !progressQuery.isPending,
   });
 
   // «Продолжить» или «Читать с начала» решает отметка — до неё любая кнопка была бы догадкой и
-  // сменилась бы на глазах.
-  if (isProgressPending || isChaptersPending) {
-    return <TitleReadingActionsSkeleton />;
-  }
-
-  // Главы приходят от новых к старым.
-  const chapters = chaptersData?.items ?? [];
-  const numbering = chaptersData?.numbering ?? CHAPTER_NUMBERING.GLOBAL;
-  const ownMark = resolveOwnMark(progress, chapters, numbering);
-  const firstChapter = chapters.at(-1);
-
-  const linked = progress?.linked ?? [];
-  const branchId = progress?.own?.branchId ?? (firstChapter && getChapterBranchId(firstChapter));
-  const linkedMarks = branchId ? resolveLinkedMarks(progress, chapters, branchId) : [];
-
-  const mainButton = ownMark ? (
-    <ContinueReadingButton titleId={titleId} mark={ownMark} numbering={numbering} />
-  ) : (
-    <ReadFromStartButton titleId={titleId} firstChapter={firstChapter} />
-  );
-
-  const chapterPosition =
-    ownMark && chapters.length - chapters.findIndex((item) => item.id === ownMark.chapter.id);
-
+  // сменилась бы на глазах. Не загрузилась отметка — читать можно с начала.
   return (
-    <Stack gap={8}>
-      {linked.length > 0 ? (
-        <OtherSourcesSplitButton
+    <QueryBlock
+      query={[toOptionalQuery(progressQuery), chaptersQuery]}
+      skeleton={<TitleReadingActionsSkeleton />}
+    >
+      {([progress, chaptersData]) => (
+        <TitleReadingButtons
           titleId={titleId}
-          linked={linked}
-          linkedMarks={linkedMarks}
-          numbering={numbering}
-        >
-          {mainButton}
-        </OtherSourcesSplitButton>
-      ) : (
-        mainButton
+          progress={progress ?? NO_READING_PROGRESS}
+          chaptersData={chaptersData}
+        />
       )}
-      {chapterPosition !== undefined && (
-        <Group gap={8}>
-          <Progress value={(chapterPosition / chapters.length) * 100} size="sm" flex={1} />
-          <Text fz={12} c="terracotta" ff="monospace">
-            {chapterPosition} / {chapters.length}
-          </Text>
-        </Group>
-      )}
-    </Stack>
+    </QueryBlock>
   );
 }
 

@@ -1,9 +1,10 @@
 import { EmptyState, Group, Scroller, Stack, Tabs, Text } from '@mantine/core';
 import { EmptyIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
 import type { Branch } from '@tanuki/contracts';
 import { PRIMARY_COLOR } from '@/shared/lib/palette';
+import PageLayout from '@/shared/ui/PageLayout';
+import type { TitlePageParams } from '../../models';
 import TitleChaptersList from './TitleChaptersList';
 
 type Props = {
@@ -13,7 +14,10 @@ type Props = {
 
 function TitleChaptersTabContent({ branches, titleId }: Props) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<string | null>(branches[0]?.id || null);
+  const { params, setParams } = PageLayout.useParams<TitlePageParams>();
+  // Выбранной ветки могло не стать (источник пересобрал ветки) — тогда первая.
+  const activeTab =
+    branches.find(({ id }) => id === params.branchId)?.id ?? branches[0]?.id ?? null;
 
   if (branches.length === 0) {
     return (
@@ -27,7 +31,11 @@ function TitleChaptersTabContent({ branches, titleId }: Props) {
   }
 
   return (
-    <Tabs variant="tile" value={activeTab} onChange={setActiveTab}>
+    <Tabs
+      variant="tile"
+      value={activeTab}
+      onChange={(branchId) => setParams({ ...params, branchId })}
+    >
       <Stack gap="sm">
         {branches.length > 1 && (
           <Tabs.List>

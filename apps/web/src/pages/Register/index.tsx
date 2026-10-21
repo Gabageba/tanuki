@@ -14,7 +14,7 @@ import {
 import { useForm } from '@mantine/form';
 import { Link, useSearchParams } from 'react-router';
 import { Trans, useTranslation } from 'react-i18next';
-import { EnvelopeSimpleIcon } from '@phosphor-icons/react';
+import { EnvelopeSimpleIcon, LockIcon } from '@phosphor-icons/react';
 import { API_ERROR_CODE, type Language } from '@tanuki/contracts';
 import { ApiRequestError } from '@/shared/api/client';
 import { validateEmail, validatePassword, validateUsername } from '@/shared/lib/authValidation';
@@ -124,11 +124,17 @@ function Register() {
         <Stack w="100%">
           <TextInput
             autoComplete="email"
+            placeholder={t('email')}
             leftSection={<EnvelopeSimpleIcon />}
             {...form.getInputProps('email')}
           />
           <UsernameInput form={form} usernameCheck={usernameCheck} />
-          <PasswordInput autoComplete="new-password" {...form.getInputProps('password')} />
+          <PasswordInput
+            autoComplete="new-password"
+            {...form.getInputProps('password')}
+            placeholder={t('password')}
+            leftSection={<LockIcon />}
+          />
           <Checkbox
             label={
               <Trans

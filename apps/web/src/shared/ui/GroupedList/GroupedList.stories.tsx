@@ -8,6 +8,7 @@ import {
   TrashIcon,
   UserIcon,
 } from '@phosphor-icons/react';
+import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
 import GroupedList from '.';
 
 const META = {
@@ -86,6 +87,26 @@ export const Loading: Story = {
     <Box p="md" maw={560}>
       <GroupedList label="Сеансы" loading skeletonRows={3} />
     </Box>
+  ),
+};
+
+export const RowWithSkeleton: Story = {
+  name: 'Строка рядом со скелетоном',
+  render: () => (
+    <SkeletonCompare
+      w={420}
+      item={
+        <GroupedList label="Аккаунт">
+          <GroupedList.Row
+            icon={<EnvelopeSimpleIcon />}
+            title="Почта"
+            description="admin@tanuki.local"
+            actionProps={{ children: 'Сменить', leftSection: <PencilSimpleIcon /> }}
+          />
+        </GroupedList>
+      }
+      skeleton={<GroupedList label="Аккаунт" loading skeletonRows={1} />}
+    />
   ),
 };
 

@@ -215,6 +215,10 @@ export const BookmarkItemSchema = z.object({
   chaptersCount: z.number().int().min(0).nullable(),
   /** Карточка показывает только признак > 0; число нужно сортировке. */
   newChaptersCount: z.number().int().min(0),
+  /** Номер последней главы в ветке цели; null — тайтл ещё не проверяли или у глав нет номеров. */
+  latestChapterNumber: z.number().nullable(),
+  /** Когда впервые увидели самую свежую из новых глав; null — новых нет. */
+  latestNewAt: z.string().datetime().nullable(),
   /** Остальные источники группы — без цели клика. */
   otherSources: z.array(BookmarkSourceSchema),
   availability: BookmarkAvailabilitySchema,

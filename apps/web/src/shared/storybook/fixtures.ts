@@ -217,6 +217,8 @@ export const BOOKMARK_ITEM: BookmarkItem = {
   progress: { chapterNumber: 120, position: 120, total: 374 },
   chaptersCount: 374,
   newChaptersCount: 0,
+  latestChapterNumber: 374,
+  latestNewAt: null,
   otherSources: [{ sourceId: 'mintmanga', titleId: 'mintmanga:berserk' }],
   availability: BOOKMARK_AVAILABILITY.AVAILABLE,
 };

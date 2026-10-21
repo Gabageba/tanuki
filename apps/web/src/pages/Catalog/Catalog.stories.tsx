@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { onlineManager } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { generatePath } from 'react-router';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
@@ -42,12 +43,20 @@ export const ServerError: Story = {
 };
 
 export const Empty: Story = {
-  name: 'Пустой ответ (пустого состояния нет)',
+  name: 'Пусто',
   parameters: {
     msw: [
       http.get(apiPath('/sources/:sourceId/titles'), () =>
         HttpResponse.json({ items: [], page: 1, hasNext: false }),
       ),
     ],
+  },
+};
+
+export const Offline: Story = {
+  name: 'Нет соединения',
+  beforeEach: () => {
+    onlineManager.setOnline(false);
+    return () => onlineManager.setOnline(true);
   },
 };

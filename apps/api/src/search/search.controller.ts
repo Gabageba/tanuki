@@ -1,12 +1,12 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { TitleStateSchema, TitleTypeSchema, type SearchResponse } from '@tanuki/contracts';
+import { Controller, Header, Query, Sse } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import type { Observable } from 'rxjs';
+import { TitleStateSchema, TitleTypeSchema } from '@tanuki/contracts';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionUser } from '../auth/session.service';
 import { BadRequestApiException } from '../common/errors';
 import { parseEnumListParam, parseListParam } from './parse-search-params';
-import { SearchResponseDto } from './search.dto';
-import { SearchService } from './search.service';
+import { SearchService, type SearchStreamMessage } from './search.service';
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
@@ -43,16 +43,29 @@ export class SearchController {
       'Значения TITLE_STATE через запятую; источник, не умеющий этот фильтр, помечается в unappliedFilters',
   })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiOkResponse({ type: SearchResponseDto })
-  @Get()
-  async search(
+  @ApiQuery({
+    name: 'retry',
+    required: false,
+    type: String,
+    description: '`1` — повтор по не ответившим источникам: запрос не пишется в историю',
+  })
+  @ApiOperation({
+    summary:
+      'Мультипоиск потоком (SSE): `sources` — порядок мест, `group` — источник по мере ответа, ' +
+      '`done` — ответили все или вышел общий дедлайн',
+  })
+  @Header('X-Accel-Buffering', 'no')
+  @Header('Cache-Control', 'no-cache, no-transform')
+  @Sse()
+  search(
     @CurrentUser() user: SessionUser,
     @Query('query') query: string | undefined,
     @Query('sources') sources: string | undefined,
     @Query('types') types: string | undefined,
     @Query('states') states: string | undefined,
     @Query('limit') limit: string | undefined,
-  ): Promise<SearchResponse> {
+    @Query('retry') retry: string | undefined,
+  ): Observable<SearchStreamMessage> {
     if (!query?.trim()) {
       throw new BadRequestApiException('searchQueryMissing');
     }
@@ -64,6 +77,7 @@ export class SearchController {
       states: parseEnumListParam(states, TitleStateSchema),
       limit: parseLimit(limit),
       userId: user.id,
+      isRetry: retry === '1',
     });
   }
 }

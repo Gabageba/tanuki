@@ -7,7 +7,6 @@ import type { BookmarkFolderCopy } from '@tanuki/contracts';
 import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
 import { getCatalogSourceTitle } from '@/entities/source/lib';
 import FolderRadioCard from '@/features/bookmark/FolderRadioCard';
-import { STATUS_DEGRADED_COLOR } from '@/shared/lib/palette';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
 import ToneModal from '@/shared/ui/ToneModal';
 import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
@@ -90,12 +89,7 @@ function BookmarkFolderModal({
             <Button variant="default" onClick={onClose}>
               {t('cancel')}
             </Button>
-            <Button
-              type="submit"
-              color={STATUS_DEGRADED_COLOR}
-              leftSection={submitIcon}
-              loading={isPending}
-            >
+            <Button type="submit" leftSection={submitIcon} loading={isPending}>
               {submitLabel}
             </Button>
           </ModalButtonsLayout>

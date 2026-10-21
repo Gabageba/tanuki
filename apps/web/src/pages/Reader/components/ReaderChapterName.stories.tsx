@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { screen, userEvent } from 'storybook/test';
 import { CHAPTER_NUMBERING } from '@tanuki/contracts';
 import { BOOKMARK_ITEM, CHAPTERS } from '@/shared/storybook/fixtures';
 import ReaderChapterName from './ReaderChapterName';
-import { MOBILE_GLOBALS } from '@/shared/storybook/models';
+import { MOBILE_GLOBALS, STORY_FOOTER } from '@/shared/storybook/models';
+import { clickFirstButton } from '@/shared/storybook/play';
 
 const META = {
   title: 'Дроверы/Читалка/ReaderChapterName',
@@ -15,7 +15,9 @@ const META = {
       titleId={BOOKMARK_ITEM.titleId}
     />
   ),
-  play: async () => userEvent.click(await screen.findByRole('button')),
+  // В читалке нижней панели приложения нет — и места под неё тоже.
+  parameters: { footer: STORY_FOOTER.NONE },
+  play: clickFirstButton,
 } satisfies Meta;
 
 export default META;

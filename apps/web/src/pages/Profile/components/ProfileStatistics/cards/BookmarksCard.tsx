@@ -2,16 +2,18 @@ import { Group, Text, UnstyledButton } from '@mantine/core';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import FolderGlyph from '@/entities/bookmark/FolderGlyph';
-import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
+import { getBookmarkFolderFillColor } from '@/entities/bookmark/lib';
 import { getBookmarksFolderPath } from '@/shared/lib/routes';
+import PageLayout from '@/shared/ui/PageLayout';
 import ProgressList from '@/shared/ui/ProgressList';
+import type useProfileQueries from '../../../hooks/useProfileQueries';
 import ProfileStatisticCard from './ProfileStatisticCard';
 
 /** Сколько тайтлов в каждой папке (G1); клик по папке открывает её на /bookmarks. Упавший
  *  запрос сообщает глобальный тост — карточки тогда просто нет. */
 function BookmarksCard() {
   const { t } = useTranslation();
-  const { data } = useBookmarkFolders();
+  const { data } = PageLayout.useQueries<typeof useProfileQueries>().bookmarkFolders;
 
   if (!data) return null;
 
@@ -35,6 +37,8 @@ function BookmarksCard() {
           ),
           value: folder.count,
           text: folder.count,
+          // Полоса в цвет папки — как её иконка слева.
+          color: getBookmarkFolderFillColor(folder.color),
         }))}
       />
     </ProfileStatisticCard>

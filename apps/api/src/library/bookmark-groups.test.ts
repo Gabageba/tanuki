@@ -180,6 +180,7 @@ const stat = (branchId: string, total: number, newCount = 0): BranchStat => ({
   position: null,
   newCount,
   latestNewAt: newCount > 0 ? at(20) : null,
+  latestNumber: total,
 });
 
 describe('подсчёт новых глав', () => {
@@ -200,6 +201,7 @@ describe('подсчёт новых глав', () => {
 
     expect(counted.branchTotal).toBe(50);
     expect(counted.newChaptersCount).toBe(2);
+    expect(counted.latestChapterNumber).toBe(50);
   });
 
   it('без отметки — по самой длинной ветке', () => {
@@ -233,6 +235,7 @@ describe('подсчёт новых глав', () => {
 
     expect(counted.branchTotal).toBeNull();
     expect(counted.newChaptersCount).toBe(0);
+    expect(counted.latestChapterNumber).toBeNull();
   });
 });
 

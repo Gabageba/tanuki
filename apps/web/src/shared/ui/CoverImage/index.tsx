@@ -1,7 +1,7 @@
 import type { ImageProps } from '@mantine/core';
 import { Center, Image, Paper, Skeleton } from '@mantine/core';
 import { useState } from 'react';
-import { ImageBrokenIcon } from '@phosphor-icons/react';
+import { ImageBrokenIcon, ImageIcon } from '@phosphor-icons/react';
 import styles from './CoverImage.module.scss';
 
 type Props = {
@@ -20,7 +20,8 @@ function CoverImage({ src, alt, className, fit = 'cover' }: Props) {
     return (
       <Paper className={`${coverClassName} ${styles.placeholder}`}>
         <Center h="100%" c="dimmed">
-          <ImageBrokenIcon size={38} />
+          {/* Обложки нет у источника — просто картинка; ссылка есть, но не открылась — битая. */}
+          {src ? <ImageBrokenIcon size={38} /> : <ImageIcon size={38} />}
         </Center>
       </Paper>
     );

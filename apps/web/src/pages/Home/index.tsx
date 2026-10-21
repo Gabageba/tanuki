@@ -5,6 +5,7 @@ import ContinueReading from './components/ContinueReading';
 import NewChapterBookmarks from './components/NewChapterBookmarks';
 import SelectionsTile from './components/SelectionsTile';
 import SourcesTile from './components/SourcesTile';
+import useHomeQueries from './hooks/useHomeQueries';
 
 /**
  * Главная (P4a + V2a + W2): «моё» — «Продолжить чтение» и «Новые главы в закладках» — и два
@@ -14,7 +15,7 @@ function Home() {
   const { t } = useTranslation();
 
   return (
-    <PageLayout>
+    <PageLayout useQueries={useHomeQueries}>
       <PageLayout.Content title={t('home')}>
         <Stack gap="xl">
           <ContinueReading />

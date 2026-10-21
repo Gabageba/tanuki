@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react';
 import { DEFAULT_SAVE_SEARCH_HISTORY, type UserSettings } from '@tanuki/contracts';
 import { SEARCH_HISTORY_QUERY_KEY } from '@/entities/search/hooks/useSearchHistory';
-import useUserSettings, { USER_SETTINGS_QUERY_KEY } from '@/shared/hooks/useUserSettings';
+import { USER_SETTINGS_QUERY_KEY } from '@/shared/hooks/useUserSettings';
+import type useUserSettings from '@/shared/hooks/useUserSettings';
+import PageLayout from '@/shared/ui/PageLayout';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
 import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
 import GroupedList from '@/shared/ui/GroupedList';
 
@@ -12,7 +15,9 @@ import GroupedList from '@/shared/ui/GroupedList';
 function SettingsSearch() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { data: settings } = useUserSettings();
+  const settingsQuery = PageLayout.useQuery<ReturnType<typeof useUserSettings>>();
+  const settings = settingsQuery.data;
+  const { isSkeleton } = useSkeletonTiming(settingsQuery);
   const updateUserSettings = useUpdateUserSettings();
   const saveSearchHistory = settings?.saveSearchHistory ?? DEFAULT_SAVE_SEARCH_HISTORY;
 
@@ -31,7 +36,7 @@ function SettingsSearch() {
   };
 
   return (
-    <GroupedList label={t('search')}>
+    <GroupedList label={t('search')} loading={isSkeleton} skeletonRows={1}>
       <GroupedList.Row
         icon={<ClockCounterClockwiseIcon />}
         title={t('saveSearchHistory')}
