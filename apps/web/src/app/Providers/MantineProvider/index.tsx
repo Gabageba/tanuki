@@ -208,6 +208,9 @@ const createAppTheme = (t: TFunction) =>
         defaultProps: {
           padding: 'sm',
         },
+        classNames: {
+          root: styles.card,
+        },
       },
       // Цвета выбранного `muted` чипа приходят из `variantColorResolver` в `--chip-*`, но своего
       // класса под этот вариант у Mantine нет — применяет их `.chipLabel` в модуле стилей. Там же
@@ -339,6 +342,7 @@ const createAppTheme = (t: TFunction) =>
       },
       Scroller: {
         classNames: {
+          root: styles.scroller,
           control: styles.scrollerControl,
         },
       },
