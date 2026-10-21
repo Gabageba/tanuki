@@ -45,30 +45,40 @@
 - **Tabs** are built from a `TABS` array in `useMemo` — `{ id, title, icon, content }` — that is
   mapped once into `Tabs.Tab` and once into `Tabs.Panel` (see `pages/Settings/index.tsx`). No
   hand-written `Tabs.Tab`/`Tabs.Panel` pairs.
-- **Loading** of a block or tab depends on whether its answer is likely to be empty:
-  - **Skeleton** when the shape of the answer is known in advance and it's almost never empty —
-    catalog, title page, chapters, source lists, users, statistics, settings forms. It repeats the
-    block's layout (a sibling `XxxSkeleton.tsx`, built from `Skeleton` and `TextSkeleton`).
-  - **Spinner** — the shared `BlockLoader` (`shared/ui/BlockLoader`) — when the answer may well
-    be empty: bookmarks in a folder, search results, invites. A skeleton of a dozen cards that
-    turns into a lone `EmptyState` is worse than a spinner. `BlockLoader` keeps the block's height
-    and fades in after 200 ms, so a fast answer never flashes it. Never a bare centered `Loader`.
-  - A mixed block splits along the same line: the part that's always there is a skeleton, the
-    part that may be empty is a `BlockLoader` (bookmarks: folder tabs — skeleton, cards — spinner).
-    The split only holds when the always-there part has its data at once. When it depends on the
-    same answer as the spinner part (search: the filter bar appears together with the results),
-    don't draw a skeleton next to a `BlockLoader` — skeleton plus spinner looks odd. Render nothing
-    in its place until the answer arrives; a skeleton stays only for the part that waits on a
-    different, faster query.
+- **Loading** depends on what started it, not on whether the answer may be empty (full table in
+  `docs/11-ui-decisions.md`, «Концепция 2026-10-21»):
+  - **A new request for content** — first load, navigation, another tab, a changed filter, sort,
+    page or in-list search — is a **skeleton** in the block's layout, even where the answer may
+    be empty: everything loads the same way. No dimmed overlay over the old content. It's a
+    sibling `XxxSkeleton.tsx` built from `Skeleton` and `TextSkeleton`; tab bars use the shared
+    `TabsSkeleton`. What's already known (tabs, a source row, blocks that don't wait for the
+    request) is drawn for real; only what waits for the answer is a skeleton.
+  - **The mechanism decides, not the block.** Never branch on `isPending`/`isFetching` to draw a
+    skeleton: the page's main query goes through `PageLayout.Content skeleton={…}`, a block's own
+    query through `<QueryBlock query skeleton empty isEmpty>{(data) => …}</QueryBlock>`
+    (`shared/ui/QueryBlock`); a component with its own `loading` prop takes
+    `useSkeletonTiming(query).isSkeleton`. Live data is marked `isLive: true` in the hook's result.
+  - **Timing:** on navigation the skeleton shows at once; on a parameter change the old content
+    stays for ~200 ms, then the skeleton, which then stays at least ~400 ms.
+  - **Stale data is never shown** (offline is the only exception). Freshness is the query's
+    `staleTime`: fresh cache shows at once with no request; stale cache on mount is a skeleton at
+    once; a refetch of data already on screen (window focus, invalidation after a mutation)
+    follows the parameter-change timing — ~200 ms, then the skeleton.
+  - **Live data** (`refetchInterval` polling, SSE updates) refreshes silently. A mutation that
+    updated the cache optimistically (`setQueryData`) doesn't invalidate it on success.
+  - **A long operation made of independent parts** (the search fan-out) shows each part as soon
+    as it's ready, the rest as skeletons.
   - A small `Loader` inside a control that's busy (a button, an avatar upload, the infinite-scroll
-    trigger, a process screen like email verification) is not a block loading and stays as is.
+    trigger, pull-to-refresh) or on a process screen (email verification, import parsing) is not
+    a block loading and stays as is. No spinner for a block, never a bare centered `Loader`.
 - **Errors** of a query inside a page block or tab are not rendered: the global handler in
   `QueryClientProvider` already shows a notification. `QueryError` is only for the page's main
   query and is rendered by `PageLayout.Content`, not by blocks. A block whose query failed shows
   its empty state.
 - **Modals** carry their tone as an icon next to the title (20px, tone color); the body holds no
   icons or colored boxes — just the main sentence in 14 and explanations in dimmed 13. The tone
-  matches the confirm button's color and how reversible the action is: `danger` (red) —
+  matches how reversible the action is; the confirm button is red only in a `danger` modal, every
+  other tone keeps the default primary-color button (no `color` prop): `danger` (red) —
   irreversible or hits someone else's account; `warning` (`gold`) — reversible, but something gets
   reset, revealed or reloaded; `neutral` (dimmed gray) — an ordinary form; `success` (`teal`) — a
   result. The icon repeats the confirm button's icon when it names the meaning, otherwise the
