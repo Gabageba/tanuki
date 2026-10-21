@@ -42,6 +42,7 @@ function TitleMatches({ title }: Props) {
               <Heading order={5}>{t('foundOnOtherSources')}</Heading>
               {isStaff && (
                 <Button
+                  w={{ base: '100%', xs: 'auto' }}
                   size="xs"
                   variant="default"
                   leftSection={<PlusIcon />}

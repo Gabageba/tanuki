@@ -8,6 +8,7 @@ import TitleDetailsSection from './components/TitleDetailsSection';
 import TitleBookmarkConflict from './components/TitleBookmarkConflict';
 import TitleSkeleton from './components/TitleSkeleton';
 import useTitleBookmarkVisit from './hooks/useTitleBookmarkVisit';
+import type { TitlePageParams } from './models';
 
 function Title() {
   const { titleId = '' } = useParams<{ titleId: string }>();
@@ -16,9 +17,10 @@ function Title() {
   useReadingProgress({ titleId });
   // Визит — сразу при открытии: он же отдаёт новые главы для списка глав.
   useTitleBookmarkVisit(titleId);
+  const params: TitlePageParams = { titleId, branchId: null };
 
   return (
-    <PageLayout key={titleId} useQuery={useTitleDetails} params={{ titleId }}>
+    <PageLayout key={titleId} useQuery={useTitleDetails} params={params}>
       <PageLayout.Content skeleton={<TitleSkeleton />}>
         <Grid columnGap="lg">
           <TitleImageSection />
