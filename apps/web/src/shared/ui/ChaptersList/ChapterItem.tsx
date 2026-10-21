@@ -10,7 +10,7 @@ import {
   type ChapterReadStatus,
   type LinkedReadingMark,
 } from '@/entities/title/models';
-import { getChapterNumberLabel } from '@/entities/title/readingProgress';
+import { getShownVolume } from '@/entities/title/readingProgress';
 import LinkedMarksIcon from './LinkedMarksIcon';
 import ReadingMarkPopover from './ReadingMarkPopover';
 import styles from './ChapterList.module.scss';
@@ -70,6 +70,7 @@ function ChapterItem({
     linkedMarks.every((mark) => mark.confidence === READING_MARK_CONFIDENCE.APPROXIMATE);
 
   const isEmptyNumber = isEmpty(chapter.number);
+  const shownVolume = getShownVolume(chapter, numbering);
   const isEmptyTitle = isEmpty(chapter.title);
 
   // У текущей главы прочитана только сторона к более старым главам, у прочитанной — обе.
@@ -175,9 +176,18 @@ function ChapterItem({
       >
         <Flex flex={1} miw={0} wrap="nowrap" gap={{ base: 'xs', xs: 'md' }} align="center">
           {!isEmptyNumber && (
-            <Text flex="none" ff="monospace">
-              {getChapterNumberLabel(chapter, numbering, t)}
-            </Text>
+            // Том и номер — отдельными кусками с зазором между ними: внутри куска пробел
+            // моноширинного шрифта во всю клетку ужат, иначе «Т. 4» разваливается.
+            <Flex flex="none" gap={{ base: 'xs', xs: 'md' }} wrap="nowrap">
+              {shownVolume !== null && (
+                <Text ff="monospace" style={{ wordSpacing: -5 }}>
+                  {t('volumeNumberAbbrev', { volume: shownVolume })}
+                </Text>
+              )}
+              <Text ff="monospace" style={{ wordSpacing: -5 }}>
+                {t('chapterNumberAbbrev', { number: chapter.number })}
+              </Text>
+            </Flex>
           )}
           {!isEmptyTitle && (
             <Text flex={1} miw={0} truncate="end">

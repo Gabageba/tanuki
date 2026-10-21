@@ -118,16 +118,22 @@ export const getProgressChapterLabel = (progress: ReadingProgress, t: TFunction)
     : t('volumeChapterNumberAbbrev', { volume: chapterVolume, number: chapterNumber });
 };
 
-/** Номер главы: «Т. 2 Гл. 5», если ветка нумерует главы по томам и без тома номер неоднозначен
- *  (глава 5 есть в каждом сезоне), иначе «Гл. 5». */
+/** Том, который показывается рядом с номером главы: только если ветка нумерует главы по томам и
+ *  без тома номер неоднозначен (глава 5 есть в каждом сезоне), иначе null. */
+export const getShownVolume = (chapter: Chapter, numbering: ChapterNumbering) =>
+  numbering === CHAPTER_NUMBERING.PER_VOLUME ? chapter.volume : null;
+
+/** Номер главы: «Т. 2 Гл. 5», если том показывается (`getShownVolume`), иначе «Гл. 5». */
 export const getChapterNumberLabel = (
   chapter: Chapter,
   numbering: ChapterNumbering,
   t: TFunction,
-) =>
-  numbering === CHAPTER_NUMBERING.PER_VOLUME && chapter.volume !== null
-    ? t('volumeChapterNumberAbbrev', { volume: chapter.volume, number: chapter.number })
-    : t('chapterNumberAbbrev', { number: chapter.number });
+) => {
+  const volume = getShownVolume(chapter, numbering);
+  return volume === null
+    ? t('chapterNumberAbbrev', { number: chapter.number })
+    : t('volumeChapterNumberAbbrev', { volume, number: chapter.number });
+};
 
 /** Глава этого тайтла так, как её показывает «Продолжить»: номер или название. */
 export const getChapterLabel = (chapter: Chapter, numbering: ChapterNumbering, t: TFunction) =>
