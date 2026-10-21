@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Box } from '@mantine/core';
 import TagBadge from '@/shared/ui/TagBadge';
+import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
 import { TITLE } from '@/shared/storybook/titles';
 import CollapsibleGroupSkeleton from './CollapsibleGroupSkeleton';
 import CollapsibleGroup from '.';
@@ -28,11 +29,17 @@ export const Clamped: Story = {
   ),
 };
 
-export const Skeleton: Story = {
-  name: 'Скелетон',
+export const WithSkeleton: Story = {
+  name: 'Рядом со скелетоном',
   render: () => (
-    <Box p="md" maw={420}>
-      <CollapsibleGroupSkeleton groupHeight={22} />
-    </Box>
+    <SkeletonCompare
+      w={420}
+      item={
+        <CollapsibleGroup gap={6} maxRows={2}>
+          {TAGS}
+        </CollapsibleGroup>
+      }
+      skeleton={<CollapsibleGroupSkeleton groupHeight={22} />}
+    />
   ),
 };

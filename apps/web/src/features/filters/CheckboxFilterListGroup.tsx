@@ -1,7 +1,7 @@
 import type { ScrollAreaAutosizeProps } from '@mantine/core';
-import { FILTER_TYPE, type FilterGroup, type FilterSelection } from '@tanuki/contracts';
+import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import VirtualizedCheckboxGrid from './VirtualizedCheckboxGrid';
-import { getOptionValue, setOptionValue } from './lib/filterSelection';
+import { getOptionValue, isExcludableGroup, setOptionValue } from './lib/filterSelection';
 
 type Props = {
   group: FilterGroup;
@@ -14,7 +14,7 @@ function CheckboxFilterListGroup({ group, selection, onChange, scrollAreaProps }
   return (
     <VirtualizedCheckboxGrid
       options={group.options}
-      withExclude={group.type === FILTER_TYPE.CHECKBOX_EXCLUDE}
+      withExclude={isExcludableGroup(group)}
       getValue={(key) => getOptionValue(selection, group.id, key)}
       onChange={(key, value) => onChange(setOptionValue(selection, group.id, key, value))}
       scrollAreaProps={scrollAreaProps}

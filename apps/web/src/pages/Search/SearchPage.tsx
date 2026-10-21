@@ -14,8 +14,7 @@ function SearchPage() {
       {query ? (
         <SearchResults key={query} query={query} />
       ) : (
-        // Без строки запрос отключён и вечно pending — лоадер тут не нужен.
-        <PageLayout.Content showLoading={false}>
+        <PageLayout.Content>
           <SearchInvite />
         </PageLayout.Content>
       )}

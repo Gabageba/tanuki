@@ -17,7 +17,7 @@ function FilterDrawerGroups({ groups, draft, setActiveGroupId }: Props) {
   const { t } = useTranslation();
 
   return (
-    <ScrollArea type="auto" offsetScrollbars="y" flex={1} mih={0}>
+    <ScrollArea type="auto" scrollbars="y" offsetScrollbars="present" flex={1} mih={0}>
       <Stack gap={0} flex={1}>
         {groups.map((group) => {
           return (
@@ -25,7 +25,7 @@ function FilterDrawerGroups({ groups, draft, setActiveGroupId }: Props) {
               key={group.id}
               label={<FilterGroupTitle group={group} />}
               description={
-                <SelectedFiltersCount groupId={group.id} draft={draft} renderEmpty={t('any')} />
+                <SelectedFiltersCount group={group} draft={draft} renderEmpty={t('any')} />
               }
               rightSection={<CaretRightIcon />}
               onClick={() => setActiveGroupId(group.id)}

@@ -1,9 +1,8 @@
-export type PageLayoutBaseQuery = {
-  data: unknown;
+import type { LoadingQuery } from '../QueryBlock/models';
+
+/** Запрос страницы: по нему `Content` решает, показать скелетон, «Нет соединения» или ошибку. */
+export type PageLayoutBaseQuery = LoadingQuery & {
   isPending: boolean;
-  isError: boolean;
-  error: Error | null;
-  refetch: () => unknown;
 };
 
 export type PageLayoutRefreshableQuery = PageLayoutBaseQuery & {
@@ -17,3 +16,7 @@ export type PageLayoutPaginatedQuery = PageLayoutBaseQuery & {
   isFetchNextPageError: boolean;
   fetchNextPage: () => unknown;
 };
+
+/** Именованные запросы страницы (`PageLayout useQueries`): каждый читается по имени, а загрузку и
+ *  ошибку страницы Content считает по всем сразу. */
+export type PageLayoutQueries = Record<string, PageLayoutBaseQuery>;

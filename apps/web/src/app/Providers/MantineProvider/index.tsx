@@ -333,7 +333,13 @@ const createAppTheme = (t: TFunction) =>
       },
       Tabs: {
         classNames: {
+          list: styles.tabsList,
           tab: styles.tabsTab,
+        },
+      },
+      Scroller: {
+        classNames: {
+          control: styles.scrollerControl,
         },
       },
       PasswordInput: {

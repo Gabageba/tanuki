@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import type { CatalogResponse, FilterSelection, SortDirection, SortOrder } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { serializeFilters } from '@/features/filters/lib/filterSelection';
@@ -29,7 +29,11 @@ function useCatalog({
   order: explicitOrder,
   direction,
 }: Params) {
-  const { data: source, isPending: isSourcePending } = useSource({ sourceId });
+  const {
+    data: source,
+    isPending: isSourcePending,
+    fetchStatus: sourceFetchStatus,
+  } = useSource({ sourceId });
   // Тот же queryKey ['filters', sourceId], что и в CatalogSettings — react-query отдаёт общий
   // кэш/in-flight запрос, second call здесь не бьёт по сети отдельно.
   const { data: filtersData } = useFilters({ sourceId });
@@ -73,9 +77,10 @@ function useCatalog({
     // Ждём, пока не подгрузится источник (а с ним и order по умолчанию) — иначе первый
     // запрос уходит без order и почти сразу рефетчится с ним, то есть каталог грузится дважды.
     enabled: !isSourcePending,
+    // Смена фильтра, сортировки или поиска — 200 мс старая сетка, потом скелетон (см. QueryBlock).
+    placeholderData: keepPreviousData,
     // Обновляем только вручную (кнопка/pull-to-refresh) или по перезагрузке вкладки —
-    // не рефетчим сами на маунте и не ретраим упавший запрос.
-    // refetchOnWindowFocus: false задан глобально в query-client.ts.
+    // не рефетчим сами на маунте и при фокусе и не ретраим упавший запрос.
     staleTime: Infinity,
     retry: false,
   });
@@ -87,7 +92,12 @@ function useCatalog({
     return queryClient.resetQueries({ queryKey });
   };
 
-  return { ...query, refresh };
+  // Каталог ждёт источник: без сети на паузе он, а не каталог, — страница всё равно должна сказать
+  // «Нет соединения», а не висеть в скелетоне.
+  const fetchStatus =
+    sourceFetchStatus === 'paused' && query.data === undefined ? 'paused' : query.fetchStatus;
+
+  return { ...query, fetchStatus, refresh };
 }
 
 export default useCatalog;

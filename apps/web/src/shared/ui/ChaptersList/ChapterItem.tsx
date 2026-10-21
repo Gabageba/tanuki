@@ -39,7 +39,8 @@ type Props = {
 
 const MARK_ICON_SIZE = 20;
 
-/** Строка целиком — ссылка в читалку: клики по узлу и иконке отметок до неё доходить не должны. */
+/** Строка целиком — ссылка в читалку: клики по узлу, иконке отметок и скачиванию до неё доходить
+ *  не должны. */
 const stopRowClick = (event: MouseEvent) => {
   event.preventDefault();
   event.stopPropagation();
@@ -191,7 +192,7 @@ function ChapterItem({
               {formatDateNumeric(chapter.uploadedAt)}
             </Text>
           )}
-          <ActionIcon variant="subtle">
+          <ActionIcon variant="subtle" onClick={stopRowClick}>
             <DownloadSimpleIcon />
           </ActionIcon>
         </Flex>

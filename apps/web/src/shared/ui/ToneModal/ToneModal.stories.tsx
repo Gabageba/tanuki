@@ -9,7 +9,6 @@ import {
   TrashIcon,
 } from '@phosphor-icons/react';
 import { fn } from 'storybook/test';
-import { STATUS_DEGRADED_COLOR } from '@/shared/lib/palette';
 import ModalStage from '@/shared/storybook/ModalStage';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
 import { MODAL_TONE, type ModalTone } from './models';
@@ -22,7 +21,8 @@ type ToneExample = {
   color?: string;
 };
 
-/** Тон — по обратимости действия, цвет кнопки повторяет тон (docs/11-ui-decisions.md). */
+/** Тон — по обратимости действия (docs/11-ui-decisions.md). Главная кнопка красная только у
+ *  danger, у остальных тонов — акцентная. */
 const stageTone = ({ tone, icon: ToneIcon, title, color }: ToneExample, onBack?: () => void) => (
   <ModalStage>
     {({ opened, close }) => (
@@ -71,13 +71,7 @@ export const Danger: Story = {
 
 export const Warning: Story = {
   name: 'warning — что-то сбросится',
-  render: () =>
-    stageTone({
-      tone: MODAL_TONE.WARNING,
-      icon: BroomIcon,
-      title: 'Сбросить',
-      color: STATUS_DEGRADED_COLOR,
-    }),
+  render: () => stageTone({ tone: MODAL_TONE.WARNING, icon: BroomIcon, title: 'Сбросить' }),
 };
 
 export const Neutral: Story = {
@@ -87,8 +81,7 @@ export const Neutral: Story = {
 
 export const Success: Story = {
   name: 'success — результат',
-  render: () =>
-    stageTone({ tone: MODAL_TONE.SUCCESS, icon: CheckCircleIcon, title: 'Готово', color: 'teal' }),
+  render: () => stageTone({ tone: MODAL_TONE.SUCCESS, icon: CheckCircleIcon, title: 'Готово' }),
 };
 
 export const InnerStep: Story = {

@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { SEARCH_GROUP_STATUS, type SelectionsSectionResponse } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { SILENT_NEXT_PAGE_ERROR_META } from '@/shared/api/errorMeta';
@@ -37,6 +37,9 @@ function useSelectionsSection({ sourceId, sectionId, variant, enabled }: Params)
     getNextPageParam: (lastPage, allPages) =>
       lastPage.hasNextPage ? allPages.length + 1 : undefined,
     enabled,
+    // Смена варианта блока — 200 мс старая сетка, потом скелетон (см. QueryBlock); другой блок —
+    // новая лента (`key` на SectionFeed), скелетон сразу.
+    placeholderData: keepPreviousData,
     // Сервер держит подборки свежими полчаса — чаще спрашивать незачем.
     staleTime: 5 * 60_000,
     meta: SILENT_NEXT_PAGE_ERROR_META,

@@ -16,7 +16,7 @@ import {
   type ContinueReadingResponse,
   type PagesResponse,
   type SearchHistoryResponse,
-  type SearchResponse,
+  type SearchGroup,
   type SelectionsResponse,
   type Title,
   type TitleDetailsResponse,
@@ -291,38 +291,37 @@ export const CONTINUE_READING_RESPONSE: ContinueReadingResponse = {
   })),
 };
 
-export const SEARCH_RESPONSE: SearchResponse = {
-  groups: [
-    {
-      sourceId: 'readmanga_ru',
-      status: SEARCH_GROUP_STATUS.OK,
-      items: TITLES.slice(0, 5),
-      unappliedFilters: [],
-      filters: [],
-    },
-    {
-      sourceId: 'mintmanga',
-      status: SEARCH_GROUP_STATUS.OK,
-      items: TITLES.slice(5, 8).map((title) => ({ ...title, sourceId: 'mintmanga' })),
-      unappliedFilters: [],
-      filters: [],
-    },
-    {
-      sourceId: 'mangalib',
-      status: SEARCH_GROUP_STATUS.TIMEOUT,
-      items: [],
-      unappliedFilters: [],
-      filters: [],
-    },
-    {
-      sourceId: 'allhentai',
-      status: SEARCH_GROUP_STATUS.LOCKED,
-      items: [],
-      unappliedFilters: [],
-      filters: [],
-    },
-  ],
-};
+/** Ответы источников на поиск «берсерк» — в порядке мест. */
+export const SEARCH_GROUPS: SearchGroup[] = [
+  {
+    sourceId: 'readmanga_ru',
+    status: SEARCH_GROUP_STATUS.OK,
+    items: TITLES.slice(0, 5),
+    unappliedFilters: [],
+    filters: [],
+  },
+  {
+    sourceId: 'mintmanga',
+    status: SEARCH_GROUP_STATUS.OK,
+    items: TITLES.slice(5, 8).map((title) => ({ ...title, sourceId: 'mintmanga' })),
+    unappliedFilters: [],
+    filters: [],
+  },
+  {
+    sourceId: 'mangalib',
+    status: SEARCH_GROUP_STATUS.TIMEOUT,
+    items: [],
+    unappliedFilters: [],
+    filters: [],
+  },
+  {
+    sourceId: 'allhentai',
+    status: SEARCH_GROUP_STATUS.LOCKED,
+    items: [],
+    unappliedFilters: [],
+    filters: [],
+  },
+];
 
 export const SEARCH_HISTORY_RESPONSE: SearchHistoryResponse = {
   items: ['берсерк', 'Монстр', 'башня бога'].map((query, index) => ({

@@ -10,7 +10,6 @@ import {
 } from '@/shared/lib/routes';
 import CatalogButton from './CatalogButton';
 import SelectionsEmpty from './SelectionsEmpty';
-import SelectionsSkeleton from './SelectionsSkeleton';
 import SelectionsSource from './SelectionsSource';
 import SourcePicker from './SourcePicker';
 
@@ -21,15 +20,15 @@ import SourcePicker from './SourcePicker';
  */
 function SelectionsContent() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { sources, settings, isPending } = useSelectionsSources();
+  const { sources, settings } = useSelectionsSources();
   const requestedId = searchParams.get(SELECTIONS_SOURCE_SEARCH_PARAM);
   const activeId = resolveSelectionsSourceId(sources, requestedId);
   const activeSource = sources.find(({ id }) => id === activeId);
 
   useEffect(() => {
-    if (isPending || !activeId || activeId === requestedId) return;
+    if (!activeId || activeId === requestedId) return;
     setSearchParams({ [SELECTIONS_SOURCE_SEARCH_PARAM]: activeId }, { replace: true });
-  }, [activeId, isPending, requestedId, setSearchParams]);
+  }, [activeId, requestedId, setSearchParams]);
 
   const handleSourceChange = (sourceId: string) => {
     writeLastSelectionsSource(sourceId);
@@ -61,10 +60,6 @@ function SelectionsContent() {
       { replace: true },
     );
   };
-
-  if (isPending) {
-    return <SelectionsSkeleton />;
-  }
 
   if (!activeId || !activeSource) {
     return <SelectionsEmpty />;

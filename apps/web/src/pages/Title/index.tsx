@@ -6,6 +6,7 @@ import useReadingProgress from '@/entities/title/hooks/useReadingProgress';
 import TitleImageSection from './components/TitleImageSection';
 import TitleDetailsSection from './components/TitleDetailsSection';
 import TitleBookmarkConflict from './components/TitleBookmarkConflict';
+import TitleSkeleton from './components/TitleSkeleton';
 import useTitleBookmarkVisit from './hooks/useTitleBookmarkVisit';
 
 function Title() {
@@ -18,7 +19,7 @@ function Title() {
 
   return (
     <PageLayout key={titleId} useQuery={useTitleDetails} params={{ titleId }}>
-      <PageLayout.Content showLoading={false}>
+      <PageLayout.Content skeleton={<TitleSkeleton />}>
         <Grid columnGap="lg">
           <TitleImageSection />
           <Divider orientation="vertical" visibleFrom="md" />

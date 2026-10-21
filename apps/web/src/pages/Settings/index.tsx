@@ -26,8 +26,9 @@ function Settings() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Push — опция инстанса: без ключей на сервере вкладке нечего показать.
-  const { data: pushConfig } = usePushConfig();
+  // Push — опция инстанса: без ключей на сервере вкладке нечего показать. Пока ответа нет, вкладка
+  // на месте со скелетоном внутри — иначе открытая по адресу «Уведомления» мигнула бы «Общими».
+  const { data: pushConfig, isPending: isPushConfigPending } = usePushConfig();
   const tabParam = searchParams.get(SETTINGS_TAB_SEARCH_PARAM);
 
   const handleTabChange = (value: string | null) => {
@@ -67,7 +68,7 @@ function Settings() {
         icon: <BookmarkSimpleIcon />,
         content: <SettingsBookmarks />,
       },
-      ...(pushConfig?.enabled
+      ...(isPushConfigPending || pushConfig?.enabled
         ? [
             {
               id: SETTINGS_TABS.NOTIFICATIONS,
@@ -78,7 +79,7 @@ function Settings() {
           ]
         : []),
     ],
-    [t, pushConfig?.enabled],
+    [t, isPushConfigPending, pushConfig?.enabled],
   );
 
   const activeTab =
@@ -88,6 +89,7 @@ function Settings() {
 
   return (
     <PageLayout useQuery={useUserSettings}>
+      {/* Вкладки видны сразу, а блоки, которые ждут настроек, грузятся скелетоном внутри. */}
       <PageLayout.Content title={t('settings')}>
         <Tabs value={activeTab} onChange={handleTabChange}>
           <Tabs.List>

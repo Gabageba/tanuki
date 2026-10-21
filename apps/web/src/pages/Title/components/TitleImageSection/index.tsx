@@ -22,19 +22,14 @@ import FolderPickerSelect from '@/features/bookmark/FolderPickerSelect';
 import CoverImage from '@/shared/ui/CoverImage';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { TitleDetailsQuery } from '../../models';
-import TitleImageSectionSkeleton from './TitleImageSectionSkeleton';
 import TitleReadingActions from './TitleReadingActions';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import styles from '../../Title.module.scss';
 
 function TitleImageSection() {
   const { t } = useTranslation();
-  const { data, isFetching } = PageLayout.useQuery<TitleDetailsQuery>();
+  const { data } = PageLayout.useQuery<TitleDetailsQuery>();
   const [isBackgroundLoaded, setIsBackgroundLoaded] = useState(false);
-
-  if (isFetching) {
-    return <TitleImageSectionSkeleton />;
-  }
 
   if (!data) {
     return null;

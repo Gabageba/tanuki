@@ -82,9 +82,10 @@ const queryClient: QueryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      staleTime: 60_000,
+      // Пока данные моложе пяти минут, они показываются сразу и не перезапрашиваются; старше —
+      // перезапрос на монтировании и при возврате во вкладку, со скелетоном (см. QueryBlock).
+      staleTime: 5 * 60_000,
       retry: shouldRetry,
-      refetchOnWindowFocus: false,
     },
   },
 });

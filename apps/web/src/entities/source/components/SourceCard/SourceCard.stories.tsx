@@ -2,10 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { SimpleGrid, Stack } from '@mantine/core';
 import { SOURCE_ACCESS, SOURCE_STATUS, SOURCE_STATUS_REASON } from '@tanuki/contracts';
 import { DOWN_SOURCE, SOURCES } from '@/shared/storybook/fixtures';
+import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
 import SourceLoginBadge from '../SourceLoginBadge';
 import SourceStatusBadge from '../SourceStatusBadge';
 import SourceTitle from '../SourceTitle';
 import SourceTitleSkeleton from '../SourceTitle/SourceTitleSkeleton';
+import SourceCardSkeleton from './SourceCardSkeleton';
 import SourceCard from '.';
 
 const OK_SOURCE = SOURCES.find(({ id }) => id === 'readmanga_ru')!;
@@ -49,7 +51,28 @@ export const Badges: Story = {
       <SourceStatusBadge source={DEGRADED_SOURCE} />
       <SourceStatusBadge source={DOWN_SOURCE} />
       <SourceLoginBadge source={LOCKED_SOURCE} />
-      <SourceTitleSkeleton />
     </Stack>
+  ),
+};
+
+export const CardWithSkeleton: Story = {
+  name: 'Карточка рядом со скелетоном',
+  render: () => (
+    <SkeletonCompare
+      w={360}
+      item={<SourceCard source={OK_SOURCE} />}
+      skeleton={<SourceCardSkeleton />}
+    />
+  ),
+};
+
+export const TitleWithSkeleton: Story = {
+  name: 'Заголовок рядом со скелетоном',
+  render: () => (
+    <SkeletonCompare
+      w={280}
+      item={<SourceTitle source={OK_SOURCE} />}
+      skeleton={<SourceTitleSkeleton />}
+    />
   ),
 };

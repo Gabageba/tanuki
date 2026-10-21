@@ -2,6 +2,7 @@ import { Button, PasswordInput, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { LockIcon } from '@phosphor-icons/react';
 import { ApiRequestError } from '@/shared/api/client';
 import { validatePassword } from '@/shared/lib/authValidation';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
@@ -42,7 +43,12 @@ function ResetPassword() {
     <form onSubmit={handleSubmit}>
       <AuthFormLayout title={t('newPassword')} description={t('comeUpWithNewPassword')}>
         <Stack w="100%">
-          <PasswordInput autoComplete="new-password" {...form.getInputProps('password')} />
+          <PasswordInput
+            autoComplete="new-password"
+            {...form.getInputProps('password')}
+            placeholder={t('newPassword')}
+            leftSection={<LockIcon />}
+          />
 
           <Button type="submit" loading={resetPassword.isPending} fullWidth>
             {t('save')}

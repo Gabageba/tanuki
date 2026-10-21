@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Stack } from '@mantine/core';
 import {
   getInvitePermissions,
-  INVITES_SORT,
   SORT_DIRECTION,
   type CreateInviteResponse,
   type Invite,
@@ -20,17 +19,17 @@ import RevokeInviteModal from './RevokeInviteModal';
 import useInvites from './hooks/useInvites';
 import useReissueInvite from './hooks/useReissueInvite';
 import useRevokeInvite from './hooks/useRevokeInvite';
-import { getDefaultSortDirection } from './models';
+import { DEFAULT_INVITES_QUERY, getDefaultSortDirection } from './models';
 
 /** Вкладка «Приглашения»: фильтры, таблица постранично, карточка и модалки действий. По умолчанию
  *  новые сверху — только что созданное приглашение сразу видно в начале первой страницы. */
 function ManagementInvites() {
   const { data: currentUser } = useCurrentUser();
-  const [status, setStatus] = useState<InviteStatus[]>([]);
-  const [role, setRole] = useState<UserRole[]>([]);
-  const [sort, setSort] = useState<InvitesSort>(INVITES_SORT.CREATED_AT);
-  const [direction, setDirection] = useState<SortDirection>(SORT_DIRECTION.DESC);
-  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState<InviteStatus[]>(DEFAULT_INVITES_QUERY.status);
+  const [role, setRole] = useState<UserRole[]>(DEFAULT_INVITES_QUERY.role);
+  const [sort, setSort] = useState<InvitesSort>(DEFAULT_INVITES_QUERY.sort);
+  const [direction, setDirection] = useState<SortDirection>(DEFAULT_INVITES_QUERY.direction);
+  const [page, setPage] = useState(DEFAULT_INVITES_QUERY.page);
   // Снимки, а не id: карточка не должна закрываться, если после отзыва приглашение выпало из фильтра.
   const [opened, setOpened] = useState<Invite | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<Invite | null>(null);

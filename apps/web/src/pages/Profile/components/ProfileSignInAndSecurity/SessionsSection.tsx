@@ -2,16 +2,20 @@ import { Badge, Button, Group } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { SignOutIcon } from '@phosphor-icons/react';
 import GroupedList from '@/shared/ui/GroupedList';
+import PageLayout from '@/shared/ui/PageLayout';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
 import useRevokeOtherSessions from './hooks/useRevokeOtherSessions';
 import useRevokeSession from './hooks/useRevokeSession';
-import useSessions from './hooks/useSessions';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import useDateFormat from '@/shared/hooks/useDateFormat';
+import type useProfileQueries from '../../hooks/useProfileQueries';
 import { getDeviceTypeIcon } from './lib';
 
 function SessionsSection() {
   const { t } = useTranslation();
-  const { data: sessions, isPending } = useSessions();
+  const sessionsQuery = PageLayout.useQueries<typeof useProfileQueries>().sessions;
+  const sessions = sessionsQuery.data;
+  const { isSkeleton } = useSkeletonTiming(sessionsQuery);
   const revokeOtherSessions = useRevokeOtherSessions();
   const revokeSession = useRevokeSession();
   const { formatRelative } = useDateFormat();
@@ -19,7 +23,7 @@ function SessionsSection() {
   const hasOtherSessions = sessions?.some((session) => !session.isCurrent) ?? false;
 
   return (
-    <GroupedList label={t('sessions')} loading={isPending} skeletonRows={2}>
+    <GroupedList label={t('sessions')} loading={isSkeleton} skeletonRows={2}>
       {sessions?.map((session) => (
         <GroupedList.Row
           key={session.id}

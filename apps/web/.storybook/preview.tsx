@@ -4,6 +4,7 @@ import { setupWorker } from 'msw/browser';
 import { mswLoader } from 'msw-storybook-addon/csf3';
 import { COLOR_SCHEME, LANGUAGE, type ColorScheme, type Language } from '@tanuki/contracts';
 import { DEFAULT_HANDLERS } from '@/shared/storybook/handlers';
+import { STORY_FOOTER } from '@/shared/storybook/models';
 import StoryProviders from './StoryProviders';
 
 type Globals = {
@@ -62,7 +63,12 @@ const preview: Preview = {
     (Story, { globals, parameters }) => {
       const { language, colorScheme } = globals as Globals;
       return (
-        <StoryProviders language={language} colorScheme={colorScheme} route={parameters.route}>
+        <StoryProviders
+          language={language}
+          colorScheme={colorScheme}
+          route={parameters.route}
+          footer={parameters.footer ?? STORY_FOOTER.PANEL}
+        >
           <Story />
         </StoryProviders>
       );

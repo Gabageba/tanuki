@@ -3,7 +3,6 @@ import { Stack } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import {
   getUserManagementPermissions,
-  MANAGED_USERS_SORT,
   SORT_DIRECTION,
   type ManagedUser,
   type ManagedUsersSort,
@@ -22,17 +21,22 @@ import useChangeUserRole from './hooks/useChangeUserRole';
 import useDeleteUser from './hooks/useDeleteUser';
 import useManagedUsers from './hooks/useManagedUsers';
 import useUnblockUser from './hooks/useUnblockUser';
-import { getDefaultSortDirection, SEARCH_DEBOUNCE_MS, type UserHandlers } from './models';
+import {
+  DEFAULT_USERS_QUERY,
+  getDefaultSortDirection,
+  SEARCH_DEBOUNCE_MS,
+  type UserHandlers,
+} from './models';
 
 /** Вкладка «Пользователи»: поиск и фильтры, таблица постранично, карточка и модалки действий. */
 function ManagementUsers() {
   const { data: currentUser } = useCurrentUser();
   const [query, setQuery] = useState('');
-  const [role, setRole] = useState<UserRole[]>([]);
-  const [status, setStatus] = useState<UserStatus[]>([]);
-  const [sort, setSort] = useState<ManagedUsersSort>(MANAGED_USERS_SORT.CREATED_AT);
-  const [direction, setDirection] = useState<SortDirection>(SORT_DIRECTION.DESC);
-  const [page, setPage] = useState(1);
+  const [role, setRole] = useState<UserRole[]>(DEFAULT_USERS_QUERY.role);
+  const [status, setStatus] = useState<UserStatus[]>(DEFAULT_USERS_QUERY.status);
+  const [sort, setSort] = useState<ManagedUsersSort>(DEFAULT_USERS_QUERY.sort);
+  const [direction, setDirection] = useState<SortDirection>(DEFAULT_USERS_QUERY.direction);
+  const [page, setPage] = useState(DEFAULT_USERS_QUERY.page);
   // Снимки, а не id: карточка не должна закрываться, если после действия человек выпал из фильтра.
   const [opened, setOpened] = useState<ManagedUser | null>(null);
   const [blockTarget, setBlockTarget] = useState<ManagedUser | null>(null);

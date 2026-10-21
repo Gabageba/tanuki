@@ -10,6 +10,7 @@ import {
   urlBase64ToUint8Array,
   writePushEnabledFlag,
 } from '../push';
+import { mergeQueries, toOptionalQuery } from '@/shared/ui/QueryBlock/lib';
 import usePushConfig from './usePushConfig';
 
 /**
@@ -18,15 +19,17 @@ import usePushConfig from './usePushConfig';
  */
 function usePushDevice() {
   const queryClient = useQueryClient();
-  const { data: config } = usePushConfig();
+  const configQuery = usePushConfig();
+  const { data: config, isPending: isConfigPending } = configQuery;
   const publicKey = config?.publicKey ?? '';
 
-  const { data: subscription = null, isPending } = useQuery({
+  const subscriptionQuery = useQuery({
     queryKey: PUSH_SUBSCRIPTION_QUERY_KEY,
     queryFn: readBrowserSubscription,
     staleTime: Infinity,
     meta: SILENT_ERROR_META,
   });
+  const { data: subscription = null, isPending } = subscriptionQuery;
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: PUSH_SUBSCRIPTION_QUERY_KEY });
 
@@ -67,7 +70,10 @@ function usePushDevice() {
   return {
     /** Push вообще можно предлагать: на инстансе заданы ключи. */
     isAvailable: config?.enabled === true,
-    isPending: isPending || config === undefined,
+    // Упавший запрос конфига — тоже ответ: push не предлагается, а не ждётся вечно.
+    isPending: isPending || isConfigPending,
+    /** Загрузка для механизма скелетонов: упавшие конфиг и подписка — тоже ответ, не ожидание. */
+    query: mergeQueries([toOptionalQuery(configQuery), toOptionalQuery(subscriptionQuery)]),
     state: isPending
       ? PUSH_DEVICE_STATE.OFF
       : getPushDeviceState({ subscription, wasEnabled: readPushEnabledFlag(), publicKey }),

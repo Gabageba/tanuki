@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
-import useNewChapterBookmarks from '../hooks/useNewChapterBookmarks';
+import PageLayout from '@/shared/ui/PageLayout';
+import type useHomeQueries from '../hooks/useHomeQueries';
 import HomeBlock from './HomeBlock';
+import QueryBlock from '@/shared/ui/QueryBlock';
+import NewChapterBookmarksEmpty from './NewChapterBookmarksEmpty';
 import NewChapterBookmarksList from './NewChapterBookmarksList';
 import NewChapterBookmarksSkeleton from './NewChapterBookmarksSkeleton';
 
@@ -12,18 +15,20 @@ import NewChapterBookmarksSkeleton from './NewChapterBookmarksSkeleton';
  */
 function NewChapterBookmarks() {
   const { t } = useTranslation();
-  const { data, isPending } = useNewChapterBookmarks();
+  const { newChapterBookmarks } = PageLayout.useQueries<typeof useHomeQueries>();
 
   return (
     <HomeBlock
       title={t('newChaptersInBookmarks')}
       link={{ label: t('allBookmarks'), to: ROUTE_PATHS.BOOKMARKS }}
     >
-      {isPending ? (
-        <NewChapterBookmarksSkeleton />
-      ) : (
-        <NewChapterBookmarksList items={data?.items ?? []} />
-      )}
+      <QueryBlock
+        query={newChapterBookmarks}
+        skeleton={<NewChapterBookmarksSkeleton />}
+        empty={<NewChapterBookmarksEmpty />}
+      >
+        {(data) => <NewChapterBookmarksList items={data.items} />}
+      </QueryBlock>
     </HomeBlock>
   );
 }

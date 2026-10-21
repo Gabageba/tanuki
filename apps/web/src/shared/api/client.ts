@@ -37,10 +37,10 @@ export const isAdultContentHiddenError = (error: unknown) =>
   error instanceof ApiRequestError && error.code === API_ERROR_CODE.ADULT_CONTENT_HIDDEN;
 
 /**
- * Текст ошибки приходит с сервера уже на языке интерфейса — язык передаётся в Accept-Language.
- * Свой текст у фронта только на случай, когда сервер ответить не смог.
+ * Запрос к API с разбором ошибки. Текст ошибки приходит с сервера уже на языке интерфейса — язык
+ * передаётся в Accept-Language. Свой текст у фронта только на случай, когда сервер ответить не смог.
  */
-export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> => {
+const apiRequest = async (path: string, init?: RequestInit): Promise<Response> => {
   const headers = new Headers(init?.headers);
   headers.set('accept-language', document.documentElement.lang);
 
@@ -66,9 +66,65 @@ export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> 
     );
   }
 
+  return response;
+};
+
+export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const response = await apiRequest(path, init);
+
   if (response.status === 204) {
     return undefined as T;
   }
 
   return (await response.json()) as T;
 };
+
+/** Кадр потока SSE: `event:` и склеенные строки `data:`. */
+export type ApiStreamEvent = {
+  event: string;
+  data: string;
+};
+
+/** Разбирает текст потока на кадры; недописанный хвост возвращает, чтобы дочитать с новой порцией. */
+const parseStreamFrames = (buffer: string) => {
+  const frames = buffer.split(/\r?\n\r?\n/);
+  const rest = frames.pop() ?? '';
+  const events = frames.flatMap((frame): ApiStreamEvent[] => {
+    let event = 'message';
+    const data: string[] = [];
+    for (const line of frame.split(/\r?\n/)) {
+      const separator = line.indexOf(':');
+      // Строка с двоеточия — комментарий (пульс), в данные не идёт.
+      if (separator === 0) continue;
+      const field = separator === -1 ? line : line.slice(0, separator);
+      const value = separator === -1 ? '' : line.slice(separator + 1).replace(/^ /, '');
+      if (field === 'event') event = value;
+      if (field === 'data') data.push(value);
+    }
+    return data.length ? [{ event, data: data.join('\n') }] : [];
+  });
+  return { events, rest };
+};
+
+/**
+ * Поток SSE через `fetch`, а не `EventSource`: его отменяет сигнал запроса, а ошибка до начала
+ * потока (400, 401) приходит обычным `ApiRequestError`.
+ */
+export async function* apiStream(path: string, init?: RequestInit) {
+  const response = await apiRequest(path, init);
+  if (!response.body) return;
+
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = '';
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const { events, rest } = parseStreamFrames(buffer + value);
+      buffer = rest;
+      yield* events;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

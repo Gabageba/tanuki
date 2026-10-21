@@ -11,6 +11,17 @@ export const STORY_LAYOUT = {
 } as const;
 export type StoryLayout = EnumLiteralsOf<typeof STORY_LAYOUT>;
 
+/** `parameters.footer`: нижняя панель приложения под компонентом без маршрута. */
+export const STORY_FOOTER = {
+  /** Неактивная панель — по умолчанию, как на страницах приложения. */
+  PANEL: 'panel',
+  /** Только её место: история показывает кнопку самой панели, вторая копия панели не нужна. */
+  SPACE: 'space',
+  /** Ни панели, ни места под неё — читалка. */
+  NONE: 'none',
+} as const;
+export type StoryFooter = EnumLiteralsOf<typeof STORY_FOOTER>;
+
 /** `parameters.route` истории страницы: шаблон маршрута, открытый адрес и каркас. */
 export type StoryRoute = {
   path: string;

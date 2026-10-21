@@ -10,6 +10,8 @@ import {
   type HomeSectionInfo,
   type HomeSectionKind,
   type HomeSectionVariant,
+  type SelectionsSectionResponse,
+  type Title,
 } from '@tanuki/contracts';
 
 /** Иконка вкладки по смыслу блока: названия у сайтов свои, вид — общий. */
@@ -40,3 +42,9 @@ export const resolveSelectionsSection = (
   sections: HomeSectionInfo[],
   requestedId: string | null,
 ): HomeSectionInfo | undefined => sections.find(({ id }) => id === requestedId) ?? sections[0];
+
+/** Тайтлы всех загруженных порций блока. Сайт мог сдвинуть блок между порциями — тайтл на стыке
+ *  пришёл бы дважды. */
+export const getSectionTitles = (pages: SelectionsSectionResponse[]): Title[] => [
+  ...new Map(pages.flatMap(({ items }) => items).map((title) => [title.id, title])).values(),
+];

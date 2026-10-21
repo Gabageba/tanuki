@@ -2,7 +2,11 @@ import { Paper } from '@mantine/core';
 import { CHAPTER_NUMBERING } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
 import ReaderControls from './ReaderControls';
+import ReaderControlsSkeleton from './ReaderControls/ReaderControlsSkeleton';
 import { HEADER_HEIGHT } from '@/shared/lib/appShell';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
+import { mergeQueries, toOptionalQuery } from '@/shared/ui/QueryBlock/lib';
+import type { LoadingQuery } from '@/shared/ui/QueryBlock/models';
 import styles from '../ReaderPage.module.scss';
 
 const CONTROLS_OFFSET = 16;
@@ -15,6 +19,8 @@ type Props = {
   page: number;
   pagesLength: number | null;
   visible: boolean;
+  /** Загрузка главы из ленты — от неё соседние главы. */
+  feedQuery: LoadingQuery;
 };
 
 function ReaderMobileControls({
@@ -25,8 +31,15 @@ function ReaderMobileControls({
   page,
   pagesLength,
   visible,
+  feedQuery,
 }: Props) {
-  const { data: chaptersData } = useChapters({ titleId });
+  const chaptersQuery = useChapters({ titleId });
+  const { data: chaptersData } = chaptersQuery;
+  // Как у шапки: без списка глав панель обойдётся, перезапрос посреди чтения тихий.
+  const { isSkeleton } = useSkeletonTiming({
+    ...mergeQueries([toOptionalQuery(chaptersQuery), feedQuery]),
+    isLive: true,
+  });
 
   const chapters = chaptersData?.items ?? [];
   const currentChapterIndex = chapters.findIndex((chapter) => chapter.id === chapterId);
@@ -49,16 +62,20 @@ function ReaderMobileControls({
       }
       style={{ marginInline: 'auto' }}
     >
-      <ReaderControls
-        page={page}
-        pagesLength={pagesLength}
-        prevChapterId={prevChapterId}
-        nextChapterId={nextChapterId}
-        titleId={titleId}
-        chapters={chapters}
-        numbering={chaptersData?.numbering ?? CHAPTER_NUMBERING.GLOBAL}
-        currentChapterIndex={currentChapterIndex}
-      />
+      {isSkeleton ? (
+        <ReaderControlsSkeleton />
+      ) : (
+        <ReaderControls
+          page={page}
+          pagesLength={pagesLength}
+          prevChapterId={prevChapterId}
+          nextChapterId={nextChapterId}
+          titleId={titleId}
+          chapters={chapters}
+          numbering={chaptersData?.numbering ?? CHAPTER_NUMBERING.GLOBAL}
+          currentChapterIndex={currentChapterIndex}
+        />
+      )}
     </Paper>
   );
 }

@@ -41,6 +41,12 @@
   }
 }
 
+// The edge fade of a `Scroller` spans its full height and would hide the tab list's bottom line
+// under it, so inside a tab list it stops right above that line.
+.tabsList .scrollerControl {
+  bottom: var(--tabs-list-border-width);
+}
+
 // Unlike `Button`, `Tabs` doesn't run its colors through `variantColorResolver`, so the base
 // (non-active) look for this variant lives here too, not just the active-state tint.
 .tabsTab {

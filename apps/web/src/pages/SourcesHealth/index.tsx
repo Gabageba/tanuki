@@ -20,7 +20,6 @@ function SourcesHealth() {
         title={t('sourcesHealth')}
         actions={isStaff && <ProbeAllButton />}
         goBack={{ path: ROUTE_PATHS.SOURCES }}
-        showLoading={false}
       >
         <SourcesHealthTable isStaff={isStaff} />
       </PageLayout.Content>

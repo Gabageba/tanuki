@@ -8,10 +8,12 @@ import {
   type SourceStatus,
 } from '@tanuki/contracts';
 import PageLayout from '@/shared/ui/PageLayout';
+import QueryBlock from '@/shared/ui/QueryBlock';
 import { flattenSources } from '@/entities/source/lib';
 import { SOURCES_HEALTH_SOURCE_SEARCH_PARAM } from '@/shared/lib/routes';
 import HealthFilters from './HealthFilters';
 import HealthList from './HealthList';
+import HealthTableSkeleton from './HealthTableSkeleton';
 import SourceDrawer from './SourceDrawer';
 import {
   HEALTH_SORT,
@@ -29,7 +31,7 @@ type Props = {
 /** Фильтры, таблица и карточка источника. Источников два десятка и все приходят одним запросом,
  *  поэтому фильтрует и сортирует клиент, без поиска и страниц. По умолчанию лежащие сверху. */
 function SourcesHealthTable({ isStaff }: Props) {
-  const { data, isPending } = PageLayout.useQuery<SourcesHealthQuery>();
+  const query = PageLayout.useQuery<SourcesHealthQuery>();
   const [status, setStatus] = useState<SourceStatus[]>([]);
   const [contentType, setContentType] = useState<SourceContentType[]>([]);
   const [sort, setSort] = useState<HealthSort>(HEALTH_SORT.STATUS);
@@ -39,9 +41,7 @@ function SourcesHealthTable({ isStaff }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
   const openedId = searchParams.get(SOURCES_HEALTH_SOURCE_SEARCH_PARAM);
 
-  const all = flattenSources(data);
-  const sources = sortSources(filterSources(all, { status, contentType }), sort, direction);
-  const opened = all.find((source) => source.id === openedId) ?? null;
+  const opened = flattenSources(query.data).find((source) => source.id === openedId) ?? null;
 
   /** Повторный клик по тому же ключу разворачивает направление. */
   const handleSortChange = (next: HealthSort) => {
@@ -72,15 +72,22 @@ function SourcesHealthTable({ isStaff }: Props) {
         onStatusChange={setStatus}
         onContentTypeChange={setContentType}
       />
-      <HealthList
-        sources={sources}
-        isPending={isPending}
-        sort={sort}
-        direction={direction}
-        onSortChange={handleSortChange}
-        onOpen={(source) => handleOpenedChange(source.id)}
-        onReset={handleReset}
-      />
+      <QueryBlock query={query} skeleton={<HealthTableSkeleton />}>
+        {(data) => (
+          <HealthList
+            sources={sortSources(
+              filterSources(flattenSources(data), { status, contentType }),
+              sort,
+              direction,
+            )}
+            sort={sort}
+            direction={direction}
+            onSortChange={handleSortChange}
+            onOpen={(source) => handleOpenedChange(source.id)}
+            onReset={handleReset}
+          />
+        )}
+      </QueryBlock>
       <SourceDrawer source={opened} isStaff={isStaff} onClose={() => handleOpenedChange(null)} />
     </Stack>
   );

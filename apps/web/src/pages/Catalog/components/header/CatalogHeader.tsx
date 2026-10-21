@@ -6,17 +6,17 @@ import SourceTitle from '@/entities/source/components/SourceTitle';
 import SearchInput from '@/shared/ui/SearchInput';
 import PageLayout from '@/shared/ui/PageLayout';
 import type { CatalogParams } from '../../models';
-import type { Source } from '@tanuki/contracts';
 import { isTitleSearchLocked } from '@/entities/source/lib';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import GoBackButton from '@/shared/ui/GoBackButton';
+import QueryBlock from '@/shared/ui/QueryBlock';
+import type useSource from '@/entities/source/hooks/useSource';
 
 type Props = {
-  source: Source | undefined;
-  isPending: boolean;
+  sourceQuery: ReturnType<typeof useSource>;
 };
 
-function CatalogHeader({ source, isPending }: Props) {
+function CatalogHeader({ sourceQuery }: Props) {
   const { t } = useTranslation();
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
   const [, setSearchParams] = useSearchParams();
@@ -35,36 +35,36 @@ function CatalogHeader({ source, isPending }: Props) {
     );
   };
 
-  if (isPending) {
-    return <CatalogHeaderSkeleton />;
-  }
-
-  if (!source) {
-    return null;
-  }
-
-  const isSearchLocked = isTitleSearchLocked(source.id, source);
-
   return (
-    <PageLayout.Header>
-      <Flex justify="space-between" direction={{ base: 'column', sm: 'row' }} gap="sm">
-        <Group gap="xs" wrap="nowrap" miw={0}>
-          <GoBackButton path={ROUTE_PATHS.SOURCES} />
-          <SourceTitle source={source} showStatus />
-        </Group>
-        <SearchInput
-          w={{ base: '100%', sm: 300 }}
-          allowClear
-          handleSearch={handleSearch}
-          defaultValue={params.query}
-          disabled={isSearchLocked}
-          placeholder={
-            isSearchLocked ? t('searchAvailableAfterLogin') : t('searchIn', { title: source.title })
-          }
-          debounceMs={400}
-        />
-      </Flex>
-    </PageLayout.Header>
+    <QueryBlock
+      query={sourceQuery}
+      skeleton={<CatalogHeaderSkeleton />}
+      offline={<CatalogHeaderSkeleton />}
+    >
+      {(source) => (
+        <PageLayout.Header>
+          <Flex justify="space-between" direction={{ base: 'column', sm: 'row' }} gap="sm">
+            <Group gap="xs" wrap="nowrap" miw={0}>
+              <GoBackButton path={ROUTE_PATHS.SOURCES} />
+              <SourceTitle source={source} showStatus />
+            </Group>
+            <SearchInput
+              w={{ base: '100%', sm: 300 }}
+              allowClear
+              handleSearch={handleSearch}
+              defaultValue={params.query}
+              disabled={isTitleSearchLocked(source.id, source)}
+              placeholder={
+                isTitleSearchLocked(source.id, source)
+                  ? t('searchAvailableAfterLogin')
+                  : t('searchIn', { title: source.title })
+              }
+              debounceMs={400}
+            />
+          </Flex>
+        </PageLayout.Header>
+      )}
+    </QueryBlock>
   );
 }
 

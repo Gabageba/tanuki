@@ -8,6 +8,8 @@ import {
   type FiltersResponse,
   type PushConfig,
   type RemoveTitleBookmarkResponse,
+  SEARCH_STREAM_EVENT,
+  type SearchGroup,
   type SelectionsSectionResponse,
   type TitleBookmark,
   type TitleBookmarkVisitResponse,
@@ -41,7 +43,7 @@ import {
   getSelectionsResponse,
   READING_PROGRESS_RESPONSE,
   SEARCH_HISTORY_RESPONSE,
-  SEARCH_RESPONSE,
+  SEARCH_GROUPS,
   TITLE_DETAILS_RESPONSE,
   TITLE_MATCHES_RESPONSE,
   TITLES,
@@ -62,7 +64,7 @@ export const neverResolve = async () => {
   return new HttpResponse(null);
 };
 
-/** Все запросы API висят — страница остаётся в загрузке: скелетоны и `BlockLoader`. Текущий
+/** Все запросы API висят — страница остаётся в загрузке, видны скелетоны. Текущий
  *  пользователь отвечает, иначе вместо страницы был бы экран входа. */
 export const LOADING_HANDLERS = [
   http.get(apiPath('/auth/me'), () => HttpResponse.json(CURRENT_USER)),
@@ -74,6 +76,37 @@ export const ERROR_HANDLERS = [
   http.get(apiPath('/auth/me'), () => HttpResponse.json(CURRENT_USER)),
   http.get(apiPath('/*'), () => apiError(API_ERROR_CODE.INTERNAL, 'Сервер не ответил', 500)),
 ];
+
+type SearchStreamOptions = {
+  /** Источники, которые так и не отвечают: их места остаются скелетоном, `done` не приходит. */
+  pendingIds?: string[];
+  /** Пауза перед каждой группой — как ответы источников по очереди. */
+  delayMs?: number;
+};
+
+/** Поток `GET /search` (SSE): места, группы по одной, `done` — если ответили все. */
+export const searchStream = (
+  groups: SearchGroup[],
+  { pendingIds = [], delayMs = 0 }: SearchStreamOptions = {},
+) => {
+  const encoder = new TextEncoder();
+  const frame = (event: string, data: unknown) =>
+    encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  const stream = new ReadableStream({
+    async start(controller) {
+      const sourceIds = [...groups.map(({ sourceId }) => sourceId), ...pendingIds];
+      controller.enqueue(frame(SEARCH_STREAM_EVENT.SOURCES, { sourceIds }));
+      for (const group of groups) {
+        if (delayMs) await delay(delayMs);
+        controller.enqueue(frame(SEARCH_STREAM_EVENT.GROUP, group));
+      }
+      if (pendingIds.length) return;
+      controller.enqueue(frame(SEARCH_STREAM_EVENT.DONE, {}));
+      controller.close();
+    },
+  });
+  return new HttpResponse(stream, { headers: { 'content-type': 'text/event-stream' } });
+};
 
 const svg = (body: string) =>
   new HttpResponse(body, { headers: { 'content-type': 'image/svg+xml' } });
@@ -169,7 +202,7 @@ export const DEFAULT_HANDLERS = [
   ),
 
   // Поиск и подборки
-  http.get(apiPath('/search'), () => HttpResponse.json(SEARCH_RESPONSE)),
+  http.get(apiPath('/search'), () => searchStream(SEARCH_GROUPS)),
   http.get(apiPath('/search/history'), () => HttpResponse.json(SEARCH_HISTORY_RESPONSE)),
   http.get(apiPath('/selections/:sourceId/:sectionId'), ({ params }) =>
     HttpResponse.json({

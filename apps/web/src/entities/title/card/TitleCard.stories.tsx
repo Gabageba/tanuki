@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Box, SimpleGrid } from '@mantine/core';
 import { VIEW_MODE } from '@tanuki/contracts';
 import { FAVORITE_FOLDER } from '@/shared/storybook/fixtures';
+import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
 import { TITLES } from '@/shared/storybook/titles';
 import TitleCardSkeleton from './TitleCardSkeleton';
 import TitleCardsGridSkeleton from './TitleCardsGridSkeleton';
@@ -42,15 +43,25 @@ export const List: Story = {
   ),
 };
 
-export const Skeletons: Story = {
-  name: 'Скелетоны карточки',
+export const GridWithSkeleton: Story = {
+  name: 'Плитка рядом со скелетоном',
   render: () => (
-    <SimpleGrid cols={2} p="md" maw={760}>
-      <Box w={180}>
-        <TitleCardSkeleton viewMode={VIEW_MODE.GRID} />
-      </Box>
-      <TitleCardSkeleton viewMode={VIEW_MODE.LIST} />
-    </SimpleGrid>
+    <SkeletonCompare
+      w={180}
+      item={<TitleCard title={TITLES[0]!} />}
+      skeleton={<TitleCardSkeleton viewMode={VIEW_MODE.GRID} />}
+    />
+  ),
+};
+
+export const ListWithSkeleton: Story = {
+  name: 'Строка списка рядом со скелетоном',
+  render: () => (
+    <SkeletonCompare
+      w={520}
+      item={<TitleCard title={TITLES[0]!} viewMode={VIEW_MODE.LIST} />}
+      skeleton={<TitleCardSkeleton viewMode={VIEW_MODE.LIST} />}
+    />
   ),
 };
 

@@ -232,6 +232,9 @@ const toBookmark = (index: number): BookmarkItem => {
         : { chapterNumber: 10 + index, position: 10 + index, total: 40 + index * 3 },
     chaptersCount: 40 + index * 3,
     newChaptersCount: index % 4 === 0 ? 2 : 0,
+    latestChapterNumber: 40 + index * 3,
+    // Новые — у каждой четвёртой; свежая у первой, дальше на день старше.
+    latestNewAt: index % 4 === 0 ? `2026-10-${15 - index / 4}T08:00:00Z` : null,
     otherSources: index % 2 === 0 ? BOOKMARK_ITEM.otherSources : [],
     availability: index === 7 ? BOOKMARK_AVAILABILITY.SOURCE_DOWN : BOOKMARK_AVAILABILITY.AVAILABLE,
   };

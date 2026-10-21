@@ -13,7 +13,7 @@ import {
 import { useForm } from '@mantine/form';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { SignInIcon, UserIcon } from '@phosphor-icons/react';
+import { LockIcon, SignInIcon, UserIcon } from '@phosphor-icons/react';
 import { API_ERROR_CODE } from '@tanuki/contracts';
 import { ApiRequestError } from '@/shared/api/client';
 import { validateRequired } from '@/shared/lib/authValidation';
@@ -106,9 +106,15 @@ function Login() {
             <TextInput
               autoComplete="username"
               {...form.getInputProps('login')}
+              placeholder={t('loginOrEmail')}
               leftSection={<UserIcon />}
             />
-            <PasswordInput autoComplete="current-password" {...form.getInputProps('password')} />
+            <PasswordInput
+              autoComplete="current-password"
+              {...form.getInputProps('password')}
+              placeholder={t('password')}
+              leftSection={<LockIcon />}
+            />
             <Group justify="space-between">
               <Checkbox
                 size="xs"
