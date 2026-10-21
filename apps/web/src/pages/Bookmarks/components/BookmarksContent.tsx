@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Stack } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { useSearchParams } from 'react-router';
@@ -44,9 +44,12 @@ function BookmarksContent() {
   const updateParams = (patch: Partial<BookmarksParams>) =>
     setParams({ ...params, folderId: activeFolderId, query, page, ...patch });
 
-  const [debouncedQuery] = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+  // Набор отложен вместе с папкой: строка, набранная в прежней папке, в запрос новой не уходит.
+  const search = useMemo(() => ({ folderId: activeFolderId, query }), [activeFolderId, query]);
+  const [debouncedSearch] = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   // Сброс поиска (кнопкой или сменой папки) применяется сразу, без задержки набора.
-  const listQuery = query ? debouncedQuery : '';
+  const listQuery =
+    query && debouncedSearch.folderId === activeFolderId ? debouncedSearch.query : '';
 
   useEffect(() => {
     if (isSameFolder) return;
