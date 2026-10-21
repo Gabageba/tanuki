@@ -2,6 +2,7 @@ import { Group, Text, UnstyledButton } from '@mantine/core';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import FolderGlyph from '@/entities/bookmark/FolderGlyph';
+import { getBookmarkFolderFillColor } from '@/entities/bookmark/lib';
 import { getBookmarksFolderPath } from '@/shared/lib/routes';
 import PageLayout from '@/shared/ui/PageLayout';
 import ProgressList from '@/shared/ui/ProgressList';
@@ -36,6 +37,8 @@ function BookmarksCard() {
           ),
           value: folder.count,
           text: folder.count,
+          // Полоса в цвет папки — как её иконка слева.
+          color: getBookmarkFolderFillColor(folder.color),
         }))}
       />
     </ProfileStatisticCard>
