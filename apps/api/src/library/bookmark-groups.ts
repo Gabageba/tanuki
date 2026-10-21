@@ -192,6 +192,7 @@ export const countBookmarkGroup = (
     branchPosition: stat?.position ?? null,
     newChaptersCount: isCounted ? stat.newCount : 0,
     latestNewAt: isCounted ? stat.latestNewAt : null,
+    latestChapterNumber: stat?.latestNumber ?? null,
   };
 };
 
