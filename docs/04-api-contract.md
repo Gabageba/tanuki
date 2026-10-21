@@ -169,15 +169,28 @@ mangabuff, multporn, nudemoon — запрос; sexkomix2 — фильтры) и
 ### Мультипоиск
 
 ```
-GET /search?query=...&sources=READMANGA,DESU&types=manga,manhwa&states=ongoing&limit=10
-    → { groups: Array<{ sourceId, status, items: Title[], unappliedFilters: Array<'types' | 'states'>, filters: FilterSelection[] }> }
+GET /search?query=...&sources=READMANGA,DESU&types=manga,manhwa&states=ongoing&limit=10[&retry=1]
+    → text/event-stream
+event: sources   data: { sourceIds: string[] }   — порядок мест, первым, сразу
+event: group     data: { sourceId, status, items: Title[], unappliedFilters: Array<'types' | 'states'>, filters: FilterSelection[] }
+event: done      data: {}                        — ответили все или вышел дедлайн
     status: ok | timeout | error | locked | unavailable
 ```
 
-Веерный запрос с общим дедлайном (`SEARCH_TIMEOUT_MS`, 5 секунд). Источники, не уложившиеся в
-дедлайн, возвращаются со `status: 'timeout'` и пустым списком — частичный результат лучше, чем
-ожидание самого медленного. Группы идут в порядке источников пользователя (`Source.position`);
-выключенные пользователем и скрытые настройкой 18+ не возвращаются вовсе.
+Веерный запрос потоком SSE (`SEARCH_STREAM_EVENT`) с общим дедлайном (`SEARCH_TIMEOUT_MS`,
+15 секунд). Первое событие `sources` — источники, которые ответят, в порядке пользователя
+(`Source.position`): клиент сразу ставит на их места скелетоны. Дальше по `group` на источник, как
+только он ответил, — в порядке ответов, не мест; пропущенные (`locked`, `unavailable`) уходят сразу
+после `sources`. В момент дедлайна все не ответившие уходят группами `timeout` с пустым списком,
+затем `done`. Выключенные пользователем и скрытые настройкой 18+ не возвращаются вовсе.
+
+- Ошибка до начала потока (400 `searchQueryMissing`, 401) — обычный HTTP-ответ с ошибкой.
+- Закрытие соединения клиентом (ушёл со страницы, сменил фильтры) останавливает поток; запросы к
+  источникам доживают сами и остаются в кеше.
+- Заголовки как у `/notifications/stream`: `X-Accel-Buffering: no`,
+  `Cache-Control: no-cache, no-transform` — иначе прокси соберёт поток и отдаст разом в конце.
+- `retry=1` — повтор по не ответившим (клиент передаёт их в `sources`): запрос не пишется в
+  историю.
 
 - `locked` — у пользователя нет аккаунта на закрытом источнике, его не опрашивали. Так же
   закрыт источник, у которого поиск по названию — выгода входа (`loginBenefits` с `titleSearch`,
@@ -204,7 +217,7 @@ GET /search?query=...&sources=READMANGA,DESU&types=manga,manhwa&states=ongoing&l
   тайтлов) на клиенте не рисуются.
 
 - Побочный эффект — запрос пишется в историю (если `UserSettings.saveSearchHistory` не
-  выключен). Фильтры в историю не попадают.
+  выключен и это не повтор `retry=1`). Фильтры в историю не попадают.
 
 ```
 GET    /search/history               → { items: Array<{ query, searchedAt }> }   свежие сверху
