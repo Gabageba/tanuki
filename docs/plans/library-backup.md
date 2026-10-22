@@ -1,6 +1,6 @@
 # Резервная копия библиотеки
 
-Статус: **Дизайн выбран** · 2026-10-23
+Статус: **Реализован** · 2026-10-23
 Задача: `library-backup` · ветка `feat/library-backup` · песочница `/playground/library-backup`
 
 ## Зачем
@@ -215,9 +215,9 @@ export const RESTORE_PROGRESS_POLICY = {
   exportedAt: '2026-10-23T10:00:00Z',
   origin: 'https://tanuki.example.com',
   username: 'gabageba',
-  settings: { user: {...}, reader: {...}, disabledSources: string[] },
+  settings: { user: {...}, sourceOrder: string[] | null, reader: {...} | null, disabledSources: string[] },
   folders: [{ key, builtIn, name, icon, color, trackUpdates, position }],
-  bookmarks: [{ titleKey, sourceId, titleId, folderKey, name, coverUrl, contentRating, type,
+  bookmarks: [{ titleId, folderKey, name, coverUrl, contentRating, type,
                 visitedAt, createdAt, updatedAt }],
   progress: [{ titleKey, sourceId, chapterId, chapterVolume, chapterNumber, chapterTitle,
                branchId, pageIndex, titleId, titleName, coverUrl, contentRating, type,
@@ -337,20 +337,38 @@ export const RESTORE_PROGRESS_POLICY = {
 
 ## Этапы реализации
 
-1. **Контракты.** `backup.ts`: `BACKUP_FORMAT`, `BACKUP_VERSION`, `BACKUP_MAX_BYTES`, enum'ы политик,
-   `BackupSchema`, `BackupPreviewSchema`, `RestoreBackupRequestSchema`,
-   `BackupRestoreResultSchema`; коды ошибок.
-2. **API.** `BackupModule`: выгрузка, расчёт плана, `preview`, `restore` в транзакции с
-   advisory lock; тесты по списку выше. Можно делать без макетов.
-3. **Web без макетов.** Строка «Создать резервную копию» со скачиванием (`Loader` в кнопке,
-   `disabled` без сети), удаление `ExportModal` с историей и `EXPORT_FORMAT`, тексты строк,
-   хук запросов сводки и записи.
-4. **Web по макетам.** `RestoreBackupModal` и его шаги вместо `ImportModal`, удаление
-   `MOCK_IMPORT_PREVIEW`; stories «Модалки/Профиль/RestoreBackupModal» по каждому шагу
-   (файл, ошибка файла, сводка без конфликтов, сводка и вопросы с конфликтами, «Всё из копии уже
-   есть», готово) и
-   обработчики MSW для `/backup/*` в `DEFAULT_HANDLERS`.
-5. **Docs.**
+1. [x] **Контракты.** `backup.ts`: `BACKUP_FORMAT`, `BACKUP_VERSION`, `BACKUP_MAX_BYTES`, enum'ы
+       политик, `BackupSchema`, `BackupPreviewSchema`, `RestoreBackupRequestSchema`,
+       `BackupRestoreResultSchema`; коды ошибок.
+2. [x] **API.** `BackupModule`: выгрузка, расчёт плана, `preview`, `restore` в транзакции с
+       advisory lock; тесты по списку выше.
+3. [x] **Web без макетов.** Строка «Создать резервную копию» со скачиванием (`Loader` в кнопке,
+       `disabled` без сети), удаление `ExportModal` с историей и `EXPORT_FORMAT`, тексты строк,
+       хуки запросов сводки и записи.
+4. [x] **Web по макетам.** `RestoreBackupModal` и его шаги вместо `ImportModal`, удаление
+       `MOCK_IMPORT_PREVIEW`; stories «Модалки/Профиль/RestoreBackupModal» по каждому шагу и
+       обработчики MSW для `/backup/*` в `DEFAULT_HANDLERS`.
+5. [x] **Docs.**
+
+### Чем реализация отличается от плана
+
+- **Закладка в файле без `titleKey` и `sourceId`** — сервер выводит их из `titleId`, иначе файл
+  мог бы противоречить сам себе. У отметок и журнала они остались: `titleId` у старых отметок
+  null, а в журнале его нет вовсе.
+- **Защита img-прокси от SSRF** — в плане её не было. Обложки из файла пишутся как есть, и
+  подписанный `/img` ходил бы по любому адресу из подделанной копии, в том числе во внутреннюю
+  сеть. Теперь прокси ходит только по `http(s)` на публичные адреса (`img-proxy/upstream-guard.ts`).
+- **Настройки 18+ из копии** применяются, только если возраст на этом инстансе уже подтверждён.
+  План исключал из копии `ageConfirmed`, но сервер открывает 18+ по одному `showAdultSources` —
+  флажок «Применить настройки» обходил бы вопрос «вам есть 18?».
+- **Выключенная в копии история поиска стирает накопленную** — как при выключении в настройках.
+- **После записи перезапрашивается весь кеш**, а не перечисленные запросы: восстановление задевает
+  почти все данные пользователя, и список ключей легко разошёлся бы с ними. Тема и язык
+  применяются общим `shared/lib/applyUserSettings` — тем же, что при входе (`UserSettingsSync`).
+- **Лимит тела** — 20 МБ плюс 1 МБ запаса на поля запроса вокруг файла, хуком `onRoute` только на
+  `/backup/*`.
+- Двойная отправка файла осталась: копия на 2,8 МБ (60 000 минут чтения) проходит сводку без
+  заметной задержки.
 
 ## Затронутые docs
 
@@ -363,11 +381,13 @@ export const RESTORE_PROGRESS_POLICY = {
 
 ## Открытые вопросы
 
-- Двойная отправка файла (сводка + запись). При типичных копиях в сотни КБ не важно; если на
-  больших копиях это станет заметно — хранить разобранный файл на сервере по токену минут 15.
-  Решить при реализации API по размеру реальной копии.
+- Двойная отправка файла (сводка + запись). На копии в 2,8 МБ незаметна; если на реальных больших
+  копиях это станет заметно — хранить разобранный файл на сервере по токену минут 15.
 - Импорт с источника — следующим планом; `BackupRestoreService` держать таким, чтобы он
   записывал через него.
+- Общий снимок тайтла вместо снимка в каждой строке закладки — в
+  [12-todo.md](../12-todo.md#закладки-и-прогресс); запись снимка при восстановлении тогда
+  переедет на общую таблицу, формат файла не изменится.
 
 ## Отвергнутые идеи
 

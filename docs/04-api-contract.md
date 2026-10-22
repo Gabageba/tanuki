@@ -429,6 +429,11 @@ GET /img?u=<base64url>&s=<sourceId>&sig=<hmac>&w=<width>&f=webp|avif|orig
   контент по нему неизменен.
 - Ресайз через `sharp` только для обложек. **Страницы глав не трогаем**: перекодирование
   убивает качество текста и съедает CPU на каждой странице.
+- Ходит только по `http`/`https` и только на публичные адреса: loopback, частные сети,
+  link-local, CGNAT и multicast закрыты — адрес-литерал проверяется сразу, имя хоста — `lookup`
+  агента undici после DNS (`img-proxy/upstream-guard.ts`), иначе `400 badRequest`. Адреса обложек
+  приходят и из резервных копий, которые человек загружает сам, — без этого подписанный `/img`
+  стучался бы во внутреннюю сеть сервера.
 
 ### Аккаунты и инвайты
 
@@ -668,6 +673,60 @@ bookmarkFolderConflict`, фронт спрашивает папку и повт�
   `newChaptersCount > 0` (у неотслеживаемых папок счётчик всегда 0), свежая новая глава первой,
   до 8.
 
+### Резервная копия
+
+Выгрузка всей библиотеки и настроек файлом и восстановление из него — на этом или другом
+инстансе. Реализация — `apps/api/src/backup` (`BackupModule`), план —
+[`plans/library-backup.md`](plans/library-backup.md), контракты —
+`packages/contracts/src/backup.ts`.
+
+```
+GET  /backup          → Backup — файл, Content-Disposition: attachment; filename="tanuki-backup-YYYY-MM-DD.json"
+POST /backup/preview  { backup }                                              → BackupPreview
+POST /backup/restore  { backup, folderPolicy, progressPolicy, applySettings }  → BackupRestoreResult
+
+Backup = { format: "tanuki-backup", version: 1, exportedAt, origin, username,
+           settings: { user, sourceOrder, reader, disabledSources },
+           folders: { key, builtIn, name, icon, color, trackUpdates, position }[],
+           bookmarks: { titleId, folderKey, name, coverUrl, contentRating, type,
+                        visitedAt, createdAt, updatedAt }[],
+           progress: { titleKey, sourceId, chapterId, chapterVolume, chapterNumber, chapterTitle,
+                       branchId, pageIndex, titleId, titleName, coverUrl, contentRating, type,
+                       hiddenAt, updatedAt }[],
+           chapterReads: { chapterId, sourceId, titleKey, chapterVolume, chapterNumber, tags,
+                           readAt }[],
+           readingActivity: { minute, seconds }[] }
+folderPolicy   = "keepMine" | "fromBackup"
+progressPolicy = "furthest" | "keepMine" | "fromBackup"
+```
+
+- **В копии** — папки, закладки, отметки «где остановился», журнал прочитанных глав, минуты
+  чтения, общие настройки, читалка, порядок и выключенные источники. Нет: аккаунтов источников,
+  истории поиска, уведомлений, устройств, аватара, связей тайтлов и подтверждения возраста.
+  `folderKey` — id папки на исходном инстансе, связывает закладку с папкой внутри файла; источник
+  и ключ закладки сервер выводит из `titleId`.
+- **Сводка и запись** считают один план (`backup-plan.ts`); сводка ничего не пишет, файл
+  отправляется дважды — сервер ничего не хранит между шагами.
+- **Источники**, которых нет в каталоге инстанса, пропускаются и считаются в `skipped`;
+  выключенные и скрытые 18+ — загружаются.
+- **Папки:** встроенные — по `builtIn`, свои — по имени без учёта регистра; новые создаются в
+  конце, сверх лимита 20 — не создаются, их тайтлы ложатся во «В планах».
+- **Закладки** — по группе подтверждённых совпадений. Тайтл в другой папке: `keepMine` не трогает,
+  `fromBackup` переносит всю группу. Недостающая копия группы становится ещё одним источником той
+  же закладки.
+- **Отметки:** нет — пишется всегда; разошлись — `furthest` (больше номер главы, при равенстве —
+  страница; без номера — свежая), `keepMine`, `fromBackup`.
+- **Статистика** — объединение: журнал без повторов, минута — большее из двух.
+- **Настройки** — только с `applySettings`: заменяются целиком, источники и блоки подборок
+  незнакомых источников отбрасываются, выключение истории поиска стирает её. Настройки 18+ из
+  копии применяются, только если возраст на этом инстансе уже подтверждён (`ageConfirmed`):
+  сервер открывает 18+ по одному `showAdultSources`, и файл обходил бы вопрос «вам есть 18?».
+- **Запись** — одной транзакцией, по одной на пользователя (`pg_try_advisory_xact_lock`): вторая
+  параллельная — `409 restoreInProgress`. Версия файла новее поддерживаемой — `400
+backupVersionUnsupported`.
+- **Лимит тела** — `BACKUP_MAX_BYTES` (20 МБ) плюс запас 1 МБ, только на `/backup/*` (хук
+  `onRoute` в `main.ts`); у остальных маршрутов общий 1 МБ.
+
 ### Уведомления
 
 Лента, поток SSE и Web Push. Реализация — `apps/api/src/notifications` (`NotificationsModule`,
@@ -758,6 +817,8 @@ NotificationItem = { id, type, category, count, createdAt, updatedAt, payload } 
 | `bookmarkFolderNameTaken`       | 409  | Папка с таким названием уже есть                                     |
 | `builtInBookmarkFolderReadonly` | 400  | Встроенную папку нельзя переименовать или удалить                    |
 | `bookmarkFolderConflict`        | 409  | Связь склеила бы закладки из разных папок — нужен `bookmarkFolderId` |
+| `backupVersionUnsupported`      | 400  | Резервная копия сделана версией формата новее, чем понимает сервер   |
+| `restoreInProgress`             | 409  | Восстановление из копии у этого пользователя уже идёт                |
 
 `message` переводится на язык из `Accept-Language` (`ru`/`en`, по умолчанию `ru`) — фронт
 выводит его как есть, своих текстов под коды не держит. Словари — `apps/api/src/common/error-messages.ts`;
