@@ -1,4 +1,12 @@
-import { Controller, Get, HttpStatus, Inject, Query, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Inject,
+  Query,
+  Res,
+  type OnModuleDestroy,
+} from '@nestjs/common';
 import { ApiOperation, ApiProduces, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import sharp from 'sharp';
@@ -6,7 +14,7 @@ import { request } from 'undici';
 import { createBrotliDecompress, createGunzip, createInflate } from 'node:zlib';
 import type { Readable } from 'node:stream';
 import type { ParsersRegistry } from '@tanuki/parsers';
-import { SourceUnavailableException } from '../common/errors';
+import { BadRequestApiException, SourceUnavailableException } from '../common/errors';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { PARSERS } from '../parsers-client/parsers-client.module';
@@ -15,6 +23,7 @@ import { CACHE_TTL } from '../cache/cache.constants';
 import { cacheKey } from '../cache/cache-keys';
 import { IMAGE_FORMAT, type ImageFormat, type TransformedImage } from './models';
 import { verifySignedImageUrl } from './sign.util';
+import { createUpstreamAgent, isAllowedUpstreamUrl } from './upstream-guard';
 
 const DEFAULT_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
@@ -29,11 +38,13 @@ const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
 
 @ApiTags('images')
 @Controller('img')
-export class ImgProxyController {
+export class ImgProxyController implements OnModuleDestroy {
   // Dedupes concurrent cache-miss requests for the same (url, width, format): a cold catalog
   // page loading many cards at once would otherwise trigger one upstream fetch + sharp resize
   // per in-flight request for the same cover instead of sharing a single one.
   private readonly inFlight = new Map<string, Promise<TransformedImage>>();
+  // Соединения только с публичными адресами — см. upstream-guard.ts.
+  private readonly upstreamAgent = createUpstreamAgent();
 
   constructor(
     @Inject(ENV) private readonly env: Env,
@@ -107,10 +118,15 @@ export class ImgProxyController {
     reply.status(HttpStatus.OK).send(decoded);
   }
 
+  async onModuleDestroy(): Promise<void> {
+    await this.upstreamAgent.close();
+  }
+
   // Each parser knows its own Referer/User-Agent expectations (Grouple in particular needs
   // a specific UA on image requests) — falls back to the image's own origin for sources with
   // no special requirements, same as the old hardcoded-map default did.
   private async fetchUpstream(absoluteUrl: string, sourceId: string) {
+    if (!isAllowedUpstreamUrl(absoluteUrl)) throw new BadRequestApiException();
     const parserHeaders = this.parsers.imageHeaders(sourceId, absoluteUrl);
     const headers: Record<string, string> = {
       Referer: parserHeaders['Referer'] ?? `${new URL(absoluteUrl).origin}/`,
@@ -119,7 +135,11 @@ export class ImgProxyController {
 
     let upstream;
     try {
-      upstream = await request(absoluteUrl, { method: 'GET', headers });
+      upstream = await request(absoluteUrl, {
+        method: 'GET',
+        headers,
+        dispatcher: this.upstreamAgent,
+      });
     } catch {
       throw new SourceUnavailableException(sourceId);
     }
