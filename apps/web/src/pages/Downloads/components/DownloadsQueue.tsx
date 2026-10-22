@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { Button, Divider, EmptyState, Group, Paper, Stack, Text, Title } from '@mantine/core';
+import { Button, Divider, EmptyState, Paper, Stack } from '@mantine/core';
 import {
   closestCenter,
   DndContext,
@@ -26,6 +26,7 @@ import {
 } from '@/entities/download/queue';
 import { getQueueItems, isOrderSettled } from '../lib';
 import type { DownloadsData } from '../models';
+import DownloadsSectionHeader from './DownloadsSectionHeader';
 import QueueQuotaAlert from './QueueQuotaAlert';
 import QueueRowActions from './QueueRowActions';
 import SortableQueueRow from './SortableQueueRow';
@@ -63,7 +64,13 @@ function DownloadsQueue({ userId, data }: Props) {
     : queueItems;
 
   if (items.length === 0) {
-    return <EmptyState title={t('queueIsEmpty')} icon={<ClockIcon />} />;
+    return (
+      <EmptyState
+        title={t('queueIsEmpty')}
+        description={t('everythingInQueueDownloaded')}
+        icon={<ClockIcon />}
+      />
+    );
   }
 
   const lockedCount = items[0]?.row.status === DOWNLOAD_STATUS.DOWNLOADING ? 1 : 0;
@@ -85,22 +92,20 @@ function DownloadsQueue({ userId, data }: Props) {
 
   return (
     <Stack gap="sm">
-      <Group justify="space-between" gap="sm">
-        <Group gap="xs">
-          <Title order={4}>{t('queue')}</Title>
-          <Text c="dimmed" ff="monospace" fz="sm">
-            {items.length}
-          </Text>
-        </Group>
-        <Button
-          variant="default"
-          size="xs"
-          leftSection={data.isPaused ? <PlayIcon /> : <PauseIcon />}
-          onClick={() => void setDownloadsPaused(userId, !data.isPaused)}
-        >
-          {data.isPaused ? t('resumeDownloads') : t('pauseDownloads')}
-        </Button>
-      </Group>
+      <DownloadsSectionHeader
+        title={t('queue')}
+        meta={items.length}
+        action={
+          <Button
+            variant="default"
+            size="xs"
+            leftSection={data.isPaused ? <PlayIcon /> : <PauseIcon />}
+            onClick={() => void setDownloadsPaused(userId, !data.isPaused)}
+          >
+            {data.isPaused ? t('resumeDownloads') : t('pauseDownloads')}
+          </Button>
+        }
+      />
       <QueueQuotaAlert rows={data.rows} isPaused={data.isPaused} />
       <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
         <DndContext

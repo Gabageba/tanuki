@@ -10,6 +10,7 @@ import DownloadedChapterRow from './DownloadedChapterRow';
 import DownloadedHeader from './DownloadedHeader';
 import DownloadedTitleHeading from './DownloadedTitleHeading';
 import DownloadedTitleMenu from './DownloadedTitleMenu';
+import styles from '../Downloads.module.scss';
 
 type Props = {
   userId: string;
@@ -25,7 +26,13 @@ function DownloadedTitles({ userId, data, openedTitleId }: Props) {
   const titles = getDownloadedTitles(data);
 
   if (titles.length === 0) {
-    return <EmptyState title={t('nothingDownloaded')} icon={<CheckCircleIcon />} />;
+    return (
+      <EmptyState
+        title={t('nothingDownloaded')}
+        description={t('queuedChaptersAppearOnceDownloaded')}
+        icon={<CheckCircleIcon />}
+      />
+    );
   }
 
   const sourceList = flattenSources(sources);
@@ -40,11 +47,12 @@ function DownloadedTitles({ userId, data, openedTitleId }: Props) {
         radius="md"
         chevronPosition="left"
         defaultValue={openedTitleId}
+        classNames={{ item: styles.titleItem, content: styles.titleContent }}
       >
         {titles.map((title) => (
           <Accordion.Item key={title.titleId} value={title.titleId}>
-            <Group gap={4} wrap="nowrap" pr="xs">
-              <Accordion.Control miw={0} flex={1}>
+            <Group gap={4} wrap="nowrap" pr="xs" className={styles.titleHeader}>
+              <Accordion.Control miw={0} flex={1} className={styles.titleControl}>
                 <DownloadedTitleHeading
                   title={title}
                   sourceName={getSourceName(title.snapshot?.sourceId)}

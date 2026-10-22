@@ -1,9 +1,10 @@
-import { Button, Group, Text, Title } from '@mantine/core';
+import { Button } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { TrashIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import DeleteDownloadsModal from '@/features/download/DeleteDownloadsModal';
 import { formatSize } from '@/shared/lib/formatSize';
+import DownloadsSectionHeader from './DownloadsSectionHeader';
 
 type Props = {
   bytes: number;
@@ -15,18 +16,18 @@ function DownloadedHeader({ bytes }: Props) {
   const [isDeleteOpened, { open, close }] = useDisclosure(false);
 
   return (
-    <Group justify="space-between" gap="sm">
-      <Group gap="xs">
-        <Title order={4}>{t('downloaded')}</Title>
-        <Text c="dimmed" ff="monospace" fz="sm">
-          {formatSize(bytes, t, i18n.language)}
-        </Text>
-      </Group>
-      <Button variant="muted" color="red" size="xs" leftSection={<TrashIcon />} onClick={open}>
-        {t('deleteAllDownloadedChapters')}
-      </Button>
+    <>
+      <DownloadsSectionHeader
+        title={t('downloaded')}
+        meta={formatSize(bytes, t, i18n.language)}
+        action={
+          <Button variant="muted" color="red" size="xs" leftSection={<TrashIcon />} onClick={open}>
+            {t('deleteAllDownloadedChapters')}
+          </Button>
+        }
+      />
       <DeleteDownloadsModal opened={isDeleteOpened} onClose={close} />
-    </Group>
+    </>
   );
 }
 

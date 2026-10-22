@@ -8,6 +8,9 @@ import Mdash from '@/shared/ui/Mdash';
 import type { DownloadedChapter } from '../models';
 import styles from '../Downloads.module.scss';
 
+/** Высота строки — она же размер корзины: подсветка кнопки ровно по строке. */
+const ROW_HEIGHT = 34;
+
 type Props = {
   item: DownloadedChapter;
   onDelete: () => void;
@@ -19,17 +22,17 @@ function DownloadedChapterRow({ item, onDelete }: Props) {
   const { row, chapter, isMissingAtSource } = item;
 
   return (
-    <Group gap="xs" wrap="nowrap" pr={4}>
+    <Group gap={4} wrap="nowrap">
       <UnstyledButton
         component={Link}
         to={getReaderPath(row.titleId, row.chapterId)}
         flex={1}
         miw={0}
+        h={ROW_HEIGHT}
         px="sm"
-        py={6}
         className={styles.row}
       >
-        <Group gap="xs" wrap="nowrap">
+        <Group gap="xs" wrap="nowrap" h="100%">
           <Text fz="sm" flex="none">
             {chapter && chapter.chapter.number !== null ? (
               getChapterNumberLabel(chapter.chapter, chapter.numbering, t)
@@ -49,7 +52,7 @@ function DownloadedChapterRow({ item, onDelete }: Props) {
         <ActionIcon
           variant="subtle"
           color="gray"
-          size="sm"
+          size={ROW_HEIGHT}
           aria-label={t('deleteDownloadedChapter')}
           onClick={onDelete}
         >
