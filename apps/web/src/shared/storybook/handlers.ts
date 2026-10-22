@@ -15,6 +15,9 @@ import {
   type TitleBookmarkVisitResponse,
 } from '@tanuki/contracts';
 import {
+  BACKUP,
+  BACKUP_PREVIEW,
+  BACKUP_RESTORE_RESULT,
   BOOKMARKS_RESPONSE,
   INVITES_RESPONSE,
   MANAGED_USERS_RESPONSE,
@@ -235,6 +238,11 @@ export const DEFAULT_HANDLERS = [
   ),
   // Поток SSE в историях не нужен: без него счётчик просто опрашивается.
   http.get(apiPath('/notifications/stream'), () => new HttpResponse(null, { status: 204 })),
+
+  // Резервная копия
+  http.get(apiPath('/backup'), () => HttpResponse.json(BACKUP)),
+  http.post(apiPath('/backup/preview'), () => HttpResponse.json(BACKUP_PREVIEW)),
+  http.post(apiPath('/backup/restore'), () => HttpResponse.json(BACKUP_RESTORE_RESULT)),
 
   // Управление
   http.get(apiPath('/users'), () => HttpResponse.json(MANAGED_USERS_RESPONSE)),

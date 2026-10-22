@@ -1,4 +1,6 @@
 import {
+  BACKUP_FORMAT,
+  BACKUP_VERSION,
   BOOKMARK_AVAILABILITY,
   DEVICE_TYPE,
   INVITE_STATUS,
@@ -8,6 +10,9 @@ import {
   USER_ROLE,
   USER_STATUS,
   VIEW_MODE,
+  type Backup,
+  type BackupPreview,
+  type BackupRestoreResult,
   type BookmarkItem,
   type BookmarksResponse,
   type InvitesResponse,
@@ -305,4 +310,67 @@ export const INVITES_RESPONSE: InvitesResponse = {
     },
   ],
   total: 5,
+};
+
+/** Файл копии, который скачивает «Скачать копию», — пустая библиотека, только шапка. */
+export const BACKUP: Backup = {
+  format: BACKUP_FORMAT,
+  version: BACKUP_VERSION,
+  exportedAt: '2026-10-12T10:00:00Z',
+  origin: 'https://tanuki.example.com',
+  username: CURRENT_USER.username,
+  settings: { user: {}, sourceOrder: null, reader: null, disabledSources: [] },
+  folders: [],
+  bookmarks: [],
+  progress: [],
+  chapterReads: [],
+  readingActivity: [],
+};
+
+const BACKUP_HEADER = {
+  username: BACKUP.username,
+  exportedAt: BACKUP.exportedAt,
+  origin: BACKUP.origin,
+};
+
+/** Сводка с конфликтами: тайтлы в других папках и расходящиеся отметки — будет шаг «Вопросы». */
+export const BACKUP_PREVIEW: BackupPreview = {
+  ...BACKUP_HEADER,
+  bookmarks: { added: 42, sameFolder: 12, otherFolder: 7, skipped: 3 },
+  folders: { added: 2, matched: 4, overLimit: 0 },
+  progress: { added: 30, differs: 5, skipped: 0 },
+  chapterReads: { added: 1204, skipped: 0 },
+};
+
+export const NO_CONFLICTS_BACKUP_PREVIEW: BackupPreview = {
+  ...BACKUP_HEADER,
+  bookmarks: { added: 18, sameFolder: 0, otherFolder: 0, skipped: 0 },
+  folders: { added: 1, matched: 4, overLimit: 0 },
+  progress: { added: 18, differs: 0, skipped: 0 },
+  chapterReads: { added: 312, skipped: 0 },
+};
+
+/** Повторное восстановление того же файла. */
+export const NOTHING_NEW_BACKUP_PREVIEW: BackupPreview = {
+  ...BACKUP_HEADER,
+  bookmarks: { added: 0, sameFolder: 57, otherFolder: 0, skipped: 0 },
+  folders: { added: 0, matched: 5, overLimit: 0 },
+  progress: { added: 0, differs: 0, skipped: 0 },
+  chapterReads: { added: 0, skipped: 0 },
+};
+
+/** Итог с пропущенным и не поместившимися папками. */
+export const BACKUP_RESTORE_RESULT: BackupRestoreResult = {
+  username: BACKUP.username,
+  exportedAt: BACKUP.exportedAt,
+  bookmarksAdded: 18,
+  bookmarksMoved: 0,
+  titlesToPlanned: 4,
+  foldersCreated: 1,
+  foldersOverLimit: 3,
+  progressAdded: 18,
+  progressUpdated: 0,
+  chapterReadsAdded: 312,
+  settingsApplied: true,
+  skipped: { bookmarks: 40, progress: 12, chapterReads: 233 },
 };

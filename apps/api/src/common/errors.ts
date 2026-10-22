@@ -370,3 +370,21 @@ export class BookmarkFolderConflictException extends ApiException {
     );
   }
 }
+
+/** Копия новее формата, который понимает сервер: в ней могут быть незнакомые поля. */
+export class BackupVersionUnsupportedException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.BACKUP_VERSION_UNSUPPORTED,
+      'backupFromNewerVersion',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+/** Второе восстановление того же пользователя, пока первое не записалось (две вкладки). */
+export class RestoreInProgressException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.RESTORE_IN_PROGRESS, 'restoreAlreadyInProgress', HttpStatus.CONFLICT);
+  }
+}

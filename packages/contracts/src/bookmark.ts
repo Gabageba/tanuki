@@ -136,7 +136,11 @@ export const BookmarkFoldersResponseSchema = z.object({
 });
 export type BookmarkFoldersResponse = z.infer<typeof BookmarkFoldersResponseSchema>;
 
-const BookmarkFolderNameSchema = z.string().trim().min(1).max(BOOKMARK_FOLDER_NAME_MAX_LENGTH);
+export const BookmarkFolderNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(BOOKMARK_FOLDER_NAME_MAX_LENGTH);
 
 export const CreateBookmarkFolderRequestSchema = z.object({
   name: BookmarkFolderNameSchema,

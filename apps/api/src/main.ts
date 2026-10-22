@@ -5,10 +5,12 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
-import { AVATAR_MAX_BYTES } from '@tanuki/contracts';
+import { AVATAR_MAX_BYTES, BACKUP_MAX_BYTES } from '@tanuki/contracts';
 import { AppModule } from './app.module';
 import { ApiErrorDto } from './common/error.dto';
 import { HttpExceptionFilter } from './common/http-exception.filter';
+
+const BACKUP_BODY_MARGIN_BYTES = 1024 * 1024;
 
 const bootstrap = async () => {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -35,6 +37,20 @@ const bootstrap = async () => {
       { parseAs: 'buffer', bodyLimit: AVATAR_MAX_BYTES },
       (_request, body, done) => done(null, body),
     );
+
+  // Резервная копия уходит телом JSON до BACKUP_MAX_BYTES — больше общего 1 МБ. Лимит ставится
+  // только её маршрутам, до их регистрации (она происходит в app.listen); запас — на поля запроса
+  // вокруг файла и на то, что JSON.stringify разобранного файла может выйти чуть длиннее.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('onRoute', (route) => {
+      if (route.url.startsWith('/api/v1/backup/')) {
+        // onRoute для того и есть: Fastify читает опции маршрута после хука из этого же объекта.
+        // eslint-disable-next-line no-param-reassign
+        route.bodyLimit = BACKUP_MAX_BYTES + BACKUP_BODY_MARGIN_BYTES;
+      }
+    });
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalFilters(new HttpExceptionFilter());

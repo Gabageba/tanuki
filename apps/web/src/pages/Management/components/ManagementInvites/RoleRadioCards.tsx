@@ -1,7 +1,8 @@
-import { Badge, Group, Paper, Radio, Stack, Text } from '@mantine/core';
+import { Badge, Paper, Radio, Stack, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { INVITABLE_ROLE, type InvitableRole } from '@tanuki/contracts';
 import { getUserRoleColor, getUserRoleLabel } from '@/entities/user/lib';
+import RadioCardOption from '@/shared/ui/RadioCardOption';
 import { getInvitableRoleDescription } from './models';
 
 type Props = {
@@ -37,19 +38,12 @@ function RoleRadioCards({ roles, value, onChange }: Props) {
     <Radio.Group value={value} onChange={(next) => isInvitableRole(next) && onChange(next)}>
       <Stack gap="xs">
         {roles.map((role) => (
-          <Radio.Card key={role} value={role} radius="md" p="md">
-            <Group gap="sm" wrap="nowrap" align="flex-start">
-              <Radio.Indicator mt={2} variant="outline" />
-              <Stack gap={2}>
-                <Text fz="sm" fw={600}>
-                  {getUserRoleLabel(role, t)}
-                </Text>
-                <Text fz="sm" c="dimmed">
-                  {getInvitableRoleDescription(role, t)}
-                </Text>
-              </Stack>
-            </Group>
-          </Radio.Card>
+          <RadioCardOption
+            key={role}
+            value={role}
+            title={getUserRoleLabel(role, t)}
+            description={getInvitableRoleDescription(role, t)}
+          />
         ))}
       </Stack>
     </Radio.Group>

@@ -16,7 +16,8 @@ import { TitleSnapshotsModule } from './title-snapshots.module';
   imports: [TitleLinksModule, TitleSnapshotsModule, SourcesModule, ParsersClientModule],
   controllers: [BookmarkFoldersController, BookmarksController, TitleBookmarkController],
   providers: [BookmarkFoldersService, BookmarksService, BookmarkUpdatesService],
-  // Прогресс чтения засчитывает визит, подтверждение связи склеивает закладки.
-  exports: [BookmarksService],
+  // Прогресс чтения засчитывает визит, подтверждение связи склеивает закладки, резервная копия
+  // выгружает и восстанавливает папки.
+  exports: [BookmarksService, BookmarkFoldersService],
 })
 export class LibraryModule {}

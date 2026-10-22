@@ -2,8 +2,6 @@ import type { QueryClient } from '@tanstack/react-query';
 import { SETTINGS_STORAGE_KEY } from '@/shared/lib/settings';
 import { OFFLINE_CACHE_NAME } from '@/entities/download/models';
 import { LAST_USER_STORAGE_KEY } from '@/entities/user/lastUser';
-import { EXPORT_FORMAT } from './models';
-import type { ExportFormat } from './models';
 
 /** Что «Очистить кеш браузера» оставляет в localStorage: настройки и вход без сети. */
 const KEPT_STORAGE_KEYS = [SETTINGS_STORAGE_KEY, LAST_USER_STORAGE_KEY];
@@ -39,13 +37,4 @@ export const clearBrowserCache = async (queryClient: QueryClient) => {
   }
 
   window.location.reload();
-};
-
-export const getExportFormatLabel = (format: ExportFormat) => {
-  switch (format) {
-    case EXPORT_FORMAT.JSON:
-      return 'JSON';
-    case EXPORT_FORMAT.CSV:
-      return 'CSV';
-  }
 };

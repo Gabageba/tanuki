@@ -60,6 +60,8 @@ const ERROR_MESSAGES_RU = {
   bothTitlesInBookmarksInDifferentFolders:
     'Оба тайтла в закладках в разных папках — выберите, в какой оставить',
   folderNotFound: 'Папка не найдена',
+  backupFromNewerVersion: 'Копия сделана более новой версией tanuki',
+  restoreAlreadyInProgress: 'Восстановление из копии уже идёт — дождитесь его окончания',
 } as const;
 
 export type ErrorMessageKey = keyof typeof ERROR_MESSAGES_RU;
@@ -118,6 +120,8 @@ const ERROR_MESSAGES_EN: Record<ErrorMessageKey, string> = {
   bothTitlesInBookmarksInDifferentFolders:
     'Both titles are bookmarked in different folders — choose which one to keep',
   folderNotFound: 'Folder not found',
+  backupFromNewerVersion: 'The backup was made by a newer version of tanuki',
+  restoreAlreadyInProgress: 'A restore from backup is already in progress — wait for it to finish',
 };
 
 /**

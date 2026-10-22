@@ -1,5 +1,5 @@
 import { ActionIcon, SimpleGrid, Stack } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useNetwork } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import {
@@ -16,17 +16,20 @@ import DeleteDownloadsModal from '@/features/download/DeleteDownloadsModal';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import GroupedList from '@/shared/ui/GroupedList';
 import ClearCacheModal from './ClearCacheModal';
-import ExportModal from './ExportModal';
+import useDownloadBackup from './hooks/useDownloadBackup';
 import ImportFromSourceRow from './ImportFromSourceRow';
-import ImportModal from './ImportModal';
+import RestoreBackupModal from './RestoreBackupModal';
 
 function ProfileData() {
   const { t } = useTranslation();
   const downloads = useDownloadsTotal();
   // Удаление чистит и очередь, поэтому его не прячут, пока ни одна глава не докачалась.
   const hasDownloads = (downloads?.rowCount ?? 0) > 0;
-  const [isExportOpened, { open: openExportModal, close: closeExportModal }] = useDisclosure(false);
-  const [isImportOpened, { open: openImportModal, close: closeImportModal }] = useDisclosure(false);
+  // Копию собирает и разбирает сервер — без сети обе кнопки выключены.
+  const { online } = useNetwork();
+  const downloadBackup = useDownloadBackup();
+  const [isRestoreOpened, { open: openRestoreModal, close: closeRestoreModal }] =
+    useDisclosure(false);
   const [isClearCacheOpened, { open: openClearCacheModal, close: closeClearCacheModal }] =
     useDisclosure(false);
   const [isDeleteDownloadsOpened, { open: openDeleteDownloads, close: closeDeleteDownloads }] =
@@ -38,22 +41,25 @@ function ProfileData() {
         <GroupedList label={t('importAndExport')}>
           <GroupedList.Row
             icon={<DownloadSimpleIcon />}
-            title={t('bookmarksExport')}
-            description={t('bookmarksProgressRatingsAndHistory')}
+            title={t('createBackup')}
+            description={t('bookmarksProgressStatisticsAndSettings')}
             actionProps={{
               leftSection: <DownloadSimpleIcon />,
-              onClick: openExportModal,
-              children: t('export'),
+              onClick: () => downloadBackup.mutate(),
+              loading: downloadBackup.isPending,
+              disabled: !online,
+              children: t('downloadBackup'),
             }}
           />
           <GroupedList.Row
             icon={<UploadSimpleIcon />}
-            title={t('bookmarksImport')}
-            description={t('importDoesNotOverwriteProgress')}
+            title={t('restoreFromBackup')}
+            description={t('addsToLibraryDeletingNothingUnasked')}
             actionProps={{
               leftSection: <UploadSimpleIcon />,
-              onClick: openImportModal,
-              children: t('import'),
+              onClick: openRestoreModal,
+              disabled: !online,
+              children: t('recover'),
             }}
           />
           <ImportFromSourceRow />
@@ -105,8 +111,7 @@ function ProfileData() {
         </GroupedList>
       </SimpleGrid>
 
-      <ExportModal opened={isExportOpened} onClose={closeExportModal} />
-      <ImportModal opened={isImportOpened} onClose={closeImportModal} />
+      <RestoreBackupModal opened={isRestoreOpened} onClose={closeRestoreModal} />
       <ClearCacheModal opened={isClearCacheOpened} onClose={closeClearCacheModal} />
       <DeleteDownloadsModal opened={isDeleteDownloadsOpened} onClose={closeDeleteDownloads} />
     </Stack>
