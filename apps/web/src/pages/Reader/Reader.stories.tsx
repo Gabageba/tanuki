@@ -1,8 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { http, HttpResponse } from 'msw';
 import { generatePath } from 'react-router';
+import { DEFAULT_READER_SETTINGS } from '@tanuki/contracts';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
-import { ERROR_HANDLERS, LOADING_HANDLERS } from '@/shared/storybook/handlers';
+import {
+  apiPath,
+  ERROR_HANDLERS,
+  LOADING_HANDLERS,
+  OFFLINE_HANDLERS,
+} from '@/shared/storybook/handlers';
 import { MOBILE_GLOBALS, STORY_LAYOUT, type StoryRoute } from '@/shared/storybook/models';
+import { goOffline } from '@/shared/storybook/network';
 import { READING_CHAPTER, TITLE } from '@/shared/storybook/titles';
 import Reader from '.';
 
@@ -39,4 +47,16 @@ export const Loading: Story = {
 export const ServerError: Story = {
   name: 'Ошибка сервера',
   parameters: { msw: ERROR_HANDLERS },
+};
+
+export const ChapterNotDownloaded: Story = {
+  name: 'Без сети, глава не скачана',
+  beforeEach: goOffline,
+  parameters: {
+    msw: [
+      // Настройки читалки без сети отдаёт кеш воркера.
+      http.get(apiPath('/reader-settings'), () => HttpResponse.json(DEFAULT_READER_SETTINGS)),
+      ...OFFLINE_HANDLERS,
+    ],
+  },
 };

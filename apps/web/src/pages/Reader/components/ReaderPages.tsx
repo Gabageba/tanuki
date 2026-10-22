@@ -7,6 +7,7 @@ import { READER_READING_MODE } from '@tanuki/contracts';
 import { ApiRequestError, isNotFoundError } from '@/shared/api/client';
 import QueryError from '@/shared/ui/QueryError';
 import ReaderChapterEnd from './ReaderChapterEnd';
+import ReaderChapterUnavailable from './ReaderChapterUnavailable';
 import ReaderNextChapterButton from './ReaderNextChapterButton';
 import ReaderPageImage from './ReaderPageImage';
 import ReaderPagesSkeleton from './ReaderPagesSkeleton';
@@ -24,6 +25,8 @@ type Props = {
   settings: ReaderSettings;
   registerPage: (element: HTMLElement | null) => (() => void) | undefined;
   onTap: () => void;
+  /** Главу не открыть: без сети и не скачана. */
+  isChapterUnavailable: (chapterId: string) => boolean;
 };
 
 /**
@@ -44,6 +47,7 @@ function ReaderPages({
   settings,
   registerPage,
   onTap,
+  isChapterUnavailable,
 }: Props) {
   const { t } = useTranslation();
   const isHorizontal = settings.readingMode === READER_READING_MODE.HORIZONTAL;
@@ -55,6 +59,7 @@ function ReaderPages({
     setPosition,
     prependChapter,
     autoNextChapter: settings.autoNextChapter,
+    isChapterUnavailable,
   });
 
   // В горизонтальном режиме экран делится на три зоны: края листают страницы, середина — тот же
@@ -90,6 +95,13 @@ function ReaderPages({
   const hasPages = chapters.some((chapter) => chapter.pages.length > 0);
   const failedChapter = chapters.find((chapter) => chapter.error);
   if (!hasPages && failedChapter?.error) {
+    if (isChapterUnavailable(failedChapter.chapterId)) {
+      return (
+        <AppShell.Main>
+          <ReaderChapterUnavailable />
+        </AppShell.Main>
+      );
+    }
     return (
       <AppShell.Main>
         <QueryError error={failedChapter.error} onRetry={failedChapter.refetch} />
@@ -134,6 +146,18 @@ function ReaderPages({
   const getFeedFooter = () => {
     if (!lastChapter) return null;
 
+    // Подклеенная глава не загрузилась, потому что пропала сеть, — для читателя это та же не
+    // скачанная следующая глава.
+    if (lastChapter.isError && isChapterUnavailable(lastChapter.chapterId)) {
+      return (
+        <ReaderChapterEnd
+          titleId={titleId}
+          nextChapterId={lastChapter.chapterId}
+          isNextUnavailable
+        />
+      );
+    }
+
     if (lastChapter.isError) {
       return (
         <Stack gap="sm" align="center">
@@ -146,8 +170,17 @@ function ReaderPages({
     }
 
     if (lastChapter.isPending) return <Loader size="sm" />;
-    if (!settings.autoNextChapter) {
-      return <ReaderChapterEnd titleId={titleId} nextChapterId={lastChapter.nextChapterId} />;
+    const isNextUnavailable = Boolean(
+      lastChapter.nextChapterId && isChapterUnavailable(lastChapter.nextChapterId),
+    );
+    if (!settings.autoNextChapter || isNextUnavailable) {
+      return (
+        <ReaderChapterEnd
+          titleId={titleId}
+          nextChapterId={lastChapter.nextChapterId}
+          isNextUnavailable={isNextUnavailable}
+        />
+      );
     }
     if (!lastChapter.nextChapterId) return <Text c="dimmed">{t('thisIsLastChapter')}</Text>;
 
@@ -160,6 +193,7 @@ function ReaderPages({
   // кнопке не должен заодно считаться тапом по зоне листания.
   const getActiveChapterPlaceholder = () => {
     if (!activeChapter?.isError) return <Loader size="sm" />;
+    if (isChapterUnavailable(activeChapter.chapterId)) return <ReaderChapterUnavailable />;
 
     return (
       <Stack gap="sm" align="center">
@@ -229,7 +263,13 @@ function ReaderPages({
 
         {isHorizontal && isChapterEndShown && activeChapter && (
           <Center py="xl">
-            <ReaderChapterEnd titleId={titleId} nextChapterId={activeChapter.nextChapterId} />
+            <ReaderChapterEnd
+              titleId={titleId}
+              nextChapterId={activeChapter.nextChapterId}
+              isNextUnavailable={Boolean(
+                activeChapter.nextChapterId && isChapterUnavailable(activeChapter.nextChapterId),
+              )}
+            />
           </Center>
         )}
 

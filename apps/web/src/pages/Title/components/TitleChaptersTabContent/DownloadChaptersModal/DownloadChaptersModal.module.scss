@@ -1,0 +1,12 @@
+// Карточка «Диапазон» и панель с полями под ней — одна рамка: у карточки срезан низ, у панели верх.
+// Фон панели обычный — поля на тонированном фоне выбранной карточки смотрелись чужими.
+.rangeCard[data-expanded] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.rangePanel {
+  border: 1px solid var(--mantine-primary-color-filled);
+  border-top: 0;
+  border-radius: 0 0 var(--mantine-radius-md) var(--mantine-radius-md);
+}

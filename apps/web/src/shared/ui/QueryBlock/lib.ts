@@ -1,4 +1,5 @@
 import type { FetchStatus } from '@tanstack/react-query';
+import { isNetworkError } from '@/shared/api/client';
 import type { LoadingQuery, QueryLoad } from './models';
 
 /** Запрос за содержимым, который должен показать скелетон: не подгрузка следующей порции и не
@@ -54,10 +55,14 @@ export const getQueryLoad = (query: LoadingQuery): QueryLoad => {
   const isPaused = query.fetchStatus === 'paused';
   const isFetching = query.fetchStatus === 'fetching';
   const isRefetching = isFetching && !query.isFetchingNextPage && !query.isLive;
+  // Запросы идут и без сети (`offlineFirst`): ответ может дать кеш воркера. Не нашёлся — запрос
+  // падает сетевой ошибкой, это не сбой.
+  const isOfflineError = query.isError && isNetworkError(query.error) && !navigator.onLine;
+  const isOffline = !hasData && (isPaused || isOfflineError);
 
   return {
-    isOffline: isPaused && !hasData,
-    isFailed: query.isError && !hasData && !isFetching && !isPaused,
+    isOffline,
+    isFailed: query.isError && !hasData && !isFetching && !isPaused && !isOffline,
     // Данных нет и без ошибки — в том числе выключенный запрос, ждущий соседний (источник для
     // каталога): показать всё равно нечего.
     isEmptyWait: !hasData && !isPaused && (isFetching || !query.isError),

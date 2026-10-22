@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ROUTE_PATHS, SETTINGS_TAB_SEARCH_PARAM, SETTINGS_TABS } from '@/shared/lib/routes';
+import { DOWNLOADS_SEED } from '@/shared/storybook/downloads';
 import { ERROR_HANDLERS, LOADING_HANDLERS } from '@/shared/storybook/handlers';
 import { MOBILE_GLOBALS, STORY_LAYOUT, type StoryRoute } from '@/shared/storybook/models';
 import Settings from '.';
@@ -80,5 +81,16 @@ export const SelectionsTab: Story = {
       ...ROUTE,
       url: `${ROUTE.url}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.SELECTIONS}`,
     },
+  },
+};
+
+export const DownloadsTab: Story = {
+  name: 'Загрузки',
+  parameters: {
+    route: {
+      ...ROUTE,
+      url: `${ROUTE.url}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.DOWNLOADS}`,
+    },
+    offlineDb: DOWNLOADS_SEED,
   },
 };

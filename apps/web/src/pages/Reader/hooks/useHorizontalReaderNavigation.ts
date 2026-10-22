@@ -15,6 +15,8 @@ type Params = {
   /** Настройка «Сразу открывать следующую главу». Выключена — с последней страницы листание
    *  ведёт не в следующую главу, а на экран конца главы, и уже с него — дальше. */
   autoNextChapter: boolean;
+  /** Главу не открыть: без сети и не скачана. В неё не листаем — показываем экран конца главы. */
+  isChapterUnavailable: (chapterId: string) => boolean;
 };
 
 /**
@@ -31,6 +33,7 @@ function useHorizontalReaderNavigation({
   setPosition,
   prependChapter,
   autoNextChapter,
+  isChapterUnavailable,
 }: Params) {
   const navigate = useNavigate();
   const chapterIndex = chapters.findIndex((chapter) => chapter.chapterId === position.chapterId);
@@ -59,11 +62,15 @@ function useHorizontalReaderNavigation({
       return;
     }
 
-    if (!autoNextChapter && !isChapterEndShown) {
+    const nextInFeed = chapters[chapterIndex + 1];
+    const isNextUnavailable = Boolean(
+      !nextInFeed && chapter.nextChapterId && isChapterUnavailable(chapter.nextChapterId),
+    );
+    if ((!autoNextChapter || isNextUnavailable) && !isChapterEndShown) {
       setEndScreenChapterId(chapter.chapterId);
       return;
     }
-    const nextInFeed = chapters[chapterIndex + 1];
+    if (isNextUnavailable) return;
     if (!nextInFeed && !chapter.nextChapterId) return;
     // Иначе возврат назад на последнюю страницу этой главы снова открыл бы экран её конца.
     setEndScreenChapterId(null);
@@ -83,6 +90,7 @@ function useHorizontalReaderNavigation({
     goToChapter,
     autoNextChapter,
     isChapterEndShown,
+    isChapterUnavailable,
   ]);
 
   // Назад за начало главы — это всегда конец прошлой: на её первую страницу читатель попадал бы

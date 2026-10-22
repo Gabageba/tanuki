@@ -3,9 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { TitleReadingProgressResponse } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
 import { getReadingProgressQueryKey } from '@/entities/title/hooks/useReadingProgress';
-import useUpdateReadingProgress, {
-  saveReadingProgress,
-} from '@/entities/title/hooks/useUpdateReadingProgress';
+import useUpdateReadingProgress from '@/entities/title/hooks/useUpdateReadingProgress';
+import { sendReadingProgress } from '@/entities/title/progressSync';
+import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import { CONTINUE_READING_QUERY_KEY } from '@/entities/title/models';
 import { toOptimisticProgress } from '@/entities/title/readingProgress';
 import { getReaderPageKey } from '../lib';
@@ -31,6 +31,8 @@ function useSaveReadingProgress({ titleId, position }: Params) {
   const { mutate } = useUpdateReadingProgress({ titleId, notifyOnError: false });
   // Та же ветка по умолчанию, что и у шапки читалки: запрос уже в кеше.
   const { data: chaptersData } = useChapters({ titleId });
+  const { data: user } = useCurrentUser();
+  const userId = user?.id;
 
   const pending = useRef<ReaderPosition | null>(null);
   const lastSavedKey = useRef<string | null>(null);
@@ -59,10 +61,10 @@ function useSaveReadingProgress({ titleId, position }: Params) {
   const flushOnExit = useCallback(() => {
     const target = takePending();
     if (!target) return;
-    saveReadingProgress(titleId, target)
+    sendReadingProgress(userId, titleId, target)
       .then(() => queryClient.invalidateQueries({ queryKey: CONTINUE_READING_QUERY_KEY }))
       .catch(() => undefined);
-  }, [takePending, titleId, queryClient]);
+  }, [takePending, userId, titleId, queryClient]);
 
   const { chapterId, pageIndex } = position;
   const chapter = chaptersData?.items.find((item) => item.id === chapterId);

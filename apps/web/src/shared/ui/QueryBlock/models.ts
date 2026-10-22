@@ -37,7 +37,7 @@ type LoadedData<TQuery> = TQuery extends LoadingQuery ? Exclude<TQuery['data'], 
 
 /** Что ждёт запрос — см. `getQueryLoad`. */
 export type QueryLoad = {
-  /** Сети нет, запрос на паузе, данных нет. */
+  /** Сети нет, данных нет: запрос на паузе или не нашёлся в кеше. */
   isOffline: boolean;
   /** Запрос упал, данных нет. */
   isFailed: boolean;

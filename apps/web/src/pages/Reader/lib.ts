@@ -1,6 +1,9 @@
 import { queryOptions } from '@tanstack/react-query';
 import { READER_PAGE_FIT, type PagesResponse, type ReaderPageFit } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
+import { isServiceWorkerControlling } from '@/shared/lib/serviceWorker';
+import { getOfflineDb } from '@/entities/download/db';
+import { getOfflinePageKey, isDownloadDone } from '@/entities/download/lib';
 import type { ReaderPosition } from './models';
 
 // manga-страница обычно выше, чем шире — используется, пока реальные width/height ещё не пришли
@@ -25,10 +28,49 @@ export const CURRENT_PAGE_ROOT_MARGIN = '-50% 0px -50% 0px';
  *  больше не удерживаем. Событие scroll не годится — его вызывает и сама подгонка. */
 export const PIN_RELEASE_EVENTS = ['wheel', 'touchmove', 'keydown'] as const;
 
-export const getChapterPagesQueryOptions = (titleId: string, chapterId: string) =>
+/**
+ * Скачанная глава собирается из снимка: страницы по синтетическим ключам, которые отдаёт service
+ * worker из кеша скачанного, — и с сетью, и без неё. Подписанные адреса снимка давно истекли, из
+ * него берутся только размеры и соседние главы. Страница не под воркером (первая загрузка, Shift+F5)
+ * синтетический адрес не откроет — тогда идём в сеть, как за обычной главой.
+ */
+const readDownloadedPages = async (
+  userId: string,
+  titleId: string,
+  chapterId: string,
+): Promise<PagesResponse | null> => {
+  if (!isServiceWorkerControlling()) return null;
+  try {
+    const db = getOfflineDb(userId);
+    const [download, snapshot] = await Promise.all([
+      db.downloads.get(chapterId),
+      db.chapters.get(chapterId),
+    ]);
+    if (!isDownloadDone(download) || !snapshot) return null;
+    return {
+      // Ключ страницы — её место в главе, как его сохранял воркер.
+      items: snapshot.pages.map((page, index) => ({
+        ...page,
+        url: getOfflinePageKey(userId, titleId, chapterId, index),
+      })),
+      prevChapterId: snapshot.prevChapterId,
+      nextChapterId: snapshot.nextChapterId,
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const getChapterPagesQueryOptions = (
+  titleId: string,
+  chapterId: string,
+  userId: string | undefined,
+) =>
   queryOptions({
     queryKey: ['pages', titleId, chapterId],
-    queryFn: () => apiFetch<PagesResponse>(`/titles/${titleId}/chapters/${chapterId}/pages`),
+    queryFn: async () =>
+      (userId && (await readDownloadedPages(userId, titleId, chapterId))) ||
+      apiFetch<PagesResponse>(`/titles/${titleId}/chapters/${chapterId}/pages`),
   });
 
 export const getReaderPageKey = ({ chapterId, pageIndex }: ReaderPosition) =>

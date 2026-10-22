@@ -1,4 +1,5 @@
 import { useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Divider, Grid } from '@mantine/core';
 import PageLayout from '@/shared/ui/PageLayout';
 import useTitleDetails from '@/entities/title/hooks/useTitleDetails';
@@ -11,6 +12,7 @@ import useTitleBookmarkVisit from './hooks/useTitleBookmarkVisit';
 import type { TitlePageParams } from './models';
 
 function Title() {
+  const { t } = useTranslation();
   const { titleId = '' } = useParams<{ titleId: string }>();
   // Кнопка чтения появляется только после деталей тайтла, и запрос отметки из неё встал бы за ними
   // в очередь. Отсюда он идёт параллельно, а кнопка берёт готовое из кеша.
@@ -21,7 +23,10 @@ function Title() {
 
   return (
     <PageLayout key={titleId} useQuery={useTitleDetails} params={params}>
-      <PageLayout.Content skeleton={<TitleSkeleton />}>
+      <PageLayout.Content
+        skeleton={<TitleSkeleton />}
+        offlineDescription={t('titleNotSavedOnDevice')}
+      >
         <Grid columnGap="lg">
           <TitleImageSection />
           <Divider orientation="vertical" visibleFrom="md" />

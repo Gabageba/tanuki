@@ -1,6 +1,5 @@
 import { Box } from '@mantine/core';
 import type { ReactNode } from 'react';
-import OfflineState from '../OfflineState';
 import useSkeletonTiming from './hooks/useSkeletonTiming';
 import { toLoadingQuery } from './lib';
 import type { QueryBlockData, QueryBlockQuery } from './models';
@@ -16,8 +15,8 @@ type Props<TQuery extends QueryBlockQuery> = {
   empty?: ReactNode;
   /** Пуст ли загруженный ответ — тогда вместо содержимого `empty`. */
   isEmpty?: (data: QueryBlockData<TQuery>) => boolean;
-  /** Без сети и без данных; по умолчанию «Нет соединения». Блок страницы, которая сама скажет
-   *  «Нет соединения», оставляет свой скелетон. */
+  /** Без сети и без данных; по умолчанию `empty` — что сети нет, говорит полоса под шапкой. Блок
+   *  страницы, которая сама скажет «Нет сети», оставляет свой скелетон. */
   offline?: ReactNode;
   children: (data: QueryBlockData<TQuery>) => ReactNode;
 };
@@ -25,7 +24,7 @@ type Props<TQuery extends QueryBlockQuery> = {
 /**
  * Блок со своим запросом. Когда показать скелетон, решает общий механизм (`useSkeletonTiming`), а не
  * блок: сразу, пока данных нет, и через 200 мс, когда на экране старые. Без сети и без данных —
- * «Нет соединения»; упал без данных или ответ пуст (`isEmpty`) — `empty`. Содержимое получает уже
+ * `offline`; упал без данных или ответ пуст (`isEmpty`) — `empty`. Содержимое получает уже
  * загруженные непустые данные.
  */
 function QueryBlock<const TQuery extends QueryBlockQuery>({
@@ -41,7 +40,7 @@ function QueryBlock<const TQuery extends QueryBlockQuery>({
 
   let content: ReactNode = skeleton;
   if (isOffline) {
-    content = offline === undefined ? <OfflineState onRetry={query.refetch} /> : offline;
+    content = offline === undefined ? empty : offline;
   } else if (isFailed) {
     content = empty;
   } else if (!isSkeleton && query.data !== undefined) {

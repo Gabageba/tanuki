@@ -5,6 +5,7 @@ import { mswLoader } from 'msw-storybook-addon/csf3';
 import { COLOR_SCHEME, LANGUAGE, type ColorScheme, type Language } from '@tanuki/contracts';
 import { DEFAULT_HANDLERS } from '@/shared/storybook/handlers';
 import { STORY_FOOTER } from '@/shared/storybook/models';
+import { seedOfflineDb } from '@/shared/storybook/offlineDb';
 import StoryProviders from './StoryProviders';
 
 type Globals = {
@@ -21,6 +22,9 @@ const preview: Preview = {
       await worker.start({ onUnhandledRequest: 'bypass', quiet: true });
       return worker;
     }),
+    async ({ parameters }) => {
+      await seedOfflineDb(parameters.offlineDb);
+    },
   ],
   globalTypes: {
     language: {

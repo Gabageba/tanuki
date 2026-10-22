@@ -23,6 +23,7 @@ function Reader() {
     setPosition,
     prependChapter,
     registerPage,
+    isChapterUnavailable,
     isPinned,
     isPending,
     query: feedQuery,
@@ -69,6 +70,7 @@ function Reader() {
         settings={settings}
         registerPage={registerPage}
         onTap={toggle}
+        isChapterUnavailable={isChapterUnavailable}
       />
       <ReaderMobileControls
         titleId={titleId}

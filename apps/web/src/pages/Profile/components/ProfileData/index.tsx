@@ -1,21 +1,35 @@
-import { SimpleGrid, Stack, Text } from '@mantine/core';
+import { ActionIcon, SimpleGrid, Stack } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
-import { BroomIcon, DownloadSimpleIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { Link } from 'react-router';
+import {
+  BroomIcon,
+  CaretRightIcon,
+  DownloadSimpleIcon,
+  TrashIcon,
+  TrayArrowDownIcon,
+  UploadSimpleIcon,
+} from '@phosphor-icons/react';
+import DownloadsTotalMeta from '@/entities/download/DownloadsTotalMeta';
+import useDownloadsTotal from '@/entities/download/hooks/useDownloadsTotal';
+import DeleteDownloadsModal from '@/features/download/DeleteDownloadsModal';
+import { ROUTE_PATHS } from '@/shared/lib/routes';
 import GroupedList from '@/shared/ui/GroupedList';
 import ClearCacheModal from './ClearCacheModal';
 import ExportModal from './ExportModal';
 import ImportFromSourceRow from './ImportFromSourceRow';
 import ImportModal from './ImportModal';
-import useStorageEstimate from './hooks/useStorageEstimate';
-import { getStorageSizeLabel } from './lib';
 
 function ProfileData() {
-  const { t, i18n } = useTranslation();
-  const { data: storage, isPending: isStoragePending } = useStorageEstimate();
+  const { t } = useTranslation();
+  const downloads = useDownloadsTotal();
+  // Удаление чистит и очередь, поэтому его не прячут, пока ни одна глава не докачалась.
+  const hasDownloads = (downloads?.rowCount ?? 0) > 0;
   const [isExportOpened, { open: openExportModal, close: closeExportModal }] = useDisclosure(false);
   const [isImportOpened, { open: openImportModal, close: closeImportModal }] = useDisclosure(false);
   const [isClearCacheOpened, { open: openClearCacheModal, close: closeClearCacheModal }] =
+    useDisclosure(false);
+  const [isDeleteDownloadsOpened, { open: openDeleteDownloads, close: closeDeleteDownloads }] =
     useDisclosure(false);
 
   return (
@@ -44,7 +58,7 @@ function ProfileData() {
           />
           <ImportFromSourceRow />
         </GroupedList>
-        <GroupedList label={t('storage')} loading={isStoragePending} skeletonRows={2}>
+        <GroupedList label={t('storage')} loading={downloads === undefined} skeletonRows={3}>
           <GroupedList.Row
             icon={<BroomIcon />}
             title={t('clearBrowserCache')}
@@ -58,25 +72,34 @@ function ProfileData() {
             }}
           />
           <GroupedList.Row
-            icon={<TrashIcon />}
-            title={t('deleteDownloadedChapters')}
-            description={
-              storage && (
-                <Text fz="sm" c="dimmed" ff="monospace">
-                  {t('occupiedOfTotal', {
-                    used: getStorageSizeLabel(storage.usage, t, i18n.language),
-                    total: getStorageSizeLabel(storage.quota, t, i18n.language),
-                  })}
-                </Text>
-              )
+            icon={<TrayArrowDownIcon />}
+            title={t('downloads')}
+            description={<DownloadsTotalMeta />}
+            isActionCompact
+            action={
+              <ActionIcon
+                component={Link}
+                to={ROUTE_PATHS.DOWNLOADS}
+                variant="subtle"
+                color="gray"
+                aria-label={t('openDownloads')}
+              >
+                <CaretRightIcon />
+              </ActionIcon>
             }
+          />
+          <GroupedList.Row
+            icon={<TrashIcon />}
+            title={t('deleteAllDownloadedChapters')}
+            description={t('cantReadOfflineUntilRedownloaded')}
+            disabled={!hasDownloads}
             actionProps={{
               color: 'red',
               variant: 'muted',
               leftSection: <TrashIcon />,
-              onClick: openClearCacheModal,
+              onClick: openDeleteDownloads,
               children: t('delete'),
-              disabled: true,
+              disabled: !hasDownloads,
             }}
           />
         </GroupedList>
@@ -85,6 +108,7 @@ function ProfileData() {
       <ExportModal opened={isExportOpened} onClose={closeExportModal} />
       <ImportModal opened={isImportOpened} onClose={closeImportModal} />
       <ClearCacheModal opened={isClearCacheOpened} onClose={closeClearCacheModal} />
+      <DeleteDownloadsModal opened={isDeleteDownloadsOpened} onClose={closeDeleteDownloads} />
     </Stack>
   );
 }

@@ -1,4 +1,5 @@
 import { Card, Group, Stack } from '@mantine/core';
+import { useNetwork } from '@mantine/hooks';
 import { useSearchParams } from 'react-router';
 import {
   SORT_DIRECTION,
@@ -15,6 +16,9 @@ import {
   resolveOwnMark,
 } from '@/entities/title/readingProgress';
 import ChaptersList from '@/shared/ui/ChaptersList';
+import useTitleDownloads from '@/entities/download/hooks/useTitleDownloads';
+import { getUnavailableChapterIds } from '@/entities/download/lib';
+import ChapterDownloadControl from '@/features/download/ChapterDownloadControl';
 import useTitleBookmarkVisit from '../../hooks/useTitleBookmarkVisit';
 import TitleChaptersSettings from './TitleChaptersSettings';
 
@@ -31,6 +35,8 @@ function TitleBranchChapters({ titleId, branch, data }: Props) {
   const { data: progress } = useReadingProgress({ titleId });
   const { mutate: updateProgress } = useUpdateReadingProgress({ titleId });
   const { data: newChapterIds } = useTitleBookmarkVisit(titleId);
+  const downloads = useTitleDownloads(titleId);
+  const { online } = useNetwork();
 
   const parsedDirection = SortDirectionSchema.safeParse(searchParams.get('direction'));
   const direction = parsedDirection.success ? parsedDirection.data : SORT_DIRECTION.DESC;
@@ -38,6 +44,7 @@ function TitleBranchChapters({ titleId, branch, data }: Props) {
   const { numbering } = data;
   const chapters = direction === SORT_DIRECTION.ASC ? [...data.items].reverse() : data.items;
   const unplacedLinked = getUnplacedLinkedProgress(progress, chapters, branch.id);
+  const ownMark = resolveOwnMark(progress, chapters, numbering);
 
   return (
     <Stack gap="xs">
@@ -49,7 +56,15 @@ function TitleBranchChapters({ titleId, branch, data }: Props) {
 
       <Card withBorder padding={0} bg="transparent">
         <Card.Section withBorder px="sm" py="xs">
-          <TitleChaptersSettings />
+          <TitleChaptersSettings
+            download={{
+              titleId,
+              branchId: branch.id,
+              chaptersList: data,
+              downloads,
+              ownChapterId: ownMark?.chapter.id,
+            }}
+          />
         </Card.Section>
         <ChaptersList
           chapters={chapters}
@@ -58,12 +73,22 @@ function TitleBranchChapters({ titleId, branch, data }: Props) {
           mah="70vh"
           showDate
           direction={direction}
-          ownMark={resolveOwnMark(progress, chapters, numbering)}
+          ownMark={ownMark}
           linkedMarks={resolveLinkedMarks(progress, chapters, branch.id)}
           newChapterIds={newChapterIds}
           onMarkChapter={(chapter) =>
             updateProgress({ chapterId: chapter.id, pageIndex: 0, chapter })
           }
+          unavailableChapterIds={online ? undefined : getUnavailableChapterIds(chapters, downloads)}
+          getChapterAction={(chapter) => (
+            <ChapterDownloadControl
+              titleId={titleId}
+              chapter={chapter}
+              download={downloads?.get(chapter.id)}
+              chaptersList={data}
+              chaptersListKey={branch.id}
+            />
+          )}
         />
       </Card>
     </Stack>

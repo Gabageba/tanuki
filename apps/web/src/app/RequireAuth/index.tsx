@@ -3,6 +3,7 @@ import NotificationsStream from '@/entities/notification/NotificationsStream';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import FullScreenLoader from '@/shared/ui/FullScreenLoader';
+import OfflineSync from './OfflineSync';
 
 function RequireAuth() {
   const { data: user, isPending } = useCurrentUser();
@@ -18,6 +19,7 @@ function RequireAuth() {
   return (
     <>
       <NotificationsStream />
+      <OfflineSync />
       <Outlet />
     </>
   );

@@ -3,6 +3,7 @@ import {
   AsclepiusIcon,
   FlaskIcon,
   GearSixIcon,
+  TrayArrowDownIcon,
   UserGearIcon,
   UserIcon,
 } from '@phosphor-icons/react';
@@ -22,6 +23,8 @@ export const getAccountMenuItemLabel = (item: AccountMenuItem, t: TFunction) => 
       return t('profile');
     case ACCOUNT_MENU_ITEM.SETTINGS:
       return t('settings');
+    case ACCOUNT_MENU_ITEM.DOWNLOADS:
+      return t('downloads');
     case ACCOUNT_MENU_ITEM.SOURCES_HEALTH:
       return t('sourcesHealth');
     case ACCOUNT_MENU_ITEM.MANAGEMENT:
@@ -37,6 +40,8 @@ export const getAccountMenuItemIcon = (item: AccountMenuItem) => {
       return <UserIcon />;
     case ACCOUNT_MENU_ITEM.SETTINGS:
       return <GearSixIcon />;
+    case ACCOUNT_MENU_ITEM.DOWNLOADS:
+      return <TrayArrowDownIcon />;
     case ACCOUNT_MENU_ITEM.SOURCES_HEALTH:
       return <AsclepiusIcon />;
     case ACCOUNT_MENU_ITEM.MANAGEMENT:
@@ -52,6 +57,8 @@ export const getAccountMenuItemPath = (item: AccountMenuItem) => {
       return ROUTE_PATHS.PROFILE;
     case ACCOUNT_MENU_ITEM.SETTINGS:
       return ROUTE_PATHS.SETTINGS;
+    case ACCOUNT_MENU_ITEM.DOWNLOADS:
+      return ROUTE_PATHS.DOWNLOADS;
     case ACCOUNT_MENU_ITEM.SOURCES_HEALTH:
       return ROUTE_PATHS.SOURCES_HEALTH;
     case ACCOUNT_MENU_ITEM.MANAGEMENT:
@@ -80,6 +87,7 @@ const isAccountMenuItemVisible = (item: AccountMenuItem, role: UserRole | undefi
       return import.meta.env.DEV;
     case ACCOUNT_MENU_ITEM.PROFILE:
     case ACCOUNT_MENU_ITEM.SETTINGS:
+    case ACCOUNT_MENU_ITEM.DOWNLOADS:
     case ACCOUNT_MENU_ITEM.SOURCES_HEALTH:
       return true;
   }

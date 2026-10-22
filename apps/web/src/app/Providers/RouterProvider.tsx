@@ -20,6 +20,7 @@ import Bookmarks from '@/pages/Bookmarks';
 import Catalog from '@/pages/Catalog';
 import Title from '@/pages/Title';
 import Reader from '@/pages/Reader';
+import Downloads from '@/pages/Downloads';
 import Login from '@/pages/Login';
 import AccountDeletionScheduled from '@/pages/AccountDeletionScheduled';
 import Register from '@/pages/Register';
@@ -94,6 +95,10 @@ const router = createBrowserRouter([
               {
                 path: ROUTE_PATHS.BOOKMARKS,
                 element: <Bookmarks />,
+              },
+              {
+                path: ROUTE_PATHS.DOWNLOADS,
+                element: <Downloads />,
               },
               ...PLAYGROUND_ROUTES,
               {

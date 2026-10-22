@@ -28,6 +28,7 @@ export type ActiveSelection = {
 export const ACCOUNT_MENU_ITEM = {
   PROFILE: 'profile',
   SETTINGS: 'settings',
+  DOWNLOADS: 'downloads',
   SOURCES_HEALTH: 'sourcesHealth',
   MANAGEMENT: 'management',
   PLAYGROUND: 'playground',
@@ -50,7 +51,7 @@ export type AccountMenuSectionItems = {
 export const ACCOUNT_MENU_SECTIONS: AccountMenuSectionItems[] = [
   {
     section: ACCOUNT_MENU_SECTION.ACCOUNT,
-    items: [ACCOUNT_MENU_ITEM.PROFILE, ACCOUNT_MENU_ITEM.SETTINGS],
+    items: [ACCOUNT_MENU_ITEM.PROFILE, ACCOUNT_MENU_ITEM.SETTINGS, ACCOUNT_MENU_ITEM.DOWNLOADS],
   },
   { section: ACCOUNT_MENU_SECTION.SOURCES, items: [ACCOUNT_MENU_ITEM.SOURCES_HEALTH] },
   {

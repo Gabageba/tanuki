@@ -1,0 +1,49 @@
+.row {
+  border-radius: var(--mantine-radius-sm);
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+/* Перетаскиваемая строка очереди поверх соседних. */
+.sortableRow {
+  &[data-dragging] {
+    z-index: 1;
+    box-shadow: var(--mantine-shadow-md);
+  }
+}
+
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* Строка скачанного тайтла подсвечивается целиком, вместе с «⋯»: Accordion.Control красит только
+   себя. Цвета — те же, что у его собственного hover. */
+.titleHeader {
+  @media (hover: hover) {
+    &:hover {
+      background-color: var(--mantine-color-gray-0);
+
+      :global([data-mantine-color-scheme='dark']) & {
+        background-color: var(--mantine-color-dark-6);
+      }
+    }
+  }
+}
+
+.titleControl:hover {
+  background-color: transparent;
+}
+
+/* Подсветка строки не вылезает за скруглённые углы первого и последнего тайтла. */
+.titleItem {
+  overflow: hidden;
+}
+
+/* Корзина главы (34 px, по высоте строки) стоит по центру под «⋯» тайтла (28 px, отступ xs от края):
+   правый отступ панели — на половину разницы их размеров меньше. */
+.titleContent {
+  padding-inline-end: calc(var(--mantine-spacing-xs) - 3px);
+}

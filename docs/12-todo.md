@@ -6,17 +6,17 @@
 
 ## Страница тайтла
 
-- [ ] **Убрать пункт «Обновить»** из меню «…» — решили не делать, сейчас это `Menu.Item` без
+- [x] **Убрать пункт «Обновить»** из меню «…» — решили не делать, сейчас это `Menu.Item` без
       обработчика.
       [`TitleImageSection/index.tsx:84`](../apps/web/src/pages/Title/components/TitleImageSection/index.tsx#L84)
-- [ ] **«Поделиться»** в том же меню — `navigator.share`, фолбэк на копирование ссылки.
+- [x] **«Поделиться»** в том же меню — `navigator.share`, фолбэк на копирование ссылки.
       [`TitleImageSection/index.tsx:85`](../apps/web/src/pages/Title/components/TitleImageSection/index.tsx#L85)
-- [ ] **Плашка «Скачано 42 гл. · 1.8 ГБ»** — числа захардкожены и видны у любого тайтла. Скрыть
+- [x] **Плашка «Скачано 42 гл. · 1.8 ГБ»** — числа захардкожены и видны у любого тайтла. Скрыть
       до офлайна, потом показывать реальные данные и только если что-то скачано.
       [`TitleImageSection/index.tsx:98`](../apps/web/src/pages/Title/components/TitleImageSection/index.tsx#L98)
-- [ ] **«Скачать все»** в настройках списка глав — `Button` без `onClick` (зависит от офлайна).
+- [x] **«Скачать все»** в настройках списка глав — `Button` без `onClick` (зависит от офлайна).
       [`TitleChaptersSettings.tsx:40`](../apps/web/src/pages/Title/components/TitleChaptersTabContent/TitleChaptersSettings.tsx#L40)
-- [ ] **Скачивание отдельной главы** — `ActionIcon` без `onClick` и `aria-label` (зависит от
+- [x] **Скачивание отдельной главы** — `ActionIcon` без `onClick` и `aria-label` (зависит от
       офлайна). [`ChapterItem.tsx:194`](../apps/web/src/shared/ui/ChaptersList/ChapterItem.tsx#L194)
 
 ## Профиль → «Данные»
@@ -32,7 +32,7 @@
 - [ ] **Импорт с источника** — сети и вход настоящие, чтение закладок и список тайтлов — мок.
       Нужен метод парсера «закладки пользователя» для семейств со входом.
       [`ImportFromSourceModal/`](../apps/web/src/pages/Profile/components/ProfileData/ImportFromSourceModal)
-- [ ] **«Удалить скачанные главы»** — всегда `disabled`, а `onClick` открывает модалку очистки
+- [x] **«Удалить скачанные главы»** — всегда `disabled`, а `onClick` открывает модалку очистки
       кеша браузера. Связать с экраном загрузок офлайна.
       [`ProfileData/index.tsx:79`](../apps/web/src/pages/Profile/components/ProfileData/index.tsx#L79)
 
@@ -74,12 +74,12 @@
 
 ## PWA и офлайн ([06](06-pwa-offline.md))
 
-- [ ] Precache app shell и стратегии кеширования API/изображений по таблице из 06.
-- [ ] Два раздельных кеша изображений: LRU для чтения и вечный `tanuki-offline-v1`.
-- [ ] Очередь скачивания глав в Dexie, последовательная загрузка в SW, прогресс, докачка после
+- [x] Precache app shell и стратегии кеширования API/изображений по таблице из 06.
+- [x] Два раздельных кеша изображений: LRU для чтения и вечный `tanuki-offline-v1`.
+- [x] Очередь скачивания глав в Dexie, последовательная загрузка в SW, прогресс, докачка после
       закрытия вкладки.
-- [ ] `navigator.storage.persist()` и `estimate()` перед скачиванием.
-- [ ] Экран управления загрузками: удалить главу / тайтл / всё.
+- [x] `navigator.storage.persist()` и `estimate()` перед скачиванием.
+- [x] Экран управления загрузками: удалить главу / тайтл / всё.
 - [ ] Офлайн-фолбэк навигации (`offline.html`), библиотека без сети.
 - [ ] `registerType: 'prompt'` и тост «доступно обновление».
 - [ ] Отложенный `beforeinstallprompt`.

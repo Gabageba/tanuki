@@ -1,6 +1,6 @@
-import { useState, type MouseEvent } from 'react';
-import { ActionIcon, Box, Flex, Group, Stack, Text, UnstyledButton } from '@mantine/core';
-import { CircleIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
+import { useState, type MouseEvent, type ReactNode } from 'react';
+import { Box, Flex, Group, Stack, Text, UnstyledButton } from '@mantine/core';
+import { CircleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { isEmpty } from '@/shared/lib/isEmpty';
 import { READING_MARK_CONFIDENCE, type Chapter, type ChapterNumbering } from '@tanuki/contracts';
@@ -35,6 +35,8 @@ type Props = {
   isFirst?: boolean;
   isLast?: boolean;
   onMark?: () => void;
+  /** Конец строки — например, состояние скачивания. Клики по нему строку не открывают сами. */
+  action?: ReactNode;
 };
 
 const MARK_ICON_SIZE = 20;
@@ -59,6 +61,7 @@ function ChapterItem({
   isFirst = false,
   isLast = false,
   onMark,
+  action,
 }: Props) {
   const { t } = useTranslation();
   const { formatDateNumeric } = useDateFormat();
@@ -202,9 +205,7 @@ function ChapterItem({
               {formatDateNumeric(chapter.uploadedAt)}
             </Text>
           )}
-          <ActionIcon variant="subtle" onClick={stopRowClick}>
-            <DownloadSimpleIcon />
-          </ActionIcon>
+          {action}
         </Flex>
       </Flex>
     </Group>
