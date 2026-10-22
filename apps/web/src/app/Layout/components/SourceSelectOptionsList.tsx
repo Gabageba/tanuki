@@ -1,4 +1,4 @@
-import { EmptyState, Stack } from '@mantine/core';
+import { Stack } from '@mantine/core';
 import { generatePath } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import SourceSelectOption from './SourceSelectOption';
@@ -8,14 +8,24 @@ import type { ActiveSelection } from '../models';
 import { ACTIVE_SELECTION_KINDS } from '../models';
 import type { Source } from '@tanuki/contracts';
 import SourceIcon from '@/entities/source/components/SourceIcon';
+import SourceSelectEmpty from './SourceSelectEmpty';
 
 type Props = {
   filteredSources: Source[];
+  /** Включён ли хоть один источник — иначе пусто не из-за запроса; `undefined` — список ещё не пришёл. */
+  hasSources: boolean | undefined;
   activeSelection: ActiveSelection;
   onClose: () => void;
+  onResetQuery: () => void;
 };
 
-function SourceSelectOptionsList({ activeSelection, filteredSources, onClose }: Props) {
+function SourceSelectOptionsList({
+  activeSelection,
+  filteredSources,
+  hasSources,
+  onClose,
+  onResetQuery,
+}: Props) {
   const { t } = useTranslation();
 
   return (
@@ -42,7 +52,11 @@ function SourceSelectOptionsList({ activeSelection, filteredSources, onClose }: 
           />
         ))}
       </Stack>
-      {filteredSources.length === 0 && <EmptyState size="xs" />}
+      <SourceSelectEmpty
+        hasSources={hasSources}
+        foundCount={filteredSources.length}
+        onResetQuery={onResetQuery}
+      />
     </Stack>
   );
 }

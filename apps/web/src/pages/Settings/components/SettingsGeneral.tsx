@@ -4,7 +4,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { GlobeIcon, TranslateIcon } from '@phosphor-icons/react';
 import { LANGUAGE, getLanguageLabel, type Language } from '@/shared/lib/language';
-import useUserSettings from '@/shared/hooks/useUserSettings';
+import type useUserSettings from '@/shared/hooks/useUserSettings';
+import PageLayout from '@/shared/ui/PageLayout';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
 import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
 import { PROFILE_STATISTICS_QUERY_KEY } from '@/entities/user/hooks/useProfileStatistics';
 import GroupedList from '@/shared/ui/GroupedList';
@@ -15,7 +17,9 @@ import SettingsSearch from './SettingsSearch';
 function SettingsGeneral() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
-  const { data: settings } = useUserSettings();
+  const settingsQuery = PageLayout.useQuery<ReturnType<typeof useUserSettings>>();
+  const settings = settingsQuery.data;
+  const { isSkeleton } = useSkeletonTiming(settingsQuery);
   const updateUserSettings = useUpdateUserSettings();
 
   const languages = Object.values(LANGUAGE).map((value) => ({
@@ -39,8 +43,8 @@ function SettingsGeneral() {
 
   return (
     <SimpleGrid cols={{ base: 1, md: 2 }}>
-      <ColorSchemePicker />
-      <GroupedList label={t('languageAndRegion')}>
+      <ColorSchemePicker loading={isSkeleton} />
+      <GroupedList label={t('languageAndRegion')} loading={isSkeleton} skeletonRows={2}>
         <GroupedList.Row
           icon={<TranslateIcon />}
           title={t('interfaceLanguage')}

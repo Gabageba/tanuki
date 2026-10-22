@@ -6,6 +6,8 @@ allowBuilds:
   '@scarf/scarf': false
   '@swc/core': true
   esbuild: false
+  # postinstall msw только копирует воркер в public — он уже лежит в apps/web/.storybook/public.
+  msw: false
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@types/react-dom@19.2.4'

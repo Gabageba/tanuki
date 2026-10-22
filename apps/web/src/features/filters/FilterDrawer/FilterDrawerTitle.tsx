@@ -24,7 +24,7 @@ function FilterDrawerTitle({ activeGroup, setActiveGroupId, draft }: Props) {
       <Flex direction={{ base: 'column', xxs: 'row' }} columnGap="md">
         <Title order={5}>{activeGroup?.id ? activeGroup.title : t('allFilters')}</Title>
         {activeGroup?.id !== undefined && (
-          <SelectedFiltersCount groupId={activeGroup.id} draft={draft} mt={{ base: 0, xxs: 2 }} />
+          <SelectedFiltersCount group={activeGroup} draft={draft} mt={{ base: 0, xxs: 2 }} />
         )}
       </Flex>
     </Group>

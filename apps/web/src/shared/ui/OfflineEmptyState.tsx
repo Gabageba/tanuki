@@ -5,7 +5,8 @@ import { Link } from 'react-router';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 
 type Props = {
-  title: string;
+  /** По умолчанию «Нет сети». */
+  title?: string;
   description?: string;
 };
 
@@ -15,7 +16,7 @@ function OfflineEmptyState({ title, description }: Props) {
   const { t } = useTranslation();
 
   return (
-    <EmptyState title={title} description={description} icon={<CloudSlashIcon />}>
+    <EmptyState title={title ?? t('noNetwork')} description={description} icon={<CloudSlashIcon />}>
       <EmptyState.Actions>
         <Button
           component={Link}

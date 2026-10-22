@@ -13,6 +13,9 @@ import ReaderPagesCount from '../ReaderPagesCount';
 import { TITLE_NAME_MIN_WIDTH } from '../../lib';
 import ReaderHeaderSkeleton from './ReaderHeaderSkeleton';
 import { isEmpty } from '@/shared/lib/isEmpty';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
+import { mergeQueries, toOptionalQuery } from '@/shared/ui/QueryBlock/lib';
+import type { LoadingQuery } from '@/shared/ui/QueryBlock/models';
 
 type Props = {
   titleId: string;
@@ -22,7 +25,8 @@ type Props = {
   nextChapterId: string | null;
   page: number;
   pagesLength: number | null;
-  isChapterDataPending: boolean;
+  /** Загрузка главы из ленты — от неё соседние главы. */
+  feedQuery: LoadingQuery;
 };
 
 function ReaderHeader({
@@ -32,16 +36,29 @@ function ReaderHeader({
   nextChapterId,
   page,
   pagesLength,
-  isChapterDataPending,
+  feedQuery,
 }: Props) {
   const { t } = useTranslation();
-  const { data: titleData, isPending: isTitleDetailsPending } = useTitleDetails({ titleId });
-  const { data: chaptersData, isPending: isChaptersDataPending } = useChapters({ titleId });
-  const { data: source, isPending: isSourcePending } = useSource({
-    sourceId: titleData?.title.sourceId,
+  const titleQuery = useTitleDetails({ titleId });
+  const chaptersQuery = useChapters({ titleId });
+  const sourceQuery = useSource({ sourceId: titleQuery.data?.title.sourceId });
+  const { data: titleData } = titleQuery;
+  const { data: chaptersData } = chaptersQuery;
+  const { data: source } = sourceQuery;
+  // Шапка ждёт всё, но без названия, списка глав или источника обойдётся. Источник известен
+  // только из тайтла: пока тайтла нет, ждём тайтл, а упавший тайтл источника уже не даст.
+  // Перезапрос посреди чтения тихий (`isLive`): шапка не мигает скелетоном над читаемой главой.
+  const { isSkeleton } = useSkeletonTiming({
+    ...mergeQueries([
+      toOptionalQuery(titleQuery),
+      toOptionalQuery(chaptersQuery),
+      toOptionalQuery(titleData ? sourceQuery : titleQuery),
+      feedQuery,
+    ]),
+    isLive: true,
   });
 
-  if (isTitleDetailsPending || isChaptersDataPending || isSourcePending || isChapterDataPending) {
+  if (isSkeleton) {
     return <ReaderHeaderSkeleton />;
   }
 

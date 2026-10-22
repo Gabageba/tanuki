@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client';
 import { Notifications } from '@mantine/notifications';
 import Providers from './app/Providers';
 import { registerServiceWorker } from './shared/lib/serviceWorker';
-import './styles/global.scss';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

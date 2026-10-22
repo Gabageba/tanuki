@@ -7,7 +7,9 @@ import useReadingProgress from '@/entities/title/hooks/useReadingProgress';
 import TitleImageSection from './components/TitleImageSection';
 import TitleDetailsSection from './components/TitleDetailsSection';
 import TitleBookmarkConflict from './components/TitleBookmarkConflict';
+import TitleSkeleton from './components/TitleSkeleton';
 import useTitleBookmarkVisit from './hooks/useTitleBookmarkVisit';
+import type { TitlePageParams } from './models';
 
 function Title() {
   const { t } = useTranslation();
@@ -17,10 +19,14 @@ function Title() {
   useReadingProgress({ titleId });
   // Визит — сразу при открытии: он же отдаёт новые главы для списка глав.
   useTitleBookmarkVisit(titleId);
+  const params: TitlePageParams = { titleId, branchId: null };
 
   return (
-    <PageLayout key={titleId} useQuery={useTitleDetails} params={{ titleId }}>
-      <PageLayout.Content showLoading={false} offlineDescription={t('titleNotSavedOnDevice')}>
+    <PageLayout key={titleId} useQuery={useTitleDetails} params={params}>
+      <PageLayout.Content
+        skeleton={<TitleSkeleton />}
+        offlineDescription={t('titleNotSavedOnDevice')}
+      >
         <Grid columnGap="lg">
           <TitleImageSection />
           <Divider orientation="vertical" visibleFrom="md" />

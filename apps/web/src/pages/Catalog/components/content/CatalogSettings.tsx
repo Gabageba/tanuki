@@ -3,16 +3,18 @@ import { Group } from '@mantine/core';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import PageLayout from '@/shared/ui/PageLayout';
-import { SORT_DIRECTION, type FilterSelection } from '@tanuki/contracts';
+import QueryBlock from '@/shared/ui/QueryBlock';
+import { toOptionalQuery } from '@/shared/ui/QueryBlock/lib';
+import { SORT_DIRECTION } from '@tanuki/contracts';
 import useSource from '@/entities/source/hooks/useSource';
 import {
   isFiltersLockedByQuery,
   resolveEffectiveSortOrders,
   resolveOrder,
 } from '../../utils/sortOrder';
-import { serializeFilters } from '@/features/filters/lib/filterSelection';
 import type { CatalogParams } from '../../models';
 import useFilters from '../../hooks/useFilters';
+import useSetCatalogFilters from '../../hooks/useSetCatalogFilters';
 import FilterBar from '@/features/filters/FilterBar';
 import CatalogSettingsSkeleton from './CatalogSettingsSkeleton';
 import CatalogSort from './CatalogSort';
@@ -24,10 +26,13 @@ type Props = {
 
 function CatalogSettings({ sourceId }: Props) {
   const { t } = useTranslation();
-  const { data: source, isPending: isSourcePending } = useSource({ sourceId });
-  const { data: filters, isPending: isFiltersPending } = useFilters({ sourceId });
+  const sourceQuery = useSource({ sourceId });
+  const filtersQuery = useFilters({ sourceId });
+  const source = sourceQuery.data;
+  const filters = filtersQuery.data;
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
   const [, setSearchParams] = useSearchParams();
+  const setFilters = useSetCatalogFilters();
 
   const isFiltersLocked = isFiltersLockedByQuery(source, params.query);
   const activeFilters = isFiltersLocked ? undefined : params.filters;
@@ -64,44 +69,33 @@ function CatalogSettings({ sourceId }: Props) {
     );
   }, [order, direction, params, effectiveSupportsDirection, setParams, setSearchParams]);
 
-  const handleFiltersChange = (next: FilterSelection[]) => {
-    setParams({ ...params, filters: next });
-    setSearchParams(
-      (prev) => {
-        const nextParams = new URLSearchParams(prev);
-        nextParams.delete('filters');
-        for (const value of serializeFilters(next)) {
-          nextParams.append('filters', value);
-        }
-        return nextParams;
-      },
-      { replace: true },
-    );
-  };
-
-  if (!sourceId || isSourcePending || isFiltersPending) {
-    return <CatalogSettingsSkeleton />;
-  }
-
   return (
-    <FilterBar
-      w="100%"
-      mb="md"
-      groups={filters?.groups}
-      selection={params.filters ?? []}
-      onChange={handleFiltersChange}
-      locked={isFiltersLocked}
-      lockedNote={t('titleSearchWithoutFilters')}
-      actions={
-        <Group gap="xs">
-          <CatalogSort
-            sortOrders={effectiveSortOrders}
-            supportsDirection={effectiveSupportsDirection}
-          />
-          <CatalogViewMode />
-        </Group>
-      }
-    />
+    // Фильтры не загрузились — пропадает только кнопка «Фильтры», сортировка и вид остаются.
+    <QueryBlock
+      query={[sourceQuery, toOptionalQuery(filtersQuery)]}
+      skeleton={<CatalogSettingsSkeleton />}
+    >
+      {([, filtersData]) => (
+        <FilterBar
+          w="100%"
+          mb="md"
+          groups={filtersData?.groups}
+          selection={params.filters ?? []}
+          onChange={setFilters}
+          locked={isFiltersLocked}
+          lockedNote={t('titleSearchWithoutFilters')}
+          actions={
+            <Group gap="xs">
+              <CatalogSort
+                sortOrders={effectiveSortOrders}
+                supportsDirection={effectiveSupportsDirection}
+              />
+              <CatalogViewMode />
+            </Group>
+          }
+        />
+      )}
+    </QueryBlock>
   );
 }
 

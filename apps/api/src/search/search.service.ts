@@ -1,12 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { unappliedSearchFilters } from '@tanuki/parsers';
 import {
   SEARCH_GROUP_STATUS,
+  SEARCH_STREAM_EVENT,
   SOURCE_ACCESS,
   SOURCE_LOGIN_BENEFIT,
   SOURCE_STATUS,
   type SearchGroup,
-  type SearchResponse,
+  type SearchGroupStatus,
+  type SearchSourcesEvent,
   type Source,
   type TitleState,
   type TitleType,
@@ -17,8 +20,6 @@ import { CatalogService } from '../catalog/catalog.service';
 import { SourcesService } from '../sources/sources.service';
 import { SearchHistoryService } from './search-history.service';
 
-class SearchTimeoutError extends Error {}
-
 export type SearchParams = {
   query: string;
   /** Пересечение с источниками пользователя; undefined — все. */
@@ -27,7 +28,23 @@ export type SearchParams = {
   states?: TitleState[];
   limit: number;
   userId: string;
+  /** Повтор по не ответившим: в историю не пишется. */
+  isRetry?: boolean;
 };
+
+/** Событие потока поиска — в форме `MessageEvent` Nest: `type` уходит в `event:`, `data` — JSON. */
+export type SearchStreamMessage =
+  | { type: typeof SEARCH_STREAM_EVENT.SOURCES; data: SearchSourcesEvent }
+  | { type: typeof SEARCH_STREAM_EVENT.GROUP; data: SearchGroup }
+  | { type: typeof SEARCH_STREAM_EVENT.DONE; data: Record<string, never> };
+
+const emptyGroup = (sourceId: string, status: SearchGroupStatus): SearchGroup => ({
+  sourceId,
+  status,
+  items: [],
+  unappliedFilters: [],
+  filters: [],
+});
 
 /** Исход источника, который веер не опрашивает; undefined — опрашивается. */
 const getSkippedStatus = (source: Source) => {
@@ -51,68 +68,94 @@ export class SearchService {
     private readonly searchHistory: SearchHistoryService,
   ) {}
 
-  async search(params: SearchParams): Promise<SearchResponse> {
-    const { query, sourceIds, types, states, limit, userId } = params;
-    // Запись в историю идёт параллельно вееру и сама переживает сбой базы.
-    const recorded = this.searchHistory.record(userId, query);
-    const sources = (await this.sourcesService.listSearchSources(userId)).filter(
-      (source) => !sourceIds || sourceIds.includes(source.id),
-    );
-    const criteria = { types, states };
+  /**
+   * Веер поиска потоком: `sources` — порядок мест, затем `group` на источник, как только он
+   * ответил (пропущенные — сразу), в конце `done`. Один общий дедлайн на весь веер
+   * (docs/04-api-contract.md): в его момент все не ответившие уходят группами `timeout`. Отписка
+   * (клиент закрыл соединение) останавливает поток; запросы к источникам доживают сами.
+   */
+  search(params: SearchParams): Observable<SearchStreamMessage> {
+    return new Observable<SearchStreamMessage>((subscriber) => {
+      let timer: NodeJS.Timeout | undefined;
+      const pending = new Set<string>();
 
-    // Один общий дедлайн на весь веер (docs/04-api-contract.md) — источник, не уложившийся
-    // в него, помечается timeout, а не получает свой персональный тайм-аут.
-    let timer: NodeJS.Timeout;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new SearchTimeoutError()), this.env.SEARCH_TIMEOUT_MS);
-    });
+      const finish = () => {
+        clearTimeout(timer);
+        subscriber.next({ type: SEARCH_STREAM_EVENT.DONE, data: {} });
+        subscriber.complete();
+      };
 
-    try {
-      // Порядок групп — порядок источников пользователя (Source.position), в нём их отдаёт
-      // listSearchSources.
-      const groups = await Promise.all(
-        sources.map(async (source): Promise<SearchGroup> => {
-          const sourceId = source.id;
-          const skipped = getSkippedStatus(source);
-          if (skipped)
-            return { sourceId, status: skipped, items: [], unappliedFilters: [], filters: [] };
+      const answer = (group: SearchGroup) => {
+        if (subscriber.closed || !pending.delete(group.sourceId)) return;
+        subscriber.next({ type: SEARCH_STREAM_EVENT.GROUP, data: group });
+        if (pending.size === 0) finish();
+      };
 
-          try {
-            // Критерии идут источнику его собственными фильтрами; не умеющий их совмещать с
-            // поиском по названию (или выбранное не выразить) отдаёт выдачу без сужения.
-            const { filters, unapplied } = source.isSearchWithFiltersSupported
-              ? this.catalogService.resolveSearchFilters(sourceId, criteria)
-              : unappliedSearchFilters(criteria);
-            const catalog = await Promise.race([
-              this.catalogService.listCatalog(sourceId, {
-                page: 0,
-                limit,
-                query,
-                filters: filters.length ? filters : undefined,
-              }),
-              timeoutPromise,
-            ]);
-            return {
-              sourceId,
-              status: SEARCH_GROUP_STATUS.OK,
-              items: catalog.items.slice(0, limit),
-              unappliedFilters: unapplied,
-              filters,
-            };
-          } catch (error) {
-            const status =
-              error instanceof SearchTimeoutError
-                ? SEARCH_GROUP_STATUS.TIMEOUT
-                : SEARCH_GROUP_STATUS.ERROR;
-            return { sourceId, status, items: [], unappliedFilters: [], filters: [] };
+      const run = async () => {
+        const { query, sourceIds, types, states, limit, userId, isRetry } = params;
+        // Запись в историю идёт параллельно вееру и сама переживает сбой базы.
+        if (!isRetry) void this.searchHistory.record(userId, query);
+        // Порядок мест — порядок источников пользователя (Source.position), в нём их отдаёт
+        // listSearchSources.
+        const sources = (await this.sourcesService.listSearchSources(userId)).filter(
+          (source) => !sourceIds || sourceIds.includes(source.id),
+        );
+        if (subscriber.closed) return;
+
+        sources.forEach(({ id }) => pending.add(id));
+        subscriber.next({
+          type: SEARCH_STREAM_EVENT.SOURCES,
+          data: { sourceIds: sources.map(({ id }) => id) },
+        });
+        if (pending.size === 0) {
+          finish();
+          return;
+        }
+
+        timer = setTimeout(() => {
+          for (const sourceId of [...pending]) {
+            answer(emptyGroup(sourceId, SEARCH_GROUP_STATUS.TIMEOUT));
           }
-        }),
-      );
+        }, this.env.SEARCH_TIMEOUT_MS);
 
-      await recorded;
-      return { groups };
-    } finally {
-      clearTimeout(timer!);
-    }
+        const criteria = { types, states };
+        const polled = sources.filter((source) => {
+          const skipped = getSkippedStatus(source);
+          if (skipped) answer(emptyGroup(source.id, skipped));
+          return !skipped;
+        });
+
+        for (const source of polled) {
+          const sourceId = source.id;
+          // Критерии идут источнику его собственными фильтрами; не умеющий их совмещать с
+          // поиском по названию (или выбранное не выразить) отдаёт выдачу без сужения.
+          const { filters, unapplied } = source.isSearchWithFiltersSupported
+            ? this.catalogService.resolveSearchFilters(sourceId, criteria)
+            : unappliedSearchFilters(criteria);
+          this.catalogService
+            .listCatalog(sourceId, {
+              page: 0,
+              limit,
+              query,
+              filters: filters.length ? filters : undefined,
+            })
+            .then(
+              (catalog) =>
+                answer({
+                  sourceId,
+                  status: SEARCH_GROUP_STATUS.OK,
+                  items: catalog.items.slice(0, limit),
+                  unappliedFilters: unapplied,
+                  filters,
+                }),
+              () => answer(emptyGroup(sourceId, SEARCH_GROUP_STATUS.ERROR)),
+            );
+        }
+      };
+
+      run().catch((error: unknown) => subscriber.error(error));
+
+      return () => clearTimeout(timer);
+    });
   }
 }

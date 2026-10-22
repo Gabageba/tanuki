@@ -18,7 +18,6 @@ function useClearSearchHistory() {
     onError: (_error, _variables, context) => {
       queryClient.setQueryData(SEARCH_HISTORY_QUERY_KEY, context?.previous);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: SEARCH_HISTORY_QUERY_KEY }),
   });
 }
 

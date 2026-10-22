@@ -26,6 +26,7 @@ function Reader() {
     isChapterUnavailable,
     isPinned,
     isPending,
+    query: feedQuery,
   } = useReaderFeed({
     titleId,
     chapterId,
@@ -57,7 +58,7 @@ function Reader() {
         nextChapterId={activeChapter?.nextChapterId ?? null}
         page={position.pageIndex + 1}
         pagesLength={pagesLength}
-        isChapterDataPending={isPending}
+        feedQuery={feedQuery}
       />
       <ReaderPages
         titleId={titleId}
@@ -79,6 +80,7 @@ function Reader() {
         page={position.pageIndex + 1}
         pagesLength={pagesLength}
         visible={visible}
+        feedQuery={feedQuery}
       />
     </AppShell>
   );

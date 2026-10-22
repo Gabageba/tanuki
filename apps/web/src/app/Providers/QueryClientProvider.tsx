@@ -102,9 +102,10 @@ const queryClient: QueryClient = new QueryClient({
       // Без сети запрос всё равно уходит: ответ может дать кеш service worker или снимок
       // скачанного. В режиме 'online' TanStack без сети ставил бы его на паузу, не спросив.
       networkMode: 'offlineFirst',
-      staleTime: 60_000,
+      // Пока данные моложе пяти минут, они показываются сразу и не перезапрашиваются; старше —
+      // перезапрос на монтировании и при возврате во вкладку, со скелетоном (см. QueryBlock).
+      staleTime: 5 * 60_000,
       retry: shouldRetry,
-      refetchOnWindowFocus: false,
     },
   },
 });

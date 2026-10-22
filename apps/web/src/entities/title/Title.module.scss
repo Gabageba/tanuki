@@ -30,9 +30,15 @@
   aspect-ratio: 3 / 4;
   overflow: hidden;
   border-radius: var(--mantine-radius-md);
+
+  // Без своего слоя WebKit обрезает увеличенную при наведении картинку без скругления.
+  isolation: isolate;
 }
 
 .image {
+  // Углы режет обёртка: свой радиус картинки (по умолчанию из темы) не совпадает с её `bdrs`
+  // и при увеличении вылезает за край.
+  border-radius: 0;
   transition: transform 0.2s ease;
 
   .card[data-view-mode='grid']:focus-visible &,

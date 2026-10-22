@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { BookmarkFoldersResponse, ReorderBookmarkFoldersRequest } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
-import { invalidateBookmarks } from '@/entities/bookmark/lib';
 import { BOOKMARK_FOLDERS_QUERY_KEY } from '@/entities/bookmark/models';
 
 /** Строка встаёт на новое место сразу, не дожидаясь сервера; при ошибке порядок возвращается. */
@@ -31,7 +30,6 @@ function useReorderBookmarkFolders() {
     onError: (_error, _ids, context) => {
       if (context?.previous) queryClient.setQueryData(BOOKMARK_FOLDERS_QUERY_KEY, context.previous);
     },
-    onSettled: () => invalidateBookmarks(queryClient),
   });
 }
 

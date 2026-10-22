@@ -13,8 +13,8 @@ function useBookmarks({ folderId, sort, direction, query, page }: BookmarksListP
       if (query.trim()) search.set('query', query.trim());
       return apiFetch<BookmarksResponse>(`/bookmarks?${search}`);
     },
-    // Смена страницы, поиска или сортировки не мигает скелетоном; другая папка — мигает: её
-    // карточки не похожи на прошлые.
+    // Смена страницы, поиска или сортировки — 200 мс старые карточки, потом скелетон (см.
+    // QueryBlock); другая папка — скелетон сразу: её карточки не похожи на прошлые.
     placeholderData: (previous, previousQuery) =>
       (previousQuery?.queryKey[2] as BookmarksListParams | undefined)?.folderId === folderId
         ? previous

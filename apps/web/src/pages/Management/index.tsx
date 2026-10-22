@@ -8,6 +8,7 @@ import { MANAGEMENT_TAB_SEARCH_PARAM, MANAGEMENT_TABS, ROUTE_PATHS } from '@/sha
 import CreateInviteButton from './components/ManagementInvites/CreateInviteButton';
 import ManagementInvites from './components/ManagementInvites';
 import ManagementUsers from './components/ManagementUsers';
+import useManagementQueries from './hooks/useManagementQueries';
 import { isManagementTab } from './lib';
 
 function Management() {
@@ -41,9 +42,10 @@ function Management() {
   );
 
   return (
-    <PageLayout>
+    <PageLayout useQueries={useManagementQueries}>
       <PageLayout.Content
         title={t('management')}
+
         actions={activeTab === MANAGEMENT_TABS.INVITES && <CreateInviteButton />}
         goBack={{ path: ROUTE_PATHS.HOME }}
       >

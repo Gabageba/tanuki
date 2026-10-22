@@ -9,34 +9,37 @@ import {
   type ViewMode,
 } from '@/shared/lib/viewMode';
 import PageLayout from '@/shared/ui/PageLayout';
+import QueryBlock from '@/shared/ui/QueryBlock';
 import useSearchFilters from '../hooks/useSearchFilters';
-import { countSearchFilters, splitSearchGroups } from '../lib';
+import { countSearchFilters, getSearchPlaces } from '../lib';
 import { EMPTY_SEARCH_FILTERS, type SearchPageQuery } from '../models';
 import NotRespondedBlock from './NotRespondedBlock';
-import NothingFound from './NothingFound';
+import SearchFound from './SearchFound';
 import SearchHeader from './SearchHeader';
 import SearchSettings from './SearchSettings';
 import SearchSettingsSkeleton from './SearchSettingsSkeleton';
-import SourceResultsList from './SourceResultsList';
 
 type Props = {
   query: string;
 };
 
 /**
- * Выдача по запросу. Запрос поиска — основной запрос страницы: лоадер и ошибку показывает
- * PageLayout.Content, поэтому пока идёт веер, вместо фильтров ничего. Если выдача пришла раньше
- * источников, на месте фильтров скелетон.
+ * Выдача по запросу. Запрос поиска — основной запрос страницы: ошибку показывает
+ * PageLayout.Content. Веер идёт потоком — секции встают на места источников по мере ответов,
+ * остальные места скелетоном; «Нашлось на:» и «Не ответили» растут по ходу. Фильтры остаются на
+ * месте, в том числе когда веер перезапускает их смена.
  */
 function SearchResults({ query }: Props) {
   const { filters, setFilters } = useSearchFilters();
-  const { data, isFetching, refetch } = PageLayout.useQuery<SearchPageQuery>();
-  const { data: sourcesData, isPending: isSourcesPending } = useSources();
+  const { data, retryMissed, isRetrying } = PageLayout.useQuery<SearchPageQuery>();
+  const sourcesQuery = useSources();
+  const sourcesData = sourcesQuery.data;
   const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredViewMode() ?? VIEW_MODE.GRID);
 
   const sources = useMemo(() => flattenSources(sourcesData), [sourcesData]);
-  const enabledSources = useMemo(() => sources.filter(({ isEnabled }) => isEnabled), [sources]);
-  const { found, missed } = splitSearchGroups(data?.groups ?? [], sources);
+  const { found, missed, places } = data
+    ? getSearchPlaces(data, sources)
+    : { found: [], missed: [], places: null };
 
   const handleViewModeChange = (next: ViewMode) => {
     setStoredViewMode(next);
@@ -48,29 +51,28 @@ function SearchResults({ query }: Props) {
       <SearchHeader query={query} found={found} />
       <PageLayout.Content>
         <Stack gap="lg">
-          {isSourcesPending ? (
-            <SearchSettingsSkeleton />
-          ) : (
-            <SearchSettings
-              sources={enabledSources}
-              filters={filters}
-              onFiltersChange={setFilters}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-            />
-          )}
-          {found.length > 0 ? (
-            <SourceResultsList found={found} query={query} viewMode={viewMode} />
-          ) : (
-            <NothingFound
-              withFilters={countSearchFilters(filters) > 0}
-              onReset={() => setFilters(EMPTY_SEARCH_FILTERS)}
-            />
-          )}
+          <QueryBlock query={sourcesQuery} skeleton={<SearchSettingsSkeleton />}>
+            {(data) => (
+              <SearchSettings
+                sources={flattenSources(data).filter(({ isEnabled }) => isEnabled)}
+                filters={filters}
+                onFiltersChange={setFilters}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+              />
+            )}
+          </QueryBlock>
+          <SearchFound
+            places={places}
+            query={query}
+            viewMode={viewMode}
+            withFilters={countSearchFilters(filters) > 0}
+            onResetFilters={() => setFilters(EMPTY_SEARCH_FILTERS)}
+          />
           <NotRespondedBlock
             missed={missed}
-            isRetrying={isFetching}
-            onRetry={() => void refetch()}
+            isRetrying={isRetrying}
+            onRetry={() => retryMissed(missed.map(({ source }) => source.id))}
           />
         </Stack>
       </PageLayout.Content>

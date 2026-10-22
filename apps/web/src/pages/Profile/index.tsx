@@ -4,13 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { ChartBarIcon, DatabaseIcon, KeyIcon, ShieldCheckIcon } from '@phosphor-icons/react';
 import PageLayout from '@/shared/ui/PageLayout';
-import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import ProfileInfo from './components/ProfileInfo';
 import ProfileStatistics from './components/ProfileStatistics';
 import ProfileSignInAndSecurity from './components/ProfileSignInAndSecurity';
 import ProfileData from './components/ProfileData';
 import ProfileSourceAccounts from './components/ProfileSourceAccounts';
 import { PROFILE_TAB_SEARCH_PARAM, PROFILE_TABS } from '@/shared/lib/routes';
+import useProfileQueries from './hooks/useProfileQueries';
 import { isProfileTab } from './lib';
 
 function Profile() {
@@ -55,7 +55,7 @@ function Profile() {
     [t],
   );
   return (
-    <PageLayout useQuery={useCurrentUser}>
+    <PageLayout useQueries={useProfileQueries}>
       <PageLayout.Content>
         <Stack gap="lg">
           <ProfileInfo />

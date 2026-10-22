@@ -10,6 +10,8 @@ import TitleMatchesScroller from './TitleMatchesScroller';
 import TitleMatchAddModal from './TitleMatchAddModal';
 import TitleLinkBookmarkModal from './TitleLinkBookmarkModal';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
+import QueryBlock from '@/shared/ui/QueryBlock';
+import { toOptionalQuery } from '@/shared/ui/QueryBlock/lib';
 
 type Props = {
   title: Title;
@@ -17,7 +19,7 @@ type Props = {
 
 function TitleMatches({ title }: Props) {
   const { t } = useTranslation();
-  const { data, isPending: isMatchesPending } = useTitleMatches({ titleId: title.id });
+  const matchesQuery = useTitleMatches({ titleId: title.id });
   // Связь, которую не поставили, пока не выбрана папка для закладки.
   const [conflictTargetId, setConflictTargetId] = useState<string | null>(null);
   const { mutate: mutateTitleLink, isPending: isTitleLinkPending } = useSetTitleLink({
@@ -29,33 +31,37 @@ function TitleMatches({ title }: Props) {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  if (isMatchesPending) {
-    return <TitleMatchesSkeleton />;
-  }
-
   return (
-    <Stack gap={8}>
-      <Group gap={8} justify="space-between">
-        <Heading order={5}>{t('foundOnOtherSources')}</Heading>
-        {isStaff && (
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={<PlusIcon />}
-            loading={isTitleLinkPending}
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            {t('addManually')}
-          </Button>
+    <>
+      {/* Совпадения не загрузились — заголовок и «Добавить вручную» остаются: ручная связь тогда
+      нужнее всего. */}
+      <QueryBlock query={toOptionalQuery(matchesQuery)} skeleton={<TitleMatchesSkeleton />}>
+        {(data) => (
+          <Stack gap={8}>
+            <Group gap={8} justify="space-between">
+              <Heading order={5}>{t('foundOnOtherSources')}</Heading>
+              {isStaff && (
+                <Button
+                  w={{ base: '100%', xs: 'auto' }}
+                  size="xs"
+                  variant="default"
+                  leftSection={<PlusIcon />}
+                  loading={isTitleLinkPending}
+                  onClick={() => setIsAddModalOpen(true)}
+                >
+                  {t('addManually')}
+                </Button>
+              )}
+            </Group>
+            <TitleMatchesScroller
+              matches={data?.items}
+              mutateTitleLink={mutateTitleLink}
+              isTitleLinkPending={isTitleLinkPending}
+              isStaff={isStaff}
+            />
+          </Stack>
         )}
-      </Group>
-
-      <TitleMatchesScroller
-        matches={data?.items}
-        mutateTitleLink={mutateTitleLink}
-        isTitleLinkPending={isTitleLinkPending}
-        isStaff={isStaff}
-      />
+      </QueryBlock>
       <TitleMatchAddModal
         opened={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -80,7 +86,7 @@ function TitleMatches({ title }: Props) {
           }
         />
       )}
-    </Stack>
+    </>
   );
 }
 

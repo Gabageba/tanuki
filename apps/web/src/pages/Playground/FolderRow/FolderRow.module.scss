@@ -1,0 +1,28 @@
+/* Строка своей папки открывает её (V2, E1–E3): подсветка при наведении, как у кнопки. */
+.row[data-clickable] {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mantine-color-default-hover);
+  }
+}
+
+/* E1 — карандаш появляется, когда курсор на строке; на телефоне виден всегда (data-always). */
+.hoverHint:not([data-always]) {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.row:hover .hoverHint {
+  opacity: 1;
+}
+
+/* E2 — «Изменить» под названием подчёркивается вместе с наведением на строку. */
+.row[data-clickable]:hover .editCaption {
+  text-decoration: underline;
+}
+
+/* D3 — перетаскиваемая строка идёт поверх соседних. */
+.row[data-dragging] {
+  z-index: 1;
+}

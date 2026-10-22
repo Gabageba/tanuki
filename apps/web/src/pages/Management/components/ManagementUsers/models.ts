@@ -6,6 +6,7 @@ import {
   type EnumLiteralsOf,
   type InvitableRole,
   type ManagedUser,
+  type ManagedUsersQuery,
   type ManagedUsersSort,
   type UserStatus,
 } from '@tanuki/contracts';
@@ -19,6 +20,15 @@ export const USERS_COLUMN_WIDTH = {
   INVITED_BY: '16%',
   DATES: '28%',
 } as const;
+
+/** С чего начинается таблица: первая страница без фильтров, новые сверху. */
+export const DEFAULT_USERS_QUERY = {
+  page: 1,
+  role: [],
+  status: [],
+  sort: MANAGED_USERS_SORT.CREATED_AT,
+  direction: SORT_DIRECTION.DESC,
+} satisfies ManagedUsersQuery;
 
 /** Сколько ждать, пока в поиске перестанут печатать, прежде чем спросить сервер. */
 export const SEARCH_DEBOUNCE_MS = 300;

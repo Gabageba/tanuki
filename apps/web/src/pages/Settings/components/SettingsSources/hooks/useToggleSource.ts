@@ -39,7 +39,6 @@ function useToggleSource() {
     onError: (_error, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(SOURCES_QUERY_KEY, context.previous);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: SOURCES_QUERY_KEY }),
   });
 }
 

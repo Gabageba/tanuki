@@ -2,7 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { EnvelopeSimpleIcon, PasswordIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import { useDisclosure } from '@mantine/hooks';
 import GroupedList from '@/shared/ui/GroupedList';
-import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
+import PageLayout from '@/shared/ui/PageLayout';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
+import type useProfileQueries from '../../hooks/useProfileQueries';
 import ChangeEmailModal from './ChangeEmailModal';
 import ChangePasswordModal from './ChangePasswordModal';
 
@@ -10,7 +12,9 @@ const PASSWORD_MASK = '••••••••';
 
 function AccountSection() {
   const { t } = useTranslation();
-  const { data: user, isPending: isUserPending } = useCurrentUser();
+  const userQuery = PageLayout.useQueries<typeof useProfileQueries>().user;
+  const user = userQuery.data;
+  const { isSkeleton } = useSkeletonTiming(userQuery);
 
   const [emailModalOpened, { open: openEmailModal, close: closeEmailModal }] = useDisclosure(false);
   const [passwordModalOpened, { open: openPasswordModal, close: closePasswordModal }] =
@@ -20,7 +24,7 @@ function AccountSection() {
 
   return (
     <>
-      <GroupedList label={t('account')} skeletonRows={2} loading={isUserPending}>
+      <GroupedList label={t('account')} skeletonRows={2} loading={isSkeleton}>
         <GroupedList.Row
           description={user.email}
           title={t('email')}

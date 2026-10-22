@@ -6,6 +6,7 @@ import useSources from '@/entities/source/hooks/useSources';
 import PageLayout from '@/shared/ui/PageLayout';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import SourcesList from './SourcesList';
+import SourcesListSkeleton from './SourcesListSkeleton';
 
 function Sources() {
   const { t } = useTranslation();
@@ -15,7 +16,7 @@ function Sources() {
       <PageLayout.Content
         title={t('sources')}
         goBack={{ path: ROUTE_PATHS.HOME }}
-        showLoading={false}
+        skeleton={<SourcesListSkeleton />}
         actions={
           <Button
             component={Link}

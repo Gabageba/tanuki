@@ -53,6 +53,7 @@ function ForgotPassword() {
           <TextInput
             autoComplete="email"
             {...form.getInputProps('email')}
+            placeholder={t('email')}
             leftSection={<EnvelopeSimpleIcon />}
             w="100%"
           />

@@ -1,91 +1,24 @@
-import { SimpleGrid, Stack } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
-import { BooksIcon, FireIcon } from '@phosphor-icons/react';
-import useProfileStatistics from '@/entities/user/hooks/useProfileStatistics';
-import useDateFormat from '@/shared/hooks/useDateFormat';
-import SourcesCard from './cards/SourcesCard';
-import ProfileStatisticMetaCard from './cards/ProfileStatisticMetaCard';
-import ChaptersReadCard from './cards/ChaptersReadCard';
-import ReadingTimeCard from './cards/ReadingTimeCard';
-import TagsCard from './cards/TagsCard';
-import BookmarksCard from './cards/BookmarksCard';
+import PageLayout from '@/shared/ui/PageLayout';
+import QueryBlock from '@/shared/ui/QueryBlock';
+import type useProfileQueries from '../../hooks/useProfileQueries';
+import ProfileStatisticsCards from './ProfileStatisticsCards';
 import ProfileStatisticsEmpty from './ProfileStatisticsEmpty';
 import ProfileStatisticsSkeleton from './ProfileStatisticsSkeleton';
-import { formatSigned, getMonthDeltaPercent, getTodayDelta, getTrendHint } from './lib';
 
 function ProfileStatistics() {
-  const { t } = useTranslation();
-  const { getCurrentMonthName } = useDateFormat();
-  const { data: statistics, isPending } = useProfileStatistics();
+  const { statistics, bookmarkFolders } = PageLayout.useQueries<typeof useProfileQueries>();
 
-  if (isPending) {
-    return <ProfileStatisticsSkeleton />;
-  }
-
-  if (!statistics || !statistics.hasActivity) return <ProfileStatisticsEmpty />;
-
-  const { today, month, totals, streak } = statistics;
-  const todayDelta = getTodayDelta(statistics);
-  const monthDeltaPercent = getMonthDeltaPercent(statistics);
-
+  // Карточка закладок берёт папки отдельным запросом — скелетон ждёт и его, иначе она выскочит
+  // последней.
   return (
-    <Stack mt="lg">
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
-        <ProfileStatisticMetaCard
-          label={t('forToday')}
-          value={today.chapters}
-          unit={t('chapter', { count: today.chapters })}
-          hint={
-            todayDelta === null
-              ? undefined
-              : getTrendHint(todayDelta, t('vsAverageDay', { value: formatSigned(todayDelta) }))
-          }
-        />
-        <ProfileStatisticMetaCard
-          label={t('forMonth', { month: getCurrentMonthName() })}
-          value={month.chapters}
-          unit={t('chapter', { count: month.chapters })}
-          hint={
-            monthDeltaPercent === null
-              ? undefined
-              : getTrendHint(
-                  monthDeltaPercent,
-                  t('vsUsualPace', { value: `${formatSigned(monthDeltaPercent)}%` }),
-                )
-          }
-        />
-        <ProfileStatisticMetaCard
-          label={t('allTime')}
-          value={totals.chapters}
-          unit={t('chapter', { count: totals.chapters })}
-          hint={{ icon: <BooksIcon />, text: t('countTitles', { count: totals.titles }) }}
-        />
-        <ProfileStatisticMetaCard
-          label={t('dayStreak')}
-          value={streak.current}
-          unit={t('day', { count: streak.current })}
-          hint={
-            streak.best > 0
-              ? {
-                  icon: <FireIcon />,
-                  text: t('personalBest', { value: streak.best }),
-                  color: 'terracotta',
-                }
-              : undefined
-          }
-        />
-      </SimpleGrid>
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
-        <ChaptersReadCard
-          chaptersByDay={statistics.chaptersByDay}
-          chaptersByMonth={statistics.chaptersByMonth}
-        />
-        <ReadingTimeCard readingTime={statistics.readingTime} />
-        <TagsCard tags={statistics.tags} />
-        <SourcesCard sources={statistics.sources} />
-        <BookmarksCard />
-      </SimpleGrid>
-    </Stack>
+    <QueryBlock
+      query={[statistics, bookmarkFolders]}
+      skeleton={<ProfileStatisticsSkeleton />}
+      empty={<ProfileStatisticsEmpty />}
+      isEmpty={([{ hasActivity }]) => !hasActivity}
+    >
+      {([data]) => <ProfileStatisticsCards statistics={data} />}
+    </QueryBlock>
   );
 }
 

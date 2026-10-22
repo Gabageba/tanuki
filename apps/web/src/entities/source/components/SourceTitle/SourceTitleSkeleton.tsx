@@ -3,11 +3,12 @@ import TextSkeleton from '@/shared/ui/TextSkeleton';
 
 function SourceTitleSkeleton() {
   return (
-    <Group flex={1} wrap="nowrap">
+    <Group flex={1} miw={0} wrap="nowrap">
       <Skeleton w={40} h={40} flex="none" />
-      <Box>
-        <TextSkeleton fz="h5" lh="h5" w={250} />
-        <TextSkeleton size="sm" w={100} />
+      {/* Как у SourceTitle: колонка текста сжимается, а не выталкивает соседей из строки. */}
+      <Box flex={1} miw={0} maw={250}>
+        <TextSkeleton fz="h5" lh="h5" />
+        <TextSkeleton size="sm" w="40%" />
       </Box>
     </Group>
   );

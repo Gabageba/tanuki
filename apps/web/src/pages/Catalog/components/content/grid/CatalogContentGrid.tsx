@@ -1,37 +1,35 @@
 import PageLayout from '@/shared/ui/PageLayout';
+import QueryBlock from '@/shared/ui/QueryBlock';
 import type { CatalogParams, CatalogQuery } from '../../../models';
 import { VIEW_MODE } from '@/shared/lib/viewMode';
 import TitleCardsGridSkeleton from '@/entities/title/card/TitleCardsGridSkeleton';
-import TitleCard from '@/entities/title/card/TitleCard';
-import useTitleBookmarkFolders from '@/entities/bookmark/hooks/useTitleBookmarkFolders';
-import ViewModeGrid from '@/shared/ui/ViewModeGrid';
+import TitleCardsGrid from '@/entities/title/card/TitleCardsGrid';
+import CatalogEmpty from './CatalogEmpty';
 
-function CatalogContentGrid() {
-  const { data, isFetching, isFetchingNextPage } = PageLayout.useQuery<CatalogQuery>();
+type Props = {
+  sourceId: string | undefined;
+};
+
+function CatalogContentGrid({ sourceId }: Props) {
+  const query = PageLayout.useQuery<CatalogQuery>();
   const { params } = PageLayout.useParams<CatalogParams>();
-
-  const items = data?.pages.flatMap((page) => page.items) ?? [];
   const viewMode = params.viewMode ?? VIEW_MODE.GRID;
-  const getBookmarkFolder = useTitleBookmarkFolders(items.map(({ id }) => id));
 
-  if (isFetching && !isFetchingNextPage) {
-    return <TitleCardsGridSkeleton viewMode={viewMode} />;
-  }
-
+  // Пока запрос выключен в ожидании источника, данных нет — это тоже скелетон, не пустое состояние.
   return (
-    <>
-      <ViewModeGrid viewMode={viewMode}>
-        {items.map((title) => (
-          <TitleCard
-            key={title.id}
-            title={title}
-            viewMode={viewMode}
-            bookmarkFolder={getBookmarkFolder(title.id)}
-          />
-        ))}
-      </ViewModeGrid>
-      <PageLayout.InfiniteScrollTrigger />
-    </>
+    <QueryBlock
+      query={query}
+      skeleton={<TitleCardsGridSkeleton viewMode={viewMode} />}
+      empty={<CatalogEmpty sourceId={sourceId} />}
+      isEmpty={({ pages }) => pages.every(({ items }) => items.length === 0)}
+    >
+      {({ pages }) => (
+        <>
+          <TitleCardsGrid titles={pages.flatMap(({ items }) => items)} viewMode={viewMode} />
+          <PageLayout.InfiniteScrollTrigger />
+        </>
+      )}
+    </QueryBlock>
   );
 }
 

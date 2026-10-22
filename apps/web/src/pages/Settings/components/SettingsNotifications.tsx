@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { BellRingingIcon, BellSlashIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { isStaffRole, type NotificationCategory, type UserSettings } from '@tanuki/contracts';
-import usePushConfig from '@/entities/notification/hooks/usePushConfig';
 import usePushDevice from '@/entities/notification/hooks/usePushDevice';
 import {
   getCategoryDescription,
@@ -16,7 +15,11 @@ import {
 import { PUSH_DEVICE_STATE } from '@/entities/notification/models';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
-import useUserSettings, { USER_SETTINGS_QUERY_KEY } from '@/shared/hooks/useUserSettings';
+import { USER_SETTINGS_QUERY_KEY } from '@/shared/hooks/useUserSettings';
+import type useUserSettings from '@/shared/hooks/useUserSettings';
+import PageLayout from '@/shared/ui/PageLayout';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
+import { mergeQueries } from '@/shared/ui/QueryBlock/lib';
 import GroupedList from '@/shared/ui/GroupedList';
 
 /**
@@ -28,9 +31,10 @@ function SettingsNotifications() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
-  const { data: settings } = useUserSettings();
-  const { isPending: isConfigPending } = usePushConfig();
+  const settingsQuery = PageLayout.useQuery<ReturnType<typeof useUserSettings>>();
+  const settings = settingsQuery.data;
   const device = usePushDevice();
+  const { isSkeleton } = useSkeletonTiming(mergeQueries([settingsQuery, device.query]));
   const updateUserSettings = useUpdateUserSettings();
 
   const disabledCategories = settings?.pushDisabledCategories ?? [];
@@ -52,7 +56,7 @@ function SettingsNotifications() {
 
   return (
     <Stack gap="xs" maw={640}>
-      <GroupedList label={t('pushNotifications')} loading={isConfigPending || device.isPending}>
+      <GroupedList label={t('pushNotifications')} loading={isSkeleton}>
         <GroupedList.Row
           icon={isOn ? <BellRingingIcon /> : <BellSlashIcon />}
           title={t('onThisDevice')}

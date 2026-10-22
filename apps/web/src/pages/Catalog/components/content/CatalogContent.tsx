@@ -8,9 +8,9 @@ type Props = {
 
 function CatalogContent({ sourceId }: Props) {
   return (
-    <PageLayout.Content showLoading={false}>
+    <PageLayout.Content>
       <CatalogSettings sourceId={sourceId} />
-      <CatalogContentGrid />
+      <CatalogContentGrid sourceId={sourceId} />
     </PageLayout.Content>
   );
 }

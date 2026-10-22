@@ -44,7 +44,18 @@ export default tseslint.config(
       ],
       'import-x/no-extraneous-dependencies': [
         'error',
-        { devDependencies: ['**/*.test.ts', '**/*.stories.tsx', '**/*.config.ts'] },
+        {
+          devDependencies: [
+            '**/*.test.ts',
+            '**/*.config.ts',
+            // Storybook: истории, его конфиг и заглушки для историй в сборку приложения не попадают.
+            '**/*.stories.tsx',
+            '**/.storybook/**',
+            '**/shared/storybook/**',
+            // Визуальные тесты историй (Playwright) тоже не попадают в сборку.
+            '**/visual/**',
+          ],
+        },
       ],
       'import-x/prefer-default-export': 'off',
       quotes: ['error', 'single'],

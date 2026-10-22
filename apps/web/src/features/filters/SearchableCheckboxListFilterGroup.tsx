@@ -3,9 +3,9 @@ import { Stack } from '@mantine/core';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SearchInput from '@/shared/ui/SearchInput';
-import { FILTER_TYPE, type FilterGroup, type FilterSelection } from '@tanuki/contracts';
+import type { FilterGroup, FilterSelection } from '@tanuki/contracts';
 import VirtualizedCheckboxGrid from './VirtualizedCheckboxGrid';
-import { getOptionValue, setOptionValue } from './lib/filterSelection';
+import { getOptionValue, isExcludableGroup, setOptionValue } from './lib/filterSelection';
 
 type Props = {
   group: FilterGroup;
@@ -32,7 +32,7 @@ function SearchableCheckboxListFilterGroup({ group, selection, onChange, scrollA
       />
       <VirtualizedCheckboxGrid
         options={filteredOptions}
-        withExclude={group.type === FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE}
+        withExclude={isExcludableGroup(group)}
         getValue={(key) => getOptionValue(selection, group.id, key)}
         onChange={(key, value) => onChange(setOptionValue(selection, group.id, key, value))}
         scrollAreaProps={scrollAreaProps}

@@ -484,6 +484,8 @@ export class BookmarksService {
       },
       chaptersCount: progress ? null : group.branchTotal,
       newChaptersCount: group.newChaptersCount,
+      latestChapterNumber: group.latestChapterNumber,
+      latestNewAt: group.latestNewAt ? toServerDateTime(group.latestNewAt.getTime()) : null,
       otherSources: group.otherSources.map(({ sourceId, titleId }) => ({ sourceId, titleId })),
       availability: target.availability,
     };
@@ -544,6 +546,7 @@ export class BookmarksService {
       position: number | null;
       new_count: number;
       latest_new_at: string | null;
+      latest_number: number | null;
     };
     const rows = await this.read<StatRow[]>(
       async () => [
@@ -560,7 +563,11 @@ export class BookmarksService {
             count(*) FILTER (WHERE NOT s.baseline AND s.first_seen_at > t.visited_at)::int
               AS new_count,
             max(s.first_seen_at) FILTER (WHERE NOT s.baseline AND s.first_seen_at > t.visited_at)
-              AS latest_new_at
+              AS latest_new_at,
+            (array_agg(s.chapter_number ORDER BY
+              coalesce(s.chapter_volume, 'Infinity'::double precision) DESC,
+              s.chapter_number DESC
+            ) FILTER (WHERE s.chapter_number IS NOT NULL))[1] AS latest_number
           FROM unnest(
             ARRAY[${keys}]::text[],
             ARRAY[${visited}]::timestamptz[],
@@ -580,6 +587,7 @@ export class BookmarksService {
       position: row.position,
       newCount: row.new_count,
       latestNewAt: row.latest_new_at ? new Date(row.latest_new_at) : null,
+      latestNumber: row.latest_number,
     }));
   }
 

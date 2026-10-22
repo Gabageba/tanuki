@@ -11,7 +11,8 @@ import { isTitleSearchLocked } from '@/entities/source/lib';
 
 function Catalog() {
   const { sourceId } = useParams<{ sourceId: string }>();
-  const { data: source, isPending: isSourcePending } = useSource({ sourceId });
+  const sourceQuery = useSource({ sourceId });
+  const source = sourceQuery.data;
   const [searchParams] = useSearchParams();
   // Закрытый поиск не отправляет query из адреса (закладка, старая ссылка): каталог открывается
   // без него. Параметры PageLayout берёт при монтировании, поэтому смена блокировки — новый key.
@@ -31,7 +32,7 @@ function Catalog() {
         viewMode: getStoredViewMode(),
       }}
     >
-      <CatalogHeader source={source} isPending={isSourcePending} />
+      <CatalogHeader sourceQuery={sourceQuery} />
       <PageLayout.PullToRefresh />
       <CatalogContent sourceId={sourceId} />
     </PageLayout>

@@ -59,6 +59,8 @@ export type BranchStat = {
   newCount: number;
   /** Когда впервые увидели самую свежую из новых; null — новых нет. */
   latestNewAt: Date | null;
+  /** Номер последней главы ветки — в том же порядке (том, номер), что и position. */
+  latestNumber: number | null;
 };
 
 /** Группа после подсчёта глав — то, из чего собирается BookmarkItem. */
@@ -67,6 +69,7 @@ export type CountedBookmarkGroup = BookmarkGroup & {
   branchPosition: number | null;
   newChaptersCount: number;
   latestNewAt: Date | null;
+  latestChapterNumber: number | null;
 };
 
 /**

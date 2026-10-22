@@ -8,7 +8,10 @@ import {
   DEFAULT_SHOW_ADULT_SOURCES,
   type UserSettings,
 } from '@tanuki/contracts';
-import useUserSettings, { USER_SETTINGS_QUERY_KEY } from '@/shared/hooks/useUserSettings';
+import { USER_SETTINGS_QUERY_KEY } from '@/shared/hooks/useUserSettings';
+import type useUserSettings from '@/shared/hooks/useUserSettings';
+import PageLayout from '@/shared/ui/PageLayout';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
 import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
 import GroupedList from '@/shared/ui/GroupedList';
 import AdultCoversPreview from './AdultCoversPreview';
@@ -25,7 +28,9 @@ import { getAdultTitlesDescription } from './lib';
 function SettingsAdultContent() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { data: settings } = useUserSettings();
+  const settingsQuery = PageLayout.useQuery<ReturnType<typeof useUserSettings>>();
+  const settings = settingsQuery.data;
+  const { isSkeleton } = useSkeletonTiming(settingsQuery);
   const updateUserSettings = useUpdateUserSettings();
   const [pendingReveal, setPendingReveal] = useState<UserSettings | null>(null);
 
@@ -63,7 +68,7 @@ function SettingsAdultContent() {
 
   return (
     <>
-      <GroupedList label={t('adultContent')}>
+      <GroupedList label={t('adultContent')} loading={isSkeleton}>
         <GroupedList.Row
           icon={<StackIcon />}
           title={t('allAdultContent')}
