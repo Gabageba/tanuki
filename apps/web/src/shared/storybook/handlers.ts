@@ -77,6 +77,16 @@ export const ERROR_HANDLERS = [
   http.get(apiPath('/*'), () => apiError(API_ERROR_CODE.INTERNAL, 'Сервер не ответил', 500)),
 ];
 
+/** Нет сети: запросы API рвутся, как у браузера без соединения, — данные приходят из снимков
+ *  скачанного. Текущий пользователь отвечает (без сети его даёт кеш воркера), картинки отдаёт
+ *  обработчик по умолчанию — обложки скачанного без сети берутся из кеша. В паре с `goOffline`. */
+export const OFFLINE_HANDLERS = [
+  http.get(apiPath('/auth/me'), () => HttpResponse.json(CURRENT_USER)),
+  http.all(apiPath('/*'), ({ request }) =>
+    new URL(request.url).pathname === apiPath('/img') ? undefined : HttpResponse.error(),
+  ),
+];
+
 type SearchStreamOptions = {
   /** Источники, которые так и не отвечают: их места остаются скелетоном, `done` не приходит. */
   pendingIds?: string[];

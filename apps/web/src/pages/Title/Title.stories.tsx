@@ -5,8 +5,16 @@ import { screen, userEvent } from 'storybook/test';
 import { API_ERROR_CODE } from '@tanuki/contracts';
 import { I18N } from '@/shared/lib/i18n';
 import { ROUTE_PATHS, TITLE_TAB_SEARCH_PARAM, TITLE_TABS } from '@/shared/lib/routes';
-import { apiError, apiPath, ERROR_HANDLERS, LOADING_HANDLERS } from '@/shared/storybook/handlers';
+import { TITLE_CHAPTERS_SEED, TITLE_DOWNLOADING_SEED } from '@/shared/storybook/downloads';
+import {
+  apiError,
+  apiPath,
+  ERROR_HANDLERS,
+  LOADING_HANDLERS,
+  OFFLINE_HANDLERS,
+} from '@/shared/storybook/handlers';
 import { MOBILE_GLOBALS, STORY_LAYOUT, type StoryRoute } from '@/shared/storybook/models';
+import { goOffline } from '@/shared/storybook/network';
 import { LINKED_READING_PROGRESS_RESPONSE, TITLE } from '@/shared/storybook/titles';
 import Title from '.';
 
@@ -45,11 +53,32 @@ export const ServerError: Story = {
   parameters: { msw: ERROR_HANDLERS },
 };
 
+const CHAPTERS_ROUTE: StoryRoute = {
+  ...ROUTE,
+  url: `${ROUTE.url}?${TITLE_TAB_SEARCH_PARAM}=${TITLE_TABS.CHAPTERS}`,
+};
+
 export const Chapters: Story = {
   name: 'Вкладка «Главы»',
-  parameters: {
-    route: { ...ROUTE, url: `${ROUTE.url}?${TITLE_TAB_SEARCH_PARAM}=${TITLE_TABS.CHAPTERS}` },
-  },
+  parameters: { route: CHAPTERS_ROUTE },
+};
+
+export const Downloads: Story = {
+  name: 'Главы скачиваются',
+  parameters: { route: CHAPTERS_ROUTE, offlineDb: TITLE_CHAPTERS_SEED },
+};
+
+export const DownloadAll: Story = {
+  name: 'Скачать все главы',
+  play: async () =>
+    userEvent.click(await screen.findByRole('button', { name: I18N.t('downloadAll') })),
+  parameters: { route: CHAPTERS_ROUTE, offlineDb: TITLE_DOWNLOADING_SEED },
+};
+
+export const Offline: Story = {
+  name: 'Без сети',
+  beforeEach: goOffline,
+  parameters: { route: CHAPTERS_ROUTE, offlineDb: TITLE_CHAPTERS_SEED, msw: OFFLINE_HANDLERS },
 };
 
 export const NotFound: Story = {

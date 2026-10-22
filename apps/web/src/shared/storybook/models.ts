@@ -1,4 +1,5 @@
 import type { EnumLiteralsOf } from '@tanuki/contracts';
+import type { ChapterSnapshotRow, DownloadRow, TitleSnapshotRow } from '@/entities/download/models';
 
 /** Каркас вокруг страницы в истории — тот же, что у её маршрута в RouterProvider. */
 export const STORY_LAYOUT = {
@@ -31,3 +32,11 @@ export type StoryRoute = {
 
 /** `globals` истории на ширине телефона — вьюпорт Storybook «Large mobile», 414 px. */
 export const MOBILE_GLOBALS = { viewport: { value: 'mobile2', isRotated: false } };
+
+/** `parameters.offlineDb`: что лежит в базе скачанного зрителя (Dexie) на старте истории. */
+export type OfflineDbSeed = {
+  downloads: DownloadRow[];
+  chapters: ChapterSnapshotRow[];
+  titles: TitleSnapshotRow[];
+  isPaused: boolean;
+};
