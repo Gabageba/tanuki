@@ -10,6 +10,7 @@ import HeaderBackground from './HeaderBackground';
 import Home from './Home';
 import ImportSourcePicker from './ImportSourcePicker';
 import InvitesTable from './InvitesTable';
+import LibraryBackup from './LibraryBackup';
 import LoginBadge from './LoginBadge';
 import MultiselectOptions from './MultiselectOptions';
 import Notifications from './Notifications';
@@ -39,6 +40,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'library-backup',
+    Component: LibraryBackup,
+    title: 'Резервная копия библиотеки',
+    description:
+      'Как выглядят создание и восстановление резервной копии по плану docs/plans/library-backup.md: строки в «Профиль → Данные», шаги модалки «Файл → Сводка → Готово», вопросы о конфликтах, предупреждение перед заменой и итог с пропущенным.',
+    createdAt: '2026-10-23',
+    decision: 'R1 + F1 + T2 + H1 + S1 + Q1a + D1 + ★3',
+  },
   {
     slug: 'folder-row',
     Component: FolderRow,
