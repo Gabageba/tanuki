@@ -80,8 +80,13 @@
       закрытия вкладки.
 - [x] `navigator.storage.persist()` и `estimate()` перед скачиванием.
 - [x] Экран управления загрузками: удалить главу / тайтл / всё.
-- [ ] Офлайн-фолбэк навигации (`offline.html`), библиотека без сети.
-- [ ] `registerType: 'prompt'` и тост «доступно обновление».
+- [x] Офлайн-фолбэк навигации, библиотека без сети — вместо `offline.html` навигация отдаёт app
+      shell из precache (`NavigationRoute` в [`sw/caching.ts`](../apps/web/src/sw/caching.ts)), а
+      закладки и папки лежат в API-кеше.
+- [ ] `registerType: 'prompt'` и тост «доступно обновление» — `registerType` и
+      `subscribeToUpdate`/`applyUpdate` в
+      [`serviceWorker.ts`](../apps/web/src/shared/lib/serviceWorker.ts) уже есть, нет самого тоста,
+      а [`sw.ts`](../apps/web/src/sw/sw.ts) пока делает `skipWaiting()` сразу при установке.
 - [ ] Отложенный `beforeinstallprompt`.
 - [ ] Проверка на реальном iOS.
 
