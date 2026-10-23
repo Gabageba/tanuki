@@ -19,6 +19,7 @@ import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
 import SelectionsTabs from './SelectionsTabs';
 import SortKeys from './SortKeys';
+import SourceImport from './SourceImport';
 import SourcesHealthTable from './SourcesHealthTable';
 import SourcesSetup from './SourcesSetup';
 import ThemePicker from './ThemePicker';
@@ -40,6 +41,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'source-import',
+    Component: SourceImport,
+    title: 'Импорт из источника',
+    description:
+      'Как выглядят шаги модалки импорта закладок с сайта по плану docs/plans/source-import.md: выбор целыми папками сайта (и отброшенный список тайтлов), «Вопросы» и «Готово», плюс кнопки импорта в «Аккаунтах источников» и пустых закладках.',
+    createdAt: '2026-10-23',
+    decision: 'F1 + S + Q + G3 + H0 + E4',
+  },
   {
     slug: 'library-backup',
     Component: LibraryBackup,
