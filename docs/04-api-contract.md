@@ -721,11 +721,46 @@ progressPolicy = "furthest" | "keepMine" | "fromBackup"
   незнакомых источников отбрасываются, выключение истории поиска стирает её. Настройки 18+ из
   копии применяются, только если возраст на этом инстансе уже подтверждён (`ageConfirmed`):
   сервер открывает 18+ по одному `showAdultSources`, и файл обходил бы вопрос «вам есть 18?».
-- **Запись** — одной транзакцией, по одной на пользователя (`pg_try_advisory_xact_lock`): вторая
-  параллельная — `409 restoreInProgress`. Версия файла новее поддерживаемой — `400
+- **Запись** — одной транзакцией, по одной на пользователя (`pg_try_advisory_xact_lock`, общий с
+  импортом из источника): вторая параллельная — `409 restoreInProgress`. Версия файла новее поддерживаемой — `400
 backupVersionUnsupported`.
 - **Лимит тела** — `BACKUP_MAX_BYTES` (20 МБ) плюс запас 1 МБ, только на `/backup/*` (хук
   `onRoute` в `main.ts`); у остальных маршрутов общий 1 МБ.
+
+### Импорт из источника
+
+Закладки с сайта, где у пользователя привязан аккаунт. Реализация — `apps/api/src/source-import`
+(`SourceImportModule`), план — [`plans/source-import.md`](plans/source-import.md), контракты —
+`packages/contracts/src/source-import.ts`.
+
+```
+POST /source-import/preview  { sourceId }                                    → SourceImportPreview
+POST /source-import          { sourceId, folderIds, folderPolicy, progressPolicy } → SourceImportResult
+
+SourceImportPreview = { sourceId, folders: { id, name, target, targetFolder: { builtIn, name, icon, color },
+                                              total, fresh, otherFolder, progressDiffers }[] }
+target = "builtIn" | "matched" | "created" | "overLimit"
+SourceImportResult  = { sourceId, bookmarksAdded, bookmarksAsSource, bookmarksMoved, titlesToPlanned,
+                        foldersCreated, foldersMatched, foldersOverLimit, pendingProgress }
+```
+
+- **Сайт читается дважды** — на сводке и на записи (`ParsersClientService.getBookmarks`, живым
+  запросом от аккаунта пользователя, без кеша); сервер ничего не хранит между шагами. Без своего
+  аккаунта — `403 sourceAccountRequired` / `sourceReloginRequired`, источник без `getBookmarks` —
+  `400 badRequest`.
+- **Правила — как у копии** (общие `planFolders` и `LibraryMergeService` в `library/`): папки по
+  `builtIn` и имени, сверх лимита — во «В планах»; закладки по группе совпадений, `keepMine` /
+  `fromBackup`. Уже импортированное (тот же `titleKey` в той же папке) не считается в `fresh` и не
+  пишется. Тайтл, что на сайте в двух папках, берётся из первой.
+- **Запись** — одной транзакцией, общий с восстановлением замок на пользователя: вторая
+  параллельная — `409 restoreInProgress`.
+- **«Где остановился»** — не сразу: строки `source_import_progress` (по одной на тайтл с номером
+  главы, который политика разрешает записать). Крон `SourceImportProgressService` раз в минуту
+  берёт порции на источник, запрашивает детали от аккаунта пользователя, ищет главу по номеру в
+  основной ветке и пишет отметку (начало главы) по политике на момент записи. Сбой — до 3 попыток;
+  сессия не принята — ждёт повторного входа до суток. Закладку удалили — строка уходит каскадом.
+  Когда у импорта не осталось ждущих строк — уведомление `sourceImportFinished` («перенесено N из
+  M»), строки удаляются.
 
 ### Уведомления
 

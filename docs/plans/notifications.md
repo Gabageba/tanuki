@@ -137,6 +137,7 @@ export const NOTIFICATION_TYPE = {
   PARSER_RECOVERED: 'parserRecovered',
   INVITE_USED: 'inviteUsed',
   INVITE_EXPIRED: 'inviteExpired',
+  SOURCE_IMPORT_FINISHED: 'sourceImportFinished',
 } as const;
 ```
 
@@ -145,16 +146,17 @@ export const NOTIFICATION_TYPE = {
 
 ### Кому и когда создаётся
 
-| Тип                              | Получатель                                                | Условие                                                                                                           |
-| -------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `newChapters`                    | владелец закладки                                         | папка с `trackUpdates`, у группы `newChaptersCount > 0`                                                           |
-| `emailChanged`                   | сам пользователь                                          | почта сменена (вместе с существующим письмом)                                                                     |
-| `deletionRequested`              | сам пользователь                                          | запланировано удаление аккаунта                                                                                   |
-| `newDeviceLogin`                 | сам пользователь                                          | вход, отпечатка которого нет в `known_devices` (первый вход аккаунта не считается)                                |
-| `sourceDown` / `sourceRecovered` | пользователи с закладкой на этом источнике, в любой папке | `SourceStatusService`: переход в `down` / возврат в `ok`; `degraded` не шумит; отключённые источники пропускаются |
-| `parserDown` / `parserRecovered` | все `admin` и `moderator`                                 | любой источник перешёл в `down` (причина из `SOURCE_STATUS_REASON`) / вернулся                                    |
-| `inviteUsed`                     | `admin`                                                   | пользователь зарегистрировался по инвайту                                                                         |
-| `inviteExpired`                  | `admin`                                                   | инвайт истёк неиспользованным                                                                                     |
+| Тип                              | Получатель                                                | Условие                                                                                                             |
+| -------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `newChapters`                    | владелец закладки                                         | папка с `trackUpdates`, у группы `newChaptersCount > 0`                                                             |
+| `emailChanged`                   | сам пользователь                                          | почта сменена (вместе с существующим письмом)                                                                       |
+| `deletionRequested`              | сам пользователь                                          | запланировано удаление аккаунта                                                                                     |
+| `newDeviceLogin`                 | сам пользователь                                          | вход, отпечатка которого нет в `known_devices` (первый вход аккаунта не считается)                                  |
+| `sourceDown` / `sourceRecovered` | пользователи с закладкой на этом источнике, в любой папке | `SourceStatusService`: переход в `down` / возврат в `ok`; `degraded` не шумит; отключённые источники пропускаются   |
+| `parserDown` / `parserRecovered` | все `admin` и `moderator`                                 | любой источник перешёл в `down` (причина из `SOURCE_STATUS_REASON`) / вернулся                                      |
+| `inviteUsed`                     | `admin`                                                   | пользователь зарегистрировался по инвайту                                                                           |
+| `inviteExpired`                  | `admin`                                                   | инвайт истёк неиспользованным                                                                                       |
+| `sourceImportFinished`           | сам пользователь                                          | у импорта из источника не осталось ждущих отметок «где остановился» (категория «Аккаунт», [план](source-import.md)) |
 
 ### Группировка и обновление
 
@@ -189,6 +191,7 @@ export const NOTIFICATION_TYPE = {
 | `sourceDown`, `sourceRecovered`  | список источников в настройках (`Sources`)                               |
 | `parserDown`, `parserRecovered`  | `SourcesHealth`                                                          |
 | `inviteUsed`, `inviteExpired`    | `Management` → инвайты                                                   |
+| `sourceImportFinished`           | закладки (`ROUTE_PATHS.BOOKMARKS`)                                       |
 
 ### Push
 

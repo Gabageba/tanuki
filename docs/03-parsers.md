@@ -63,11 +63,20 @@ export interface Parser {
   getDetails(url: string): Promise<RawTitle>; // chapters заполнены
   getPages(chapterUrl: string): Promise<RawPage[]>; // url абсолютный, преразрешённый
   getHome?(): Promise<RawHomeSection[]>; // блоки главной сайта — для подборок
+  getBookmarks?(): Promise<RawBookmarkFolder[]>; // закладки аккаунта — для импорта из источника
   imageHeaders(imageUrl: string): Record<string, string>;
   init?(): Promise<void>; // разовый прогрев (SSO Grouple)
   close?(): Promise<void>;
 }
 ```
+
+`getBookmarks` читает закладки от аккаунта пользователя (`currentSourceAccount`) по папкам сайта:
+`RawBookmarkFolder { id, builtIn, name, items }`, стандартный статус сайта → встроенная папка
+(`builtIn`), своя папка сайта — `builtIn: null`; `RawBookmark` — `id` и `url` как у `getList`,
+снимок тайтла и `lastChapterNumber` («где остановился», `null`, если сайт не отдаёт).
+`RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
+пишется. Пока метод не реализован ни в одном движке: разбор ждёт образцов ответов сайтов
+([plans/source-import.md](plans/source-import.md)).
 
 Источники с общим движком (Grouple, LibSocial, Chan) реализованы как **фабрика с конфигом**
 (`createGroupleParser(config, ctx)`), а не через наследование — в Kotlin один класс на источник

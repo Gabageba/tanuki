@@ -25,9 +25,12 @@
       резервную копию» качает файл, «Восстановить из копии» — модалка со сводкой и вопросами
       ([plans/library-backup.md](plans/library-backup.md)).
       [`RestoreBackupModal/`](../apps/web/src/pages/Profile/components/ProfileData/RestoreBackupModal)
-- [ ] **Импорт с источника** — сети и вход настоящие, чтение закладок и список тайтлов — мок.
-      Нужен метод парсера «закладки пользователя» для семейств со входом.
-      [`ImportFromSourceModal/`](../apps/web/src/pages/Profile/components/ProfileData/ImportFromSourceModal)
+- [x] **Импорт из источника** — модалка, сервер и фоновая достройка отметок
+      ([plans/source-import.md](plans/source-import.md)).
+      [`ImportFromSourceModal/`](../apps/web/src/features/source-import/ImportFromSourceModal)
+- [ ] **Импорт из источника: разбор закладок сайтов** — `getBookmarks` в движках Grouple,
+      AllHentai, LibSocial и Nude-Moon: ждёт образцов ответов сайтов с вошедшим аккаунтом. Пока
+      метода нет, источник в модалке не выбирается («Импорт отсюда пока не поддерживается»).
 - [x] **«Удалить скачанные главы»** — всегда `disabled`, а `onClick` открывает модалку очистки
       кеша браузера. Связать с экраном загрузок офлайна.
       [`ProfileData/index.tsx:79`](../apps/web/src/pages/Profile/components/ProfileData/index.tsx#L79)
