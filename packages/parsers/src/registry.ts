@@ -310,7 +310,15 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
     // that already reads the catalog correctly, means a future engine can't reintroduce the
     // same bug by copying the same boilerplate.
     const parser = descriptor.create(ctx);
-    parsers.set(id, { ...parser, info: { ...parser.info, isBroken: descriptor.info.isBroken } });
+    parsers.set(id, {
+      ...parser,
+      info: {
+        ...parser.info,
+        isBroken: descriptor.info.isBroken,
+        // Same reasoning: derived from the parser itself, so no engine has to remember the flag.
+        isBookmarksImportSupported: parser.getBookmarks !== undefined,
+      },
+    });
   }
 
   return {

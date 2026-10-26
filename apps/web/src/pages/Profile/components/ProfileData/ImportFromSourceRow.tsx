@@ -1,13 +1,15 @@
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useNetwork } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
 import { CloudArrowDownIcon } from '@phosphor-icons/react';
+import ImportFromSourceModal from '@/features/source-import/ImportFromSourceModal';
 import GroupedList from '@/shared/ui/GroupedList';
-import ImportFromSourceModal from './ImportFromSourceModal';
 
 /** Строка «Импорт из источника» и её модалка. */
 function ImportFromSourceRow() {
   const { t } = useTranslation();
   const [opened, { open, close }] = useDisclosure(false);
+  // Закладки с сайта читает и пишет сервер — без сети кнопка выключена, как у копии.
+  const { online } = useNetwork();
 
   return (
     <>
@@ -18,6 +20,7 @@ function ImportFromSourceRow() {
         actionProps={{
           leftSection: <CloudArrowDownIcon />,
           onClick: open,
+          disabled: !online,
           children: t('import'),
         }}
       />

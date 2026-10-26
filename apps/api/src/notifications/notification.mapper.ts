@@ -9,7 +9,7 @@ import { toServerDateTime } from '../common/dates';
 import { IMAGE_FORMAT } from '../img-proxy/models';
 import { buildSignedImageUrl } from '../img-proxy/sign.util';
 import type { NotificationRecord } from './models';
-import { text } from './payload.util';
+import { count, text } from './payload.util';
 
 /** Причина из payload; неизвестное значение (запись старой версии) читается как «сбои запросов». */
 const toStatusReason = (value: unknown) => {
@@ -82,5 +82,15 @@ export const toNotificationItem = (
       };
     case NOTIFICATION_TYPE.INVITE_EXPIRED:
       return { ...base, type: record.type, payload: { inviteId: text(payload['inviteId']) } };
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
+      return {
+        ...base,
+        type: record.type,
+        payload: {
+          sourceId: text(payload['sourceId']),
+          transferred: count(payload['transferred']),
+          total: count(payload['total']),
+        },
+      };
   }
 };

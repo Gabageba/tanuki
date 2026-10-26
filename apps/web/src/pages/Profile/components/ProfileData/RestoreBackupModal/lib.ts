@@ -8,8 +8,8 @@ import {
 } from '@tanuki/contracts';
 import { BACKUP_FILE_ERROR, type BackupFileError } from './models';
 
-export const hasFolderConflict = (preview: BackupPreview) => preview.bookmarks.otherFolder > 0;
-export const hasProgressConflict = (preview: BackupPreview) => preview.progress.differs > 0;
+const hasFolderConflict = (preview: BackupPreview) => preview.bookmarks.otherFolder > 0;
+const hasProgressConflict = (preview: BackupPreview) => preview.progress.differs > 0;
 export const hasConflicts = (preview: BackupPreview) =>
   hasFolderConflict(preview) || hasProgressConflict(preview);
 

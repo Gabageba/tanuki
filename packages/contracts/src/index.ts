@@ -473,3 +473,20 @@ export {
   BackupRestoreResultSchema,
   type BackupRestoreResult,
 } from './backup';
+export {
+  SOURCE_IMPORT_FOLDER_TARGET,
+  SourceImportFolderTargetSchema,
+  type SourceImportFolderTarget,
+  SOURCE_IMPORT_PROGRESS_STATUS,
+  type SourceImportProgressStatus,
+  SourceImportPreviewRequestSchema,
+  type SourceImportPreviewRequest,
+  SourceImportFolderSchema,
+  type SourceImportFolder,
+  SourceImportPreviewSchema,
+  type SourceImportPreview,
+  SourceImportRequestSchema,
+  type SourceImportRequest,
+  SourceImportResultSchema,
+  type SourceImportResult,
+} from './source-import';

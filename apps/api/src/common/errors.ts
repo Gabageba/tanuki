@@ -382,9 +382,26 @@ export class BackupVersionUnsupportedException extends ApiException {
   }
 }
 
-/** Второе восстановление того же пользователя, пока первое не записалось (две вкладки). */
+/** Вторая запись в библиотеку того же пользователя — восстановление или импорт, — пока первая не
+ *  записалась (две вкладки). */
 export class RestoreInProgressException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.RESTORE_IN_PROGRESS, 'restoreAlreadyInProgress', HttpStatus.CONFLICT);
+    super(
+      API_ERROR_CODE.RESTORE_IN_PROGRESS,
+      'importOrRestoreAlreadyInProgress',
+      HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** Парсер источника не умеет читать закладки. */
+export class SourceImportUnsupportedException extends ApiException {
+  constructor(sourceId: string) {
+    super(
+      API_ERROR_CODE.BAD_REQUEST,
+      'sourceDoesNotSupportBookmarksImport',
+      HttpStatus.BAD_REQUEST,
+      { sourceId, params: sourceNameParams(sourceId) },
+    );
   }
 }

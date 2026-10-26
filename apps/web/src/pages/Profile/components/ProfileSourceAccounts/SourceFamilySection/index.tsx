@@ -1,10 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import type { Source, SourceAccount, SourceAuthFamily } from '@tanuki/contracts';
 import GroupedList from '@/shared/ui/GroupedList';
-import { getSourceAccountStatusColor, getSourceAccountStatusLabel } from '../lib';
-import { getSourcesWithoutLogin } from './lib';
+import {
+  getSourceAccountStatusColor,
+  getSourceAccountStatusLabel,
+  getSourcesWithoutLogin,
+} from '@/entities/source-account/lib';
 import SourceAccountRow from './SourceAccountRow';
-import SourceAccountStatusIcon from './SourceAccountStatusIcon';
+import SourceAccountStatusIcon from '@/entities/source-account/SourceAccountStatusIcon';
 import SourceAccountStatusActions from '../SourceAccountStatusActions';
 
 type Props = {

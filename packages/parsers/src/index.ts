@@ -11,6 +11,8 @@ export type {
   RawHomeSectionInfo,
   RawHomeSectionPage,
   RawHomeSectionParams,
+  RawBookmark,
+  RawBookmarkFolder,
 } from './types';
 export { RATING_UNKNOWN } from './types';
 

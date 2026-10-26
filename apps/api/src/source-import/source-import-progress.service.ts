@@ -1,0 +1,287 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { and, asc, eq, inArray, lte, sql } from 'drizzle-orm';
+import {
+  DEFAULT_BRANCH_ID,
+  NOTIFICATION_TYPE,
+  SOURCE_IMPORT_PROGRESS_STATUS,
+} from '@tanuki/contracts';
+import { SourceAccountRequiredException } from '../common/errors';
+import { pickDefaultBranch } from '../common/normalize';
+import { decodeTitleId, encodeChapterId, splitCompositeId } from '../common/opaque-id';
+import { DatabaseService } from '../database/database.service';
+import { readingProgress, sourceImportProgress } from '../database/schema';
+import { TitleLinksService } from '../matches/title-links.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { ParsersClientService } from '../parsers-client/parsers-client.service';
+import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.types';
+import { VIEWER_KIND } from '../source-accounts/models';
+import { runAsViewer } from '../source-accounts/viewer-context';
+import {
+  SOURCE_IMPORT_PROGRESS_BATCH_SIZE,
+  SOURCE_IMPORT_PROGRESS_MAX_ATTEMPTS,
+  SOURCE_IMPORT_PROGRESS_RETRY_DELAY_MS,
+  SOURCE_IMPORT_RELOGIN_RECHECK_MS,
+  SOURCE_IMPORT_RELOGIN_WAIT_MS,
+  SOURCE_IMPORT_REQUEST_DELAY_MS,
+} from './models';
+import { winsSiteProgress } from './source-import-plan';
+
+type ProgressRow = typeof sourceImportProgress.$inferSelect;
+
+const WAITING_STATUSES = [
+  SOURCE_IMPORT_PROGRESS_STATUS.PENDING,
+  SOURCE_IMPORT_PROGRESS_STATUS.WAITING_RELOGIN,
+];
+
+/** Глава с номером «где остановился» в основной ветке — той же, что тайтл открывает по умолчанию. */
+export const findChapterByNumber = (chapters: RawChapter[], number: number) => {
+  const branch = pickDefaultBranch(chapters);
+  return chapters.find((chapter) => chapter.branch === branch && chapter.number === number) ?? null;
+};
+
+/** Отметка, которую пишет импорт: начало главы, снимок тайтла — из его деталей. */
+export const toImportedProgress = (row: ProgressRow, title: RawTitle, chapter: RawChapter) => ({
+  userId: row.userId,
+  titleKey: row.titleKey,
+  sourceId: row.sourceId,
+  chapterId: `${row.sourceId}:${encodeChapterId({ id: chapter.id, url: chapter.url, branch: chapter.branch })}`,
+  chapterVolume: chapter.volume,
+  chapterNumber: chapter.number,
+  chapterTitle: chapter.title,
+  branchId: chapter.branch ?? DEFAULT_BRANCH_ID,
+  pageIndex: 0,
+  titleId: row.titleId,
+  titleName: title.title,
+  coverUrl: title.coverUrl,
+  contentRating: title.contentRating,
+  type: title.type ?? null,
+  updatedAt: new Date(),
+});
+
+/**
+ * Что делать со строкой после сбоя. Сайт не принял сессию — строка ждёт повторного входа до
+ * суток. Прочий сбой — ещё попытка с паузой, после последней строка пропускается.
+ */
+export const getFailureUpdate = (
+  row: Pick<ProgressRow, 'attempts' | 'createdAt'>,
+  now: Date,
+  error: unknown,
+): Partial<Pick<ProgressRow, 'status' | 'attempts' | 'nextAttemptAt'>> => {
+  if (error instanceof SourceAccountRequiredException) {
+    return now.getTime() - row.createdAt.getTime() > SOURCE_IMPORT_RELOGIN_WAIT_MS
+      ? { status: SOURCE_IMPORT_PROGRESS_STATUS.SKIPPED }
+      : {
+          status: SOURCE_IMPORT_PROGRESS_STATUS.WAITING_RELOGIN,
+          nextAttemptAt: new Date(now.getTime() + SOURCE_IMPORT_RELOGIN_RECHECK_MS),
+        };
+  }
+  const attempts = row.attempts + 1;
+  return attempts >= SOURCE_IMPORT_PROGRESS_MAX_ATTEMPTS
+    ? { status: SOURCE_IMPORT_PROGRESS_STATUS.SKIPPED, attempts }
+    : {
+        status: SOURCE_IMPORT_PROGRESS_STATUS.PENDING,
+        attempts,
+        nextAttemptAt: new Date(now.getTime() + SOURCE_IMPORT_PROGRESS_RETRY_DELAY_MS),
+      };
+};
+
+/**
+ * Достраивает отметки «где остановился» после импорта из источника: у сайта в закладках только
+ * номер главы, а отметке нужна глава — её находят детали тайтла, запрошенные от аккаунта
+ * пользователя. Раз в минуту, порциями на источник, запросы к одному сайту — по одному с паузой.
+ * Всё состояние в БД, так что рестарт ничего не теряет. Когда у импорта не остаётся ждущих строк,
+ * приходит уведомление, и строки удаляются.
+ */
+@Injectable()
+export class SourceImportProgressService {
+  private readonly logger = new Logger(SourceImportProgressService.name);
+  private isRunning = false;
+
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly parsersClient: ParsersClientService,
+    private readonly links: TitleLinksService,
+    private readonly notifications: NotificationsService,
+  ) {}
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async processDue(now = new Date()): Promise<void> {
+    // Прошлый проход ещё идёт (медленный сайт) — второй те же строки не берёт.
+    if (this.isRunning) return;
+    this.isRunning = true;
+    try {
+      const due = await this.database.withFallback(
+        () =>
+          this.database.db
+            .select()
+            .from(sourceImportProgress)
+            .where(
+              and(
+                inArray(sourceImportProgress.status, WAITING_STATUSES),
+                lte(sourceImportProgress.nextAttemptAt, now),
+              ),
+            )
+            .orderBy(asc(sourceImportProgress.nextAttemptAt)),
+        [] as ProgressRow[],
+      );
+      const bySource = new Map<string, ProgressRow[]>();
+      for (const row of due) {
+        const rows = bySource.get(row.sourceId) ?? [];
+        if (rows.length < SOURCE_IMPORT_PROGRESS_BATCH_SIZE) rows.push(row);
+        bySource.set(row.sourceId, rows);
+      }
+
+      // Сайты — параллельно, внутри сайта — по одному запросу с паузой.
+      await Promise.all(
+        [...bySource.values()].map(async (rows) => {
+          for (const [index, row] of rows.entries()) {
+            if (index > 0) await sleep(SOURCE_IMPORT_REQUEST_DELAY_MS);
+            await this.processOne(row, now);
+          }
+        }),
+      );
+      await this.finishImports();
+    } finally {
+      this.isRunning = false;
+    }
+  }
+
+  private async processOne(row: ProgressRow, now: Date): Promise<void> {
+    let title: RawTitle;
+    try {
+      const { url } = decodeTitleId(splitCompositeId(row.titleId).opaqueId);
+      title = await runAsViewer({ kind: VIEWER_KIND.USER, userId: row.userId }, async () => {
+        const { data } = await this.parsersClient.getDetails(row.sourceId, url);
+        return data;
+      });
+    } catch (error) {
+      await this.markFailed(row, now, error);
+      return;
+    }
+
+    const chapter = findChapterByNumber(title.chapters ?? [], row.chapterNumber);
+    if (!chapter) {
+      await this.setStatus(row.id, { status: SOURCE_IMPORT_PROGRESS_STATUS.SKIPPED });
+      return;
+    }
+    try {
+      await this.writeProgress(row, title, chapter);
+    } catch (error) {
+      await this.markFailed(row, now, error);
+      return;
+    }
+    await this.setStatus(row.id, { status: SOURCE_IMPORT_PROGRESS_STATUS.DONE });
+  }
+
+  /**
+   * Отметку пишет политика, выбранная при импорте, — по отметкам всей группы на момент записи:
+   * человек мог дочитать дальше, пока строка ждала. Отметки нет ни на одном источнике группы —
+   * пишется всегда.
+   */
+  private async writeProgress(row: ProgressRow, title: RawTitle, chapter: RawChapter) {
+    const groupKeys = [row.titleKey, ...(await this.links.listConfirmedGroup(row.titleKey))];
+    const marks = await this.database.db
+      .select({
+        chapterNumber: readingProgress.chapterNumber,
+        updatedAt: readingProgress.updatedAt,
+      })
+      .from(readingProgress)
+      .where(
+        and(eq(readingProgress.userId, row.userId), inArray(readingProgress.titleKey, groupKeys)),
+      );
+    const mine = marks.reduce<(typeof marks)[number] | undefined>(
+      (latest, mark) => (!latest || mark.updatedAt > latest.updatedAt ? mark : latest),
+      undefined,
+    );
+    if (!winsSiteProgress(row.progressPolicy, row.chapterNumber, mine?.chapterNumber)) return;
+
+    const values = toImportedProgress(row, title, chapter);
+    // Ключ строки при конфликте не переписывается — только отметка и снимок.
+    const { userId: _userId, titleKey: _titleKey, ...update } = values;
+    await this.database.db
+      .insert(readingProgress)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [readingProgress.userId, readingProgress.titleKey],
+        set: { ...update, hiddenAt: null },
+      });
+  }
+
+  private async markFailed(row: ProgressRow, now: Date, error: unknown): Promise<void> {
+    if (!(error instanceof SourceAccountRequiredException)) {
+      this.logger.warn(
+        `Отметка импорта ${row.id} (${row.sourceId}) не достроена: ${(error as Error).message}`,
+      );
+    }
+    await this.setStatus(row.id, getFailureUpdate(row, now, error));
+  }
+
+  /**
+   * Импорты, где ждущих строк не осталось: уведомление «перенесено N из M» и уборка строк. Ищутся
+   * среди всех, а не только обработанных в этом проходе: последняя ждущая строка могла уйти вместе
+   * с удалённой закладкой, а импорт, на котором упало уведомление, доберёт следующий проход.
+   */
+  private async finishImports(): Promise<void> {
+    const waiting = sql<number>`count(*) filter (where ${inArray(sourceImportProgress.status, WAITING_STATUSES)})::int`;
+    const summaries = await this.database.withFallback(
+      () =>
+        this.database.db
+          .select({
+            importId: sourceImportProgress.importId,
+            userId: sourceImportProgress.userId,
+            sourceId: sourceImportProgress.sourceId,
+            total: sql<number>`count(*)::int`,
+            transferred: sql<number>`count(*) filter (where ${sourceImportProgress.status} = ${SOURCE_IMPORT_PROGRESS_STATUS.DONE})::int`,
+          })
+          .from(sourceImportProgress)
+          .groupBy(
+            sourceImportProgress.importId,
+            sourceImportProgress.userId,
+            sourceImportProgress.sourceId,
+          )
+          .having(sql`${waiting} = 0`),
+      [],
+    );
+
+    for (const summary of summaries) {
+      // Сбой уведомления не держит остальные импорты; строки остаются до следующего прохода.
+      try {
+        await this.notifications.notify(summary.userId, {
+          type: NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED,
+          groupKey: `source-import:${summary.importId}`,
+          payload: {
+            sourceId: summary.sourceId,
+            transferred: summary.transferred,
+            total: summary.total,
+          },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Импорт ${summary.importId}: уведомление не отправлено: ${(error as Error).message}`,
+        );
+        continue;
+      }
+      await this.database.withFallback(async () => {
+        await this.database.db
+          .delete(sourceImportProgress)
+          .where(eq(sourceImportProgress.importId, summary.importId));
+        return true;
+      }, false);
+    }
+  }
+
+  private async setStatus(
+    id: string,
+    values: Partial<Pick<ProgressRow, 'status' | 'attempts' | 'nextAttemptAt'>>,
+  ): Promise<void> {
+    await this.database.withFallback(async () => {
+      await this.database.db
+        .update(sourceImportProgress)
+        .set(values)
+        .where(eq(sourceImportProgress.id, id));
+      return true;
+    }, false);
+  }
+}

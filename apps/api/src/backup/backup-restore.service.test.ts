@@ -12,6 +12,7 @@ import {
 import { BackupVersionUnsupportedException, RestoreInProgressException } from '../common/errors';
 import type { DatabaseService } from '../database/database.service';
 import type { BookmarkFoldersService } from '../library/bookmark-folders.service';
+import { LibraryMergeService } from '../library/library-merge.service';
 import type { TitleLinksService } from '../matches/title-links.service';
 import type { NotificationsService } from '../notifications/notifications.service';
 import { toUserSettingsWrite } from './backup-settings';
@@ -53,6 +54,7 @@ const createLockedService = () => {
     folders,
     {} as TitleLinksService,
     {} as NotificationsService,
+    new LibraryMergeService(),
   );
 };
 

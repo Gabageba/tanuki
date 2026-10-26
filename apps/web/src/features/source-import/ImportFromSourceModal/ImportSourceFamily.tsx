@@ -8,9 +8,9 @@ import { SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
 import {
   getSourceAccountStatusColor,
   getSourceAccountStatusLabel,
-} from '../../ProfileSourceAccounts/lib';
-import { getSourcesWithoutLogin } from '../../ProfileSourceAccounts/SourceFamilySection/lib';
-import SourceAccountStatusIcon from '../../ProfileSourceAccounts/SourceFamilySection/SourceAccountStatusIcon';
+  getSourcesWithoutLogin,
+} from '@/entities/source-account/lib';
+import SourceAccountStatusIcon from '@/entities/source-account/SourceAccountStatusIcon';
 import ImportSourceRow from './ImportSourceRow';
 
 type Props = {

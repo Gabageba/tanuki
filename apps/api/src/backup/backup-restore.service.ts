@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import {
   BACKUP_VERSION,
   RESTORE_FOLDER_POLICY,
@@ -10,15 +10,9 @@ import {
   type BackupRestoreResult,
   type RestoreBackupRequest,
 } from '@tanuki/contracts';
-import {
-  ApiException,
-  BackupVersionUnsupportedException,
-  RestoreInProgressException,
-  StorageUnavailableException,
-} from '../common/errors';
+import { BackupVersionUnsupportedException } from '../common/errors';
 import { DatabaseService, type Database } from '../database/database.service';
 import {
-  bookmarkFolders,
   bookmarks,
   chapterReads,
   disabledSources,
@@ -32,19 +26,11 @@ import { TitleLinksService } from '../matches/title-links.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BookmarkFoldersService } from '../library/bookmark-folders.service';
 import { titleKeyOf } from '../library/bookmarks.service';
+import { listUntrackedMovedKeys } from '../library/library-merge';
+import { chunk, LibraryMergeService, type Transaction } from '../library/library-merge.service';
 import { buildRestorePlan, type RestorePlanInput } from './backup-plan';
 import { toUserSettingsWrite } from './backup-settings';
 import type { FolderRef, RestorePlan } from './models';
-
-type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
-
-/** Столько строк за один insert: у Postgres предел — 65 535 параметров на запрос. */
-const CHUNK_SIZE = 1000;
-
-const chunk = <T>(rows: T[]) =>
-  Array.from({ length: Math.ceil(rows.length / CHUNK_SIZE) }, (_, index) =>
-    rows.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE),
-  );
 
 const KNOWN_SOURCE_IDS: ReadonlySet<string> = new Set(SOURCE_IDS);
 
@@ -114,11 +100,12 @@ export class BackupRestoreService {
     private readonly folders: BookmarkFoldersService,
     private readonly links: TitleLinksService,
     private readonly notifications: NotificationsService,
+    private readonly merge: LibraryMergeService,
   ) {}
 
   async preview(userId: string, backup: Backup): Promise<BackupPreview> {
     assertBackupVersion(backup);
-    const plan = await this.run(async () =>
+    const plan = await this.merge.run(async () =>
       buildRestorePlan({
         ...(await this.loadState(this.database.db, userId, backup)),
         backup,
@@ -135,40 +122,40 @@ export class BackupRestoreService {
     // Встроенные папки — до транзакции: «В планах» нужна плану как запасная папка.
     await this.folders.list(userId);
 
-    const { plan, untrackedKeys } = await this.run(() =>
+    const { plan, untrackedKeys } = await this.merge.run(() =>
       this.database.db.transaction(async (tx) => {
-        const [lock] = await tx.execute<{ locked: boolean }>(
-          sql`SELECT pg_try_advisory_xact_lock(hashtextextended(${`backup-restore:${userId}`}, 0)) AS locked`,
-        );
-        if (!lock?.locked) throw new RestoreInProgressException();
+        await this.merge.lock(tx, userId);
 
         const state = await this.loadState(tx, userId, backup);
         const restorePlan = buildRestorePlan({ ...state, backup, folderPolicy, progressPolicy });
-        const folderIds = await this.writeFolders(tx, userId, state.folders, restorePlan);
+        const folderIds = await this.merge.writeFolders(
+          tx,
+          userId,
+          state.folders,
+          restorePlan.folderCreates,
+        );
         const resolve = (ref: FolderRef) => ref.id ?? folderIds.get(ref.key)!;
 
-        await this.writeBookmarks(tx, userId, restorePlan, resolve);
+        await this.merge.writeBookmarks(
+          tx,
+          userId,
+          restorePlan.bookmarkInserts,
+          restorePlan.groupMoves,
+          resolve,
+        );
         await this.writeProgress(tx, userId, restorePlan);
         await this.writeStatistics(tx, userId, restorePlan);
         if (applySettings) await this.writeSettings(tx, userId, backup);
 
-        // Тайтлы, переехавшие в папку без слежения: «новые главы» о них из ленты убираются.
-        const trackedIds = new Set(
-          [
-            ...state.folders,
-            ...restorePlan.folderCreates.map(({ key, trackUpdates }) => ({
-              id: folderIds.get(key)!,
-              trackUpdates,
-            })),
-          ]
-            .filter(({ trackUpdates }) => trackUpdates)
-            .map(({ id }) => id),
-        );
         return {
           plan: restorePlan,
-          untrackedKeys: restorePlan.groupMoves
-            .filter(({ folder }) => !trackedIds.has(resolve(folder)))
-            .flatMap(({ titleKeys }) => titleKeys),
+          untrackedKeys: listUntrackedMovedKeys(
+            state.folders,
+            restorePlan.folderCreates,
+            folderIds,
+            restorePlan.groupMoves,
+            resolve,
+          ),
         };
       }),
     );
@@ -226,69 +213,6 @@ export class BackupRestoreService {
       chapterReadIds: new Set(reads.map(({ chapterId }) => chapterId)),
       canonical,
     };
-  }
-
-  /** Новые свои папки — в конце, в порядке копии. Отдаёт id созданных по ключу папки копии. */
-  private async writeFolders(
-    tx: Transaction,
-    userId: string,
-    existing: { position: number }[],
-    plan: RestorePlan,
-  ): Promise<Map<string, string>> {
-    const ids = new Map<string, string>();
-    if (plan.folderCreates.length === 0) return ids;
-
-    const start = Math.max(-1, ...existing.map(({ position }) => position)) + 1;
-    const created = await tx
-      .insert(bookmarkFolders)
-      .values(
-        plan.folderCreates.map((folder, index) => ({
-          userId,
-          builtIn: null,
-          name: folder.name,
-          icon: folder.icon,
-          color: folder.color,
-          trackUpdates: folder.trackUpdates,
-          position: start + index,
-        })),
-      )
-      .returning({ id: bookmarkFolders.id });
-    plan.folderCreates.forEach(({ key }, index) => ids.set(key, created[index]!.id));
-    return ids;
-  }
-
-  private async writeBookmarks(
-    tx: Transaction,
-    userId: string,
-    plan: RestorePlan,
-    resolve: (ref: FolderRef) => string,
-  ): Promise<void> {
-    for (const rows of chunk(plan.bookmarkInserts)) {
-      await tx
-        .insert(bookmarks)
-        .values(
-          rows.map(({ row, titleKey, sourceId, folder }) => ({
-            userId,
-            titleKey,
-            sourceId,
-            titleId: row.titleId,
-            folderId: resolve(folder),
-            name: row.name,
-            coverUrl: row.coverUrl,
-            contentRating: row.contentRating,
-            type: row.type,
-            visitedAt: new Date(row.visitedAt),
-            createdAt: new Date(row.createdAt),
-          })),
-        )
-        .onConflictDoNothing();
-    }
-    for (const { titleKeys, folder } of plan.groupMoves) {
-      await tx
-        .update(bookmarks)
-        .set({ folderId: resolve(folder), updatedAt: sql`now()` })
-        .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.titleKey, titleKeys)));
-    }
   }
 
   private async writeProgress(tx: Transaction, userId: string, plan: RestorePlan): Promise<void> {
@@ -412,16 +336,6 @@ export class BackupRestoreService {
         .insert(disabledSources)
         .values([...new Set(disabled)].map((sourceId) => ({ userId, sourceId })))
         .onConflictDoNothing();
-    }
-  }
-
-  /** Ошибки API проходят как есть, сбой базы — «правка не сохранена». */
-  private async run<T>(operation: () => Promise<T>): Promise<T> {
-    try {
-      return await operation();
-    } catch (error) {
-      if (error instanceof ApiException) throw error;
-      throw new StorageUnavailableException();
     }
   }
 }

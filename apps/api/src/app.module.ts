@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AuthModule } from './auth/auth.module';
 import { BackupModule } from './backup/backup.module';
+import { SourceImportModule } from './source-import/source-import.module';
 import { CacheModule } from './cache/cache.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { DatabaseModule } from './database/database.module';
@@ -50,6 +51,7 @@ import { ViewerContextInterceptor } from './source-accounts/viewer-context.inter
     ReadingStatisticsModule,
     LibraryModule,
     BackupModule,
+    SourceImportModule,
     NotificationsModule,
     UserSettingsModule,
     UsersModule,

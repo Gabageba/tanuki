@@ -9,6 +9,7 @@ import type {
   RawHomeSection,
   RawHomeSectionPage,
   RawHomeSectionParams,
+  RawBookmarkFolder,
 } from '../types';
 import type { ListParams, FilterSelection } from './paging';
 import type { HttpClient } from './http/client';
@@ -88,6 +89,10 @@ export type Parser = {
    *  sources whose search doesn't combine with filters (RawSourceInfo.isSearchWithFiltersSupported
    *  false); the caller then treats every criterion as unapplied. */
   resolveSearchFilters?(criteria: SearchFilterCriteria): ResolvedSearchFilters;
+  /** Закладки текущего аккаунта (`currentSourceAccount`) по папкам сайта; без аккаунта — ошибка
+   *  входа. Omit on sources without bookmarks import — RawSourceInfo.isBookmarksImportSupported
+   *  mirrors whether this is present. */
+  getBookmarks?(): Promise<RawBookmarkFolder[]>;
   /** Headers the source expects when hotlinking its images — consumed by img-proxy. */
   imageHeaders(imageUrl: string): Record<string, string>;
   /**
@@ -110,4 +115,5 @@ export type {
   RawHomeSection,
   RawHomeSectionPage,
   RawHomeSectionParams,
+  RawBookmarkFolder,
 };

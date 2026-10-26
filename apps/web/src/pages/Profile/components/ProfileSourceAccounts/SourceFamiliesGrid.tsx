@@ -2,7 +2,7 @@ import { SimpleGrid, Stack, useMatches } from '@mantine/core';
 import type { SourceAccount, SourcesResponse } from '@tanuki/contracts';
 import SourceLoginBadgeLegend from '@/entities/source/components/SourceLoginBadge/SourceLoginBadgeLegend';
 import { getPresentSourceLoginMarks } from '@/entities/source/lib';
-import { groupSourcesByAccount } from './lib';
+import { groupSourcesByAccount } from '@/entities/source-account/lib';
 import SourceFamilySection from './SourceFamilySection';
 
 type Props = {

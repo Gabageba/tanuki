@@ -181,6 +181,7 @@ export class SourcesService {
       sortOrders: raw.sortOrders,
       supportsDirection: raw.supportsDirection,
       isSearchWithFiltersSupported: raw.isSearchWithFiltersSupported,
+      isBookmarksImportSupported: raw.isBookmarksImportSupported ?? false,
       authFamily: catalogEntry.authFamily,
       loginBenefits: catalogEntry.loginBenefits,
       isEnabled: !disabled.has(raw.id),

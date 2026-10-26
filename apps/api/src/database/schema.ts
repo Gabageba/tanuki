@@ -3,6 +3,7 @@ import {
   boolean,
   customType,
   doublePrecision,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -33,6 +34,8 @@ import type {
   TitleType,
   NotificationCategory,
   NotificationType,
+  RestoreProgressPolicy,
+  SourceImportProgressStatus,
 } from '@tanuki/contracts';
 import type { EmailTokenPurpose } from '../auth/models';
 
@@ -674,5 +677,40 @@ export const knownDevices = pgTable(
   },
   (table) => [
     uniqueIndex('known_devices_user_fingerprint_idx').on(table.userId, table.fingerprint),
+  ],
+);
+
+/**
+ * Отметки «где остановился», которые импорт из источника достраивает в фоне: у сайта в закладках
+ * есть только номер главы, а отметке нужна сама глава — её находит крон по деталям тайтла.
+ * Строки одного импорта связаны `importId`; когда ждущих не остаётся, приходит уведомление и
+ * строки удаляются. Закладку удалили до достройки — строка уходит вместе с ней.
+ */
+export const sourceImportProgress = pgTable(
+  'source_import_progress',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    importId: uuid('import_id').notNull(),
+    sourceId: text('source_id').notNull(),
+    titleKey: text('title_key').notNull(),
+    titleId: text('title_id').notNull(),
+    /** «Где остановился» на сайте — номер главы. */
+    chapterNumber: doublePrecision('chapter_number').notNull(),
+    progressPolicy: text('progress_policy').$type<RestoreProgressPolicy>().notNull(),
+    status: text('status').$type<SourceImportProgressStatus>().notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId, table.titleKey],
+      foreignColumns: [bookmarks.userId, bookmarks.titleKey],
+    }).onDelete('cascade'),
+    index('source_import_progress_due_idx').on(table.status, table.nextAttemptAt),
+    index('source_import_progress_import_idx').on(table.importId),
   ],
 );

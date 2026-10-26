@@ -53,6 +53,14 @@ export const CURRENT_USER: CurrentUser = {
 /** Вход есть на Grouple — у остальных семейств с обязательным входом источник закрыт. */
 const LOGGED_IN_FAMILIES: string[] = [SOURCE_AUTH_FAMILY.GROUPLE];
 
+/** Источники, откуда можно импортировать закладки; Usagi — вошли, но импорт не поддерживается. */
+const BOOKMARKS_IMPORT_SOURCE_IDS: string[] = [
+  'readmanga_ru',
+  'mintmanga',
+  'selfmanga',
+  'seimanga',
+];
+
 const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source => {
   const entry = SOURCE_CATALOG[id];
   const isLoggedIn = entry.authFamily !== null && LOGGED_IN_FAMILIES.includes(entry.authFamily);
@@ -75,6 +83,7 @@ const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source
     sortOrders: [],
     supportsDirection: false,
     isSearchWithFiltersSupported: true,
+    isBookmarksImportSupported: BOOKMARKS_IMPORT_SOURCE_IDS.includes(id),
     authFamily: entry.authFamily,
     loginRequirement: entry.loginRequirement,
     loginBenefits: entry.loginBenefits,

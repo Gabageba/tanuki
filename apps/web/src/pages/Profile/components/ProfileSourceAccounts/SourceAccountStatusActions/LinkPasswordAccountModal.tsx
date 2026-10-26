@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { SignInIcon } from '@phosphor-icons/react';
 import type { SourceAuthFamily } from '@tanuki/contracts';
 import useLinkSourceAccount from '../hooks/useLinkSourceAccount';
-import { getSourceAuthFamilyTitle } from '../lib';
+import { getSourceAuthFamilyTitle } from '@/entities/source-account/lib';
 import PasswordAccountForm from './PasswordAccountForm';
 import ToneModal from '@/shared/ui/ToneModal';
 import { MODAL_TONE } from '@/shared/ui/ToneModal/models';

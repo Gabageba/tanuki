@@ -9,7 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import GroupedList from '@/shared/ui/GroupedList';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
-import NewCount from './NewCount';
+import NewCount from '@/features/library-merge/NewCount';
 
 /** Часть копии: сколько нового — справа, подробности — в описании через «·». */
 export type BackupPart = {

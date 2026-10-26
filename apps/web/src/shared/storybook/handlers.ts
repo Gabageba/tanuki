@@ -25,6 +25,8 @@ import {
   NOTIFICATIONS_PAGE,
   PROFILE_STATISTICS_RESPONSE,
   SESSIONS_RESPONSE,
+  SOURCE_IMPORT_PREVIEW,
+  SOURCE_IMPORT_RESULT,
   USER_SETTINGS,
 } from './account';
 import {
@@ -243,6 +245,8 @@ export const DEFAULT_HANDLERS = [
   http.get(apiPath('/backup'), () => HttpResponse.json(BACKUP)),
   http.post(apiPath('/backup/preview'), () => HttpResponse.json(BACKUP_PREVIEW)),
   http.post(apiPath('/backup/restore'), () => HttpResponse.json(BACKUP_RESTORE_RESULT)),
+  http.post(apiPath('/source-import/preview'), () => HttpResponse.json(SOURCE_IMPORT_PREVIEW)),
+  http.post(apiPath('/source-import'), () => HttpResponse.json(SOURCE_IMPORT_RESULT)),
 
   // Управление
   http.get(apiPath('/users'), () => HttpResponse.json(MANAGED_USERS_RESPONSE)),

@@ -3,7 +3,7 @@ import useSources from '@/entities/source/hooks/useSources';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useProfileStatistics from '@/entities/user/hooks/useProfileStatistics';
 import useSessions from '../components/ProfileSignInAndSecurity/hooks/useSessions';
-import useSourceAccounts from '../components/ProfileSourceAccounts/hooks/useSourceAccounts';
+import useSourceAccounts from '@/entities/source-account/hooks/useSourceAccounts';
 
 /** Запросы страницы для PageLayout — пользователь и запросы всех вкладок. Вкладки смонтированы все
  *  и с теми же ключами, так что лишних запросов нет; упади все разом — страница покажет ошибку,

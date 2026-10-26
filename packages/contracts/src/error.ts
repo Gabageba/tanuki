@@ -52,7 +52,8 @@ export const API_ERROR_CODE = {
   BOOKMARK_FOLDER_CONFLICT: 'bookmarkFolderConflict',
   // Резервная копия сделана версией формата новее той, что понимает сервер.
   BACKUP_VERSION_UNSUPPORTED: 'backupVersionUnsupported',
-  // Восстановление из копии у этого пользователя уже идёт — второе параллельно не запускается.
+  // Восстановление из копии или импорт из источника у этого пользователя уже идёт — второе
+  // параллельно не запускается.
   RESTORE_IN_PROGRESS: 'restoreInProgress',
   // Фильтр поиска (types/states) содержит значение не из TITLE_TYPE/TITLE_STATE.
   SEARCH_FILTER_INVALID: 'searchFilterInvalid',

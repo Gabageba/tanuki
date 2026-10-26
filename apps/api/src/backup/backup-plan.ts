@@ -1,23 +1,18 @@
 import {
-  BUILT_IN_BOOKMARK_FOLDER,
-  CUSTOM_BOOKMARK_FOLDERS_LIMIT,
   RESTORE_FOLDER_POLICY,
   RESTORE_PROGRESS_POLICY,
   type Backup,
   type BackupBookmark,
   type BackupChapterRead,
-  type BackupFolder,
   type BackupProgress,
   type RestoreFolderPolicy,
   type RestoreProgressPolicy,
 } from '@tanuki/contracts';
 import { splitCompositeId } from '../common/opaque-id';
-import {
-  type BookmarkFolderRecord,
-  isReservedFolderName,
-} from '../library/bookmark-folders.service';
+import type { BookmarkFolderRecord } from '../library/bookmark-folders.service';
 import { resolveGroupFolder } from '../library/bookmark-groups';
 import { titleKeyOf } from '../library/bookmarks.service';
+import { isSameRef, planFolders } from '../library/library-merge';
 import type { BookmarkRecord } from '../library/models';
 import type {
   BookmarkInsert,
@@ -44,76 +39,9 @@ export type RestorePlanInput = {
   progressPolicy: RestoreProgressPolicy;
 };
 
-const isSameRef = (a: FolderRef, b: FolderRef) =>
-  a.id !== undefined ? a.id === b.id : a.key === b.key;
-
 /** Самая свежая по `updatedAt` из строк — так же решается папка разошедшейся группы. */
 const freshest = <T extends { updatedAt: string }>(rows: T[]): T =>
   rows.reduce((latest, row) => (row.updatedAt > latest.updatedAt ? row : latest));
-
-/**
- * Папки копии на папки пользователя. Встроенная — по `builtIn`; своя — по имени без учёта
- * регистра (тот же ключ, что у уникального индекса): совпала — это она, иначе создаётся в конце, в
- * порядке копии, пока не кончится лимит. Не поместившиеся и с занятым встроенной именем ложатся во
- * «В планах».
- */
-export const planFolders = (backupFolders: BackupFolder[], folders: BookmarkFolderRecord[]) => {
-  const planned = folders.find(({ builtIn }) => builtIn === BUILT_IN_BOOKMARK_FOLDER.PLANNED);
-  if (!planned) throw new Error('Встроенные папки должны быть созданы до расчёта');
-  const plannedRef: FolderRef = { id: planned.id };
-
-  const byBuiltIn = new Map(
-    folders.flatMap((f) => (f.builtIn ? [[f.builtIn, f.id] as const] : [])),
-  );
-  const byName = new Map<string, FolderRef>(
-    folders.flatMap((f) =>
-      f.name ? [[f.name.trim().toLocaleLowerCase(), { id: f.id }] as const] : [],
-    ),
-  );
-  let slots =
-    CUSTOM_BOOKMARK_FOLDERS_LIMIT - folders.filter(({ builtIn }) => builtIn === null).length;
-
-  const targets = new Map<string, FolderTarget>();
-  const creates: BackupFolder[] = [];
-  const matched = new Set<string>();
-  let overLimit = 0;
-
-  for (const folder of [...backupFolders].sort((a, b) => a.position - b.position)) {
-    if (folder.builtIn) {
-      const id = byBuiltIn.get(folder.builtIn);
-      targets.set(folder.key, { ref: id ? { id } : plannedRef, isOverLimit: false });
-      continue;
-    }
-    const name = (folder.name ?? '').trim();
-    const lowered = name.toLocaleLowerCase();
-    const existing = byName.get(lowered);
-    if (existing) {
-      // Совпала своя папка пользователя — считаем её один раз; повтор имени внутри копии — нет.
-      if (existing.id !== undefined) matched.add(existing.id);
-      targets.set(folder.key, { ref: existing, isOverLimit: false });
-    } else if (isReservedFolderName(name)) {
-      targets.set(folder.key, { ref: plannedRef, isOverLimit: false });
-    } else if (slots > 0) {
-      slots -= 1;
-      const ref: FolderRef = { key: folder.key };
-      creates.push({ ...folder, name });
-      byName.set(lowered, ref);
-      targets.set(folder.key, { ref, isOverLimit: false });
-    } else {
-      overLimit += 1;
-      targets.set(folder.key, { ref: plannedRef, isOverLimit: true });
-    }
-  }
-
-  return {
-    targets,
-    creates,
-    matched: matched.size,
-    overLimit,
-    targetOf: (folderKey: string): FolderTarget =>
-      targets.get(folderKey) ?? { ref: plannedRef, isOverLimit: false },
-  };
-};
 
 /**
  * Дальше ли отметка из копии, чем ваша: больше номер главы, при равенстве — дальше страница. Если

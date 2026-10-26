@@ -2,9 +2,8 @@ import {
   RESTORE_FOLDER_POLICY,
   RESTORE_PROGRESS_POLICY,
   type EnumLiteralsOf,
-  type RestoreFolderPolicy,
-  type RestoreProgressPolicy,
 } from '@tanuki/contracts';
+import type { MergeChoices } from '@/features/library-merge/models';
 
 /** Шаги модалки: «Вопросы» — только если в копии есть конфликты. */
 export const RESTORE_STEP = {
@@ -22,9 +21,7 @@ export const BACKUP_FILE_ERROR = {
 } as const;
 export type BackupFileError = EnumLiteralsOf<typeof BACKUP_FILE_ERROR>;
 
-export type RestoreChoices = {
-  folderPolicy: RestoreFolderPolicy;
-  progressPolicy: RestoreProgressPolicy;
+export type RestoreChoices = MergeChoices & {
   applySettings: boolean;
 };
 

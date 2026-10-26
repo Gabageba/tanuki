@@ -21,8 +21,12 @@ import type { BookmarksParams } from '../models';
 /** Задержка поиска: запрос уходит, когда человек перестал печатать. */
 const SEARCH_DEBOUNCE_MS = 300;
 
+type Props = {
+  onImport: () => void;
+};
+
 /** Вкладки-папки, поиск и сортировка, карточки открытой папки. */
-function BookmarksContent() {
+function BookmarksContent({ onImport }: Props) {
   const { data: folders } = PageLayout.useQuery<ReturnType<typeof useBookmarkFolders>>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { params, setParams } = PageLayout.useParams<BookmarksParams>();
@@ -83,7 +87,7 @@ function BookmarksContent() {
         <FolderTabs folders={items} activeId={activeFolder.id} onChange={handleFolderChange} />
       )}
       {isEmpty || !activeFolder ? (
-        <BookmarksEmpty />
+        <BookmarksEmpty onImport={onImport} />
       ) : (
         <>
           <BookmarksToolbar

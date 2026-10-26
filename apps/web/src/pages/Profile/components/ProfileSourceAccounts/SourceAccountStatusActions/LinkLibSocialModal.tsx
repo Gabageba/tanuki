@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyIcon, PasswordIcon, SignInIcon } from '@phosphor-icons/react';
 import { SOURCE_AUTH_FAMILY, type Source } from '@tanuki/contracts';
 import useLinkLibSocialAccount from '../hooks/useLinkLibSocialAccount';
-import { getSourceAuthFamilyTitle } from '../lib';
+import { getSourceAuthFamilyTitle } from '@/entities/source-account/lib';
 import PasswordAccountForm from './PasswordAccountForm';
 import LibSocialTokenForm from './LibSocialTokenForm';
 import ToneModal from '@/shared/ui/ToneModal';
