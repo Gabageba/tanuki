@@ -141,7 +141,11 @@ for (const [key, where] of callKeys) {
   if (!enGroups.has(key)) errors.push(`${where}: ключа «${key}» нет в en.json`);
 }
 
-// 6. Неиспользуемые ключи: базовое имя не встречается в коде ни одним строковым литералом
+// 6. Неиспользуемые ключи: базовое имя не встречается в коде ни одним строковым литералом и ни
+// одним вложенным `$t(key)` в самих словарях
+for (const value of Object.values(ru)) {
+  for (const m of String(value).matchAll(/\$t\(([A-Za-z][\w.]*)/g)) usedLiterals.add(m[1]);
+}
 const unused = [...ruGroups.keys()].filter((base) => !usedLiterals.has(base));
 for (const base of unused) warnings.push(`ru.json/en.json: «${base}» нигде не используется`);
 
