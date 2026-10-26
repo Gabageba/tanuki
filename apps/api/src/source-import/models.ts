@@ -5,14 +5,20 @@ import type { GroupMove, MergeBookmarkInsert, MergeFolder } from '../library/lib
 /** Отметка пользователя — столько, сколько нужно, чтобы сравнить её с «где остановился» сайта. */
 export type ImportProgressMark = Pick<
   typeof readingProgress.$inferSelect,
-  'titleKey' | 'chapterNumber' | 'updatedAt'
+  'titleKey' | 'chapterVolume' | 'chapterNumber' | 'updatedAt'
 >;
 
-/** Отметка, которую крон достроит по номеру главы с сайта. */
-export type PendingProgress = {
+/** Место главы: номер и том — у сайтов, где нумерация начинается заново в каждом томе, номер
+ *  без тома неоднозначен. Том null — сайт его не отдаёт. */
+export type ChapterPosition = {
+  chapterVolume: number | null;
+  chapterNumber: number;
+};
+
+/** Отметка, которую крон достроит по главе с сайта. */
+export type PendingProgress = ChapterPosition & {
   titleKey: string;
   titleId: string;
-  chapterNumber: number;
 };
 
 /** «Что куда ляжет» — общий расчёт сводки и записи импорта: сводка берёт из него только папки. */

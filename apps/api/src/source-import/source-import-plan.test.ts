@@ -60,6 +60,7 @@ const item = (url: string, overrides: Partial<RawBookmark> = {}): RawBookmark =>
   contentRating: CONTENT_RATING.SAFE,
   type: null,
   lastChapterNumber: null,
+  lastChapterVolume: null,
   ...overrides,
 });
 
@@ -84,8 +85,14 @@ const userBookmark = (sourceId: string, url: string, folderId: string): Bookmark
   updatedAt: new Date(0),
 });
 
-const mark = (sourceId: string, url: string, chapterNumber: number | null): ImportProgressMark => ({
+const mark = (
+  sourceId: string,
+  url: string,
+  chapterNumber: number | null,
+  chapterVolume: number | null = null,
+): ImportProgressMark => ({
   titleKey: linkKeyOf(sourceId, url),
+  chapterVolume,
   chapterNumber,
   updatedAt: new Date(0),
 });
@@ -303,6 +310,36 @@ describe('buildSourceImportPlan', () => {
     ]);
   });
 
+  it('номер главы сравнивается в своём томе — нумерация может начинаться заново', () => {
+    const result = plan({
+      siteFolders: [
+        siteFolder(
+          'reading',
+          [
+            item('/next-volume', { lastChapterNumber: 3, lastChapterVolume: 5 }),
+            item('/same-number', { lastChapterNumber: 10, lastChapterVolume: 1 }),
+            item('/same', { lastChapterNumber: 10, lastChapterVolume: 5 }),
+          ],
+          READING,
+        ),
+      ],
+      progress: [
+        mark(SOURCE, '/next-volume', 10, 1),
+        mark(SOURCE, '/same-number', 10, 5),
+        mark(SOURCE, '/same', 10, 5),
+      ],
+    });
+
+    expect(result.folders[0]!.progressDiffers).toBe(2);
+    expect(result.pendingProgress).toEqual([
+      expect.objectContaining({
+        titleKey: linkKeyOf(SOURCE, '/next-volume'),
+        chapterVolume: 5,
+        chapterNumber: 3,
+      }),
+    ]);
+  });
+
   it('снимок новой закладки — из ответа сайта, без рейтинга — по источнику', () => {
     const result = plan({
       siteFolders: [siteFolder('reading', [item('/a', { contentRating: null })], READING)],
@@ -318,18 +355,36 @@ describe('buildSourceImportPlan', () => {
 });
 
 describe('winsSiteProgress', () => {
+  const at = (chapterNumber: number | null, chapterVolume: number | null = null) => ({
+    chapterNumber,
+    chapterVolume,
+  });
+  const site = (chapterNumber: number, chapterVolume: number | null = null) => ({
+    chapterNumber,
+    chapterVolume,
+  });
+
   it('без отметки пишет при любой политике', () => {
     for (const policy of Object.values(RESTORE_PROGRESS_POLICY)) {
-      expect(winsSiteProgress(policy, 5, undefined)).toBe(true);
+      expect(winsSiteProgress(policy, site(5), undefined)).toBe(true);
     }
   });
 
   it('при расхождении решает политика', () => {
-    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FURTHEST, 5, 3)).toBe(true);
-    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FURTHEST, 3, 5)).toBe(false);
-    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FURTHEST, 3, null)).toBe(false);
-    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.KEEP_MINE, 9, 3)).toBe(false);
-    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FROM_BACKUP, 3, 9)).toBe(true);
-    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FROM_BACKUP, 3, 3)).toBe(false);
+    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FURTHEST, site(5), at(3))).toBe(true);
+    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FURTHEST, site(3), at(5))).toBe(false);
+    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FURTHEST, site(3), at(null))).toBe(false);
+    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.KEEP_MINE, site(9), at(3))).toBe(false);
+    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FROM_BACKUP, site(3), at(9))).toBe(true);
+    expect(winsSiteProgress(RESTORE_PROGRESS_POLICY.FROM_BACKUP, site(3), at(3))).toBe(false);
+  });
+
+  it('«дальше» — сначала по тому, если он известен у обеих сторон', () => {
+    const { FURTHEST, FROM_BACKUP } = RESTORE_PROGRESS_POLICY;
+    expect(winsSiteProgress(FURTHEST, site(3, 5), at(10, 1))).toBe(true);
+    expect(winsSiteProgress(FURTHEST, site(10, 1), at(3, 5))).toBe(false);
+    expect(winsSiteProgress(FURTHEST, site(10, 5), at(3))).toBe(true);
+    expect(winsSiteProgress(FROM_BACKUP, site(10, 1), at(10, 5))).toBe(true);
+    expect(winsSiteProgress(FROM_BACKUP, site(10, 5), at(10))).toBe(false);
   });
 });

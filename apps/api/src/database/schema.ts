@@ -697,8 +697,9 @@ export const sourceImportProgress = pgTable(
     sourceId: text('source_id').notNull(),
     titleKey: text('title_key').notNull(),
     titleId: text('title_id').notNull(),
-    /** «Где остановился» на сайте — номер главы. */
+    /** «Где остановился» на сайте — номер главы и её том (null — сайт тома не отдаёт). */
     chapterNumber: doublePrecision('chapter_number').notNull(),
+    chapterVolume: doublePrecision('chapter_volume'),
     progressPolicy: text('progress_policy').$type<RestoreProgressPolicy>().notNull(),
     status: text('status').$type<SourceImportProgressStatus>().notNull(),
     attempts: integer('attempts').notNull().default(0),

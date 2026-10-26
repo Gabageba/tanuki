@@ -8,7 +8,7 @@ import {
   SOURCE_IMPORT_PROGRESS_STATUS,
 } from '@tanuki/contracts';
 import { SourceAccountRequiredException } from '../common/errors';
-import { pickDefaultBranch } from '../common/normalize';
+import { groupByBranch } from '../common/normalize';
 import { decodeTitleId, encodeChapterId, splitCompositeId } from '../common/opaque-id';
 import { DatabaseService } from '../database/database.service';
 import { readingProgress, sourceImportProgress } from '../database/schema';
@@ -19,6 +19,7 @@ import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.type
 import { VIEWER_KIND } from '../source-accounts/models';
 import { runAsViewer } from '../source-accounts/viewer-context';
 import {
+  type ChapterPosition,
   SOURCE_IMPORT_PROGRESS_BATCH_SIZE,
   SOURCE_IMPORT_PROGRESS_MAX_ATTEMPTS,
   SOURCE_IMPORT_PROGRESS_RETRY_DELAY_MS,
@@ -35,10 +36,29 @@ const WAITING_STATUSES = [
   SOURCE_IMPORT_PROGRESS_STATUS.WAITING_RELOGIN,
 ];
 
-/** Глава с номером «где остановился» в основной ветке — той же, что тайтл открывает по умолчанию. */
-export const findChapterByNumber = (chapters: RawChapter[], number: number) => {
-  const branch = pickDefaultBranch(chapters);
-  return chapters.find((chapter) => chapter.branch === branch && chapter.number === number) ?? null;
+/**
+ * Глава «где остановился»: сначала в основной ветке — той же, что тайтл открывает по умолчанию,
+ * иначе в следующих по величине. Ветка — команда переводчиков, и у долгих тайтлов команды
+ * сменяют друг друга: ранние тома бывают только в другой ветке. Номер ищется в томе с сайта: у
+ * сайтов, где нумерация начинается заново в каждом томе, глава 10 есть в нескольких томах. Тома
+ * нет — номер должен стоять в одном томе во всех ветках, иначе глава не угадывается.
+ */
+export const findChapterByPosition = (chapters: RawChapter[], position: ChapterPosition) => {
+  const candidates = chapters.filter((chapter) => chapter.number === position.chapterNumber);
+  const volume =
+    position.chapterVolume ??
+    (new Set(candidates.map((chapter) => chapter.volume)).size === 1
+      ? candidates[0]!.volume
+      : undefined);
+  if (volume === undefined) return null;
+  // Порядок веток — по всем главам тайтла, а не по найденным: иначе решает свежесть одной главы.
+  for (const { items } of groupByBranch(chapters)) {
+    const chapter = items.find(
+      (item) => item.number === position.chapterNumber && item.volume === volume,
+    );
+    if (chapter) return chapter;
+  }
+  return null;
 };
 
 /** Отметка, которую пишет импорт: начало главы, снимок тайтла — из его деталей. */
@@ -161,7 +181,7 @@ export class SourceImportProgressService {
       return;
     }
 
-    const chapter = findChapterByNumber(title.chapters ?? [], row.chapterNumber);
+    const chapter = findChapterByPosition(title.chapters ?? [], row);
     if (!chapter) {
       await this.setStatus(row.id, { status: SOURCE_IMPORT_PROGRESS_STATUS.SKIPPED });
       return;
@@ -184,6 +204,7 @@ export class SourceImportProgressService {
     const groupKeys = [row.titleKey, ...(await this.links.listConfirmedGroup(row.titleKey))];
     const marks = await this.database.db
       .select({
+        chapterVolume: readingProgress.chapterVolume,
         chapterNumber: readingProgress.chapterNumber,
         updatedAt: readingProgress.updatedAt,
       })
@@ -195,7 +216,7 @@ export class SourceImportProgressService {
       (latest, mark) => (!latest || mark.updatedAt > latest.updatedAt ? mark : latest),
       undefined,
     );
-    if (!winsSiteProgress(row.progressPolicy, row.chapterNumber, mine?.chapterNumber)) return;
+    if (!winsSiteProgress(row.progressPolicy, row, mine)) return;
 
     const values = toImportedProgress(row, title, chapter);
     // Ключ строки при конфликте не переписывается — только отметка и снимок.

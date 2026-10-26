@@ -25,7 +25,12 @@ import {
 import type { BookmarkRecord } from '../library/models';
 import { linkKeyOf } from '../matches/title-links.service';
 import type { RawBookmark, RawBookmarkFolder } from '../parsers-client/parsers-client.types';
-import type { ImportProgressMark, PendingProgress, SourceImportPlan } from './models';
+import type {
+  ChapterPosition,
+  ImportProgressMark,
+  PendingProgress,
+  SourceImportPlan,
+} from './models';
 
 export type SourceImportPlanInput = {
   sourceId: string;
@@ -85,25 +90,55 @@ const describeTarget = (
 };
 
 /**
- * Писать ли «где остановился» с сайта: отметки нет — всегда; есть — решает политика. Номер
- * главы — всё, что сайт отдаёт, поэтому «дальше» сравнивается только по нему; у отметки без
- * номера сравнивать нечего — она остаётся.
+ * Порядок двух глав: сначала том, если он известен у обеих (нумерация может начинаться заново в
+ * каждом томе), затем номер. Отрицательное — `a` раньше, ноль — та же глава.
+ */
+export const compareChapterPositions = (a: ChapterPosition, b: ChapterPosition) => {
+  if (a.chapterVolume !== null && b.chapterVolume !== null && a.chapterVolume !== b.chapterVolume) {
+    return a.chapterVolume - b.chapterVolume;
+  }
+  return a.chapterNumber - b.chapterNumber;
+};
+
+/** Порядок главы сайта относительно отметки; null — у отметки нет номера, сравнивать нечего. */
+const compareWithMark = (
+  site: ChapterPosition,
+  mine: Pick<ImportProgressMark, 'chapterVolume' | 'chapterNumber'>,
+) =>
+  mine.chapterNumber === null
+    ? null
+    : compareChapterPositions(site, {
+        chapterVolume: mine.chapterVolume,
+        chapterNumber: mine.chapterNumber,
+      });
+
+/**
+ * Писать ли «где остановился» с сайта: отметки нет — всегда; есть — решает политика. Сайт отдаёт
+ * только номер и том главы, поэтому «дальше» сравнивается по ним; у отметки без номера
+ * сравнивать нечего — она остаётся.
  */
 export const winsSiteProgress = (
   policy: RestoreProgressPolicy,
-  siteChapter: number,
-  mine: number | null | undefined,
+  site: ChapterPosition,
+  mine: Pick<ImportProgressMark, 'chapterVolume' | 'chapterNumber'> | undefined,
 ) => {
   if (mine === undefined) return true;
+  const order = compareWithMark(site, mine);
   switch (policy) {
     case RESTORE_PROGRESS_POLICY.FURTHEST:
-      return mine !== null && siteChapter > mine;
+      return order !== null && order > 0;
     case RESTORE_PROGRESS_POLICY.KEEP_MINE:
       return false;
     case RESTORE_PROGRESS_POLICY.FROM_BACKUP:
-      return mine !== siteChapter;
+      return order !== 0;
   }
 };
+
+/** «Где остановился» закладки сайта; null — сайт его не отдал. */
+const sitePositionOf = (item: RawBookmark): ChapterPosition | null =>
+  item.lastChapterNumber === null
+    ? null
+    : { chapterVolume: item.lastChapterVolume, chapterNumber: item.lastChapterNumber };
 
 /**
  * Что куда ляжет из закладок сайта. Ничего не пишет: по нему сводка считает папки, а запись —
@@ -225,10 +260,11 @@ export const buildSourceImportPlan = (input: SourceImportPlanInput): SourceImpor
         if (!isImported) summary.fresh += 1;
 
         const mark = marks.get(key);
+        const sitePosition = sitePositionOf(item);
         if (
-          item.lastChapterNumber !== null &&
+          sitePosition !== null &&
           mark !== undefined &&
-          mark.chapterNumber !== item.lastChapterNumber
+          compareWithMark(sitePosition, mark) !== 0
         ) {
           summary.progressDiffers += 1;
         }
@@ -255,15 +291,8 @@ export const buildSourceImportPlan = (input: SourceImportPlanInput): SourceImpor
           }
         }
 
-        if (
-          item.lastChapterNumber !== null &&
-          winsSiteProgress(input.progressPolicy, item.lastChapterNumber, mark?.chapterNumber)
-        ) {
-          pending.push({
-            titleKey,
-            titleId: titleIdOf(sourceId, item),
-            chapterNumber: item.lastChapterNumber,
-          });
+        if (sitePosition !== null && winsSiteProgress(input.progressPolicy, sitePosition, mark)) {
+          pending.push({ titleKey, titleId: titleIdOf(sourceId, item), ...sitePosition });
         }
       }
 

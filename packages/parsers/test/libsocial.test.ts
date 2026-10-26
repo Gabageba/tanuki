@@ -7,8 +7,12 @@ import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 import { readFixture } from './support/fixtures';
+import { runWithSourceAccounts } from '../src/core/source-accounts';
+import { SourceAuthRequiredError } from '../src/errors';
 import {
+  BUILT_IN_BOOKMARK_FOLDER,
   FILTER_TYPE,
+  SOURCE_AUTH_FAMILY,
   TITLE_RESTRICTION,
   TITLE_TYPE,
   SORT_DIRECTION,
@@ -599,5 +603,102 @@ describe('LibSocial getHomeSection', () => {
     const parser = createLibSocialParser(CFG, makeContext(new FakeHttpClient()));
 
     await expect(parser.getHomeSection!('popular', { page: 1 })).resolves.toBeNull();
+  });
+});
+
+describe('LibSocial getBookmarks', () => {
+  const AUTH_CFG: LibSocialConfig = {
+    ...CFG,
+    auth: {
+      authOrigin: 'https://mangalib.me',
+      tokenUrl: `https://${LIBSOCIAL_API_HOST}/api/auth/oauth/token`,
+      clientId: '1',
+      redirectUri: 'https://mangalib.me/ru/front/auth/oauth/callback',
+    },
+  };
+  const USER_ID = 42;
+  const ITEM = JSON.parse(LIST_JSON).data[0] as Record<string, unknown>;
+  const bookmark = (id: number, chapter: string | null, site = 1) => ({
+    media: { ...ITEM, id, slug_url: `${id}--t`, site },
+    item: chapter === null ? null : { model: 'chapter', volume: '2', number: chapter },
+  });
+  const json = (body: unknown) => ({
+    status: 200,
+    body: JSON.stringify(body),
+    contentType: 'application/json',
+  });
+  const asUser = <T>(fn: () => Promise<T>) =>
+    runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.LIBSOCIAL]: { tokenStore: () => null } }, fn);
+
+  const setUp = () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.endsWith('/api/auth/me'), json({ data: { id: USER_ID } }));
+    http.register(
+      (url) => url.endsWith(`/api/bookmarks/folder/${USER_ID}`),
+      json({
+        data: [
+          { id: 1, name: 'Читаю', count: 3, site_ids: [0, 1, 2, 3, 4] },
+          { id: 2, name: 'В планах', count: 0, site_ids: [0, 1, 2, 3, 4] },
+          { id: 5, name: 'Любимые', count: 1, site_ids: [0, 1, 2, 3, 4] },
+          { id: 21, name: 'Смотрю', count: 1, site_ids: [5] },
+        ],
+      }),
+    );
+    http.register(
+      (url) => url.includes('status=1&') && url.includes('page=1'),
+      json({ data: [bookmark(1, '200'), bookmark(2, null)], links: { next: 'page=2' } }),
+    );
+    http.register(
+      (url) => url.includes('status=1&') && url.includes('page=2'),
+      json({ data: [bookmark(3, '12.5'), bookmark(4, '7', 4)], links: { next: null } }),
+    );
+    http.register(
+      (url) => url.includes('status=5&'),
+      json({ data: [bookmark(5, '1')], links: { next: null } }),
+    );
+    return http;
+  };
+
+  it('maps site folders to built-in or own ones, follows pages, keeps only this site', async () => {
+    const http = setUp();
+    const parser = createLibSocialParser(AUTH_CFG, makeContext(http));
+
+    const folders = await asUser(() => parser.getBookmarks!());
+
+    expect(folders.map(({ id, builtIn, name }) => ({ id, builtIn, name }))).toEqual([
+      { id: '1', builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: 'Читаю' },
+      { id: '2', builtIn: BUILT_IN_BOOKMARK_FOLDER.PLANNED, name: 'В планах' },
+      { id: '5', builtIn: null, name: 'Любимые' },
+    ]);
+    const [reading, planned, favourites] = folders;
+    expect(
+      reading!.items.map(({ url, lastChapterNumber }) => ({ url, lastChapterNumber })),
+    ).toEqual([
+      { url: '1--t', lastChapterNumber: 200 },
+      { url: '2--t', lastChapterNumber: null },
+      { url: '3--t', lastChapterNumber: 12.5 },
+    ]);
+    expect(reading!.items[0]).toMatchObject({ title: 'Ван-Пис', type: TITLE_TYPE.MANHWA });
+    expect(planned!.items).toEqual([]);
+    expect(favourites!.items.map(({ url }) => url)).toEqual(['5--t']);
+    const query = new URL(http.requests.find(({ url }) => url.includes('status=1&'))!.url)
+      .searchParams;
+    expect(query.get('user_id')).toBe(String(USER_ID));
+    // Пустая папка не запрашивается.
+    expect(http.requests.some(({ url }) => url.includes('status=2&'))).toBe(false);
+  });
+
+  it('without the user’s own account — auth required, no request', async () => {
+    const http = setUp();
+    const parser = createLibSocialParser(AUTH_CFG, makeContext(http));
+
+    await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
+    expect(http.requests).toHaveLength(0);
+  });
+
+  it('a network site without login has no bookmarks import', () => {
+    const parser = createLibSocialParser(CFG, makeContext(new FakeHttpClient()));
+
+    expect(parser.getBookmarks).toBeUndefined();
   });
 });

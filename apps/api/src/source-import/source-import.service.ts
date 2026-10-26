@@ -139,6 +139,7 @@ export class SourceImportService {
           titleKey: row.titleKey,
           titleId: row.titleId,
           chapterNumber: row.chapterNumber,
+          chapterVolume: row.chapterVolume,
           progressPolicy,
           status: SOURCE_IMPORT_PROGRESS_STATUS.PENDING,
         })),
@@ -159,6 +160,7 @@ export class SourceImportService {
       db
         .select({
           titleKey: readingProgress.titleKey,
+          chapterVolume: readingProgress.chapterVolume,
           chapterNumber: readingProgress.chapterNumber,
           updatedAt: readingProgress.updatedAt,
         })
