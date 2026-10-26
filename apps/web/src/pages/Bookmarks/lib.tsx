@@ -5,6 +5,7 @@ import {
   BOOKMARK_SORT,
   type BookmarkAvailability,
   type BookmarkSort,
+  type BookmarksResponse,
 } from '@tanuki/contracts';
 import { HIDDEN_COVER_BLUR } from '@/entities/title/models';
 
@@ -63,3 +64,11 @@ export const getCoverBlur = (isHidden: boolean, isUnavailable: boolean, compact:
   }
   return 0;
 };
+
+/** Карточки подгруженных порций по одной на тайтл: если закладку переложили между подгрузками,
+ *  сдвиг смещения отдаёт её в двух соседних порциях. */
+export const getBookmarkItems = (pages: BookmarksResponse[]) => [
+  ...new Map(
+    pages.flatMap(({ items }) => items).map((bookmark) => [bookmark.titleId, bookmark]),
+  ).values(),
+];

@@ -38,15 +38,14 @@ function BookmarksContent({ onImport }: Props) {
   const activeFolder = items.find(({ id }) => id === folderParam) ?? items[0];
   const activeFolderId = activeFolder?.id;
 
-  // Другая папка — поиск и страница с начала, откуда бы ни пришла смена: вкладка, иконка
-  // закладок в шапке или удалённая папка в адресе. Пока params не догнали папку, сброшенные
-  // значения берутся сразу; затем они записываются, чтобы прежняя папка не вернула свой поиск.
+  // Другая папка — поиск с начала, откуда бы ни пришла смена: вкладка, иконка закладок в шапке
+  // или удалённая папка в адресе. Пока params не догнали папку, сброшенный поиск берётся сразу;
+  // затем он записывается, чтобы прежняя папка не вернула свой.
   const isSameFolder = params.folderId === activeFolderId;
   const query = isSameFolder ? params.query : '';
-  const page = isSameFolder ? params.page : 1;
   const { sort, direction } = params;
   const updateParams = (patch: Partial<BookmarksParams>) =>
-    setParams({ ...params, folderId: activeFolderId, query, page, ...patch });
+    setParams({ ...params, folderId: activeFolderId, query, ...patch });
 
   // Набор отложен вместе с папкой: строка, набранная в прежней папке, в запрос новой не уходит.
   const search = useMemo(() => ({ folderId: activeFolderId, query }), [activeFolderId, query]);
@@ -57,7 +56,7 @@ function BookmarksContent({ onImport }: Props) {
 
   useEffect(() => {
     if (isSameFolder) return;
-    setParams({ ...params, folderId: activeFolderId, query: '', page: 1 });
+    setParams({ ...params, folderId: activeFolderId, query: '' });
   }, [isSameFolder, params, activeFolderId, setParams]);
 
   // Без папки в адресе (или с удалённой) открывается первая — и сразу попадает в адрес.
@@ -69,7 +68,7 @@ function BookmarksContent({ onImport }: Props) {
   const isEmpty = items.every(({ count }) => count === 0);
 
   const handleQueryChange = (value: string) => {
-    updateParams({ query: value, page: 1 });
+    updateParams({ query: value });
   };
 
   const handleViewModeChange = (value: ViewMode) => {
@@ -99,18 +98,16 @@ function BookmarksContent({ onImport }: Props) {
               updateParams({
                 sort: value,
                 direction: getDefaultBookmarkSortDirection(value),
-                page: 1,
               });
             }}
             direction={direction}
-            onDirectionChange={(value) => updateParams({ direction: value, page: 1 })}
+            onDirectionChange={(value) => updateParams({ direction: value })}
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
           />
           <BookmarksList
-            params={{ folderId: activeFolder.id, sort, direction, query: listQuery, page }}
+            params={{ folderId: activeFolder.id, sort, direction, query: listQuery }}
             viewMode={viewMode}
-            onPageChange={(value) => updateParams({ page: value })}
             onResetQuery={() => handleQueryChange('')}
           />
         </>
