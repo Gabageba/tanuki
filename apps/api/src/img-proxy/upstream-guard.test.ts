@@ -20,6 +20,11 @@ describe('isBlockedAddress', () => {
   it.each(['93.184.216.34', '2606:2800:220:1:248:1893:25c8:1946'])('пропускает %s', (address) => {
     expect(isBlockedAddress(address)).toBe(false);
   });
+
+  it('пропускает fake-IP VPN-клиентов (198.18.0.0/15) — за ним настоящий хост', () => {
+    expect(isBlockedAddress('198.18.0.196')).toBe(false);
+    expect(isBlockedAddress('198.19.255.1')).toBe(false);
+  });
 });
 
 describe('isAllowedUpstreamUrl', () => {
