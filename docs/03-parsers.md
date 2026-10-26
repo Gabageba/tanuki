@@ -73,10 +73,19 @@ export interface Parser {
 `getBookmarks` читает закладки от аккаунта пользователя (`currentSourceAccount`) по папкам сайта:
 `RawBookmarkFolder { id, builtIn, name, items }`, стандартный статус сайта → встроенная папка
 (`builtIn`), своя папка сайта — `builtIn: null`; `RawBookmark` — `id` и `url` как у `getList`,
-снимок тайтла и `lastChapterNumber` («где остановился», `null`, если сайт не отдаёт).
+снимок тайтла, `lastChapterNumber` и `lastChapterVolume` («где остановился», `null`, если сайт не
+отдаёт; том нужен там, где нумерация глав начинается заново в каждом томе — так у LibSocial).
 `RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
-пишется. Пока метод не реализован ни в одном движке: разбор ждёт образцов ответов сайтов
-([plans/source-import.md](plans/source-import.md)).
+пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже); Grouple,
+AllHentai и Nude-Moon ждут образцов ответов сайтов ([plans/source-import.md](plans/source-import.md)).
+
+LibSocial (проверено вживую 2026-10-26): id аккаунта — `GET /api/auth/me`, папки —
+`GET /api/bookmarks/folder/{userId}` (общие на всю сеть, у каждой `site_ids` и `count`; 1–4 —
+«Читаю», «В планах», «Брошено», «Прочитано», 5 — «Любимые», дальше свои папки, 21+ — аниме-сайт),
+закладки папки — `GET /api/bookmarks?user_id=&status=<id папки>&page=` по 24 до пустого
+`links.next` (проверено на 30 закладках: 24 + 6). Закладки других сайтов сети отсеиваются по
+`media.site`, «где остановился» — `item.volume` и `item.number` (`item.model: 'chapter'`). Свои
+папки человека создаются с `site_ids` одного сайта.
 
 Источники с общим движком (Grouple, LibSocial, Chan) реализованы как **фабрика с конфигом**
 (`createGroupleParser(config, ctx)`), а не через наследование — в Kotlin один класс на источник
