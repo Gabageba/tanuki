@@ -76,8 +76,9 @@ export interface Parser {
 снимок тайтла, `lastChapterNumber` и `lastChapterVolume` («где остановился», `null`, если сайт не
 отдаёт; том нужен там, где нумерация глав начинается заново в каждом томе — так у LibSocial).
 `RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
-пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже); Grouple,
-AllHentai и Nude-Moon ждут образцов ответов сайтов ([plans/source-import.md](plans/source-import.md)).
+пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже) и Desu;
+Grouple, AllHentai и Nude-Moon ждут образцов ответов сайтов
+([plans/source-import.md](plans/source-import.md)).
 
 LibSocial (проверено вживую 2026-10-26): id аккаунта — `GET /api/auth/me`, папки —
 `GET /api/bookmarks/folder/{userId}` (общие на всю сеть, у каждой `site_ids` и `count`; 1–4 —
@@ -86,6 +87,14 @@ LibSocial (проверено вживую 2026-10-26): id аккаунта — 
 `links.next` (проверено на 30 закладках: 24 + 6). Закладки других сайтов сети отсеиваются по
 `media.site`, «где остановился» — `item.volume` и `item.number` (`item.model: 'chapter'`). Свои
 папки человека создаются с `site_ids` одного сайта.
+
+Desu (проверено вживую 2026-10-26): id аккаунта — `visitor: { user_id }` в конфиге XenForo любой
+страницы (у гостя 0), список — `GET /manga/list/{userId}/` (редирект на `/manga/list/<slug>.<id>/`),
+одна страница без пагинации: по таблице `#status_<статус>_block` на статус, свёрнутые тоже в
+разметке. Статусы — `data-status` формы «Добавить в список»: `watching`, `planned`, `completed`,
+`dropped` — встроенные папки, `on_hold` («Отложено») и `favorites` («Любимое») — свои; других
+папок у сайта нет. «Где остановился» — ссылка колонки «Закладка» (`/vol4/ch24/`, том и глава), без
+неё — счётчик «Главы» (сколько прочитано, без тома). Обложки списка — `x120`, берём `preview`.
 
 Источники с общим движком (Grouple, LibSocial, Chan) реализованы как **фабрика с конфигом**
 (`createGroupleParser(config, ctx)`), а не через наследование — в Kotlin один класс на источник
@@ -397,6 +406,20 @@ AllHentai — особый случай: там 404 без сессии отда
 поэтому источник бесполезен без авторизации (`SOURCE_AUTH_REQUIRED` на любой запрос), а не
 только деградирует на отдельных главах. Нужен отдельный аккаунт на `qawa.org` и
 `ALLHENTAI_USERNAME`/`ALLHENTAI_PASSWORD` в `.env`.
+
+### Desu: авторизация
+
+Всё открыто гостю; аккаунт (семейство `desu`, `optional`, без `loginBenefits`) нужен только
+импорту закладок — чтобы прочитать список именно этого человека. Вход — форма XenForo:
+`POST /login/login` (`login`, `password`, `remember=1`, `cookie_check=1`, пустой `_xfToken`,
+`redirect`), перед ней — `GET /login/`: с `cookie_check` запрос совсем без cookie (а jar аккаунта
+создаётся пустым) отвергается до проверки пароля — «должны быть включены cookie». Неверный
+пароль — 200 со страницей входа и `errorPanel` (его текст пишется в лог), принятый — редирект на
+`redirect`. Признак сессии и id аккаунта — `visitor: { user_id }` на странице
+(`sources/desu/auth.ts`). Истёкшая сессия при импорте с сохранённым паролем восстанавливается
+повторным входом. XenForo проверяет `_xfToken` у POST только вошедших, поэтому быстрый поиск
+(`POST /manga/search/`) всегда уходит гостем (`runWithSourceAccounts({})`) — от аккаунта пустой
+токен не прошёл бы.
 
 ### Nude-Moon: авторизация
 

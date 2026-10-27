@@ -1,6 +1,6 @@
 # Импорт из источника
 
-Статус: **Реализован** (разбор закладок — пока только LibSocial) · 2026-10-26
+Статус: **Реализован** (разбор закладок — пока LibSocial и Desu) · 2026-10-26
 Задача: `source-import` · ветка `feat/library-backup` · песочница `/playground/source-import`
 
 ## Зачем
@@ -345,7 +345,8 @@ type RawBookmark = {
 
 1. ◐ **Разведка сайтов** (без макетов): страницы/API закладок Grouple, AllHentai, LibSocial,
    Nude-Moon — папки, последняя глава, пагинация; фикстуры. LibSocial ✅ (2026-10-26, API — в
-   [03-parsers](../03-parsers.md)).
+   [03-parsers](../03-parsers.md)). Desu ✅ (2026-10-26): входа у него не было — добавлено
+   семейство `desu` со входом через форму XenForo, список — в [03-parsers](../03-parsers.md).
 2. ◐ **Парсеры:** `RawBookmarkFolder`/`RawBookmark`, `getBookmarks` в трёх движках, тесты.
 3. ✅ **Контракты:** `source-import.ts`, `SOURCE_IMPORT_PROGRESS_STATUS`, `SOURCE_IMPORT_FINISHED`.
 4. ✅ **API:** вынос общей записи из `BackupRestoreService`; `SourceImportModule` (preview, запись);
@@ -394,7 +395,7 @@ type RawBookmark = {
 ## Открытые вопросы
 
 - `getBookmarks` в движках Grouple, AllHentai и Nude-Moon — по образцам ответов сайтов (LibSocial
-  готов).
+  и Desu готовы).
 
 - Что именно отдаёт каждый сайт (папки, последняя глава) — выяснится на этапе 1; чего нет — то
   `null`, план не меняется.

@@ -29,7 +29,7 @@
       ([plans/source-import.md](plans/source-import.md)).
       [`ImportFromSourceModal/`](../apps/web/src/features/source-import/ImportFromSourceModal)
 - [ ] **Импорт из источника: разбор закладок сайтов** — `getBookmarks` готов в LibSocial
-      (MangaLib, HentaiLib); Grouple, AllHentai и Nude-Moon ждут образцов ответов сайтов с
+      (MangaLib, HentaiLib) и Desu; Grouple, AllHentai и Nude-Moon ждут образцов ответов сайтов с
       вошедшим аккаунтом. Пока метода нет, источник в модалке не выбирается («Импорт отсюда пока
       не поддерживается»).
 - [x] **«Удалить скачанные главы»** — всегда `disabled`, а `onClick` открывает модалку очистки

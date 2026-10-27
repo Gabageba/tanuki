@@ -556,7 +556,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -578,7 +578,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ```
 GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }
-POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon)
+POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu)
 POST   /source-accounts/libsocial/login { login, password, rememberPassword } → 204
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
 DELETE /source-accounts/:family → 204
@@ -587,8 +587,9 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
 ```
 
 - Аккаунт один на семейство. Grouple и AllHentai: сервер сам входит на SSO-шлюз и хранит
-  cookie jar. Nude-Moon — так же, но через форму входа самого сайта (`/setuser.php`, cookie
-  `fusion_user`). Пароль хранится, только если человек разрешил: тогда истёкшая сессия
+  cookie jar. Nude-Moon и Desu — так же, но через форму входа самого сайта (Nude-Moon —
+  `/setuser.php`, cookie `fusion_user`; Desu — `/login/login` XenForo, `user_id` посетителя на
+  странице). Пароль хранится, только если человек разрешил: тогда истёкшая сессия
   восстанавливается сама. LibSocial: учётка общая на всю сеть, но у MangaLib и HentaiLib свои
   OAuth-шлюзы, и токен каждый выдаёт свой. Аккаунт хранит токены по сайтам
   (`SourceAccount.sourceIds` — у каких сайтов токен есть), сайт без токена закрыт (`locked`),
