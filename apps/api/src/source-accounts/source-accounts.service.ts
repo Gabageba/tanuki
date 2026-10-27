@@ -47,7 +47,7 @@ const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamil
   family === SOURCE_AUTH_FAMILY.DESU;
 
 const isSessionFamily = (family: SourceAuthFamily): family is SessionAuthFamily =>
-  family === SOURCE_AUTH_FAMILY.INKSTORY;
+  family === SOURCE_AUTH_FAMILY.INUKO;
 
 /** Привязка и отвязка личных аккаунтов источников — то, что человек делает в настройках. */
 @Injectable()
@@ -106,9 +106,9 @@ export class SourceAccountsService {
   }
 
   /**
-   * Inkstory: вход на SSO inuko закрыт капчей для людей, поэтому человек входит на сайте сам и
-   * переносит cookie сессии. Сервер только проверяет, что сайт её узнаёт, — пароля нет, и
-   * истёкшую сессию человек переносит заново.
+   * Сеть inuko (Inkstory, PureManga): вход на SSO закрыт капчей для людей, поэтому человек входит
+   * на любом сайте сети сам и переносит cookie сессии. Сервер только проверяет, что один из сайтов
+   * её узнаёт, — пароля нет, и истёкшую сессию человек переносит заново.
    */
   async linkSession(userId: string, family: SourceAuthFamily, value: string): Promise<void> {
     if (!isSessionFamily(family)) throw new BadRequestApiException();

@@ -10,7 +10,7 @@ import {
   type SourceAccount,
   type SourceAuthFamily,
 } from '@tanuki/contracts';
-import LinkInkStoryModal from './LinkInkStoryModal';
+import LinkInukoModal from './LinkInukoModal';
 import LinkLibSocialModal from './LinkLibSocialModal';
 import LinkPasswordAccountModal from './LinkPasswordAccountModal';
 import useUnlinkSourceAccount from '../hooks/useUnlinkSourceAccount';
@@ -90,10 +90,10 @@ function SourceAccountStatusActions({
           onClose={close}
         />
       )}
-      {family === SOURCE_AUTH_FAMILY.INKSTORY && (
-        <LinkInkStoryModal source={sources[0]} opened={opened} onClose={close} />
+      {family === SOURCE_AUTH_FAMILY.INUKO && (
+        <LinkInukoModal source={sources[0]} opened={opened} onClose={close} />
       )}
-      {family !== SOURCE_AUTH_FAMILY.LIBSOCIAL && family !== SOURCE_AUTH_FAMILY.INKSTORY && (
+      {family !== SOURCE_AUTH_FAMILY.LIBSOCIAL && family !== SOURCE_AUTH_FAMILY.INUKO && (
         <LinkPasswordAccountModal family={family} opened={opened} onClose={close} />
       )}
     </>

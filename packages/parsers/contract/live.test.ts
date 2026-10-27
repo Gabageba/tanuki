@@ -50,6 +50,8 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   SOURCE_ID.REMANGA,
   SOURCE_ID.MANGABUFF,
   SOURCE_ID.INKSTORY,
+  // Same inuko network as INKSTORY (see sources/inuko/config.ts), behind the same DDoS-Guard.
+  SOURCE_ID.PUREMANGA,
   // COMX intentionally excluded: marked broken (`isBroken: true` in comx/index.ts) — every
   // request is gated behind a JS PoW + TLS/JA3 fingerprint challenge no undici client can pass.
   SOURCE_ID.TOMILOLIB,
@@ -68,7 +70,7 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   SOURCE_ID.MULTPORN_HENTAI,
 ];
 
-// REMANGA/MANGABUFF/INKSTORY/NUDEMOON: known-flaky in the nightly workflow specifically — their
+// REMANGA/MANGABUFF/INKSTORY/PUREMANGA/NUDEMOON: known-flaky in the nightly workflow specifically — their
 // Cloudflare/DDoS-Guard antibot (see looksLikeAntibotChallenge in core/http/classify.ts)
 // challenges GitHub Actions' shared runner IP ranges with a 403, but the exact same requests
 // pass from a residential IP (confirmed for NUDEMOON: g.nude-moon.fun returns 200 outside CI).
@@ -80,6 +82,7 @@ const CI_ANTIBOT_FLAKY_SOURCE_IDS: SourceId[] = [
   SOURCE_ID.REMANGA,
   SOURCE_ID.MANGABUFF,
   SOURCE_ID.INKSTORY,
+  SOURCE_ID.PUREMANGA,
   SOURCE_ID.NUDEMOON,
 ];
 

@@ -54,7 +54,9 @@ export class SourceAccountsController {
     await this.sourceAccounts.linkWithPassword(user.id, parseFamily(family), body);
   }
 
-  @ApiOperation({ summary: 'Привязывает аккаунт Inkstory cookie сессии из браузера' })
+  @ApiOperation({
+    summary: 'Привязывает аккаунт сети inuko (Inkstory, PureManga) cookie сессии из браузера',
+  })
   @ApiParam({ name: 'family' })
   @ApiBody({ type: LinkSourceSessionRequestDto })
   @HttpCode(HttpStatus.NO_CONTENT)

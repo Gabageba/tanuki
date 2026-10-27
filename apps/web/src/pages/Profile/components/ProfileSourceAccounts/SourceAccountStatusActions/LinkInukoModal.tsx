@@ -11,7 +11,7 @@ import ToneModal from '@/shared/ui/ToneModal';
 import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 import useLinkSourceSession from '../hooks/useLinkSourceSession';
 
-/** Cookie сессии inkstory.net — её человек и переносит. */
+/** Cookie сессии сайта сети inuko — её человек и переносит. */
 const SESSION_COOKIE = '__otaku_session';
 
 type Props = {
@@ -21,10 +21,11 @@ type Props = {
 };
 
 /**
- * Inkstory: вход на SSO сети закрыт капчей, поэтому сервер не входит сам — человек входит на
- * сайте в своём браузере и переносит cookie сессии.
+ * Сеть inuko (Inkstory, PureManga): вход на SSO сети закрыт капчей, поэтому сервер не входит
+ * сам — человек входит на сайте в своём браузере и переносит cookie сессии. Подходит cookie
+ * любого сайта сети: сервер пробует её на каждом.
  */
-function LinkInkStoryModal({ source, opened, onClose }: Props) {
+function LinkInukoModal({ source, opened, onClose }: Props) {
   const { t } = useTranslation();
   const linkSession = useLinkSourceSession();
 
@@ -40,7 +41,7 @@ function LinkInkStoryModal({ source, opened, onClose }: Props) {
 
   const handleSubmit = form.onSubmit((values) => {
     linkSession.mutate(
-      { family: SOURCE_AUTH_FAMILY.INKSTORY, ...values },
+      { family: SOURCE_AUTH_FAMILY.INUKO, ...values },
       {
         onSuccess: close,
         onError: (error) =>
@@ -58,7 +59,7 @@ function LinkInkStoryModal({ source, opened, onClose }: Props) {
       icon={SignInIcon}
       opened={opened}
       onClose={close}
-      title={t('logInToName', { name: getSourceAuthFamilyTitle(SOURCE_AUTH_FAMILY.INKSTORY) })}
+      title={t('logInToName', { name: getSourceAuthFamilyTitle(SOURCE_AUTH_FAMILY.INUKO) })}
     >
       <form onSubmit={handleSubmit}>
         <Stack>
@@ -119,4 +120,4 @@ function LinkInkStoryModal({ source, opened, onClose }: Props) {
   );
 }
 
-export default LinkInkStoryModal;
+export default LinkInukoModal;

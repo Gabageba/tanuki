@@ -352,7 +352,22 @@ export const SOURCE_CATALOG = {
     color: '#2B7FFF',
     // Всё открыто гостю; аккаунт нужен только импорту закладок. Вход на SSO inuko закрыт
     // Yandex SmartCaptcha, поэтому сессию сайта человек переносит из своего браузера.
-    authFamily: SOURCE_AUTH_FAMILY.INKSTORY,
+    authFamily: SOURCE_AUTH_FAMILY.INUKO,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
+    loginBenefits: [],
+  },
+  // Хентай-сайт той же сети inuko, что Inkstory: общий API, SSO и разметка — см. sources/inuko.
+  // Голый puremanga.me отвечает 404, сайт живёт на поддомене v1. (проверено 2026-10-27).
+  puremanga: {
+    title: 'PureManga',
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
+    isBroken: false,
+    isAdult: true,
+    requiresVpn: false,
+    domains: ['v1.puremanga.me'],
+    // Красный с логотипа: акцент самого сайта зависит от выбранной темы.
+    color: '#D22A4B',
+    authFamily: SOURCE_AUTH_FAMILY.INUKO,
     loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },

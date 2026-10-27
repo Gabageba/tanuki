@@ -60,11 +60,16 @@ type LiveAccount = {
   password: string | null;
 };
 
+/** Имя семейства INUKO до миграции 0032 — под ним зашифрованы уже привязанные аккаунты. */
+const LEGACY_INUKO_AAD_FAMILY = 'inkstory';
+
 /**
  * Ключ аккаунта в памяти и AAD его шифрования. Хвостовое `:` — след колонки source_id, которая
  * раньше входила в ключ: без него не расшифруются уже сохранённые аккаунты Grouple и AllHentai.
+ * По той же причине семейство INUKO входит в AAD под старым именем.
  */
-const accountKey = (userId: string, family: SourceAuthFamily) => `${userId}:${family}:`;
+const accountKey = (userId: string, family: SourceAuthFamily) =>
+  `${userId}:${family === SOURCE_AUTH_FAMILY.INUKO ? LEGACY_INUKO_AAD_FAMILY : family}:`;
 
 /**
  * Личные аккаунты пользователей на источниках: хранение (зашифрованно), живые сессии в памяти

@@ -23,12 +23,13 @@ import { CHAN_CONFIGS } from './sources/chan/config';
 import { createChanParser } from './sources/chan/engine';
 import { createRemangaParser } from './sources/remanga';
 import { createMangaBuffParser } from './sources/mangabuff';
-import { createInkStoryParser } from './sources/inkstory';
+import { INUKO_CONFIGS } from './sources/inuko/config';
+import { createInukoParser } from './sources/inuko/engine';
 import {
-  createInkStorySessionJar,
-  fetchInkStoryViewer,
-  parseInkStorySessionValue,
-} from './sources/inkstory/auth';
+  createInukoSessionJar,
+  fetchInukoViewer,
+  parseInukoSessionValue,
+} from './sources/inuko/auth';
 import { createComxParser } from './sources/comx';
 import { createTomiloLibParser } from './sources/tomilolib';
 import { createWaMangaParser } from './sources/wamanga';
@@ -74,6 +75,7 @@ const LIBSOCIAL_IDS = new Set<string>([SOURCE_ID.MANGALIB, SOURCE_ID.HENTAILIB, 
 const FILTERS_SUPPORTED_IDS = new Set<SourceId>([
   SOURCE_ID.DESUME,
   SOURCE_ID.INKSTORY,
+  SOURCE_ID.PUREMANGA,
   SOURCE_ID.MANGABUFF,
   SOURCE_ID.MANGACHAN,
   SOURCE_ID.HENCHAN,
@@ -95,7 +97,6 @@ const SINGLE_SOURCE_FACTORIES: Record<string, (ctx: ParserContext) => Parser> = 
   [SOURCE_ID.DESUME]: createDesuParser,
   [SOURCE_ID.REMANGA]: createRemangaParser,
   [SOURCE_ID.MANGABUFF]: createMangaBuffParser,
-  [SOURCE_ID.INKSTORY]: createInkStoryParser,
   [SOURCE_ID.COMX]: createComxParser,
   [SOURCE_ID.TOMILOLIB]: createTomiloLibParser,
   [SOURCE_ID.WAMANGA]: createWaMangaParser,
@@ -113,6 +114,7 @@ const buildDescriptor = (id: SourceId): SourceDescriptor => {
   const chanConfig = CHAN_CONFIGS.find((c) => c.id === id);
   const multpornConfig = MULTPORN_CONFIGS.find((c) => c.id === id);
   const senkuroConfig = SENKURO_CONFIGS.find((c) => c.id === id);
+  const inukoConfig = INUKO_CONFIGS.find((c) => c.id === id);
 
   const info: RawSourceInfo = {
     id,
@@ -192,6 +194,15 @@ const buildDescriptor = (id: SourceId): SourceDescriptor => {
       create: (ctx) => createSenkuroParser(senkuroConfig, ctx),
     };
   }
+  if (inukoConfig) {
+    return {
+      info,
+      domains,
+      cookieScope: cookieScopeFor(id),
+      defaultHeaders: {},
+      create: (ctx) => createInukoParser(inukoConfig, ctx),
+    };
+  }
   const singleSourceFactory = SINGLE_SOURCE_FACTORIES[id];
   if (singleSourceFactory) {
     return {
@@ -230,7 +241,7 @@ export type PasswordAuthFamily =
  * Семейства, вход в которые закрыт капчей для людей: человек входит в своём браузере и
  * переносит cookie сессии, сервер её только проверяет.
  */
-export type SessionAuthFamily = typeof SOURCE_AUTH_FAMILY.INKSTORY;
+export type SessionAuthFamily = typeof SOURCE_AUTH_FAMILY.INUKO;
 
 /** Принятая сессия: jar для аккаунта и имя, под которым человек вошёл на сайт. */
 export type LinkedSession = { jar: CookieJar; login: string };
@@ -250,8 +261,10 @@ export type ParsersRegistry = {
     credentials: GroupleCredentials,
   ): Promise<CookieJar | null>;
   /**
-   * Проверяет перенесённую из браузера cookie сессии: открывает сайт с ней в свежем jar и
-   * смотрит, кого сайт узнал. null — значение не похоже на сессию или сайт видит гостя.
+   * Проверяет перенесённую из браузера cookie сессии: открывает сайты семейства с ней в свежем
+   * jar и смотрит, кого сайт узнал. Cookie host-only, а с какого сайта сети её сняли, неизвестно,
+   * — принимается первый домен, на котором сайт узнал человека, и jar хранит cookie на нём.
+   * null — значение не похоже на сессию или ни один сайт не узнал человека.
    */
   linkSession(family: SessionAuthFamily, value: string): Promise<LinkedSession | null>;
   /**
@@ -433,23 +446,38 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         await http.close();
       }
     },
-    async linkSession(_family, value) {
-      const session = parseInkStorySessionValue(value);
+    async linkSession(family, value) {
+      const session = parseInukoSessionValue(value);
       if (!session) return null;
-      const domain = SOURCES[SOURCE_ID.INKSTORY].domains[0];
-      const jar = await createInkStorySessionJar(domain, session);
-      const http = new HttpClientImpl({
-        sourceId: SOURCE_ID.INKSTORY,
-        jar,
-        defaultHeaders: SOURCES[SOURCE_ID.INKSTORY].defaultHeaders,
-        timeouts: opts.timeouts,
-      });
-      try {
-        const viewer = await fetchInkStoryViewer(http, domain);
-        return viewer ? { jar, login: viewer.username } : null;
-      } finally {
-        await http.close();
+      const memberIds = SOURCE_IDS.filter((id) => SOURCE_CATALOG[id].authFamily === family);
+      // Ошибка сети пробрасывается, только если не ответил ни один сайт: гость на доступном
+      // сайте — это неподошедшая cookie, а не недоступный источник.
+      let lastError: unknown = null;
+      let isAnswered = false;
+      for (const sourceId of memberIds) {
+        const domain = SOURCES[sourceId].domains[0];
+        const jar = await createInukoSessionJar(domain, session);
+        const http = new HttpClientImpl({
+          sourceId,
+          jar,
+          defaultHeaders: SOURCES[sourceId].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const viewer = await fetchInukoViewer(http, domain);
+          isAnswered = true;
+          if (viewer) return { jar, login: viewer.username };
+        } catch (err) {
+          lastError = err;
+          opts.logger.warn(
+            `linkSession failed on ${domain}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        } finally {
+          await http.close();
+        }
       }
+      if (!isAnswered && lastError) throw lastError;
+      return null;
     },
     async fetchLibSocialAccountName(sourceId, store) {
       const cfg = LIBSOCIAL_CONFIGS.find((config) => config.id === sourceId);

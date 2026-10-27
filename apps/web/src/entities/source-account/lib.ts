@@ -24,8 +24,8 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
       return 'Nude-Moon';
     case SOURCE_AUTH_FAMILY.DESU:
       return 'Desu';
-    case SOURCE_AUTH_FAMILY.INKSTORY:
-      return 'Inkstory';
+    case SOURCE_AUTH_FAMILY.INUKO:
+      return 'Inuko';
   }
 };
 

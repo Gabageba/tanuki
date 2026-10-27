@@ -225,6 +225,13 @@
       "when": 1793089434783,
       "tag": "0031_title_snapshot_chapters_count",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793104923315,
+      "tag": "0032_inuko_family",
+      "breakpoints": true
     }
   ]
 }

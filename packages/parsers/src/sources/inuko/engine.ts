@@ -8,7 +8,6 @@ import {
   RANGE_FORMAT,
   SORT_DIRECTION,
   SORT_ORDER,
-  SOURCE_CONTENT_TYPE,
   type TitleState,
   SOURCE_LOCALE,
   type TitleType,
@@ -46,16 +45,16 @@ import { toTitleCase } from '../../core/text/strings';
 import { ParseError, SourceAuthRequiredError } from '../../errors';
 import { currentSourceAccount } from '../../core/source-accounts';
 import { UserAgents } from '../../core/http/user-agents';
-import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { catalogEntryFor } from '../catalog';
 import { parseHtml } from '../../core/html/dom';
 import { findHomeHeading } from '../../core/html/home';
 import { attrOrNull, textOrNull } from '../../core/html/selectors';
 import { parseFloatOrNull } from '../../core/text/numbers';
 import { nullIfEmpty } from '../../core/text/strings';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
-import { fetchInkStoryViewer } from './auth';
+import { fetchInukoViewer, findInukoSessionDomain } from './auth';
+import type { InukoConfig } from './config';
 
-const SOURCE_ID = CATALOG_SOURCE_ID.INKSTORY;
 const PAGE_SIZE = 20;
 const FIRST_PAGE = 0;
 const DECRYPTION_KEY_TTL_MS = 10 * 60 * 1000;
@@ -66,41 +65,42 @@ const LIBRARY_MAX_PAGES = 100;
 /** Сколько запросов по одному тайтлу (глава закладки, скрытая книга) уходит разом. */
 const LIBRARY_REQUESTS_BATCH = 8;
 
-/** The per-site `api.<domain>` host is gone (it doesn't even resolve any more): the site now runs
- *  on the shared "inuko" platform — sso.inuko.me, static.inuko.me — whose single API serves every
- *  sibling site (puremanga, hexnovels, zenmanga, manga.ovh) out of one catalog. `serviceName` is
- *  what scopes a listing back down to this one; without it the feeds come back empty. */
+/** The per-site `api.<domain>` host is gone (it doesn't even resolve any more): every site of
+ *  the "inuko" network — sso.inuko.me, static.inuko.me — reads one API serving every sibling site
+ *  (inkstory, puremanga, hexnovels, zenmanga, manga.ovh) out of one catalog. `serviceName` (see
+ *  InukoConfig) is what scopes a listing back down to one site; without it the feeds come back
+ *  empty. */
 const API_HOST = 'api.inuko.me';
-const SERVICE_NAME = 'inkstory';
 
-/** Блоки главной inkstory.net — проверено вживую 2026-10-12. Онгоинги и завершённые подобраны
- *  сайтом (с сортировками API не совпадают) — берутся из SSR-разметки; «Последние обновления»
- *  дорисовываются в браузере — их отдаёт та же лента глав, что сортировка каталога «обновлено». */
-export const INKSTORY_HOME_SECTION = {
+/** Блоки главной — одни на всю сеть: inkstory.net проверен вживую 2026-10-12, v1.puremanga.me —
+ *  2026-10-27. Онгоинги и завершённые подобраны сайтом (с сортировками API не совпадают) —
+ *  берутся из SSR-разметки; «Последние обновления» дорисовываются в браузере — их отдаёт та же
+ *  лента глав, что сортировка каталога «обновлено». */
+export const INUKO_HOME_SECTION = {
   POPULAR_ONGOINGS: 'popularOngoings',
   BEST_FINISHED: 'bestFinished',
   RECENTLY_ADDED: 'recentlyAdded',
   LATEST_UPDATES: 'latestUpdates',
 } as const;
 
-const INKSTORY_HOME_SECTIONS = [
+const INUKO_HOME_SECTIONS = [
   {
-    id: INKSTORY_HOME_SECTION.POPULAR_ONGOINGS,
+    id: INUKO_HOME_SECTION.POPULAR_ONGOINGS,
     title: 'Популярные онгоинги',
     kind: HOME_SECTION_KIND.POPULAR,
   },
   {
-    id: INKSTORY_HOME_SECTION.BEST_FINISHED,
+    id: INUKO_HOME_SECTION.BEST_FINISHED,
     title: 'Лучшие завершенные',
     kind: HOME_SECTION_KIND.TOP,
   },
   {
-    id: INKSTORY_HOME_SECTION.RECENTLY_ADDED,
+    id: INUKO_HOME_SECTION.RECENTLY_ADDED,
     title: 'Недавно добавлено',
     kind: HOME_SECTION_KIND.NEW,
   },
   {
-    id: INKSTORY_HOME_SECTION.LATEST_UPDATES,
+    id: INUKO_HOME_SECTION.LATEST_UPDATES,
     title: 'Последние обновления каталога',
     kind: HOME_SECTION_KIND.UPDATES,
   },
@@ -109,7 +109,7 @@ const INKSTORY_HOME_SECTIONS = [
 /** Обложка карточки — `static.inuko.me/book/<id книги>/poster/...`: id книги тот же, что в API. */
 const BOOK_ID_FROM_COVER_REGEX = /\/book\/([0-9a-f-]{36})\//;
 
-export const INKSTORY_FILTER_GROUP = {
+export const INUKO_FILTER_GROUP = {
   GENRE: FILTER_GROUP.GENRE,
   STATUS: FILTER_GROUP.STATUS,
   CONTENT_STATUS: FILTER_GROUP.CONTENT_STATUS,
@@ -332,7 +332,7 @@ const toStaticOptions = (keys: string[], getTitle: (key: string) => string): Raw
 /** Mirrors the site's own catalog sort dropdown (6 native `/v2/books` sort fields) — RATING
  *  is the site's real averageRating field, not likesCount, which is its own separate LIKES
  *  option. bookmarksCount is inferred from the same `<noun>Count` naming as views/likes/chapters.
- *  Inkstory is the only source in this repo whose native `sort` param already accepts a plain
+ *  The inuko network is the only one in this repo whose native `sort` param already accepts a plain
  *  `<field>,<asc|desc>` pair, so it's the only one that actually honors ListParams.direction —
  *  see Source.supportsDirection. */
 const getSortKey = (order: string | undefined, direction: string | undefined): string => {
@@ -461,7 +461,7 @@ const parseIsoDate = (value: string | undefined): number => {
   return Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s), ms);
 };
 
-const getInkStoryTypeKeys = (value: TitleType): string[] => {
+const getInukoTypeKeys = (value: TitleType): string[] => {
   switch (value) {
     case TITLE_TYPE.MANGA:
       return ['JAPAN'];
@@ -476,7 +476,7 @@ const getInkStoryTypeKeys = (value: TitleType): string[] => {
   }
 };
 
-const getInkStoryStateKeys = (value: TitleState): string[] => {
+const getInukoStateKeys = (value: TitleState): string[] => {
   switch (value) {
     case TITLE_STATE.ONGOING:
       return ['ONGOING'];
@@ -493,21 +493,23 @@ const getInkStoryStateKeys = (value: TitleState): string[] => {
 
 /** Search criteria -> this source's own filter groups (see resolveSearchFilters). */
 const SEARCH_FILTER_SPEC: SearchFilterSpec = {
-  types: { groupId: INKSTORY_FILTER_GROUP.COUNTRY, isMultiple: true, getKeys: getInkStoryTypeKeys },
+  types: { groupId: INUKO_FILTER_GROUP.COUNTRY, isMultiple: true, getKeys: getInukoTypeKeys },
   states: {
-    groupId: INKSTORY_FILTER_GROUP.STATUS,
+    groupId: INUKO_FILTER_GROUP.STATUS,
     isMultiple: true,
-    getKeys: getInkStoryStateKeys,
+    getKeys: getInukoStateKeys,
   },
 };
 
-export const createInkStoryParser = (ctx: ParserContext): Parser => {
+export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Parser => {
+  const SOURCE_ID = config.id;
+  const catalogEntry = catalogEntryFor(SOURCE_ID);
   const domain = ctx.domain;
   let cachedDecryptionKey: { key: string; fetchedAt: number } | null = null;
 
   const apiUrl = (path: string): URL => {
     const url = new URL(`https://${API_HOST}${path}`);
-    url.searchParams.set('serviceName', SERVICE_NAME);
+    url.searchParams.set('serviceName', config.serviceName);
     return url;
   };
 
@@ -520,7 +522,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     const match = /decryptionKey:\s*"([^"]+)"/.exec(res.text());
     if (!match)
       throw new ParseError(
-        `inkstory decryptionKey not found in SSR payload: https://${domain}/`,
+        `${SOURCE_ID} decryptionKey not found in SSR payload: https://${domain}/`,
         SOURCE_ID,
       );
     return match[1]!;
@@ -609,13 +611,13 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
   ): void => {
     let param: string;
     switch (groupId) {
-      case INKSTORY_FILTER_GROUP.AVERAGE_RATING:
+      case INUKO_FILTER_GROUP.AVERAGE_RATING:
         param = 'averageRating';
         break;
-      case INKSTORY_FILTER_GROUP.YEAR:
+      case INUKO_FILTER_GROUP.YEAR:
         param = 'year';
         break;
-      case INKSTORY_FILTER_GROUP.CHAPTERS_COUNT:
+      case INUKO_FILTER_GROUP.CHAPTERS_COUNT:
         param = 'chaptersCount';
         break;
       default:
@@ -640,19 +642,19 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         continue;
       }
       switch (filter.groupId) {
-        case INKSTORY_FILTER_GROUP.GENRE:
+        case INUKO_FILTER_GROUP.GENRE:
           url.searchParams.append(filter.exclude ? 'labelsExclude' : 'labelsInclude', filter.key);
           break;
-        case INKSTORY_FILTER_GROUP.STATUS:
+        case INUKO_FILTER_GROUP.STATUS:
           url.searchParams.append('status', filter.key);
           break;
-        case INKSTORY_FILTER_GROUP.CONTENT_STATUS:
+        case INUKO_FILTER_GROUP.CONTENT_STATUS:
           url.searchParams.append('contentStatus', filter.key);
           break;
-        case INKSTORY_FILTER_GROUP.COUNTRY:
+        case INUKO_FILTER_GROUP.COUNTRY:
           url.searchParams.append('country', filter.key);
           break;
-        case INKSTORY_FILTER_GROUP.FORMAT:
+        case INUKO_FILTER_GROUP.FORMAT:
           url.searchParams.append('formats', filter.key);
           break;
       }
@@ -673,31 +675,31 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     const yearMax = new Date().getFullYear();
     return [
       {
-        id: INKSTORY_FILTER_GROUP.GENRE,
+        id: INUKO_FILTER_GROUP.GENRE,
         title: 'Жанры',
         type: FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE,
         options: genres.map((l) => ({ key: l.slug, title: toTitleCase(l.name), count: null })),
       },
       {
-        id: INKSTORY_FILTER_GROUP.STATUS,
+        id: INUKO_FILTER_GROUP.STATUS,
         title: 'Статус',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(STATUS_KEYS, getStatusTitle),
       },
       {
-        id: INKSTORY_FILTER_GROUP.CONTENT_STATUS,
+        id: INUKO_FILTER_GROUP.CONTENT_STATUS,
         title: 'Возрастное ограничение',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(CONTENT_STATUS_KEYS, getContentStatusTitle),
       },
       {
-        id: INKSTORY_FILTER_GROUP.COUNTRY,
+        id: INUKO_FILTER_GROUP.COUNTRY,
         title: 'Страна',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(COUNTRY_KEYS, getCountryTitle),
       },
       {
-        id: INKSTORY_FILTER_GROUP.FORMAT,
+        id: INUKO_FILTER_GROUP.FORMAT,
         title: 'Формат выпуска',
         type: FILTER_TYPE.CHECKBOX,
         options: toStaticOptions(FORMAT_KEYS, getFormatTitle),
@@ -706,14 +708,14 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       // rating and chapter count are hardcoded there too, only the year cap tracks the current
       // year at each of their deploys, so it's computed here instead of pinned to today's value.
       {
-        id: INKSTORY_FILTER_GROUP.AVERAGE_RATING,
+        id: INUKO_FILTER_GROUP.AVERAGE_RATING,
         title: 'Рейтинг',
         type: FILTER_TYPE.RANGE,
         options: [],
         settings: { range: { min: 0, max: 10 }, presets: RATING_PRESETS },
       },
       {
-        id: INKSTORY_FILTER_GROUP.YEAR,
+        id: INUKO_FILTER_GROUP.YEAR,
         title: 'Год выпуска',
         type: FILTER_TYPE.RANGE,
         options: [],
@@ -723,7 +725,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         },
       },
       {
-        id: INKSTORY_FILTER_GROUP.CHAPTERS_COUNT,
+        id: INUKO_FILTER_GROUP.CHAPTERS_COUNT,
         title: 'Число глав',
         type: FILTER_TYPE.RANGE,
         options: [],
@@ -793,7 +795,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
         branchPromise = getBranchName(jo.branchId);
         branchNames.set(jo.branchId, branchPromise);
       }
-      // Ветка у Inkstory и есть команда перевода — остальные источники с ветками (grouple,
+      // Ветка у сайтов inuko и есть команда перевода — остальные источники с ветками (grouple,
       // libsocial, remanga) отдают то же имя и в scanlator, поэтому оно дублируется и здесь.
       const branch = await branchPromise;
       chapters.push({
@@ -911,20 +913,15 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       });
       return uniqueByUrl(cards.filter((item): item is RawTitle => item !== null));
     };
-    const titleOf = (id: string) =>
-      INKSTORY_HOME_SECTIONS.find((section) => section.id === id)!.title;
+    const titleOf = (id: string) => INUKO_HOME_SECTIONS.find((section) => section.id === id)!.title;
 
-    return toHomeSections(INKSTORY_HOME_SECTIONS, {
-      [INKSTORY_HOME_SECTION.POPULAR_ONGOINGS]: cardsAfter(
-        titleOf(INKSTORY_HOME_SECTION.POPULAR_ONGOINGS),
+    return toHomeSections(INUKO_HOME_SECTIONS, {
+      [INUKO_HOME_SECTION.POPULAR_ONGOINGS]: cardsAfter(
+        titleOf(INUKO_HOME_SECTION.POPULAR_ONGOINGS),
       ),
-      [INKSTORY_HOME_SECTION.BEST_FINISHED]: cardsAfter(
-        titleOf(INKSTORY_HOME_SECTION.BEST_FINISHED),
-      ),
-      [INKSTORY_HOME_SECTION.RECENTLY_ADDED]: cardsAfter(
-        titleOf(INKSTORY_HOME_SECTION.RECENTLY_ADDED),
-      ),
-      [INKSTORY_HOME_SECTION.LATEST_UPDATES]: latestUpdates,
+      [INUKO_HOME_SECTION.BEST_FINISHED]: cardsAfter(titleOf(INUKO_HOME_SECTION.BEST_FINISHED)),
+      [INUKO_HOME_SECTION.RECENTLY_ADDED]: cardsAfter(titleOf(INUKO_HOME_SECTION.RECENTLY_ADDED)),
+      [INUKO_HOME_SECTION.LATEST_UPDATES]: latestUpdates,
     });
   };
 
@@ -934,7 +931,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     id: string,
     { page }: RawHomeSectionParams,
   ): Promise<RawHomeSectionPage | null> => {
-    if (id !== INKSTORY_HOME_SECTION.LATEST_UPDATES) return null;
+    if (id !== INUKO_HOME_SECTION.LATEST_UPDATES) return null;
     const items = await fetchUpdatedPage(FIRST_PAGE + page - 1);
     return { items, hasNextPage: items.length >= PAGE_SIZE };
   };
@@ -1024,22 +1021,27 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     return positions;
   };
 
-  /** Id аккаунта, от которого идут запросы, — по разметке страницы с его cookie сессии. */
+  /**
+   * Id аккаунта, от которого идут запросы, — по разметке страницы с его cookie сессии. Cookie
+   * лежит на домене того сайта сети, с которого её перенесли, а не обязательно на этом: id
+   * пользователя в сети общий, поэтому страница открывается на домене из jar.
+   */
   const resolveLibraryOwnerId = async (): Promise<string> => {
-    const account = currentSourceAccount(SOURCE_AUTH_FAMILY.INKSTORY);
+    const account = currentSourceAccount(SOURCE_AUTH_FAMILY.INUKO);
     // Без аккаунта пользователя запрос ушёл бы гостем — чью библиотеку брать, неизвестно.
-    if (!account?.jar) {
+    const sessionDomain = account?.jar ? await findInukoSessionDomain(account.jar) : null;
+    if (!sessionDomain) {
       throw new SourceAuthRequiredError('Bookmarks require the user’s own account', SOURCE_ID);
     }
-    const viewer = await fetchInkStoryViewer(ctx.http, domain);
-    if (!viewer) throw new SourceAuthRequiredError('Inkstory session expired', SOURCE_ID);
+    const viewer = await fetchInukoViewer(ctx.http, sessionDomain);
+    if (!viewer) throw new SourceAuthRequiredError('Inuko session expired', SOURCE_ID);
     return viewer.id;
   };
 
   /**
    * Папки библиотеки аккаунта. Сами папки и их книги API отдаёт по id пользователя, без
    * авторизации, — сессия нужна только узнать, чей это аккаунт. `serviceName` оставляет книги
-   * одного inkstory: сайт может показывать в библиотеке и книги соседних сайтов сети.
+   * одного сайта: библиотека у пользователя сети общая, в ней лежат книги всех её сайтов.
    */
   const getBookmarks = async (): Promise<RawBookmarkFolder[]> => {
     const userId = await resolveLibraryOwnerId();
@@ -1088,13 +1090,13 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     id: SOURCE_ID,
     info: {
       id: SOURCE_ID,
-      title: 'Inkstory',
+      title: catalogEntry.title,
       domain,
       locale: SOURCE_LOCALE.RU,
-      contentType: SOURCE_CONTENT_TYPE.MANGA,
-      isBroken: false,
-      isAdult: false,
-      requiresVpn: false,
+      contentType: catalogEntry.contentType,
+      isBroken: catalogEntry.isBroken,
+      isAdult: catalogEntry.isAdult,
+      requiresVpn: catalogEntry.requiresVpn,
       sortOrders: [
         SORT_ORDER.POPULARITY,
         SORT_ORDER.UPDATED,
@@ -1109,7 +1111,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
       isMultipleTagsSupported: true,
       isFiltersSupported: true,
       isSearchWithFiltersSupported: true,
-      homeSections: INKSTORY_HOME_SECTIONS,
+      homeSections: INUKO_HOME_SECTIONS,
     },
     getList,
     getDetails,

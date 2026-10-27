@@ -4,14 +4,20 @@ import {
   BUILT_IN_BOOKMARK_FOLDER,
   CONTENT_RATING,
   FILTER_TYPE,
+  SOURCE_CONTENT_TYPE,
   SOURCE_AUTH_FAMILY,
   TITLE_RESTRICTION,
   TITLE_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
 } from '@tanuki/contracts';
-import { createInkStoryParser, INKSTORY_FILTER_GROUP } from '../src/sources/inkstory';
-import { parseInkStorySessionValue, parseInkStoryViewer } from '../src/sources/inkstory/auth';
+import { createInukoParser, INUKO_FILTER_GROUP } from '../src/sources/inuko/engine';
+import { INUKO_CONFIGS } from '../src/sources/inuko/config';
+import {
+  createInukoSessionJar,
+  parseInukoSessionValue,
+  parseInukoViewer,
+} from '../src/sources/inuko/auth';
 import { runWithSourceAccounts } from '../src/core/source-accounts';
 import { SourceAuthRequiredError } from '../src/errors';
 import { SOURCE_ID } from '../src/sources/catalog';
@@ -21,10 +27,14 @@ import { readFixture } from './support/fixtures';
 import { checkHome } from './support/home';
 
 const DOMAIN = 'inkstory.net';
+const PUREMANGA_DOMAIN = 'v1.puremanga.me';
 // The site's own api.<domain> host is gone — every sibling site of the "inuko" platform now reads
-// one shared API, scoped per site by `serviceName`. See createInkStoryParser.
+// one shared API, scoped per site by `serviceName`. See createInukoParser.
 const API_HOST = 'api.inuko.me';
 const SERVICE_NAME = 'inkstory';
+const PUREMANGA_SERVICE_NAME = 'puremanga.me';
+const INKSTORY_CONFIG = INUKO_CONFIGS.find(({ id }) => id === SOURCE_ID.INKSTORY)!;
+const PUREMANGA_CONFIG = INUKO_CONFIGS.find(({ id }) => id === SOURCE_ID.PUREMANGA)!;
 const MANGA_ID = 'aaaa-bbbb-1111';
 
 const LIST_MANGA_JSON = {
@@ -47,7 +57,7 @@ const LIST_MANGA_JSON = {
 };
 
 // /v2/books?sort=updatedAt,desc sorts by book metadata edits, not chapter releases, so the
-// default 'UPDATED' order reads this feed of latest chapter drops instead — see createInkStoryParser.
+// default 'UPDATED' order reads this feed of latest chapter drops instead — see createInukoParser.
 const UPDATED_FEED_JSON = JSON.stringify([{ book: LIST_MANGA_JSON }]);
 
 const LIST_JSON = JSON.stringify([LIST_MANGA_JSON]);
@@ -107,10 +117,10 @@ const xor = (bytes: Buffer, key: string): Buffer => {
   return Buffer.from(bytes.map((b, i) => b ^ keyBytes[i % keyBytes.length]!));
 };
 
-const makeContext = (http: FakeHttpClient): ParserContext => {
+const makeContext = (http: FakeHttpClient, domain = DOMAIN): ParserContext => {
   return {
     http,
-    domain: DOMAIN,
+    domain,
     jar: new CookieJar(),
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     credentials: {},
@@ -164,7 +174,7 @@ const setUpFixtures = (): FakeHttpClient => {
 
 describe('Inkstory parser conformance', () => {
   const http = setUpFixtures();
-  const parser = createInkStoryParser(makeContext(http));
+  const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
 
   it('getList: chapters null, rating in 0..1, url relative, id a safe integer', async () => {
     const items = await parser.getList({ offset: 0, limit: 20 });
@@ -241,7 +251,7 @@ describe('Inkstory parser conformance', () => {
 
   it('every API request names the service — the shared platform API is not scoped by host', async () => {
     const freshHttp = setUpFixtures();
-    const freshParser = createInkStoryParser(makeContext(freshHttp));
+    const freshParser = createInukoParser(INKSTORY_CONFIG, makeContext(freshHttp));
     await freshParser.getList({ offset: 0, limit: 20 });
     await freshParser.getList({ offset: 0, limit: 20, order: SORT_ORDER.POPULARITY });
     await freshParser.getDetails(MANGA_ID);
@@ -258,24 +268,24 @@ describe('Inkstory parser conformance', () => {
   it('getFilters: genre from /v2/labels (COLLECTION kind excluded) plus static and range groups', async () => {
     const groups = await parser.getFilters!();
     expect(groups.map((g) => g.id)).toEqual([
-      INKSTORY_FILTER_GROUP.GENRE,
-      INKSTORY_FILTER_GROUP.STATUS,
-      INKSTORY_FILTER_GROUP.CONTENT_STATUS,
-      INKSTORY_FILTER_GROUP.COUNTRY,
-      INKSTORY_FILTER_GROUP.FORMAT,
-      INKSTORY_FILTER_GROUP.AVERAGE_RATING,
-      INKSTORY_FILTER_GROUP.YEAR,
-      INKSTORY_FILTER_GROUP.CHAPTERS_COUNT,
+      INUKO_FILTER_GROUP.GENRE,
+      INUKO_FILTER_GROUP.STATUS,
+      INUKO_FILTER_GROUP.CONTENT_STATUS,
+      INUKO_FILTER_GROUP.COUNTRY,
+      INUKO_FILTER_GROUP.FORMAT,
+      INUKO_FILTER_GROUP.AVERAGE_RATING,
+      INUKO_FILTER_GROUP.YEAR,
+      INUKO_FILTER_GROUP.CHAPTERS_COUNT,
     ]);
 
-    const genre = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.GENRE)!;
+    const genre = groups.find((g) => g.id === INUKO_FILTER_GROUP.GENRE)!;
     expect(genre.type).toBe(FILTER_TYPE.SEARCHABLE_CHECKBOX_EXCLUDE);
     expect(genre.options).toEqual([
       { key: 'vampires', title: 'Вампиры', count: null },
       { key: 'harem', title: 'Гарем', count: null },
     ]);
 
-    const status = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.STATUS)!;
+    const status = groups.find((g) => g.id === INUKO_FILTER_GROUP.STATUS)!;
     expect(status.type).toBe(FILTER_TYPE.CHECKBOX);
     expect(status.options).toEqual([
       { key: 'ONGOING', title: 'Онгоинг', count: null },
@@ -284,7 +294,7 @@ describe('Inkstory parser conformance', () => {
       { key: 'ANNOUNCE', title: 'Анонс', count: null },
     ]);
 
-    const contentStatus = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.CONTENT_STATUS)!;
+    const contentStatus = groups.find((g) => g.id === INUKO_FILTER_GROUP.CONTENT_STATUS)!;
     expect(contentStatus.options.map((o) => o.key)).toEqual([
       'SAFE',
       'UNSAFE',
@@ -292,7 +302,7 @@ describe('Inkstory parser conformance', () => {
       'PORNOGRAPHIC',
     ]);
 
-    const country = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.COUNTRY)!;
+    const country = groups.find((g) => g.id === INUKO_FILTER_GROUP.COUNTRY)!;
     expect(country.options).toEqual([
       { key: 'RUSSIA', title: 'Россия', count: null },
       { key: 'JAPAN', title: 'Япония', count: null },
@@ -301,7 +311,7 @@ describe('Inkstory parser conformance', () => {
       { key: 'OTHER', title: 'Другая', count: null },
     ]);
 
-    const format = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.FORMAT)!;
+    const format = groups.find((g) => g.id === INUKO_FILTER_GROUP.FORMAT)!;
     expect(format.options.map((o) => o.key)).toEqual([
       'FOURTH_KOMA',
       'COMPILATION',
@@ -314,7 +324,7 @@ describe('Inkstory parser conformance', () => {
       'WEB',
     ]);
 
-    const averageRating = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.AVERAGE_RATING)!;
+    const averageRating = groups.find((g) => g.id === INUKO_FILTER_GROUP.AVERAGE_RATING)!;
     expect(averageRating.type).toBe(FILTER_TYPE.RANGE);
     expect(averageRating.options).toEqual([]);
     expect(averageRating.settings?.range).toEqual({ min: 0, max: 10 });
@@ -324,7 +334,7 @@ describe('Inkstory parser conformance', () => {
       { id: '7-plus', label: '7+', min: 7 },
     ]);
 
-    const chaptersCount = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.CHAPTERS_COUNT)!;
+    const chaptersCount = groups.find((g) => g.id === INUKO_FILTER_GROUP.CHAPTERS_COUNT)!;
     expect(chaptersCount.type).toBe(FILTER_TYPE.RANGE);
     expect(chaptersCount.settings?.range).toEqual({ min: 0, max: 10000 });
     expect(chaptersCount.settings?.presets).toEqual([
@@ -337,7 +347,7 @@ describe('Inkstory parser conformance', () => {
 
     const currentYear = new Date().getFullYear();
     const currentDecadeStart = Math.floor(currentYear / 10) * 10;
-    const year = groups.find((g) => g.id === INKSTORY_FILTER_GROUP.YEAR)!;
+    const year = groups.find((g) => g.id === INUKO_FILTER_GROUP.YEAR)!;
     expect(year.type).toBe(FILTER_TYPE.RANGE);
     expect(year.settings!.range.min).toBe(1950);
     expect(year.settings!.range.max).toBe(currentYear);
@@ -367,13 +377,13 @@ describe('Inkstory parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: INKSTORY_FILTER_GROUP.STATUS, key: 'ONGOING' },
-        { groupId: INKSTORY_FILTER_GROUP.STATUS, key: 'DONE' },
-        { groupId: INKSTORY_FILTER_GROUP.GENRE, key: 'vampires' },
-        { groupId: INKSTORY_FILTER_GROUP.GENRE, key: 'harem', exclude: true },
-        { groupId: INKSTORY_FILTER_GROUP.CONTENT_STATUS, key: 'SAFE' },
-        { groupId: INKSTORY_FILTER_GROUP.COUNTRY, key: 'JAPAN' },
-        { groupId: INKSTORY_FILTER_GROUP.FORMAT, key: 'WEBTOON' },
+        { groupId: INUKO_FILTER_GROUP.STATUS, key: 'ONGOING' },
+        { groupId: INUKO_FILTER_GROUP.STATUS, key: 'DONE' },
+        { groupId: INUKO_FILTER_GROUP.GENRE, key: 'vampires' },
+        { groupId: INUKO_FILTER_GROUP.GENRE, key: 'harem', exclude: true },
+        { groupId: INUKO_FILTER_GROUP.CONTENT_STATUS, key: 'SAFE' },
+        { groupId: INUKO_FILTER_GROUP.COUNTRY, key: 'JAPAN' },
+        { groupId: INUKO_FILTER_GROUP.FORMAT, key: 'WEBTOON' },
       ],
     });
     const booksRequest = http.requests
@@ -394,9 +404,9 @@ describe('Inkstory parser conformance', () => {
       offset: 0,
       limit: 20,
       filters: [
-        { groupId: INKSTORY_FILTER_GROUP.AVERAGE_RATING, range: { min: 8.5, max: 10 } },
-        { groupId: INKSTORY_FILTER_GROUP.YEAR, range: { min: 2020 } },
-        { groupId: INKSTORY_FILTER_GROUP.CHAPTERS_COUNT, range: { max: 500 } },
+        { groupId: INUKO_FILTER_GROUP.AVERAGE_RATING, range: { min: 8.5, max: 10 } },
+        { groupId: INUKO_FILTER_GROUP.YEAR, range: { min: 2020 } },
+        { groupId: INUKO_FILTER_GROUP.CHAPTERS_COUNT, range: { max: 500 } },
       ],
     });
     const booksRequest = http.requests
@@ -416,7 +426,7 @@ describe('Inkstory parser conformance', () => {
     const items = await parser.getList({
       offset: 0,
       limit: 20,
-      filters: [{ groupId: INKSTORY_FILTER_GROUP.STATUS, key: 'ONGOING' }],
+      filters: [{ groupId: INUKO_FILTER_GROUP.STATUS, key: 'ONGOING' }],
     });
     expect(items).toHaveLength(1);
     const booksRequest = http.requests
@@ -476,7 +486,7 @@ describe('Inkstory parser conformance', () => {
       body: '[]',
       contentType: 'application/json',
     });
-    const parser = createInkStoryParser(makeContext(freshHttp));
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(freshHttp));
     const manga = await parser.getDetails(MANGA_ID);
     expect(manga.contentRating).toBe(expected);
   });
@@ -495,7 +505,7 @@ describe('Inkstory parser conformance', () => {
       body: JSON.stringify([{ book: { ...LIST_MANGA_JSON, country } }]),
       contentType: 'application/json',
     });
-    const parser = createInkStoryParser(makeContext(freshHttp));
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(freshHttp));
     const [item] = await parser.getList({ offset: 0, limit: 20 });
     expect(item!.type).toBe(type);
   });
@@ -518,7 +528,7 @@ describe('Inkstory parser conformance', () => {
       body: JSON.stringify([{ id: 'notice-1', title: 'Про удаление глав' }]),
       contentType: 'application/json',
     });
-    const parser = createInkStoryParser(makeContext(freshHttp));
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(freshHttp));
     const manga = await parser.getDetails(takenDownId);
     expect(manga.restriction).toBe(TITLE_RESTRICTION.LEGAL);
   });
@@ -559,7 +569,7 @@ describe('Inkstory getHome', () => {
       body: UPDATED_FEED_JSON,
       contentType: 'application/json',
     });
-    const parser = createInkStoryParser(makeContext(http));
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
 
     const { sections, problems } = await checkHome(parser);
 
@@ -626,9 +636,9 @@ describe('Inkstory getBookmarks', () => {
     http.register((url) => isPath(url) && page(url) !== '0', json([]));
   };
 
-  const setUp = (isLoggedIn: boolean) => {
+  const setUp = (isLoggedIn: boolean, viewerDomain = DOMAIN) => {
     const http = new FakeHttpClient();
-    http.register((url) => url === `https://${DOMAIN}/faq`, {
+    http.register((url) => url === `https://${viewerDomain}/faq`, {
       status: 200,
       body: viewerPage(isLoggedIn),
     });
@@ -641,12 +651,15 @@ describe('Inkstory getBookmarks', () => {
     return http;
   };
 
-  const asUser = <T>(fn: () => Promise<T>) =>
-    runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.INKSTORY]: { jar: new CookieJar() } }, fn);
+  /** Аккаунт сети с cookie сессии на домене того сайта, откуда её перенесли. */
+  const asUser = async <T>(fn: () => Promise<T>, sessionDomain = DOMAIN) => {
+    const jar = await createInukoSessionJar(sessionDomain, 'NrHoLrFoQijL5sH3');
+    return runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.INUKO]: { jar } }, fn);
+  };
 
   it('reads folders by the viewer id, sorted, with system folders mapped to built-in ones', async () => {
     const http = setUp(true);
-    const parser = createInkStoryParser(makeContext(http));
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
 
     const folders = await asUser(() => parser.getBookmarks!());
 
@@ -682,8 +695,20 @@ describe('Inkstory getBookmarks', () => {
     expect(http.requests.some(({ url }) => url.includes('other-ch'))).toBe(false);
   });
 
+  it('a session moved from a sibling site: the viewer is read on that site, the library on this one', async () => {
+    const http = setUp(true, PUREMANGA_DOMAIN);
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
+
+    const folders = await asUser(() => parser.getBookmarks!(), PUREMANGA_DOMAIN);
+
+    expect(folders).toHaveLength(3);
+    expect(http.requests.some(({ url }) => url === `https://${DOMAIN}/faq`)).toBe(false);
+    const folderItems = http.requests.find(({ url }) => url.includes('/v2/folder-items?'));
+    expect(new URL(folderItems!.url).searchParams.get('serviceName')).toBe(SERVICE_NAME);
+  });
+
   it('an expired session — auth required', async () => {
-    const parser = createInkStoryParser(makeContext(setUp(false)));
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(setUp(false)));
 
     await expect(asUser(() => parser.getBookmarks!())).rejects.toBeInstanceOf(
       SourceAuthRequiredError,
@@ -692,28 +717,118 @@ describe('Inkstory getBookmarks', () => {
 
   it('without the user’s own account — auth required, no request', async () => {
     const http = setUp(true);
-    const parser = createInkStoryParser(makeContext(http));
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
 
     await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
     expect(http.requests).toHaveLength(0);
   });
 });
 
-describe('Inkstory session', () => {
+describe('Inuko session', () => {
   it('takes the bare value, the name=value pair or a whole Cookie header', () => {
-    expect(parseInkStorySessionValue('  NrHoLrFoQijL5sH3  ')).toBe('NrHoLrFoQijL5sH3');
-    expect(parseInkStorySessionValue('__otaku_session=NrHoLrFoQijL5sH3')).toBe('NrHoLrFoQijL5sH3');
-    expect(parseInkStorySessionValue('_ga=GA1.1; __otaku_session=NrHo; __ddg1_=x')).toBe('NrHo');
-    expect(parseInkStorySessionValue('two words')).toBeNull();
-    expect(parseInkStorySessionValue('')).toBeNull();
+    expect(parseInukoSessionValue('  NrHoLrFoQijL5sH3  ')).toBe('NrHoLrFoQijL5sH3');
+    expect(parseInukoSessionValue('__otaku_session=NrHoLrFoQijL5sH3')).toBe('NrHoLrFoQijL5sH3');
+    expect(parseInukoSessionValue('_ga=GA1.1; __otaku_session=NrHo; __ddg1_=x')).toBe('NrHo');
+    expect(parseInukoSessionValue('two words')).toBeNull();
+    expect(parseInukoSessionValue('')).toBeNull();
   });
 
   it('reads the viewer from the SSR state, a guest is null', () => {
     expect(
-      parseInkStoryViewer(
+      parseInukoViewer(
         'currentUser:$R[29]={id:"752215b2-799e-4dc8-87ed-e58993c34e8f",username:"Reader",slug:null}',
       ),
     ).toEqual({ id: '752215b2-799e-4dc8-87ed-e58993c34e8f', username: 'Reader' });
-    expect(parseInkStoryViewer('currentUser:null,members:$R[26]=[]')).toBeNull();
+    expect(parseInukoViewer('currentUser:null,members:$R[26]=[]')).toBeNull();
+  });
+});
+
+describe('PureManga', () => {
+  /** Те же ответы API, что у Inkstory, — сайты сети различаются доменом и `serviceName`. */
+  const setUpPureManga = () => {
+    const http = setUpFixtures();
+    http.register((url) => url === `https://${PUREMANGA_DOMAIN}/`, {
+      status: 200,
+      body: SSR_STATE_HTML,
+      contentType: 'text/html; charset=utf-8',
+    });
+    return http;
+  };
+
+  it('info comes from the catalog: an adult hentai source on its own domain', () => {
+    const parser = createInukoParser(
+      PUREMANGA_CONFIG,
+      makeContext(setUpPureManga(), PUREMANGA_DOMAIN),
+    );
+
+    expect(parser.id).toBe(SOURCE_ID.PUREMANGA);
+    expect(parser.info).toMatchObject({
+      id: SOURCE_ID.PUREMANGA,
+      title: 'PureManga',
+      domain: PUREMANGA_DOMAIN,
+      contentType: SOURCE_CONTENT_TYPE.HENTAI,
+      isAdult: true,
+    });
+  });
+
+  it('every API request names puremanga.me, titles and chapters carry the PureManga id', async () => {
+    const http = setUpPureManga();
+    const parser = createInukoParser(PUREMANGA_CONFIG, makeContext(http, PUREMANGA_DOMAIN));
+
+    const [item] = await parser.getList({ offset: 0, limit: 20, order: SORT_ORDER.POPULARITY });
+    const details = await parser.getDetails(MANGA_ID);
+    await parser.getPages('ch-1');
+
+    expect(item!.source).toBe(SOURCE_ID.PUREMANGA);
+    expect(item!.publicUrl).toBe(`https://${PUREMANGA_DOMAIN}/content/one-piece`);
+    expect(details.chapters![0]!.source).toBe(SOURCE_ID.PUREMANGA);
+    // uid зависит от источника: та же книга сети у Inkstory и PureManga — разные тайтлы.
+    const [inkstoryItem] = await createInukoParser(
+      INKSTORY_CONFIG,
+      makeContext(setUpFixtures()),
+    ).getList({ offset: 0, limit: 20, order: SORT_ORDER.POPULARITY });
+    expect(item!.id).not.toBe(inkstoryItem!.id);
+    const apiRequests = http.requests.filter((r) => r.url.startsWith(`https://${API_HOST}/`));
+    expect(apiRequests.length).toBeGreaterThan(0);
+    for (const request of apiRequests) {
+      expect(new URL(request.url).searchParams.get('serviceName')).toBe(PUREMANGA_SERVICE_NAME);
+    }
+  });
+
+  it('decodeImage reads the key from the PureManga home page', async () => {
+    const http = setUpPureManga();
+    const parser = createInukoParser(PUREMANGA_CONFIG, makeContext(http, PUREMANGA_DOMAIN));
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const url = 'https://static.inuko.me/chapter/1/aaaaaaaa-bbbb-xccc-dddd-eeeeeeeeeeee.png';
+
+    const decoded = await parser.decodeImage!(xor(png, DECRYPTION_KEY), url);
+
+    expect(decoded.equals(png)).toBe(true);
+    expect(http.requests.some(({ url: u }) => u === `https://${PUREMANGA_DOMAIN}/`)).toBe(true);
+  });
+
+  it('getHome reads the same SSR blocks, cards of sibling sites are skipped', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${PUREMANGA_DOMAIN}/`, {
+      status: 200,
+      body: readFixture('puremanga-home.html'),
+    });
+    http.register((url) => url.includes('/v2/chapter-update-feed'), {
+      status: 200,
+      body: UPDATED_FEED_JSON,
+      contentType: 'application/json',
+    });
+    const parser = createInukoParser(PUREMANGA_CONFIG, makeContext(http, PUREMANGA_DOMAIN));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+    for (const section of sections.slice(0, 3)) {
+      expect(section.items).toHaveLength(3);
+      for (const item of section.items) {
+        expect(item.source).toBe(SOURCE_ID.PUREMANGA);
+        expect(item.publicUrl.startsWith(`https://${PUREMANGA_DOMAIN}/content/`)).toBe(true);
+      }
+    }
   });
 });

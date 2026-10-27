@@ -6,18 +6,16 @@ import { I18N } from '@/shared/lib/i18n';
 import { SOURCES } from '@/shared/storybook/fixtures';
 import { apiError, apiPath } from '@/shared/storybook/handlers';
 import ModalStage from '@/shared/storybook/ModalStage';
-import LinkInkStoryModal from './LinkInkStoryModal';
+import LinkInukoModal from './LinkInukoModal';
 
-const INKSTORY_SOURCE = SOURCES.find(
-  ({ authFamily }) => authFamily === SOURCE_AUTH_FAMILY.INKSTORY,
-);
+const INUKO_SOURCE = SOURCES.find(({ authFamily }) => authFamily === SOURCE_AUTH_FAMILY.INUKO);
 
 const META = {
-  title: 'Модалки/Профиль/LinkInkStoryModal',
+  title: 'Модалки/Профиль/LinkInukoModal',
   render: () => (
     <ModalStage>
       {({ opened, close }) => (
-        <LinkInkStoryModal source={INKSTORY_SOURCE} opened={opened} onClose={close} />
+        <LinkInukoModal source={INUKO_SOURCE} opened={opened} onClose={close} />
       )}
     </ModalStage>
   ),
