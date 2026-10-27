@@ -1,14 +1,19 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
 import {
+  BUILT_IN_BOOKMARK_FOLDER,
   CONTENT_RATING,
   FILTER_TYPE,
+  SOURCE_AUTH_FAMILY,
   TITLE_RESTRICTION,
   TITLE_TYPE,
   SORT_DIRECTION,
   SORT_ORDER,
 } from '@tanuki/contracts';
 import { createInkStoryParser, INKSTORY_FILTER_GROUP } from '../src/sources/inkstory';
+import { parseInkStorySessionValue, parseInkStoryViewer } from '../src/sources/inkstory/auth';
+import { runWithSourceAccounts } from '../src/core/source-accounts';
+import { SourceAuthRequiredError } from '../src/errors';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
@@ -564,5 +569,151 @@ describe('Inkstory getHome', () => {
     // id — тот же uuid книги, что в API каталога, а не slug из ссылки.
     expect(ongoing.url).toMatch(/^[0-9a-f-]{36}$/);
     expect(ongoing.coverUrl).not.toContain('?');
+  });
+});
+
+describe('Inkstory getBookmarks', () => {
+  const USER_ID = '752215b2-799e-4dc8-87ed-e58993c34e8f';
+  const READING_ID = 'f-reading';
+  const FAVORITES_ID = 'f-favorites';
+  const OWN_ID = 'f-own';
+
+  // Состояние роутера в SSR — как у живой страницы (проверено 2026-10-27).
+  const viewerPage = (isLoggedIn: boolean) =>
+    `<script>$R[1]={currentDomainId:"inkstory",currentUser:${
+      isLoggedIn ? `$R[27]={id:"${USER_ID}",username:"Reader",slug:null}` : 'null'
+    },members:$R[2]=[]}</script>`;
+
+  const FOLDERS_JSON = JSON.stringify([
+    { id: OWN_ID, name: 'Перечитать', system: false, sortOrder: 6 },
+    { id: FAVORITES_ID, name: 'Любимые', system: true, sortOrder: 5 },
+    { id: READING_ID, name: 'Читаю', system: true, sortOrder: 1 },
+  ]);
+
+  const FOLDER_ITEMS_JSON = JSON.stringify([
+    { folderId: READING_ID, bookId: MANGA_ID },
+    { folderId: READING_ID, bookId: 'hidden-book' },
+    { folderId: OWN_ID, bookId: MANGA_ID },
+  ]);
+
+  // Книгу «только в библиотеке» список `/v2/books` не отдаёт — только её страница.
+  const HIDDEN_BOOK_JSON = {
+    ...LIST_MANGA_JSON,
+    id: 'hidden-book',
+    name: { ru: 'Скрытая' },
+    country: 'KOREA',
+    readingRestriction: 'LIBRARY_ONLY',
+  };
+
+  // Две ветки одной книги — позиция берётся из самой свежей.
+  const READING_BOOKMARKS_JSON = JSON.stringify([
+    { bookId: MANGA_ID, chapterId: 'old-ch', updatedAt: '2026-01-01T00:00:00.123456Z' },
+    { bookId: MANGA_ID, chapterId: 'new-ch', updatedAt: '2026-02-01T00:00:00.123456Z' },
+    { bookId: 'not-in-folders', chapterId: 'other-ch', updatedAt: '2026-02-01T00:00:00Z' },
+  ]);
+
+  const json = (body: unknown) => ({
+    status: 200,
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+    contentType: 'application/json',
+  });
+
+  /** Листаемый список API: первая страница с данными, дальше — пустые. */
+  const registerPaged = (http: FakeHttpClient, path: string, body: string) => {
+    const isPath = (url: string) => url.includes(`/v2/${path}?`);
+    const page = (url: string) => new URL(url).searchParams.get('page');
+    http.register((url) => isPath(url) && page(url) === '0', json(body));
+    http.register((url) => isPath(url) && page(url) !== '0', json([]));
+  };
+
+  const setUp = (isLoggedIn: boolean) => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/faq`, {
+      status: 200,
+      body: viewerPage(isLoggedIn),
+    });
+    http.register((url) => url.includes('/v2/folders?'), json(FOLDERS_JSON));
+    registerPaged(http, 'folder-items', FOLDER_ITEMS_JSON);
+    registerPaged(http, 'bookmarks', READING_BOOKMARKS_JSON);
+    http.register((url) => url.includes('/v2/books?'), json([LIST_MANGA_JSON]));
+    http.register((url) => url.includes('/v2/books/hidden-book'), json(HIDDEN_BOOK_JSON));
+    http.register((url) => url.includes('/v2/chapters/new-ch'), json({ number: 42.5, volume: 3 }));
+    return http;
+  };
+
+  const asUser = <T>(fn: () => Promise<T>) =>
+    runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.INKSTORY]: { jar: new CookieJar() } }, fn);
+
+  it('reads folders by the viewer id, sorted, with system folders mapped to built-in ones', async () => {
+    const http = setUp(true);
+    const parser = createInkStoryParser(makeContext(http));
+
+    const folders = await asUser(() => parser.getBookmarks!());
+
+    expect(folders.map(({ id, builtIn, name }) => ({ id, builtIn, name }))).toEqual([
+      { id: READING_ID, builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: 'Читаю' },
+      { id: FAVORITES_ID, builtIn: null, name: 'Любимые' },
+      { id: OWN_ID, builtIn: null, name: 'Перечитать' },
+    ]);
+    expect(folders[0]!.items).toEqual([
+      {
+        id: expect.any(Number),
+        url: MANGA_ID,
+        title: 'Ван-Пис',
+        coverUrl: 'https://cdn.inkstory.me/one-piece.jpg',
+        contentRating: CONTENT_RATING.SAFE,
+        type: TITLE_TYPE.MANGA,
+        lastChapterNumber: 42.5,
+        lastChapterVolume: 3,
+      },
+      expect.objectContaining({
+        url: 'hidden-book',
+        title: 'Скрытая',
+        type: TITLE_TYPE.MANHWA,
+        lastChapterNumber: null,
+      }),
+    ]);
+    expect(folders[2]!.items.map(({ url }) => url)).toEqual([MANGA_ID]);
+    const folderItems = http.requests.find(({ url }) => url.includes('/v2/folder-items?'));
+    const query = new URL(folderItems!.url).searchParams;
+    expect(query.get('userId')).toBe(USER_ID);
+    expect(query.get('serviceName')).toBe(SERVICE_NAME);
+    // Глава книги не из папок не запрашивается.
+    expect(http.requests.some(({ url }) => url.includes('other-ch'))).toBe(false);
+  });
+
+  it('an expired session — auth required', async () => {
+    const parser = createInkStoryParser(makeContext(setUp(false)));
+
+    await expect(asUser(() => parser.getBookmarks!())).rejects.toBeInstanceOf(
+      SourceAuthRequiredError,
+    );
+  });
+
+  it('without the user’s own account — auth required, no request', async () => {
+    const http = setUp(true);
+    const parser = createInkStoryParser(makeContext(http));
+
+    await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
+    expect(http.requests).toHaveLength(0);
+  });
+});
+
+describe('Inkstory session', () => {
+  it('takes the bare value, the name=value pair or a whole Cookie header', () => {
+    expect(parseInkStorySessionValue('  NrHoLrFoQijL5sH3  ')).toBe('NrHoLrFoQijL5sH3');
+    expect(parseInkStorySessionValue('__otaku_session=NrHoLrFoQijL5sH3')).toBe('NrHoLrFoQijL5sH3');
+    expect(parseInkStorySessionValue('_ga=GA1.1; __otaku_session=NrHo; __ddg1_=x')).toBe('NrHo');
+    expect(parseInkStorySessionValue('two words')).toBeNull();
+    expect(parseInkStorySessionValue('')).toBeNull();
+  });
+
+  it('reads the viewer from the SSR state, a guest is null', () => {
+    expect(
+      parseInkStoryViewer(
+        'currentUser:$R[29]={id:"752215b2-799e-4dc8-87ed-e58993c34e8f",username:"Reader",slug:null}',
+      ),
+    ).toEqual({ id: '752215b2-799e-4dc8-87ed-e58993c34e8f', username: 'Reader' });
+    expect(parseInkStoryViewer('currentUser:null,members:$R[26]=[]')).toBeNull();
   });
 });

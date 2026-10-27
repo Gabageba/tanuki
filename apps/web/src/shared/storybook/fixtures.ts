@@ -15,6 +15,7 @@ import {
   SOURCE_CONTENT_TYPE,
   SOURCE_IDS,
   SOURCE_LOCALE,
+  SOURCE_LOGIN_BENEFIT,
   SOURCE_LOGIN_REQUIREMENT,
   SOURCE_STATUS,
   SOURCE_STATUS_REASON,
@@ -65,6 +66,7 @@ const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source
   const entry = SOURCE_CATALOG[id];
   const isLoggedIn = entry.authFamily !== null && LOGGED_IN_FAMILIES.includes(entry.authFamily);
   const isLocked = entry.loginRequirement === SOURCE_LOGIN_REQUIREMENT.REQUIRED && !isLoggedIn;
+  const isBookmarksImportSupported = BOOKMARKS_IMPORT_SOURCE_IDS.includes(id);
 
   return {
     id,
@@ -83,10 +85,13 @@ const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source
     sortOrders: [],
     supportsDirection: false,
     isSearchWithFiltersSupported: true,
-    isBookmarksImportSupported: BOOKMARKS_IMPORT_SOURCE_IDS.includes(id),
+    isBookmarksImportSupported,
     authFamily: entry.authFamily,
     loginRequirement: entry.loginRequirement,
-    loginBenefits: entry.loginBenefits,
+    // Как на сервере: импорт закладок добавляется к пользам из каталога.
+    loginBenefits: isBookmarksImportSupported
+      ? [...entry.loginBenefits, SOURCE_LOGIN_BENEFIT.BOOKMARKS_IMPORT]
+      : entry.loginBenefits,
     isLoggedIn,
     position,
     isEnabled: true,

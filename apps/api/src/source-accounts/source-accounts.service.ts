@@ -14,6 +14,7 @@ import {
   type LibSocialTokenState,
   type ParsersRegistry,
   type PasswordAuthFamily,
+  type SessionAuthFamily,
 } from '@tanuki/parsers';
 import {
   BadRequestApiException,
@@ -44,6 +45,9 @@ const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamil
   family === SOURCE_AUTH_FAMILY.ALLHENTAI ||
   family === SOURCE_AUTH_FAMILY.NUDEMOON ||
   family === SOURCE_AUTH_FAMILY.DESU;
+
+const isSessionFamily = (family: SourceAuthFamily): family is SessionAuthFamily =>
+  family === SOURCE_AUTH_FAMILY.INKSTORY;
 
 /** Привязка и отвязка личных аккаунтов источников — то, что человек делает в настройках. */
 @Injectable()
@@ -97,6 +101,30 @@ export class SourceAccountsService {
     await this.sourceAccess.save(userId, family, {
       login: input.login,
       password: input.rememberPassword ? input.password : null,
+      state: { cookies },
+    });
+  }
+
+  /**
+   * Inkstory: вход на SSO inuko закрыт капчей для людей, поэтому человек входит на сайте сам и
+   * переносит cookie сессии. Сервер только проверяет, что сайт её узнаёт, — пароля нет, и
+   * истёкшую сессию человек переносит заново.
+   */
+  async linkSession(userId: string, family: SourceAuthFamily, value: string): Promise<void> {
+    if (!isSessionFamily(family)) throw new BadRequestApiException();
+    if (!this.sourceAccess.isLinkingAvailable) throw new SourceLinkingUnavailableException();
+
+    const linked = await this.parsers.linkSession(family, value).catch((error: unknown) => {
+      if (error instanceof SourceBlockedError) throw new SourceBlockedException();
+      if (error instanceof SourceUnavailableError) throw new SourceUnavailableException();
+      throw error;
+    });
+    const cookies = linked?.jar.serializeSync();
+    if (!linked || !cookies) throw new SourceLoginFailedException();
+
+    await this.sourceAccess.save(userId, family, {
+      login: linked.login || null,
+      password: null,
       state: { cookies },
     });
   }

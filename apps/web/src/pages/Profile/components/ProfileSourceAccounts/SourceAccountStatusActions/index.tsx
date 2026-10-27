@@ -10,6 +10,7 @@ import {
   type SourceAccount,
   type SourceAuthFamily,
 } from '@tanuki/contracts';
+import LinkInkStoryModal from './LinkInkStoryModal';
 import LinkLibSocialModal from './LinkLibSocialModal';
 import LinkPasswordAccountModal from './LinkPasswordAccountModal';
 import useUnlinkSourceAccount from '../hooks/useUnlinkSourceAccount';
@@ -81,14 +82,18 @@ function SourceAccountStatusActions({
         )}
       </Group>
 
-      {family === SOURCE_AUTH_FAMILY.LIBSOCIAL ? (
+      {family === SOURCE_AUTH_FAMILY.LIBSOCIAL && (
         <LinkLibSocialModal
           sources={sources.filter((source) => source.statusReason !== SOURCE_STATUS_REASON.BROKEN)}
           defaultTokenSourceId={sourcesWithoutLogin[0]?.id}
           opened={opened}
           onClose={close}
         />
-      ) : (
+      )}
+      {family === SOURCE_AUTH_FAMILY.INKSTORY && (
+        <LinkInkStoryModal source={sources[0]} opened={opened} onClose={close} />
+      )}
+      {family !== SOURCE_AUTH_FAMILY.LIBSOCIAL && family !== SOURCE_AUTH_FAMILY.INKSTORY && (
         <LinkPasswordAccountModal family={family} opened={opened} onClose={close} />
       )}
     </>

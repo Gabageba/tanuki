@@ -49,6 +49,8 @@ export {
   type SourceDescriptor,
   type ParsersRegistry,
   type PasswordAuthFamily,
+  type SessionAuthFamily,
+  type LinkedSession,
   type RegistryOptions,
 } from './registry';
 

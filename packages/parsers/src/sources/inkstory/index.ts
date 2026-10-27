@@ -12,6 +12,9 @@ import {
   type TitleState,
   SOURCE_LOCALE,
   type TitleType,
+  SOURCE_AUTH_FAMILY,
+  BUILT_IN_BOOKMARK_FOLDER,
+  type BuiltInBookmarkFolder,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -34,11 +37,14 @@ import type {
   RawFilterOption,
   RawHomeSectionPage,
   RawHomeSectionParams,
+  RawBookmark,
+  RawBookmarkFolder,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toTitleCase } from '../../core/text/strings';
-import { ParseError } from '../../errors';
+import { ParseError, SourceAuthRequiredError } from '../../errors';
+import { currentSourceAccount } from '../../core/source-accounts';
 import { UserAgents } from '../../core/http/user-agents';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { parseHtml } from '../../core/html/dom';
@@ -47,11 +53,18 @@ import { attrOrNull, textOrNull } from '../../core/html/selectors';
 import { parseFloatOrNull } from '../../core/text/numbers';
 import { nullIfEmpty } from '../../core/text/strings';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
+import { fetchInkStoryViewer } from './auth';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.INKSTORY;
 const PAGE_SIZE = 20;
 const FIRST_PAGE = 0;
 const DECRYPTION_KEY_TTL_MS = 10 * 60 * 1000;
+/** Потолок `size` у списков API: `/v2/books` больше 100 не отдаёт (проверено 2026-10-27). */
+const LIBRARY_PAGE_SIZE = 100;
+/** Предохранитель листания библиотеки — 100 страниц по 100 больше любой реальной. */
+const LIBRARY_MAX_PAGES = 100;
+/** Сколько запросов по одному тайтлу (глава закладки, скрытая книга) уходит разом. */
+const LIBRARY_REQUESTS_BATCH = 8;
 
 /** The per-site `api.<domain>` host is gone (it doesn't even resolve any more): the site now runs
  *  on the shared "inuko" platform — sso.inuko.me, static.inuko.me — whose single API serves every
@@ -168,6 +181,26 @@ type PageJson = {
   image: string;
 };
 
+type FolderJson = {
+  id: string;
+  name: string;
+  /** Пять стандартных папок, которые сайт создаёт каждому аккаунту. */
+  system: boolean;
+  sortOrder: number;
+};
+
+type FolderItemJson = {
+  folderId: string;
+  bookId: string;
+};
+
+/** Место чтения: своя запись на каждую ветку перевода, которую человек открывал. */
+type ReadingBookmarkJson = {
+  bookId: string;
+  chapterId: string;
+  updatedAt: string;
+};
+
 type ChapterUpdateFeedItem = {
   book: MangaJson;
 };
@@ -199,6 +232,24 @@ const FORMAT_KEYS = [
   'LIGHT',
   'WEB',
 ];
+
+/** Стандартная папка сайта → встроенная; «Любимые» и созданные человеком — свои папки. Сайт
+ *  отдаёт имена системных папок, ключа статуса у них нет. Проверено вживую 2026-10-27. */
+const getBuiltInBookmarkFolder = (folder: FolderJson): BuiltInBookmarkFolder | null => {
+  if (!folder.system) return null;
+  switch (folder.name) {
+    case 'Читаю':
+      return BUILT_IN_BOOKMARK_FOLDER.READING;
+    case 'В планах':
+      return BUILT_IN_BOOKMARK_FOLDER.PLANNED;
+    case 'Прочитано':
+      return BUILT_IN_BOOKMARK_FOLDER.COMPLETED;
+    case 'Брошено':
+      return BUILT_IN_BOOKMARK_FOLDER.DROPPED;
+    default:
+      return null;
+  }
+};
 
 /** Mirrors the site's own hardcoded RU translations (constants chunk of the catalog filter UI) —
  *  the API only ever returns the bare enum key, never a display name, for these four groups. */
@@ -888,6 +939,151 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     return { items, hasNextPage: items.length >= PAGE_SIZE };
   };
 
+  /**
+   * Все страницы списка API. Листается до пустой страницы, а не до неполной: потолок `size` у
+   * эндпоинтов разный, и неполная страница ещё не значит, что дальше ничего нет.
+   */
+  const fetchAllPages = async <T>(path: string, params: Record<string, string>): Promise<T[]> => {
+    const items: T[] = [];
+    for (let page = FIRST_PAGE; page < FIRST_PAGE + LIBRARY_MAX_PAGES; page += 1) {
+      const url = apiUrl(path);
+      for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+      url.searchParams.set('page', String(page));
+      url.searchParams.set('size', String(LIBRARY_PAGE_SIZE));
+      const pageItems = await ctx.http.getJson<T[]>(url.toString());
+      if (pageItems.length === 0) break;
+      items.push(...pageItems);
+    }
+    return items;
+  };
+
+  /**
+   * Книги по id, пачками: `/v2/books` принимает повторяющийся `id`. Книги «только в
+   * библиотеке» (`readingRestriction: LIBRARY_ONLY`) список не отдаёт, хотя они лежат в папках,
+   * — их добираем по одной, страницей книги (проверено 2026-10-27).
+   */
+  const fetchBooksById = async (bookIds: string[]): Promise<Map<string, MangaJson>> => {
+    const books = new Map<string, MangaJson>();
+    for (let start = 0; start < bookIds.length; start += LIBRARY_PAGE_SIZE) {
+      const url = apiUrl('/v2/books');
+      url.searchParams.set('size', String(LIBRARY_PAGE_SIZE));
+      for (const id of bookIds.slice(start, start + LIBRARY_PAGE_SIZE)) {
+        url.searchParams.append('id', id);
+      }
+      for (const book of await ctx.http.getJson<MangaJson[]>(url.toString())) {
+        books.set(book.id, book);
+      }
+    }
+    const missing = bookIds.filter((id) => !books.has(id));
+    for (let start = 0; start < missing.length; start += LIBRARY_REQUESTS_BATCH) {
+      const batch = await Promise.all(
+        missing
+          .slice(start, start + LIBRARY_REQUESTS_BATCH)
+          .map((id) =>
+            ctx.http.getJson<MangaJson>(apiUrl(`/v2/books/${id}`).toString()).catch(() => null),
+          ),
+      );
+      for (const book of batch) if (book) books.set(book.id, book);
+    }
+    return books;
+  };
+
+  /**
+   * Глава, на которой человек остановился в каждой книге, — из самой свежей записи места чтения.
+   * Номера в записи нет, только id главы: он берётся из самой главы, по запросу на книгу.
+   * Удалённая глава не валит импорт — у книги просто не будет прогресса.
+   */
+  const fetchReadingPositions = async (
+    userId: string,
+    bookIds: Set<string>,
+  ): Promise<Map<string, ChapterJson>> => {
+    const latest = new Map<string, ReadingBookmarkJson>();
+    for (const mark of await fetchAllPages<ReadingBookmarkJson>('/v2/bookmarks', { userId })) {
+      if (!bookIds.has(mark.bookId)) continue;
+      const current = latest.get(mark.bookId);
+      if (!current || parseIsoDate(mark.updatedAt) > parseIsoDate(current.updatedAt)) {
+        latest.set(mark.bookId, mark);
+      }
+    }
+    const marks = [...latest.values()];
+    const positions = new Map<string, ChapterJson>();
+    for (let start = 0; start < marks.length; start += LIBRARY_REQUESTS_BATCH) {
+      const batch = marks.slice(start, start + LIBRARY_REQUESTS_BATCH);
+      const chapters = await Promise.all(
+        batch.map((mark) =>
+          ctx.http
+            .getJson<ChapterJson>(apiUrl(`/v2/chapters/${mark.chapterId}`).toString())
+            .catch(() => null),
+        ),
+      );
+      batch.forEach((mark, index) => {
+        const chapter = chapters[index];
+        if (chapter) positions.set(mark.bookId, chapter);
+      });
+    }
+    return positions;
+  };
+
+  /** Id аккаунта, от которого идут запросы, — по разметке страницы с его cookie сессии. */
+  const resolveLibraryOwnerId = async (): Promise<string> => {
+    const account = currentSourceAccount(SOURCE_AUTH_FAMILY.INKSTORY);
+    // Без аккаунта пользователя запрос ушёл бы гостем — чью библиотеку брать, неизвестно.
+    if (!account?.jar) {
+      throw new SourceAuthRequiredError('Bookmarks require the user’s own account', SOURCE_ID);
+    }
+    const viewer = await fetchInkStoryViewer(ctx.http, domain);
+    if (!viewer) throw new SourceAuthRequiredError('Inkstory session expired', SOURCE_ID);
+    return viewer.id;
+  };
+
+  /**
+   * Папки библиотеки аккаунта. Сами папки и их книги API отдаёт по id пользователя, без
+   * авторизации, — сессия нужна только узнать, чей это аккаунт. `serviceName` оставляет книги
+   * одного inkstory: сайт может показывать в библиотеке и книги соседних сайтов сети.
+   */
+  const getBookmarks = async (): Promise<RawBookmarkFolder[]> => {
+    const userId = await resolveLibraryOwnerId();
+    const foldersUrl = apiUrl('/v2/folders');
+    foldersUrl.searchParams.set('userId', userId);
+    const [folders, folderItems] = await Promise.all([
+      ctx.http.getJson<FolderJson[]>(foldersUrl.toString()),
+      fetchAllPages<FolderItemJson>('/v2/folder-items', { userId }),
+    ]);
+    const bookIds = [...new Set(folderItems.map((item) => item.bookId))];
+    const [books, positions] = await Promise.all([
+      fetchBooksById(bookIds),
+      fetchReadingPositions(userId, new Set(bookIds)),
+    ]);
+
+    const toBookmark = (bookId: string): RawBookmark | null => {
+      const book = books.get(bookId);
+      if (!book) return null;
+      const position = positions.get(bookId);
+      return {
+        id: generateUid(SOURCE_ID, book.id),
+        url: book.id,
+        title: book.name.ru,
+        coverUrl: book.poster,
+        contentRating: toContentRating(book.contentStatus),
+        type: toMangaType(book.country),
+        lastChapterNumber: position?.number ?? null,
+        lastChapterVolume: position?.volume ?? null,
+      };
+    };
+
+    return [...folders]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((folder) => ({
+        id: folder.id,
+        builtIn: getBuiltInBookmarkFolder(folder),
+        name: folder.name,
+        items: folderItems
+          .filter((item) => item.folderId === folder.id)
+          .map((item) => toBookmark(item.bookId))
+          .filter((item): item is RawBookmark => item !== null),
+      }));
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -921,6 +1117,7 @@ export const createInkStoryParser = (ctx: ParserContext): Parser => {
     getFilters,
     getHome,
     getHomeSection,
+    getBookmarks,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     decodeImage,

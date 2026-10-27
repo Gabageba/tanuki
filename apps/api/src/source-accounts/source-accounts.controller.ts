@@ -9,6 +9,7 @@ import { RateLimitService } from '../rate-limit/rate-limit.service';
 import {
   LinkLibSocialTokenRequestDto,
   LinkSourceAccountRequestDto,
+  LinkSourceSessionRequestDto,
   SourceAccountsResponseDto,
 } from './source-accounts.dto';
 import { SourceAccountsService } from './source-accounts.service';
@@ -51,6 +52,24 @@ export class SourceAccountsController {
       RATE_LIMIT.SOURCE_LOGIN.windowSeconds,
     );
     await this.sourceAccounts.linkWithPassword(user.id, parseFamily(family), body);
+  }
+
+  @ApiOperation({ summary: 'Привязывает аккаунт Inkstory cookie сессии из браузера' })
+  @ApiParam({ name: 'family' })
+  @ApiBody({ type: LinkSourceSessionRequestDto })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post(':family/session')
+  async linkSession(
+    @CurrentUser() user: SessionUser,
+    @Param('family') family: string,
+    @Body() body: LinkSourceSessionRequestDto,
+  ): Promise<void> {
+    await this.rateLimit.consume(
+      `source-login:${user.id}:${family}`,
+      RATE_LIMIT.SOURCE_LOGIN.limit,
+      RATE_LIMIT.SOURCE_LOGIN.windowSeconds,
+    );
+    await this.sourceAccounts.linkSession(user.id, parseFamily(family), body.value);
   }
 
   @ApiOperation({

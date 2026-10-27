@@ -350,8 +350,10 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['inkstory.net'],
     color: '#2B7FFF',
-    authFamily: null,
-    loginRequirement: null,
+    // Всё открыто гостю; аккаунт нужен только импорту закладок. Вход на SSO inuko закрыт
+    // Yandex SmartCaptcha, поэтому сессию сайта человек переносит из своего браузера.
+    authFamily: SOURCE_AUTH_FAMILY.INKSTORY,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   hentaichan_cc: {

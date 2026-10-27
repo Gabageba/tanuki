@@ -24,6 +24,11 @@ import { createChanParser } from './sources/chan/engine';
 import { createRemangaParser } from './sources/remanga';
 import { createMangaBuffParser } from './sources/mangabuff';
 import { createInkStoryParser } from './sources/inkstory';
+import {
+  createInkStorySessionJar,
+  fetchInkStoryViewer,
+  parseInkStorySessionValue,
+} from './sources/inkstory/auth';
 import { createComxParser } from './sources/comx';
 import { createTomiloLibParser } from './sources/tomilolib';
 import { createWaMangaParser } from './sources/wamanga';
@@ -221,6 +226,15 @@ export type PasswordAuthFamily =
   | typeof SOURCE_AUTH_FAMILY.NUDEMOON
   | typeof SOURCE_AUTH_FAMILY.DESU;
 
+/**
+ * Семейства, вход в которые закрыт капчей для людей: человек входит в своём браузере и
+ * переносит cookie сессии, сервер её только проверяет.
+ */
+export type SessionAuthFamily = typeof SOURCE_AUTH_FAMILY.INKSTORY;
+
+/** Принятая сессия: jar для аккаунта и имя, под которым человек вошёл на сайт. */
+export type LinkedSession = { jar: CookieJar; login: string };
+
 export type ParsersRegistry = {
   listSources(): RawSourceInfo[];
   get(sourceId: string): Parser;
@@ -235,6 +249,11 @@ export type ParsersRegistry = {
     family: PasswordAuthFamily,
     credentials: GroupleCredentials,
   ): Promise<CookieJar | null>;
+  /**
+   * Проверяет перенесённую из браузера cookie сессии: открывает сайт с ней в свежем jar и
+   * смотрит, кого сайт узнал. null — значение не похоже на сессию или сайт видит гостя.
+   */
+  linkSession(family: SessionAuthFamily, value: string): Promise<LinkedSession | null>;
   /**
    * Проверяет токен LibSocial для источника и возвращает имя аккаунта (null — токен не
    * принят). Истёкший access_token по пути обменивается — новый пишется в store.
@@ -410,6 +429,24 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
             ? await authenticateAllHentai(http, jar, cfg, credentials, opts.logger)
             : await authenticateGrouple(http, jar, credentials, opts.logger);
         return isLoggedIn ? jar : null;
+      } finally {
+        await http.close();
+      }
+    },
+    async linkSession(_family, value) {
+      const session = parseInkStorySessionValue(value);
+      if (!session) return null;
+      const domain = SOURCES[SOURCE_ID.INKSTORY].domains[0];
+      const jar = await createInkStorySessionJar(domain, session);
+      const http = new HttpClientImpl({
+        sourceId: SOURCE_ID.INKSTORY,
+        jar,
+        defaultHeaders: SOURCES[SOURCE_ID.INKSTORY].defaultHeaders,
+        timeouts: opts.timeouts,
+      });
+      try {
+        const viewer = await fetchInkStoryViewer(http, domain);
+        return viewer ? { jar, login: viewer.username } : null;
       } finally {
         await http.close();
       }

@@ -97,8 +97,8 @@ export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 /**
  * Аккаунт, которым пользователь открывает источник. Одна учётка обслуживает всё семейство:
  * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у LibSocial — аккаунт lib.social,
- * у Nude-Moon и Desu — аккаунт самого сайта. Что именно без аккаунта закрыто — loginRequirement
- * и loginBenefits источника.
+ * у Nude-Moon и Desu — аккаунт самого сайта, у Inkstory — сессия сайта поверх общей SSO inuko.
+ * Что именно без аккаунта закрыто — loginRequirement и loginBenefits источника.
  */
 export const SOURCE_AUTH_FAMILY = {
   GROUPLE: 'grouple',
@@ -106,6 +106,7 @@ export const SOURCE_AUTH_FAMILY = {
   LIBSOCIAL: 'libsocial',
   NUDEMOON: 'nudemoon',
   DESU: 'desu',
+  INKSTORY: 'inkstory',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 
@@ -132,6 +133,11 @@ export const SOURCE_LOGIN_BENEFIT = {
   PURCHASED_CHAPTERS: 'purchasedChapters',
   /** Поиск по названию: сайт отдаёт его только вошедшим — без аккаунта источник в поиске закрыт. */
   TITLE_SEARCH: 'titleSearch',
+  /**
+   * Импорт закладок с сайта. В каталоге не пишется: сервер добавляет его сам каждому источнику,
+   * чей парсер умеет `getBookmarks` (`isBookmarksImportSupported`).
+   */
+  BOOKMARKS_IMPORT: 'bookmarksImport',
 } as const;
 export type SourceLoginBenefit = EnumLiteralsOf<typeof SOURCE_LOGIN_BENEFIT>;
 export const SourceLoginBenefitSchema = z.enum(SOURCE_LOGIN_BENEFIT);
@@ -194,6 +200,12 @@ export const LinkLibSocialTokenRequestSchema = z.object({
   value: z.string().min(1),
 });
 export type LinkLibSocialTokenRequest = z.infer<typeof LinkLibSocialTokenRequestSchema>;
+
+export const LinkSourceSessionRequestSchema = z.object({
+  /** Значение cookie сессии сайта или вся строка `имя=значение`. */
+  value: z.string().min(1),
+});
+export type LinkSourceSessionRequest = z.infer<typeof LinkSourceSessionRequestSchema>;
 
 /** Смысл блока главной — по нему фронт берёт иконку вкладки: названия у сайтов свои, вид общий. */
 export const HOME_SECTION_KIND = {
