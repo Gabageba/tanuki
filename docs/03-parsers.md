@@ -77,7 +77,7 @@ export interface Parser {
 отдаёт; том нужен там, где нумерация глав начинается заново в каждом томе — так у LibSocial).
 `RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
 пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже), Desu и
-Inkstory;
+сети inuko (Inkstory, PureManga);
 Grouple, AllHentai и Nude-Moon ждут образцов ответов сайтов
 ([plans/source-import.md](plans/source-import.md)).
 
@@ -97,12 +97,14 @@ Desu (проверено вживую 2026-10-26): id аккаунта — `visi
 папок у сайта нет. «Где остановился» — ссылка колонки «Закладка» (`/vol4/ch24/`, том и глава), без
 неё — счётчик «Главы» (сколько прочитано, без тома). Обложки списка — `x120`, берём `preview`.
 
-Inkstory (проверено вживую 2026-10-27): сессия сайта нужна только узнать, чей аккаунт, — id
-вошедшего в SSR-состоянии `/faq` (`currentUser`). Дальше общий API `api.inuko.me` отдаёт
+Сеть inuko — Inkstory и PureManga (проверено вживую 2026-10-27): сессия сайта нужна только узнать,
+чей аккаунт, — id вошедшего в SSR-состоянии `/faq` (`currentUser`). Страница открывается на домене,
+где лежит cookie в jar аккаунта (`findInukoSessionDomain`): id пользователя в сети общий, поэтому
+cookie, перенесённая с PureManga, открывает и библиотеку Inkstory. Дальше общий API `api.inuko.me` отдаёт
 библиотеку по `userId` без авторизации: папки — `GET /v2/folders?userId=` (пять системных —
 «Читаю», «В планах», «Брошено», «Прочитано» → встроенные, «Любимые» и созданные человеком —
 свои; ключа статуса у папок нет, только имя), книги в них — `GET /v2/folder-items?userId=` (только
-`bookId`; `serviceName=inkstory` отсеивает книги соседних сайтов сети, которые сайт показывает в
+`bookId`; `serviceName` сайта отсеивает книги соседних сайтов сети, которые сайт показывает в
 библиотеке при «показывать все сервисы»), сами книги — `GET /v2/books?id=…&id=…` пачками по 100.
 Книги «только в библиотеке» (`readingRestriction: LIBRARY_ONLY`) список не отдаёт — их берём
 по одной из `/v2/books/{id}`. «Где остановился» — `GET /v2/bookmarks?userId=` (место чтения,
@@ -141,7 +143,7 @@ Inkstory (проверено вживую 2026-10-27): сессия сайта �
 | MangaLib, HentaiLib | Последние обновления; «Сейчас читают» — по периоду (`variants` day/week/month)                             | `/api/latest-updates?page=` по 15 (за последней сайт повторяет её с её `current_page`); `/api/media/top-views?time=&popularity=&page=` по 56, как страница `/top-views` сайта — не дальше 9-й порции (дальше порядок не по просмотрам) |
 | Senkuro, Senkognito | «Самое читаемое» — по периоду (`variants` day/week/month) одной порцией; остальные — курсором, как каталог | `mangaPopularByPeriod(period)` по 12; `mangas(first:, after:)` с сортировкой и типом блока                                                                                                                                             |
 | TomiloLib           | «Топ тайтлов» — по вкладке (`variants` currentYear/manhwa/manhua)                                          | каталог `/api/titles?sortBy=views&page=` по 24, конец — `pagination.pages`                                                                                                                                                             |
-| Inkstory            | Последние обновления каталога                                                                              | лента глав `chapter-update-feed?page=`                                                                                                                                                                                                 |
+| Inkstory, PureManga | Последние обновления каталога                                                                              | лента глав `chapter-update-feed?page=`                                                                                                                                                                                                 |
 | Остальные           | —                                                                                                          | HTML-главные и фиксированные списки                                                                                                                                                                                                    |
 
 Проверено вживую 2026-10-12:
@@ -153,7 +155,7 @@ Inkstory (проверено вживую 2026-10-27): сессия сайта �
 | Grouple (ReadManga, MintManga, SelfManga, SeiManga, AllHentai) | Горячие новинки, Обновление популярного, жанровые вкладки «Трендов» (свои у каждого сайта, `trendTabs` в конфиге), Популярная сейчас манга, Последние обновления каталога | HTML `/`: шаблоны вкладок «Тренды», `/internal/elementList/<id>` на жанровую вкладку, карусель, лента обновлений                                                                                                                                                                                                                                                                                             |
 | Desu                                                           | Обновления популярной манги, Горячие новинки манги                                                                                                                        | HTML `/`                                                                                                                                                                                                                                                                                                                                                                                                     |
 | MangaBuff                                                      | Манга онлайн, Горячие новинки, Популярно на неделе, Лучшие онгоинги, Новое на сайте, Обновления                                                                           | HTML `/`                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Inkstory                                                       | Популярные онгоинги, Лучшие завершенные, Недавно добавлено, Последние обновления каталога                                                                                 | SSR `/` (id книги — из адреса обложки), лента глав API                                                                                                                                                                                                                                                                                                                                                       |
+| Inkstory, PureManga                                            | Популярные онгоинги, Лучшие завершенные, Недавно добавлено, Последние обновления каталога                                                                                 | SSR `/` (id книги — из адреса обложки), лента глав API                                                                                                                                                                                                                                                                                                                                                       |
 | WaManga                                                        | Топ за всё время, Новинки, Свежие обновления                                                                                                                              | `/api/v1/manga/homepage`                                                                                                                                                                                                                                                                                                                                                                                     |
 | TomiloLib                                                      | Популярное за неделю, Топ-5 недели, Новые главы, Читают на этой неделе, Недооценённые, Топ тайтлов (вкладки Топ года / манхвы / маньхуа; у сайта «Топ-<год>»)             | `/api/titles/popular`, `/top/week`, `/latest-updates` (из бандла главной); «Читают на этой неделе» — `/top/week?limit=50`, отсортированный по `views`, как у сайта; «Недооценённые» — 50 тайтлов каталога по `averageRating`, отобранных по правилу сайта (рейтинг ≥ 7.5, просмотров не больше 35-го перцентиля); «Топ тайтлов» — каталог по `views` с `releaseYear` / `types` (проверено вживую 2026-10-14) |
 | Senkuro                                                        | Самое читаемое, Последние обновления, Последние манги, Популярные новинки манги, Топ манхв, Топ маньхуа, Топ манг                                                         | GraphQL `mangaPopularByPeriod(period)`; подборки сайта (`experimentalSpotlights`, по 12 без продолжения) — ровно первые страницы каталога: `mangas` по `LAST_CHAPTER_AT`, `CREATED_AT`, `POPULARITY_SCORE` с типами MANGA+MANHWA+MANHUA / MANHWA / MANHUA / MANGA (проверено вживую 2026-10-14)                                                                                                              |
@@ -235,14 +237,15 @@ AsyncLocalStorage (`runWithSourceAccounts`, `core/source-accounts.ts`). `HttpCli
 23 источника из форка = **14 движков** (проверено по форку `tanuki-parsers-redo`). Ни один из них не
 использует `evaluateJs` и не расшифровывает картинки — headless-браузер не нужен.
 
-| Движок            | Источники                                                                 | Статус        |
-| ----------------- | ------------------------------------------------------------------------- | ------------- |
-| Grouple           | READMANGA_RU, MINTMANGA, SELFMANGA, SEIMANGA, USAGI, ALLHENTAI            | ✅ портирован |
-| Desu (standalone) | DESUME                                                                    | ✅ портирован |
-| LibSocial         | MANGALIB, HENTAILIB, YAOILIB                                              | ✅ портирован |
-| Chan              | MANGACHAN, HENCHAN, YAOICHAN                                              | ✅ портирован |
-| standalone        | REMANGA, NUDEMOON, ACOMICS, COMX, MANGABUFF, INKSTORY, TOMILOLIB, WAMANGA | ✅ портирован |
-| Senkuro (GraphQL) | SENKURO, SENKOGNITO                                                       | ✅ портирован |
+| Движок            | Источники                                                       | Статус        |
+| ----------------- | --------------------------------------------------------------- | ------------- |
+| Grouple           | READMANGA_RU, MINTMANGA, SELFMANGA, SEIMANGA, USAGI, ALLHENTAI  | ✅ портирован |
+| Desu (standalone) | DESUME                                                          | ✅ портирован |
+| LibSocial         | MANGALIB, HENTAILIB, YAOILIB                                    | ✅ портирован |
+| Chan              | MANGACHAN, HENCHAN, YAOICHAN                                    | ✅ портирован |
+| standalone        | REMANGA, NUDEMOON, ACOMICS, COMX, MANGABUFF, TOMILOLIB, WAMANGA | ✅ портирован |
+| Inuko             | INKSTORY, PUREMANGA                                             | ✅ портирован |
+| Senkuro (GraphQL) | SENKURO, SENKOGNITO                                             | ✅ портирован |
 
 MANGA_WTF и ZENMANGA — один и тот же сайт под новым брендом (домен `inkstory.net`, ранее
 `inkstory.me` — переехал в августе 2026), объединены в единый источник INKSTORY.
@@ -264,7 +267,32 @@ INKSTORY больше не входит в этот список: сайт пе�
 дате новой главы, поэтому дефолтный порядок `UPDATED` теперь читает отдельную ленту
 `/v2/chapter-update-feed?onlyBorderChapters=true` (как и сам сайт на главной странице); а
 `/branch/{id}` заменён на `/v2/branches/{id}` (та же форма ответа). См.
-`packages/parsers/src/sources/inkstory/index.ts`.
+`packages/parsers/src/sources/inuko/engine.ts`.
+
+### Сеть inuko: Inkstory и PureManga
+
+Inkstory (`inkstory.net`) и PureManga (`v1.puremanga.me`, хентай; голый `puremanga.me` отвечает 404) — сайты одной сети: общий API `api.inuko.me`, SSO `sso.inuko.me`, статика `static.inuko.me`
+и одинаковая раскладка сайта (TanStack Start, SSR-состояние seroval). Движок один —
+`createInukoParser(config, ctx)` в `sources/inuko/engine.ts`, сайты — конфиги `INUKO_CONFIGS`
+(`sources/inuko/config.ts`): `id` и `serviceName` — значение API, которое сужает общий каталог до
+одного сайта (`inkstory`, `puremanga.me` — с точкой, пишется как есть). Домен, название, тип
+контента и `isAdult` — из `SOURCE_CATALOG`. Общие для сети: ключ XOR-расшифровки страниц
+(`decryptionKey` в SSR главной, у обоих сайтов один), блоки главной (`INUKO_HOME_SECTION` — те же
+заголовки, на PureManga в блоках бывают и карточки соседних сайтов с абсолютной ссылкой, они
+отбрасываются), фильтры и сортировки. `uid` тайтлов — `generateUid(SOURCE_ID, id)`: одна и та же
+книга сети у двух сайтов — разные тайтлы, uid Inkstory после выноса движка не изменились. Другие
+сайты сети (`hexnovels` — новеллы, `selftoon`, `zenmanga`, `manga.ovh`) — будущие конфиги.
+
+**18+ в списках.** Списки API скрывают от гостя взрослое: `/v2/books`, поиск и лента
+`chapter-update-feed` не отдают книги `contentStatus` `EROTIC` и `PORNOGRAPHIC`
+(`contentStatus=PORNOGRAPHIC` у PureManga — `[]`; из 40 популярных — 31 `SAFE` и 9 `UNSAFE`).
+Тайтл по id, его главы и страницы открываются и гостю, SSR главной сайта взрослое показывает.
+Разведка 2026-10-27: настройки `global-filters` (`contentStatuses`, `labelBlacklist`,
+`preventUserAgentFiltering`) сайт читает и пишет только через server functions TanStack Start
+(`createServerFn` с middleware сессии) — браузер к `api.inuko.me` не ходит вовсе, запросы к API
+делает SSR-сервер сайта. `preventUserAgentFiltering` — поле пользователя (видно в SSR у профилей).
+Чем SSR-сервер представляется API, пока не выяснено — снятие фильтра не реализовано, списки обоих
+сайтов идут без 18+. См. [plans/puremanga-source.md](plans/puremanga-source.md).
 
 ### Источники вне форка
 

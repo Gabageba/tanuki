@@ -556,7 +556,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu, Inkstory) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu, Inuko) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -582,7 +582,7 @@ GET    /source-accounts                → { items: SourceAccount[], isLinkingAv
 POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu)
 POST   /source-accounts/libsocial/login { login, password, rememberPassword } → 204
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
-POST   /source-accounts/:family/session { value } → 204  (inkstory)
+POST   /source-accounts/:family/session { value } → 204  (inuko)
 DELETE /source-accounts/:family → 204
 
 PUT    /sources/:sourceId/enabled      { isEnabled } → 204
@@ -603,11 +603,17 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
   сохранённым паролем отвергнутый refresh_token заменяется новым входом. Запасной путь для
   входящих через VK или Яндекс — вставить значение ключа `auth` из localStorage сайта. Такой токен
   проверяется через `/api/auth/me`.
-- Inkstory: вход на SSO сети inuko (`sso.inuko.me`) закрыт Yandex SmartCaptcha — проверкой «вы
-  человек», а не proof-of-work, как ALTCHA у LibSocial, — поэтому сервер не входит сам. Человек
-  входит на сайте в своём браузере и вставляет cookie `__otaku_session` (одно значение, пара
-  `имя=значение` или вся строка Cookie). Сервер кладёт её в свежий jar и открывает `/faq`: в
-  SSR-состоянии `currentUser` — id и имя вошедшего, у гостя `null` → 400 `SOURCE_LOGIN_FAILED`.
+- Inuko (Inkstory, PureManga — семейство `inuko`, одна учётка на всю сеть): вход на SSO
+  `sso.inuko.me` закрыт Yandex SmartCaptcha — проверкой «вы человек», а не proof-of-work, как
+  ALTCHA у LibSocial, — поэтому сервер не входит сам. Человек входит на любом сайте сети в своём
+  браузере и вставляет cookie `__otaku_session` (одно значение, пара `имя=значение` или вся
+  строка Cookie). Cookie host-only, а с какого сайта её сняли, неизвестно: сервер по очереди
+  кладёт её в свежий jar на домене каждого сайта семейства и открывает там `/faq`. Принимается
+  первый сайт, у которого в SSR-состоянии `currentUser` — id и имя вошедшего; аккаунт хранит jar
+  с cookie на этом домене. Если все сайты видят гостя (`null`) — 400 `SOURCE_LOGIN_FAILED`, если
+  не ответил ни один — ошибка источника. Импорт закладок работает с обоих сайтов: библиотеку API
+  отдаёт по `userId`, а сайт выбирает `serviceName`. Аккаунты, привязанные до переименования
+  семейства (`inkstory`), перенесены миграцией `0032_inuko_family`.
   Пароля нет, cookie живёт около года; истёкшая сессия переводит аккаунт в `reloginRequired`, и
   её переносят заново.
 - Сессии и пароли шифруются AES-256-GCM ключом `SOURCE_SECRETS_KEY`. Без ключа привязка
