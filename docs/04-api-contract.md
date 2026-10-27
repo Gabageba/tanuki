@@ -556,7 +556,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu, Inkstory) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -567,7 +567,8 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 задачи. `Source.loginBenefits` — всё, что вход даёт (`catalogAndReading` — сам источник, у каждого
 `required`; `memberChapters`; `purchasedChapters`; `titleSearch` — поиск по названию, который
 сайт отдаёт только вошедшим: без аккаунта источник в `/search` — `locked`, а поле поиска в его
-каталоге закрыто),
+каталоге закрыто; `bookmarksImport` — импорт закладок, в каталоге не пишется: сервер добавляет его
+сам источнику с `isBookmarksImportSupported`),
 `Source.isLoggedIn` — есть ли действующий аккаунт.
 Источник с `optional` всегда `access: available`. Если аккаунт привязан, но источник
 перестал принимать его сессию, закрытый источник отвечает 403 `SOURCE_RELOGIN_REQUIRED`.
@@ -581,6 +582,7 @@ GET    /source-accounts                → { items: SourceAccount[], isLinkingAv
 POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu)
 POST   /source-accounts/libsocial/login { login, password, rememberPassword } → 204
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
+POST   /source-accounts/:family/session { value } → 204  (inkstory)
 DELETE /source-accounts/:family → 204
 
 PUT    /sources/:sourceId/enabled      { isEnabled } → 204
@@ -601,6 +603,13 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
   сохранённым паролем отвергнутый refresh_token заменяется новым входом. Запасной путь для
   входящих через VK или Яндекс — вставить значение ключа `auth` из localStorage сайта. Такой токен
   проверяется через `/api/auth/me`.
+- Inkstory: вход на SSO сети inuko (`sso.inuko.me`) закрыт Yandex SmartCaptcha — проверкой «вы
+  человек», а не proof-of-work, как ALTCHA у LibSocial, — поэтому сервер не входит сам. Человек
+  входит на сайте в своём браузере и вставляет cookie `__otaku_session` (одно значение, пара
+  `имя=значение` или вся строка Cookie). Сервер кладёт её в свежий jar и открывает `/faq`: в
+  SSR-состоянии `currentUser` — id и имя вошедшего, у гостя `null` → 400 `SOURCE_LOGIN_FAILED`.
+  Пароля нет, cookie живёт около года; истёкшая сессия переводит аккаунт в `reloginRequired`, и
+  её переносят заново.
 - Сессии и пароли шифруются AES-256-GCM ключом `SOURCE_SECRETS_KEY`. Без ключа привязка
   отвечает 503 `SOURCE_LINKING_UNAVAILABLE`. Источник, не принявший данные, — 400
   `SOURCE_LOGIN_FAILED`. Отвергнутая источником сессия переводит аккаунт в `reloginRequired`.
@@ -662,8 +671,12 @@ BookmarkItem = { titleId, sourceId, name, coverUrl, contentRating, type, folderI
   Первый снимок тайтла — базовый, его главы новыми не считаются. Новые — увиденные впервые после
   последнего визита в группу; визит — открытие страницы тайтла или сохранение прогресса. Число
   считается по ветке отметки цели (без отметки — по самой длинной), наружу карточка показывает
-  только точку. Снимки, которых нет ни в закладках, ни в отметках, чистятся раз в сутки
-  (`BOOKMARK_SNAPSHOTS_CLEANUP_CRON`).
+  только точку. `chaptersCount` / `progress.total` — из статистики ветки; статистики нет совсем
+  (глав 0 или база не ответила) — из `title_chapter_snapshots.chapters_count`: глав в самой
+  длинной ветке при последней удачной проверке, `null` у тайтла с платными главами (список
+  зависит от зрителя, кеш их режет) и у пропавшего. `0` — карточка пишет «Нет глав»; `null` —
+  «Главы ещё не проверены», но только у доступной цели без отметки. Снимки, которых нет ни в
+  закладках, ни в отметках, чистятся раз в сутки (`BOOKMARK_SNAPSHOTS_CLEANUP_CRON`).
 - **Склейка:** `PUT /titles/:id/links` с `confirmed` принимает необязательный `bookmarkFolderId`.
   Если у подтверждающего обе стороны лежат в закладках в разных папках, а поля нет — `409
 bookmarkFolderConflict`, фронт спрашивает папку и повторяет запрос. У остальных пользователей
