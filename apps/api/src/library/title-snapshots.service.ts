@@ -41,7 +41,10 @@ export class TitleSnapshotsService {
     const db = this.database.db;
 
     const [existing] = await db
-      .select({ checkedAt: titleChapterSnapshots.checkedAt })
+      .select({
+        checkedAt: titleChapterSnapshots.checkedAt,
+        missing: titleChapterSnapshots.missing,
+      })
       .from(titleChapterSnapshots)
       .where(eq(titleChapterSnapshots.titleKey, titleKey))
       .limit(1);
@@ -61,7 +64,9 @@ export class TitleSnapshotsService {
       .values({ titleKey, ...values })
       .onConflictDoUpdate({ target: titleChapterSnapshots.titleKey, set: values });
 
-    const baseline = !existing;
+    // Строка, которую оставил только сбой «не найдено» (markFailed), глав не видела — снимок всё
+    // ещё первый.
+    const baseline = !existing || (existing.missing && !(await this.hasSeenChapters(titleKey)));
     const chapters = (raw.chapters ?? []).filter((chapter) => !chapter.isPaid);
     for (let start = 0; start < chapters.length; start += SNAPSHOT_INSERT_CHUNK) {
       await db
@@ -88,12 +93,47 @@ export class TitleSnapshotsService {
     });
   }
 
-  /** Проверка не удалась: missing — источник ответил «не найдено». */
+  /**
+   * Проверка не удалась: missing — источник ответил «не найдено». Такой ответ окончательный,
+   * поэтому у тайтла без снимка строка создаётся (titleId — из закладки): иначе он навсегда
+   * остался бы в выборке первых снимков, а карточка не узнала бы, что тайтла нет. Временный сбой
+   * строку не создаёт — первый снимок попробуют ещё раз.
+   */
   async markFailed(titleKey: string, error: string, missing: boolean): Promise<void> {
-    await this.database.db
-      .update(titleChapterSnapshots)
-      .set({ checkedAt: sql`now()`, lastError: error, missing })
-      .where(eq(titleChapterSnapshots.titleKey, titleKey));
+    const db = this.database.db;
+    const values = { checkedAt: sql`now()`, lastError: error, missing };
+    if (!missing) {
+      await db
+        .update(titleChapterSnapshots)
+        .set(values)
+        .where(eq(titleChapterSnapshots.titleKey, titleKey));
+      return;
+    }
+    const [bookmark] = await db
+      .select({ sourceId: bookmarks.sourceId, titleId: bookmarks.titleId })
+      .from(bookmarks)
+      .where(eq(bookmarks.titleKey, titleKey))
+      .limit(1);
+    if (!bookmark) {
+      await db
+        .update(titleChapterSnapshots)
+        .set(values)
+        .where(eq(titleChapterSnapshots.titleKey, titleKey));
+      return;
+    }
+    await db
+      .insert(titleChapterSnapshots)
+      .values({ titleKey, ...bookmark, ...values })
+      .onConflictDoUpdate({ target: titleChapterSnapshots.titleKey, set: values });
+  }
+
+  private async hasSeenChapters(titleKey: string): Promise<boolean> {
+    const [row] = await this.database.db
+      .select({ titleKey: titleChaptersSeen.titleKey })
+      .from(titleChaptersSeen)
+      .where(eq(titleChaptersSeen.titleKey, titleKey))
+      .limit(1);
+    return !!row;
   }
 
   /** Chapter.id глав тайтла, впервые увиденных после визита; главы базового снимка не в счёт. */

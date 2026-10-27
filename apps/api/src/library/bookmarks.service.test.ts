@@ -13,9 +13,9 @@ import type { NotificationsService } from '../notifications/notifications.servic
 import type { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { SourcesService } from '../sources/sources.service';
 import type { BookmarkFoldersService } from './bookmark-folders.service';
-import { orderByStaleness, selectTrackedKeys } from './bookmark-updates.service';
+import { orderByStaleness, selectFillBatches, selectTrackedKeys } from './bookmark-updates.service';
 import { BookmarksService, toSourceAvailability } from './bookmarks.service';
-import type { BookmarkRecord } from './models';
+import { BOOKMARK_SNAPSHOTS_FILL_BATCH_SIZE, type BookmarkRecord } from './models';
 import type { TitleSnapshotsService } from './title-snapshots.service';
 
 const row = (titleKey: string, folderId: string): BookmarkRecord => ({
@@ -184,5 +184,28 @@ describe('очередь крона', () => {
         ]),
       ),
     ).toEqual(['never', 'stale', 'fresh']);
+  });
+});
+
+describe('selectFillBatches', () => {
+  it('делит по источникам и не берёт больше порции с одного', () => {
+    const many = Array.from(
+      { length: BOOKMARK_SNAPSHOTS_FILL_BATCH_SIZE + 5 },
+      (_, index) => `mangalib:${index}`,
+    );
+    const batches = selectFillBatches([...many, 'hentailib:1'], new Map(), 0);
+
+    expect(batches).toEqual([many.slice(0, BOOKMARK_SNAPSHOTS_FILL_BATCH_SIZE), ['hentailib:1']]);
+  });
+
+  it('пропускает ключи с недавним сбоем, пока не подошло время повтора', () => {
+    const retryAt = new Map([
+      ['mangalib:failed', 2000],
+      ['mangalib:retry', 1000],
+    ]);
+
+    expect(selectFillBatches(['mangalib:failed', 'mangalib:retry'], retryAt, 1000)).toEqual([
+      ['mangalib:retry'],
+    ]);
   });
 });

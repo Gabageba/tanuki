@@ -6,13 +6,24 @@ import { TitleSnapshotsService } from './title-snapshots.service';
 
 type SeenValue = { chapterId: string; branchId: string; baseline: boolean };
 
-/** База, в которой снимок тайтла уже есть (checkedAt) или его нет (null). */
-const createService = (checkedAt: Date | null) => {
+/**
+ * База, в которой снимок тайтла уже есть (checkedAt) или его нет (null). missing — строку оставил
+ * сбой «не найдено»; hasSeen — у тайтла уже есть увиденные главы.
+ */
+const createService = (
+  checkedAt: Date | null,
+  { missing = false, hasSeen = false }: { missing?: boolean; hasSeen?: boolean } = {},
+) => {
   const seen: SeenValue[] = [];
   const db = {
     select: () => ({
-      from: () => ({
-        where: () => ({ limit: () => Promise.resolve(checkedAt ? [{ checkedAt }] : []) }),
+      from: (table: unknown) => ({
+        where: () => ({
+          limit: () => {
+            if (table === titleChaptersSeen) return Promise.resolve(hasSeen ? [{}] : []);
+            return Promise.resolve(checkedAt ? [{ checkedAt, missing }] : []);
+          },
+        }),
       }),
     }),
     insert: (table: unknown) => ({
@@ -56,6 +67,22 @@ describe('TitleSnapshotsService.record', () => {
     const { service, seen } = createService(new Date(0));
 
     await service.record('remanga', '/title', title([chapter(3)]));
+
+    expect(seen.map(({ baseline }) => baseline)).toEqual([false]);
+  });
+
+  it('снимок после сбоя «не найдено» без увиденных глав — всё ещё базовый', async () => {
+    const { service, seen } = createService(new Date(0), { missing: true });
+
+    await service.record('remanga', '/title', title([chapter(1)]));
+
+    expect(seen.map(({ baseline }) => baseline)).toEqual([true]);
+  });
+
+  it('тайтл, который пропадал, но главы уже видел, пишет новые главы небазовыми', async () => {
+    const { service, seen } = createService(new Date(0), { missing: true, hasSeen: true });
+
+    await service.record('remanga', '/title', title([chapter(4)]));
 
     expect(seen.map(({ baseline }) => baseline)).toEqual([false]);
   });

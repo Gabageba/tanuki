@@ -89,6 +89,14 @@ export const BUILT_IN_BOOKMARK_FOLDER_NAMES = [
 
 export const BOOKMARK_UPDATES_JOB_NAME = 'bookmark-updates';
 export const BOOKMARK_SNAPSHOTS_CLEANUP_JOB_NAME = 'bookmark-snapshots-cleanup';
+export const BOOKMARK_SNAPSHOTS_FILL_JOB_NAME = 'bookmark-snapshots-fill';
+
+/** Сколько первых снимков одного источника снимать за минутный проход. */
+export const BOOKMARK_SNAPSHOTS_FILL_BATCH_SIZE = 20;
+/** Пауза между запросами к одному сайту — чтобы импорт сотни закладок не упёрся в рейт-лимит. */
+export const BOOKMARK_SNAPSHOTS_FILL_REQUEST_DELAY_MS = 1_000;
+/** Через сколько повторить первый снимок, который не удался. */
+export const BOOKMARK_SNAPSHOTS_FILL_RETRY_MS = 30 * 60_000;
 
 /** Чаще этого страница тайтла снимок не переписывает — список глав грузится по веткам. */
 export const SNAPSHOT_REFRESH_MIN_INTERVAL_MS = 5 * 60_000;

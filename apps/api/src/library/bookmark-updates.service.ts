@@ -1,6 +1,7 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { SchedulerRegistry } from '@nestjs/schedule';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { CronExpression, SchedulerRegistry } from '@nestjs/schedule';
+import { asc, eq, inArray, isNull } from 'drizzle-orm';
 import { CronJob } from 'cron';
 import { SOURCE_STATUS } from '@tanuki/contracts';
 import { NotFoundApiException } from '../common/errors';
@@ -18,7 +19,14 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import { runAsService } from '../source-accounts/viewer-context';
 import { SourcesService } from '../sources/sources.service';
-import { BOOKMARK_SNAPSHOTS_CLEANUP_JOB_NAME, BOOKMARK_UPDATES_JOB_NAME } from './models';
+import {
+  BOOKMARK_SNAPSHOTS_CLEANUP_JOB_NAME,
+  BOOKMARK_SNAPSHOTS_FILL_BATCH_SIZE,
+  BOOKMARK_SNAPSHOTS_FILL_JOB_NAME,
+  BOOKMARK_SNAPSHOTS_FILL_REQUEST_DELAY_MS,
+  BOOKMARK_SNAPSHOTS_FILL_RETRY_MS,
+  BOOKMARK_UPDATES_JOB_NAME,
+} from './models';
 import { BookmarksService } from './bookmarks.service';
 import { TitleSnapshotsService } from './title-snapshots.service';
 
@@ -44,6 +52,26 @@ export const selectTrackedKeys = (
   return [...keys];
 };
 
+/**
+ * Порция первых снимков: по BOOKMARK_SNAPSHOTS_FILL_BATCH_SIZE ключей на источник, ключи с
+ * недавним сбоем — пропускаются до retryAt.
+ */
+export const selectFillBatches = (
+  keys: string[],
+  retryAt: Map<string, number>,
+  now: number,
+): string[][] => {
+  const bySource = new Map<string, string[]>();
+  for (const key of keys) {
+    if ((retryAt.get(key) ?? 0) > now) continue;
+    const { sourceId } = parseLinkKey(key);
+    const batch = bySource.get(sourceId) ?? [];
+    if (batch.length < BOOKMARK_SNAPSHOTS_FILL_BATCH_SIZE) batch.push(key);
+    bySource.set(sourceId, batch);
+  }
+  return [...bySource.values()];
+};
+
 /** Давно не проверенные — первыми; ни разу не проверенные — самыми первыми. */
 export const orderByStaleness = (keys: string[], checkedAt: Map<string, Date>): string[] =>
   [...keys].sort((a, b) => (checkedAt.get(a)?.getTime() ?? 0) - (checkedAt.get(b)?.getTime() ?? 0));
@@ -54,12 +82,18 @@ export const orderByStaleness = (keys: string[], checkedAt: Map<string, Date>): 
  * сохранили. Запросы идут обычным путём к источнику — через лимитер и breaker; источники в
  * статусе down пропускаются.
  *
+ * Раз в минуту закладки без снимка — из любой папки — получают первый снимок, не дожидаясь
+ * прохода: иначе у только что импортированных карточек нет даже числа глав.
+ *
  * Раз в сутки тот же сервис чистит снимки тайтлов, которых больше нет ни в одних закладках.
  */
 @Injectable()
 export class BookmarkUpdatesService implements OnModuleInit {
   private readonly logger = new Logger(BookmarkUpdatesService.name);
   private isRunning = false;
+  private isFilling = false;
+  /** Когда снова пробовать первый снимок после сбоя; в памяти — после рестарта сразу. */
+  private readonly fillRetryAt = new Map<string, number>();
   /** Когда в прошлый раз сводили ленту «новых глав»; в памяти, после рестарта пусто. */
   private lastNotifiedAt: Date | null = null;
 
@@ -95,6 +129,12 @@ export class BookmarkUpdatesService implements OnModuleInit {
     this.scheduler.addCronJob(BOOKMARK_SNAPSHOTS_CLEANUP_JOB_NAME, cleanup);
     cleanup.start();
 
+    const fill = new CronJob(CronExpression.EVERY_MINUTE, () => {
+      void this.fillMissing();
+    });
+    this.scheduler.addCronJob(BOOKMARK_SNAPSHOTS_FILL_JOB_NAME, fill);
+    fill.start();
+
     this.logger.log(`Проверка закладок запланирована: ${this.env.BOOKMARK_UPDATES_CRON}`);
   }
 
@@ -122,6 +162,49 @@ export class BookmarkUpdatesService implements OnModuleInit {
       this.logger.warn(`Проверка закладок упала: ${(error as Error).message}`);
     } finally {
       this.isRunning = false;
+    }
+  }
+
+  /**
+   * Первые снимки закладок, которых ещё не проверяли. Источники — параллельно, внутри источника —
+   * по одному запросу с паузой. Пока идёт полный проход, не запускается: он сам начинает с ни разу
+   * не проверенных.
+   */
+  async fillMissing(): Promise<void> {
+    if (this.isFilling || this.isRunning) return;
+    this.isFilling = true;
+    try {
+      const rows = await this.database.db
+        .selectDistinct({ titleKey: bookmarks.titleKey })
+        .from(bookmarks)
+        .leftJoin(titleChapterSnapshots, eq(titleChapterSnapshots.titleKey, bookmarks.titleKey))
+        .where(isNull(titleChapterSnapshots.titleKey));
+      if (rows.length === 0) return;
+
+      const sources = await this.sources.listSources();
+      const liveSources = new Set(
+        sources.filter(({ status }) => status !== SOURCE_STATUS.DOWN).map(({ id }) => id),
+      );
+      const keys = rows
+        .map(({ titleKey }) => titleKey)
+        .filter((key) => liveSources.has(parseLinkKey(key).sourceId));
+
+      await Promise.all(
+        selectFillBatches(keys, this.fillRetryAt, Date.now()).map(async (batch) => {
+          for (const [index, key] of batch.entries()) {
+            if (index > 0) await sleep(BOOKMARK_SNAPSHOTS_FILL_REQUEST_DELAY_MS);
+            if (await this.checkOne(key)) {
+              this.fillRetryAt.delete(key);
+            } else {
+              this.fillRetryAt.set(key, Date.now() + BOOKMARK_SNAPSHOTS_FILL_RETRY_MS);
+            }
+          }
+        }),
+      );
+    } catch (error) {
+      this.logger.warn(`Первые снимки закладок упали: ${(error as Error).message}`);
+    } finally {
+      this.isFilling = false;
     }
   }
 
@@ -203,18 +286,20 @@ export class BookmarkUpdatesService implements OnModuleInit {
     );
   }
 
-  /** Один тайтл: детали от сервисной учётки — снимок общий для всех. */
-  private async checkOne(titleKey: string): Promise<void> {
+  /** Один тайтл: детали от сервисной учётки — снимок общий для всех. false — не удалось. */
+  private async checkOne(titleKey: string): Promise<boolean> {
     const { sourceId, url } = parseLinkKey(titleKey);
     try {
       const { data } = await runAsService(() => this.parsersClient.getDetails(sourceId, url));
       await this.snapshots.record(sourceId, url, data, { force: true });
+      return true;
     } catch (error) {
       const message = (error as Error).message;
       await this.snapshots
         .markFailed(titleKey, message, error instanceof NotFoundApiException)
         .catch(() => undefined);
       this.logger.warn(`Проверка закладок: ${titleKey} — ${message}`);
+      return false;
     }
   }
 }
