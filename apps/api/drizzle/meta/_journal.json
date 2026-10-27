@@ -218,6 +218,13 @@
       "when": 1793006518966,
       "tag": "0030_source_import_progress_volume",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793089434783,
+      "tag": "0031_title_snapshot_chapters_count",
+      "breakpoints": true
     }
   ]
 }

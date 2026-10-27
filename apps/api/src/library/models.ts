@@ -10,7 +10,7 @@ export type ProgressRecord = Pick<
 
 export type SnapshotRecord = Pick<
   typeof titleChapterSnapshots.$inferSelect,
-  'titleKey' | 'titleId' | 'checkedAt' | 'missing'
+  'titleKey' | 'titleId' | 'checkedAt' | 'missing' | 'chaptersCount'
 >;
 
 /** Копия тайтла, куда может вести карточка: titleId известен, доступность посчитана. */
@@ -47,6 +47,8 @@ export type BookmarkGroup = {
   readAt: Date | null;
   /** Когда цель последний раз проверяли; null — ещё ни разу. */
   checkedAt: Date | null;
+  /** Сколько глав у цели на источнике по снимку; null — неизвестно или тайтл пропал. */
+  sourceChaptersCount: number | null;
 };
 
 /** Сколько глав в ветке тайтла и сколько из них новых с визита. */

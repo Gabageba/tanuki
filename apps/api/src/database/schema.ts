@@ -565,6 +565,8 @@ export const titleChapterSnapshots = pgTable('title_chapter_snapshots', {
   lastError: text('last_error'),
   /** Источник ответил «не найдено» — тайтл пропал с него. */
   missing: boolean('missing').notNull().default(false),
+  /** Глав в самой длинной ветке при последней удачной проверке; null — неизвестно (есть платные). */
+  chaptersCount: integer('chapters_count'),
 });
 
 /**

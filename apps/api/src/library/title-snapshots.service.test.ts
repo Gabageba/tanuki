@@ -5,6 +5,7 @@ import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.type
 import { TitleSnapshotsService } from './title-snapshots.service';
 
 type SeenValue = { chapterId: string; branchId: string; baseline: boolean };
+type SnapshotValue = { chaptersCount?: number };
 
 /**
  * База, в которой снимок тайтла уже есть (checkedAt) или его нет (null). missing — строку оставил
@@ -15,6 +16,7 @@ const createService = (
   { missing = false, hasSeen = false }: { missing?: boolean; hasSeen?: boolean } = {},
 ) => {
   const seen: SeenValue[] = [];
+  const snapshots: SnapshotValue[] = [];
   const db = {
     select: () => ({
       from: (table: unknown) => ({
@@ -27,8 +29,9 @@ const createService = (
       }),
     }),
     insert: (table: unknown) => ({
-      values: (values: SeenValue | SeenValue[]) => {
+      values: (values: SeenValue[] | SnapshotValue) => {
         if (table === titleChaptersSeen) seen.push(...(values as SeenValue[]));
+        else snapshots.push(values as SnapshotValue);
         return {
           onConflictDoUpdate: () => Promise.resolve(),
           onConflictDoNothing: () => Promise.resolve(),
@@ -36,7 +39,11 @@ const createService = (
       },
     }),
   };
-  return { service: new TitleSnapshotsService({ db } as unknown as DatabaseService), seen };
+  return {
+    service: new TitleSnapshotsService({ db } as unknown as DatabaseService),
+    seen,
+    snapshots,
+  };
 };
 
 const chapter = (id: number, overrides: Partial<RawChapter> = {}) =>
@@ -54,6 +61,28 @@ const chapter = (id: number, overrides: Partial<RawChapter> = {}) =>
 const title = (chapters: RawChapter[]) => ({ id: 1, url: '/title', chapters }) as RawTitle;
 
 describe('TitleSnapshotsService.record', () => {
+  it('запоминает число глав самой длинной ветки, а ответ без глав его не трогает', async () => {
+    const { service, snapshots } = createService(null);
+
+    await service.record(
+      'remanga',
+      '/title',
+      title([chapter(1), chapter(2), chapter(3, { branch: 'Команда' })]),
+    );
+    await service.record('remanga', '/title', title([]));
+    await service.record('remanga', '/title', { id: 1, url: '/title' } as RawTitle);
+
+    expect(snapshots.map(({ chaptersCount }) => chaptersCount)).toEqual([2, 0, undefined]);
+  });
+
+  it('у тайтла с платными главами число неизвестно — список зависит от зрителя', async () => {
+    const { service, snapshots } = createService(null);
+
+    await service.record('mangalib', '/title', { ...title([chapter(1)]), hasPaidChapters: true });
+
+    expect(snapshots[0]?.chaptersCount).toBeNull();
+  });
+
   it('первый снимок тайтла — базовый: его главы новыми не станут', async () => {
     const { service, seen } = createService(null);
 

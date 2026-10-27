@@ -10,7 +10,7 @@ import {
 } from '../database/schema';
 import { linkKeyOf } from '../matches/title-links.service';
 import type { RawTitle } from '../parsers-client/parsers-client.types';
-import { toSnapshotBranchId } from './bookmark-groups';
+import { countSnapshotChapters, toSnapshotBranchId } from './bookmark-groups';
 import { SNAPSHOT_INSERT_CHUNK, SNAPSHOT_REFRESH_MIN_INTERVAL_MS } from './models';
 
 /**
@@ -58,6 +58,8 @@ export class TitleSnapshotsService {
       checkedAt: sql`now()`,
       lastError: null,
       missing: false,
+      // Ответ без списка глав не знает их числа — прежнее остаётся.
+      ...(raw.chapters ? { chaptersCount: countSnapshotChapters(raw) } : {}),
     };
     await db
       .insert(titleChapterSnapshots)

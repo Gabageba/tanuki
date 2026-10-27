@@ -215,7 +215,7 @@ export const BookmarkItemSchema = z.object({
   folderId: z.string().uuid(),
   /** null — в группе не читали. */
   progress: BookmarkProgressSchema.nullable(),
-  /** Сколько глав в ветке цели — когда отметки нет; null — тайтл ещё не проверяли. */
+  /** Сколько глав в ветке цели — когда отметки нет; 0 — на источнике глав нет; null — неизвестно. */
   chaptersCount: z.number().int().min(0).nullable(),
   /** Карточка показывает только признак > 0; число нужно сортировке. */
   newChaptersCount: z.number().int().min(0),

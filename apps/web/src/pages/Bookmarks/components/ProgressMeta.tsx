@@ -1,20 +1,22 @@
 import { Text } from '@mantine/core';
 import { Trans, useTranslation } from 'react-i18next';
-import type { BookmarkItem } from '@tanuki/contracts';
+import { BOOKMARK_AVAILABILITY, type BookmarkItem } from '@tanuki/contracts';
 import NumericMeta from '@/entities/title/NumericMeta';
 
 type Props = {
-  bookmark: Pick<BookmarkItem, 'progress' | 'chaptersCount'>;
+  bookmark: Pick<BookmarkItem, 'progress' | 'chaptersCount' | 'availability'>;
 };
 
 const MONO = { mono: <Text span inherit ff="monospace" /> };
 
 /** «Гл. 197 из 203» — фраза Golos Text с моноширинными номерами, неразрывная. Первое число —
  *  порядковый номер главы в ветке (position), а не номер из названия: он сравним с общим числом глав.
- *  Ветку отметки ещё не проверяли — только «Гл. 1090» с номером главы. Без отметки — число глав, тайтл ещё не проверяли — ничего. */
+ *  Ветку отметки ещё не проверяли — только «Гл. 1090» с номером главы. Без отметки — число глав, на источнике глав нет —
+ *  «Нет глав». Доступный тайтл без отметки ещё не проверяли — «Главы ещё не проверены»; у недоступного проверки не
+ *  будет, а у отметки null значит ещё и «ветку не нашли» — там ничего. */
 function ProgressMeta({ bookmark }: Props) {
   const { t } = useTranslation();
-  const { progress, chaptersCount } = bookmark;
+  const { progress, chaptersCount, availability } = bookmark;
 
   if (progress && progress.chapterNumber !== null) {
     if (progress.total === null || progress.position === null) {
@@ -36,11 +38,25 @@ function ProgressMeta({ bookmark }: Props) {
   }
 
   const total = progress?.total ?? chaptersCount;
-  if (total) {
-    return <NumericMeta>{t('countChaptersAbbrev', { count: total })}</NumericMeta>;
+  if (total === 0) {
+    return (
+      <Text span inherit>
+        {t('noChapters')}
+      </Text>
+    );
+  }
+  if (total === null) {
+    if (progress || availability !== BOOKMARK_AVAILABILITY.AVAILABLE) {
+      return null;
+    }
+    return (
+      <Text span inherit>
+        {t('chaptersNotCheckedYet')}
+      </Text>
+    );
   }
 
-  return null;
+  return <NumericMeta>{t('countChaptersAbbrev', { count: total })}</NumericMeta>;
 }
 
 export default ProgressMeta;
