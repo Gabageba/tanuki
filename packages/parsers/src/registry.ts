@@ -16,6 +16,7 @@ import { authenticateAllHentai, authenticateGrouple } from './sources/grouple/au
 import { fetchLibSocialAccountName } from './sources/libsocial/auth';
 import { loginLibSocialWithPassword } from './sources/libsocial/login';
 import { createDesuParser } from './sources/desu';
+import { loginDesu } from './sources/desu/auth';
 import { LIBSOCIAL_API_HOST, LIBSOCIAL_CONFIGS } from './sources/libsocial/config';
 import { createLibSocialParser } from './sources/libsocial/engine';
 import { CHAN_CONFIGS } from './sources/chan/config';
@@ -217,7 +218,8 @@ export const listSources = (): RawSourceInfo[] => {
 export type PasswordAuthFamily =
   | typeof SOURCE_AUTH_FAMILY.GROUPLE
   | typeof SOURCE_AUTH_FAMILY.ALLHENTAI
-  | typeof SOURCE_AUTH_FAMILY.NUDEMOON;
+  | typeof SOURCE_AUTH_FAMILY.NUDEMOON
+  | typeof SOURCE_AUTH_FAMILY.DESU;
 
 export type ParsersRegistry = {
   listSources(): RawSourceInfo[];
@@ -226,8 +228,8 @@ export type ParsersRegistry = {
   decodeImage(sourceId: string, bytes: Buffer, imageUrl: string): Promise<Buffer>;
   init(): Promise<void>;
   /**
-   * Входит в Grouple, AllHentai или Nude-Moon под учёткой пользователя, в свежий jar — общий и
-   * чужие сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
+   * Входит в Grouple, AllHentai, Nude-Moon или Desu под учёткой пользователя, в свежий jar — общий
+   * и чужие сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
    */
   loginAccount(
     family: PasswordAuthFamily,
@@ -369,6 +371,22 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         try {
           const domain = SOURCES[SOURCE_ID.NUDEMOON].domains[0];
           return (await loginNudeMoon(http, jar, domain, credentials, opts.logger)) ? jar : null;
+        } finally {
+          await http.close();
+        }
+      }
+
+      if (family === SOURCE_AUTH_FAMILY.DESU) {
+        const jar = new CookieJar();
+        const http = new HttpClientImpl({
+          sourceId: SOURCE_ID.DESUME,
+          jar,
+          defaultHeaders: SOURCES[SOURCE_ID.DESUME].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const domain = SOURCES[SOURCE_ID.DESUME].domains[0];
+          return (await loginDesu(http, domain, credentials, opts.logger)) !== null ? jar : null;
         } finally {
           await http.close();
         }

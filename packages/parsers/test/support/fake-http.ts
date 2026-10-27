@@ -1,4 +1,5 @@
 import { parseHtml } from '../../src/core/html/dom';
+import { classifyResponse } from '../../src/core/http/classify';
 import type {
   HttpClient,
   HttpRequest,
@@ -62,9 +63,13 @@ export class FakeHttpClient implements HttpClient {
   }
 
   async get(url: string): Promise<HttpResponse> {
-    const res = await this.request({ url, method: 'GET', headers: {} });
-    if (res.status >= 400)
-      throw new Error(`FakeHttpClient: fixture status ${res.status} for ${url}`);
+    return this.throwIfError(await this.request({ url, method: 'GET', headers: {} }));
+  }
+
+  /** Same classification as the real client — a 5xx or an antibot page becomes its ParserError. */
+  private throwIfError(res: HttpResponse): HttpResponse {
+    const error = classifyResponse('fake', res.status, res.url, res.headers, res.text());
+    if (error) throw error;
     return res;
   }
 
@@ -78,8 +83,13 @@ export class FakeHttpClient implements HttpClient {
     return res.json<T>();
   }
 
-  async postForm(url: string): Promise<HttpResponse> {
-    return this.get(url);
+  async postForm(
+    url: string,
+    form: Record<string, string>,
+    headers: Record<string, string> = {},
+  ): Promise<HttpResponse> {
+    const body = new URLSearchParams(form);
+    return this.throwIfError(await this.request({ url, method: 'POST', headers, body }));
   }
 
   async head(): Promise<boolean> {

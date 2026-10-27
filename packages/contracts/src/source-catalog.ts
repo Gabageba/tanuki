@@ -132,8 +132,10 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['desu.uno', 'x.desu.city', 'desu.city', 'desu.work', 'desu.store', 'desu.win'],
     color: '#915806',
-    authFamily: null,
-    loginRequirement: null,
+    // Всё открыто гостю; аккаунт нужен только импорту закладок — список читается от имени
+    // вошедшего, чтобы взять именно его (проверено вживую 26 октября 2026).
+    authFamily: SOURCE_AUTH_FAMILY.DESU,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   mangalib: {

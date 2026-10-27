@@ -97,14 +97,15 @@ export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 /**
  * Аккаунт, которым пользователь открывает источник. Одна учётка обслуживает всё семейство:
  * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у LibSocial — аккаунт lib.social,
- * у Nude-Moon — аккаунт самого сайта. Что именно без аккаунта закрыто — loginRequirement и
- * loginBenefits источника.
+ * у Nude-Moon и Desu — аккаунт самого сайта. Что именно без аккаунта закрыто — loginRequirement
+ * и loginBenefits источника.
  */
 export const SOURCE_AUTH_FAMILY = {
   GROUPLE: 'grouple',
   ALLHENTAI: 'allhentai',
   LIBSOCIAL: 'libsocial',
   NUDEMOON: 'nudemoon',
+  DESU: 'desu',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 

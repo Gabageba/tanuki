@@ -22,6 +22,8 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
       return 'LibSocial';
     case SOURCE_AUTH_FAMILY.NUDEMOON:
       return 'Nude-Moon';
+    case SOURCE_AUTH_FAMILY.DESU:
+      return 'Desu';
   }
 };
 

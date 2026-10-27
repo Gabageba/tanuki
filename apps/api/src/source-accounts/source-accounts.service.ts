@@ -8,6 +8,8 @@ import {
   type SourceAuthFamily,
 } from '@tanuki/contracts';
 import {
+  SourceBlockedError,
+  SourceUnavailableError,
   parseLibSocialAuthValue,
   type LibSocialTokenState,
   type ParsersRegistry,
@@ -15,8 +17,10 @@ import {
 } from '@tanuki/parsers';
 import {
   BadRequestApiException,
+  SourceBlockedException,
   SourceLinkingUnavailableException,
   SourceLoginFailedException,
+  SourceUnavailableException,
 } from '../common/errors';
 import { toServerDateTime } from '../common/dates';
 import { PARSERS } from '../parsers-client/parsers.provider';
@@ -38,7 +42,8 @@ const toSourceAccount = (row: SourceAccountRow, sourceIds: string[] | null): Sou
 const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamily =>
   family === SOURCE_AUTH_FAMILY.GROUPLE ||
   family === SOURCE_AUTH_FAMILY.ALLHENTAI ||
-  family === SOURCE_AUTH_FAMILY.NUDEMOON;
+  family === SOURCE_AUTH_FAMILY.NUDEMOON ||
+  family === SOURCE_AUTH_FAMILY.DESU;
 
 /** Привязка и отвязка личных аккаунтов источников — то, что человек делает в настройках. */
 @Injectable()
@@ -66,9 +71,9 @@ export class SourceAccountsService {
   }
 
   /**
-   * Grouple, AllHentai и Nude-Moon: сервер сам входит на сайт (у Grouple и AllHentai — через шлюз
-   * SSO) и сохраняет полученную сессию. Пароль
-   * хранится, только если человек разрешил, — иначе он нужен лишь на время входа.
+   * Grouple, AllHentai, Nude-Moon и Desu: сервер сам входит на сайт (у Grouple и AllHentai —
+   * через шлюз SSO) и сохраняет полученную сессию. Пароль хранится, только если человек
+   * разрешил, — иначе он нужен лишь на время входа.
    */
   async linkWithPassword(
     userId: string,
@@ -78,10 +83,14 @@ export class SourceAccountsService {
     if (!isPasswordFamily(family)) throw new BadRequestApiException();
     if (!this.sourceAccess.isLinkingAvailable) throw new SourceLinkingUnavailableException();
 
-    const jar = await this.parsers.loginAccount(family, {
-      username: input.login,
-      password: input.password,
-    });
+    // Сайт не ответил — это не «неверный логин», а недоступность источника.
+    const jar = await this.parsers
+      .loginAccount(family, { username: input.login, password: input.password })
+      .catch((error: unknown) => {
+        if (error instanceof SourceBlockedError) throw new SourceBlockedException();
+        if (error instanceof SourceUnavailableError) throw new SourceUnavailableException();
+        throw error;
+      });
     const cookies = jar?.serializeSync();
     if (!cookies) throw new SourceLoginFailedException();
 
