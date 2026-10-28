@@ -218,6 +218,8 @@ AsyncLocalStorage (`runWithSourceAccounts`, `core/source-accounts.ts`). `HttpCli
 `loginAccount` (вход в свежий jar) и `fetchLibSocialAccountName` (проверка токена) для привязки.
 Платные главы LibSocial: `restricted_view` бывает только у них. Открытые аккаунту остаются с
 `isPaid`, закрытые пропускаются, у тайтла ставится `hasPaidChapters`.
+Платные главы REMANGA: закрытые пропускаются, купленные сервисной сессией остаются без
+`isPaid` (своих аккаунтов у источника нет), у тайтла ставится `hasPaidChapters`.
 
 ### Пагинация
 
