@@ -701,7 +701,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     ].filter((t) => t.length > 0);
 
     const chapters: RawChapter[] = [];
-    let hadPaidChapters = false;
+    let hasPaidChapters = false;
     for (const branch of json.branches ?? []) {
       const branchName =
         branch.publishers
@@ -710,10 +710,10 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
           .join(', ') || null;
       const branchChapters = (await fetchAllChapters(branch.id)).slice().reverse();
       for (const cjo of branchChapters) {
-        if (cjo.is_paid && !cjo.is_bought) {
-          hadPaidChapters = true;
-          continue;
-        }
+        // Закрытые платные главы пропускаются. Купленные остаются без isPaid: своих аккаунтов у
+        // REMANGA нет, всё читается от сервисной сессии — её покупки видны всем.
+        if (cjo.is_paid) hasPaidChapters = true;
+        if (cjo.is_paid && !cjo.is_bought) continue;
         chapters.push({
           id: generateUid(SOURCE_ID, cjo.id),
           title: cjo.name ? toTitleCase(cjo.name) : null,
@@ -763,7 +763,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
         json.status?.id === LICENSED_STATUS_ID ||
         json.translate_status?.id === TRANSLATE_LICENSED_STATUS_ID
           ? TITLE_RESTRICTION.LEGAL
-          : chapters.length === 0 && hadPaidChapters
+          : chapters.length === 0 && hasPaidChapters
             ? TITLE_RESTRICTION.PAYWALL
             : null,
       type: mangaTypeById(json.type?.id),
@@ -778,6 +778,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
       description: json.description ?? null,
       chapters,
       source: SOURCE_ID,
+      ...(hasPaidChapters ? { hasPaidChapters } : {}),
     };
   };
 
