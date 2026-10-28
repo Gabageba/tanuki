@@ -9,11 +9,13 @@ import {
 import {
   buildBookmarkGroups,
   countBookmarkGroup,
+  countSnapshotChapters,
   matchesBookmarkQuery,
   pickStatBranch,
   sortBookmarkGroups,
   toFolderCopies,
 } from './bookmark-groups';
+import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.types';
 import type { BookmarkRecord, BranchStat, ProgressRecord, SnapshotRecord } from './models';
 
 const at = (minutes: number) => new Date(Date.UTC(2026, 9, 1, 0, minutes));
@@ -338,5 +340,24 @@ describe('toFolderCopies', () => {
       { folderId: 'planned', sourceIds: ['b'] },
       { folderId: 'reading', sourceIds: ['a', 'c'] },
     ]);
+  });
+});
+
+describe('countSnapshotChapters', () => {
+  const title = (chapters: Partial<RawChapter>[], hasPaidChapters?: boolean) =>
+    ({
+      chapters: chapters.map((chapter) => ({ branch: null, ...chapter })),
+      ...(hasPaidChapters ? { hasPaidChapters } : {}),
+    }) as RawTitle;
+
+  it('считает главы самой длинной ветки', () => {
+    expect(countSnapshotChapters(title([{ branch: 'a' }, { branch: 'a' }, { branch: 'b' }]))).toBe(
+      2,
+    );
+  });
+
+  it('платные главы — число неизвестно, весь тайтл за пейволом — глав нет', () => {
+    expect(countSnapshotChapters(title([{}], true))).toBeNull();
+    expect(countSnapshotChapters(title([], true))).toBe(0);
   });
 });

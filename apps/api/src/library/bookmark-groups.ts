@@ -268,10 +268,10 @@ export const toSnapshotBranchId = (branch: string | null) => branch ?? DEFAULT_B
 /**
  * Число глав тайтла для снимка — по самой длинной ветке, как pickStatBranch без отметки. У тайтла
  * с платными главами список зависит от зрителя (закрытые выкинуты, кеш режет и купленные) —
- * число неизвестно.
+ * число неизвестно. Пустой список — весь тайтл за пейволом: глав нет, это известно.
  */
 export const countSnapshotChapters = (raw: RawTitle): number | null => {
-  if (raw.hasPaidChapters) return null;
+  if (raw.hasPaidChapters && raw.chapters?.length) return null;
   const byBranch = new Map<string, number>();
   for (const chapter of raw.chapters ?? []) {
     const branchId = toSnapshotBranchId(chapter.branch);
