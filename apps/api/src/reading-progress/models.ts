@@ -22,3 +22,12 @@ export type AlignedChapter = {
 export type ChapterSnapshot = Pick<RawChapter, 'volume' | 'number' | 'title'>;
 
 export type ReadingProgressRow = typeof readingProgress.$inferSelect;
+
+/**
+ * Последняя глава ветки по снимку глав: том и номер самой поздней и наибольший номер в ветке —
+ * без учёта тома, на случай устаревших строк снимка (глава переехала в другой том).
+ */
+export type LatestChapter = Pick<ChapterSnapshot, 'volume'> & {
+  number: number;
+  maxNumber: number;
+};

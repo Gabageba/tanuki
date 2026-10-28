@@ -1,4 +1,4 @@
-import type { ReadingProgressRow } from './models';
+import type { LatestChapter, ReadingProgressRow } from './models';
 
 /** Строка видна в «Продолжить чтение»: её не убирали или читали уже после того, как убрали. */
 export const isShownInContinueReading = ({ hiddenAt, updatedAt }: ReadingProgressRow) =>
@@ -23,4 +23,23 @@ export const pickContinueReadingRows = (
     seenGroups.add(group);
     return true;
   });
+};
+
+/**
+ * Отметка на последней главе своей ветки — дочитывать нечего, в ленте тайтлу не место. Главы
+ * сравниваются как в счётчике закладок: том, потом номер, глава без тома — после всех томов.
+ * Глава с большим номером где угодно в ветке — не последняя: том у главы мог смениться, а старая
+ * строка снимка осталась. Последняя глава неизвестна (снимка нет или он ненадёжен, у отметки нет
+ * номера) — тайтл остаётся.
+ */
+export const isOnLastChapter = (
+  { chapterVolume, chapterNumber }: ReadingProgressRow,
+  latest: LatestChapter | undefined,
+) => {
+  if (!latest || chapterNumber === null || chapterNumber < latest.maxNumber) return false;
+  const markVolume = chapterVolume ?? Infinity;
+  const latestVolume = latest.volume ?? Infinity;
+  return (
+    markVolume > latestVolume || (markVolume === latestVolume && chapterNumber >= latest.number)
+  );
 };

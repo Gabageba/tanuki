@@ -21,7 +21,7 @@ import { groupByBranch, normalizeChapter, titleIdOf } from '../common/normalize'
 import { decodeChapterId, decodeTitleId, splitCompositeId } from '../common/opaque-id';
 import { DatabaseService } from '../database/database.service';
 import { BookmarksService } from '../library/bookmarks.service';
-import { readingProgress } from '../database/schema';
+import { readingProgress, titleChapterSnapshots, titleChaptersSeen } from '../database/schema';
 import { IMAGE_FORMAT } from '../img-proxy/models';
 import { buildSignedImageUrl } from '../img-proxy/sign.util';
 import { SourcesService } from '../sources/sources.service';
@@ -29,8 +29,8 @@ import { linkKeyOf, parseLinkKey, TitleLinksService } from '../matches/title-lin
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.types';
 import { alignBySnapshot, alignChapter } from './chapter-alignment';
-import { pickContinueReadingRows } from './continue-reading';
-import type { ReadingProgressRow } from './models';
+import { isOnLastChapter, pickContinueReadingRows } from './continue-reading';
+import type { LatestChapter, ReadingProgressRow } from './models';
 
 /**
  * Сколько строк прогресса смотрится ради «Продолжить чтение». С запасом против
@@ -38,6 +38,13 @@ import type { ReadingProgressRow } from './models';
  * выключен, тайтл убран из ленты).
  */
 const CONTINUE_READING_SCAN_LIMIT = 200;
+
+/**
+ * Сколько снимок глав считается свежим, чтобы по нему убрать дочитанный тайтл из ленты.
+ * Отслеживаемые закладки крон перепроверяет чаще; остальные — только при открытии тайтла, и без
+ * этого срока новая глава не вернула бы тайтл в ленту никогда.
+ */
+const LATEST_CHAPTER_MAX_AGE_MS = 24 * 60 * 60_000;
 
 /** Снимок тайтла для «Продолжить чтение» — из деталей, которые источник уже отдал. */
 const toTitleSnapshot = (titleId: string, raw: RawTitle) => ({
@@ -268,7 +275,8 @@ export class ReadingProgressService {
 
   /**
    * «Продолжить чтение» — последние тайтлы, которые читал пользователь: группа совпадений —
-   * одна карточка с источником и главой самой свежей отметки. Строкам без снимка (прогресс
+   * одна карточка с источником и главой самой свежей отметки. Тайтл, дочитанный до последней
+   * главы по свежему снимку, в ленту не попадает — до выхода следующей. Строкам без снимка (прогресс
    * старше снимков) он досниматься из деталей источника; не вышло — строка ждёт следующего
    * чтения. Недоступная база — пустая лента: главная из-за этого падать не должна.
    */
@@ -290,9 +298,11 @@ export class ReadingProgressService {
       this.sources.listSources(userId),
     ]);
     const shownSources = new Set(sources.filter(({ isEnabled }) => isEnabled).map(({ id }) => id));
-    const picked = pickContinueReadingRows(rows, canonical, (sourceId) =>
+    const visible = pickContinueReadingRows(rows, canonical, (sourceId) =>
       shownSources.has(sourceId),
     );
+    const latest = await this.listLatestChapters(visible);
+    const picked = visible.filter((row) => !isOnLastChapter(row, latest.get(row.titleKey)));
 
     const items: ContinueReadingItem[] = [];
     for (let start = 0; start < picked.length && items.length < CONTINUE_READING_LIMIT;) {
@@ -304,6 +314,61 @@ export class ReadingProgressService {
       }
     }
     return { items };
+  }
+
+  /**
+   * Последняя глава в ветке каждой отметки — по снимку глав, одним запросом. Снимок берётся только
+   * свежий, удачный и без платных глав (их в снимке нет, а последней бесплатная быть не обязана);
+   * глав без номера (экстры) он не знает: их не с чем сравнить. Недоступная база — пусто: лента
+   * покажет всё.
+   */
+  private async listLatestChapters(
+    rows: ReadingProgressRow[],
+  ): Promise<Map<string, LatestChapter>> {
+    if (rows.length === 0) return new Map();
+    const keys = sql.join(
+      rows.map(({ titleKey }) => sql`${titleKey}`),
+      sql`, `,
+    );
+    const branches = sql.join(
+      rows.map(({ branchId }) => sql`${branchId}`),
+      sql`, `,
+    );
+
+    type LatestRow = {
+      title_key: string;
+      chapter_volume: number | null;
+      chapter_number: number;
+      max_number: number;
+    };
+    const latest = await this.database.withFallback<LatestRow[]>(
+      async () => [
+        ...(await this.database.db.execute<LatestRow>(sql`
+          SELECT DISTINCT ON (t.title_key) t.title_key, s.chapter_volume, s.chapter_number,
+            max(s.chapter_number) OVER (PARTITION BY t.title_key) AS max_number
+          FROM unnest(ARRAY[${keys}]::text[], ARRAY[${branches}]::text[]) AS t(title_key, branch_id)
+          JOIN ${titleChapterSnapshots} AS c
+            ON c.title_key = t.title_key
+            AND c.chapters_count IS NOT NULL
+            AND c.last_error IS NULL
+            AND NOT c.missing
+            AND c.checked_at > now() - ${LATEST_CHAPTER_MAX_AGE_MS}::double precision * interval '1 millisecond'
+          JOIN ${titleChaptersSeen} AS s
+            ON s.title_key = t.title_key AND s.branch_id = t.branch_id
+          WHERE s.chapter_number IS NOT NULL
+          ORDER BY t.title_key,
+            coalesce(s.chapter_volume, 'Infinity'::double precision) DESC,
+            s.chapter_number DESC
+        `)),
+      ],
+      [],
+    );
+    return new Map(
+      latest.map((row) => [
+        row.title_key,
+        { volume: row.chapter_volume, number: row.chapter_number, maxNumber: row.max_number },
+      ]),
+    );
   }
 
   /** Убирает тайтл из «Продолжить чтение» — всю его группу; прогресс остаётся как был. */
