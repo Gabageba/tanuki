@@ -407,6 +407,51 @@ describe('Senkuro getHome', () => {
   const requestVariables = (http: FakeHttpClient) =>
     http.requests.map(({ body }) => JSON.parse(body!).variables as Record<string, unknown>);
 
+  it('keeps a title without a source cover without treating the whole section as broken', async () => {
+    const http = new FakeHttpClient();
+    http.register((_url, body) => body?.includes('fetchMangas') ?? false, {
+      status: 200,
+      body: JSON.stringify({
+        data: {
+          mangas: {
+            edges: [{ node: { ...card(3), cover: null } }, { node: card(4) }],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      }),
+    });
+    registerHome(http);
+    const parser = createSenkuroParser(SENKURO_CONFIG, makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+    const newest = sections.find(({ id }) => id === 'newest')!;
+    expect(newest.items).toHaveLength(2);
+    expect(newest.items[0]!.coverUrl).toBeNull();
+    expect(newest.items[1]!.coverUrl).toBe(card(4).cover.original.url);
+  });
+
+  it('still reports a section that lost every cover', async () => {
+    const http = new FakeHttpClient();
+    http.register((_url, body) => body?.includes('fetchMangas') ?? false, {
+      status: 200,
+      body: JSON.stringify({
+        data: {
+          mangas: {
+            edges: [{ node: { ...card(3), cover: null } }],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      }),
+    });
+    registerHome(http);
+
+    const { problems } = await checkHome(createSenkuroParser(SENKURO_CONFIG, makeContext(http)));
+
+    expect(problems).toContain('newest: no covers');
+  });
+
   it('Senkuro: «Самое читаемое» by period, the rest — from the catalog', async () => {
     const http = new FakeHttpClient();
     registerHome(http);

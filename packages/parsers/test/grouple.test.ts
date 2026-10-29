@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CONTENT_RATING, FILTER_TYPE, TITLE_STATE, TITLE_TYPE } from '@tanuki/contracts';
 import { createGroupleParser } from '../src/sources/grouple/engine';
 import { GROUPLE_FILTER_GROUP } from '../src/sources/grouple/models';
-import type { GroupleConfig } from '../src/sources/grouple/config';
+import { GROUPLE_CONFIGS, type GroupleConfig } from '../src/sources/grouple/config';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
@@ -583,6 +583,22 @@ describe('Grouple parser conformance', () => {
 });
 
 describe('Grouple getHome', () => {
+  it('does not advertise hot new titles on Usagi, where that tab is absent', async () => {
+    const http = new FakeHttpClient();
+    const html = readFixture('grouple-home.html').replace(
+      /<template data-tab-content="hot-list"[\s\S]*?<\/template>/,
+      '',
+    );
+    http.register((url) => url === `https://${DOMAIN}/`, { status: 200, body: html });
+    const config = GROUPLE_CONFIGS.find(({ id }) => id === SOURCE_ID.USAGI)!;
+    const parser = createGroupleParser({ ...config, trendTabs: [] }, makeContext(http));
+
+    const { sections, problems } = await checkHome(parser);
+
+    expect(problems).toEqual([]);
+    expect(sections.map(({ id }) => id)).toEqual(['popularUpdates', 'popularNow', 'latestUpdates']);
+  });
+
   it('reads the «Тренды» tab templates, «Популярная сейчас» and the latest updates feed', async () => {
     const http = new FakeHttpClient();
     http.register((url) => url === `https://${DOMAIN}/`, {

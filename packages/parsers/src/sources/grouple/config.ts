@@ -16,6 +16,8 @@ export type GroupleConfig = {
   isNsfw: boolean;
   /** AllHentai also accepts this cookie name as proof of auth, in addition to `gwt`. */
   extraAuthCookies?: string[];
+  /** Usagi убрал «Горячие новинки» из вкладок главной. У остальных сайтов блок есть. */
+  hasHotNew?: boolean;
   /** Жанровые вкладки «Трендов» после «Горячих новинок» и «Обновления популярного» — набор у
    *  каждого сайта свой (проверено вживую 2026-10-13). */
   trendTabs?: GroupleTrendTab[];
@@ -81,6 +83,7 @@ export const GROUPLE_CONFIGS: GroupleConfig[] = [
     siteId: 1,
     authGateway: MAIN_AUTH_GATEWAY,
     isNsfw: false,
+    hasHotNew: false,
     trendTabs: READMANGA_TREND_TABS,
   },
   {

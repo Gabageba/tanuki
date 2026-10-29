@@ -383,7 +383,9 @@ const parsePagesV3 = (data: string, pos: number, domain: string, sourceId: strin
 export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   const trendTabs = cfg.trendTabs ?? [];
-  const homeSections = getGroupleHomeSections(trendTabs);
+  const homeSections = getGroupleHomeSections(trendTabs).filter(
+    ({ id }) => cfg.hasHotNew !== false || id !== GROUPLE_HOME_SECTION.HOT_NEW,
+  );
   let cachedPagesServer: string | null = null;
 
   const authFamily = catalogEntryFor(cfg.id).authFamily;
