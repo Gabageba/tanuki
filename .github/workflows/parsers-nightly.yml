@@ -5,9 +5,17 @@ on:
     - cron: '0 3 * * *'
   workflow_dispatch: {}
 
+# OAuth refresh tokens rotate on use; two runs must not spend the same stored token.
+concurrency:
+  group: parsers-nightly-tokens
+  cancel-in-progress: false
+
 jobs:
   contract-tests:
     runs-on: ubuntu-latest
+    # Environment secrets are read when the job starts, after waiting for concurrency.
+    environment: parsers-nightly
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -17,17 +25,19 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build --filter=@tanuki/parsers
-      # HENTAILIB's login is reCAPTCHA-gated (scripts/libsocial-login.ts) — a human runs it once,
-      # after which the engine refreshes the access token from the stored refresh_token on its
-      # own. This seeds that file from LIBSOCIAL_HENTAILIB_TOKEN (set once from the output of
-      # that script); no-ops if the secret isn't configured.
-      - name: Set up HENTAILIB token store
+      # Environment tokens override repository tokens, which seed the first run only.
+      # File names must match SOURCE_ID values (lowercase, including on Linux).
+      - name: Set up LibSocial token stores
         run: |
           mkdir -p "$RUNNER_TEMP/libsocial-tokens"
+          if [ -n "$LIBSOCIAL_MANGALIB_TOKEN" ]; then
+            printf '%s' "$LIBSOCIAL_MANGALIB_TOKEN" > "$RUNNER_TEMP/libsocial-tokens/mangalib.json"
+          fi
           if [ -n "$LIBSOCIAL_HENTAILIB_TOKEN" ]; then
-            printf '%s' "$LIBSOCIAL_HENTAILIB_TOKEN" > "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json"
+            printf '%s' "$LIBSOCIAL_HENTAILIB_TOKEN" > "$RUNNER_TEMP/libsocial-tokens/hentailib.json"
           fi
         env:
+          LIBSOCIAL_MANGALIB_TOKEN: ${{ secrets.LIBSOCIAL_MANGALIB_TOKEN }}
           LIBSOCIAL_HENTAILIB_TOKEN: ${{ secrets.LIBSOCIAL_HENTAILIB_TOKEN }}
       - run: pnpm --filter @tanuki/parsers test:contract
         env:
@@ -36,17 +46,19 @@ jobs:
           ALLHENTAI_USERNAME: ${{ secrets.ALLHENTAI_USERNAME }}
           ALLHENTAI_PASSWORD: ${{ secrets.ALLHENTAI_PASSWORD }}
           LIBSOCIAL_TOKEN_STORE_DIR: ${{ runner.temp }}/libsocial-tokens
-      # The site rotates refresh_token on every use, invalidating the one just spent — without
-      # writing the new one back, next run's stored token would already be dead. Runs regardless
-      # of test outcome (the refresh itself happens up front in registry.init(), independent of
-      # which sources later pass/fail) and no-ops if the token wasn't refreshed or
-      # GH_SECRETS_PAT isn't configured (default GITHUB_TOKEN can't write repo secrets).
-      - name: Persist refreshed HENTAILIB token
+      # Save both rotated tokens even when another source fails. GITHUB_TOKEN cannot write
+      # environment secrets; GH_SECRETS_PAT supplies that permission.
+      - name: Persist LibSocial tokens
         if: always()
         run: |
-          if [ -s "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json" ] && [ -n "$GH_TOKEN" ]; then
-            gh secret set LIBSOCIAL_HENTAILIB_TOKEN < "$RUNNER_TEMP/libsocial-tokens/HENTAILIB.json"
-          fi
+          status=0
+          for source in mangalib hentailib; do
+            token_file="$RUNNER_TEMP/libsocial-tokens/$source.json"
+            if [ -s "$token_file" ]; then
+              gh secret set "LIBSOCIAL_${source^^}_TOKEN" --env parsers-nightly < "$token_file" || status=1
+            fi
+          done
+          exit "$status"
         env:
           GH_TOKEN: ${{ secrets.GH_SECRETS_PAT }}
       - uses: actions/upload-artifact@v4
