@@ -672,7 +672,7 @@ PUT    /titles/:titleId/bookmark          { folderId } — положить ил
 DELETE /titles/:titleId/bookmark          → { rows } — удалённые строки для restore
 POST   /titles/:titleId/bookmark/visit    → { newChapterIds } — главы с прошлого визита
 
-BookmarkFolder = { id, builtIn: "reading" | "planned" | "completed" | "dropped" | null,
+BookmarkFolder = { id, builtIn: "reading" | "planned" | "onHold" | "completed" | "dropped" | "favorite" | null,
                    name, icon, color (null у встроенных), trackUpdates, count, newCount }
 BookmarkItem = { titleId, sourceId, name, coverUrl, contentRating, type, folderId,
                  progress: { chapterNumber, total } | null, chaptersCount, newChaptersCount,
@@ -683,7 +683,7 @@ BookmarkItem = { titleId, sourceId, name, coverUrl, contentRating, type, folderI
 - **Ключ** — тайтл на источнике (`sourceId:адрес`, как у прогресса и связей), а показ и правки —
   по группе подтверждённых совпадений: смена папки и удаление касаются всех строк группы, тайтл
   «в закладках», если в закладках он сам или любая копия. Одна папка на тайтл.
-- **Папки:** четыре встроенные создаются лениво, переименовать и удалить их нельзя
+- **Папки:** шесть встроенных создаются лениво, переименовать и удалить их нельзя
   (`builtInBookmarkFolderReadonly`); своих — не больше 20 (`bookmarkFolderLimit`), название 1–32
   символа и уникально без учёта регистра, в том числе против названий встроенных на любом языке
   (`bookmarkFolderNameTaken`). «Следить за обновлениями» по умолчанию включено у всех, кроме
