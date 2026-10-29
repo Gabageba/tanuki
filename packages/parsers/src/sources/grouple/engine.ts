@@ -40,6 +40,7 @@ import { catalogEntryFor, SOURCE_ID } from '../catalog';
 import { currentSourceAccount } from '../../core/source-accounts';
 import { authenticateGrouple, authenticateAllHentai } from './auth';
 import type { GroupleConfig } from './config';
+import { fetchGroupleBookmarks } from './bookmarks';
 import {
   GROUPLE_ELEMENT_TYPE,
   GROUPLE_FILTER_GROUP,
@@ -1343,6 +1344,9 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     },
     getList,
     getDetails,
+    ...(cfg.id === SOURCE_ID.MINTMANGA
+      ? { getBookmarks: () => fetchGroupleBookmarks(cfg, ctx, login) }
+      : {}),
     getPages,
     getHome,
     getFilters,
