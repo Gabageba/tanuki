@@ -395,7 +395,7 @@ type RawBookmark = {
 
 ## Открытые вопросы
 
-- `getBookmarks` в движках Grouple, AllHentai и Nude-Moon — по образцам ответов сайтов (LibSocial,
+- `getBookmarks` у остальных сайтов Grouple (MintManga реализован 2026-10-29), AllHentai и Nude-Moon — по образцам ответов сайтов (LibSocial,
   Desu, MangaBuff и inuko готовы).
 
 - Что именно отдаёт каждый сайт (папки, последняя глава) — выяснится на этапе 1; чего нет — то

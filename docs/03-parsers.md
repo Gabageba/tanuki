@@ -77,8 +77,8 @@ export interface Parser {
 отдаёт; том нужен там, где нумерация глав начинается заново в каждом томе — так у LibSocial).
 `RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
 пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже), Desu,
-MangaBuff и сети inuko (Inkstory, PureManga);
-Grouple, AllHentai и Nude-Moon ждут образцов ответов сайтов
+MangaBuff, MintManga и сети inuko (Inkstory, PureManga);
+остальные сайты Grouple, AllHentai и Nude-Moon ждут образцов ответов сайтов
 ([plans/source-import.md](plans/source-import.md)).
 
 LibSocial (проверено вживую 2026-10-26): id аккаунта — `GET /api/auth/me`, папки —
@@ -122,6 +122,19 @@ cookie, перенесённая с PureManga, открывает и библи�
 запись на каждую открытую ветку перевода — берём самую свежую), номер и том — из
 `/v2/chapters/{chapterId}`, запрос на тайтл. Списки листаются до пустой страницы: потолок `size`
 у эндпоинтов разный (у `/v2/books` — 100), у `/v2/bookmarks` по умолчанию 20.
+
+MintManga (проверено вживую 2026-10-29 на пустой библиотеке): кабинет на SSO-шлюзе
+`3.grouple.co`, `GET /private/bookmarks` отдаёт `BOOKMARK_SETTINGS` с названиями и доступностью
+трёх пользовательских папок. Список — штатный запрос чтения `POST /api/bookmark/list`,
+`Authorization: Bearer <gwt>` из сессии пользователя. В теле `siteFilter: [2]`,
+`statusFilter: [статус]`, `includeUpdates: true`, `limit: 50`, `offset`; ответ — `list` и `total`.
+`WATCHING`, `PLANED` (написание API), `COMPLETED`, `DROPPED` → встроенные папки; `REVIEWING`,
+`ON_HOLD`, `FAVORITE` и включённые `USER_DEFINED*` → свои. Удалённое не запрашивается.
+Тайтл — `element.elementUrl`, `name`, `picUrl`; чужие сайты и отзывы отсеиваются.
+Позиция — `resume.url` вида `/slug/vol3/12.5`, без ссылки прогресс неизвестен.
+Формат заполненных строк подтверждён JavaScript-клиентом сайта и фикстурными тестами;
+живая сервисная учётная запись закладок MintManga не содержит. Возможность импорта включена
+только у MintManga; остальные сайты общего движка нужно проверять отдельно.
 
 Источники с общим движком (Grouple, LibSocial, Chan) реализованы как **фабрика с конфигом**
 (`createGroupleParser(config, ctx)`), а не через наследование — в Kotlin один класс на источник
