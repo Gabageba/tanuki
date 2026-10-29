@@ -466,8 +466,8 @@ describe('Desu getBookmarks', () => {
     expect(folders.map(({ id, builtIn, name }) => ({ id, builtIn, name }))).toEqual([
       { id: 'planned', builtIn: BUILT_IN_BOOKMARK_FOLDER.PLANNED, name: 'Запланировано' },
       { id: 'watching', builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: 'Читаю' },
-      { id: 'on_hold', builtIn: null, name: 'Отложено' },
-      { id: 'favorites', builtIn: null, name: 'Любимое' },
+      { id: 'on_hold', builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD, name: 'Отложено' },
+      { id: 'favorites', builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE, name: 'Любимое' },
     ]);
     const [planned, reading] = folders;
     expect(planned!.items[0]).toMatchObject({

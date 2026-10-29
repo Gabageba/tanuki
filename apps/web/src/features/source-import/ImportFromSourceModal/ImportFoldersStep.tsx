@@ -1,11 +1,11 @@
-import { Button, Checkbox, Divider, ScrollArea, Stack } from '@mantine/core';
+import { Button, Stack } from '@mantine/core';
 import type { UseFormReturnType } from '@mantine/form';
 import { useTranslation } from 'react-i18next';
 import { ArrowRightIcon, CloudArrowDownIcon } from '@phosphor-icons/react';
 import type { SourceImportPreview } from '@tanuki/contracts';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
 import { getDefaultFolderIds, hasQuestions, summarizeSelection } from './lib';
-import { FOLDERS_LIST_MAX_HEIGHT, type ImportChoices } from './models';
+import type { ImportChoices } from './models';
 import NothingNewFromSourceNote from './NothingNewFromSourceNote';
 import SourceBookmarksEmpty from './SourceBookmarksEmpty';
 import SourceFoldersList from './SourceFoldersList';
@@ -38,7 +38,6 @@ function ImportFoldersStep({
   const { t } = useTranslation();
   const selectable = getDefaultFolderIds(preview);
   const summary = summarizeSelection(preview, form.getValues().folderIds);
-  const isAll = selectable.length > 0 && summary.folderCount === selectable.length;
   const isNext = hasQuestions(summary);
 
   if (preview.folders.length === 0) {
@@ -49,28 +48,7 @@ function ImportFoldersStep({
     <form onSubmit={form.onSubmit((values) => (isNext ? onNext() : onImport(values)))}>
       <Stack gap="sm">
         <NothingNewFromSourceNote sourceTitle={sourceTitle} folders={preview.folders} />
-        <Checkbox
-          label={t('selectedCountFoldersCountTitles', {
-            folders: summary.folderCount,
-            count: summary.titleCount,
-          })}
-          checked={isAll}
-          indeterminate={summary.folderCount > 0 && !isAll}
-          disabled={selectable.length === 0}
-          error={form.errors.folderIds}
-          onChange={() => form.setFieldValue('folderIds', isAll ? [] : selectable)}
-        />
-        <Divider />
-        <ScrollArea.Autosize
-          mah={FOLDERS_LIST_MAX_HEIGHT}
-          type="auto"
-          scrollbars="y"
-          offsetScrollbars
-          display="block"
-          miw={0}
-        >
-          <SourceFoldersList sourceTitle={sourceTitle} folders={preview.folders} form={form} />
-        </ScrollArea.Autosize>
+        <SourceFoldersList sourceTitle={sourceTitle} preview={preview} form={form} />
         <ModalButtonsLayout>
           <Button variant="default" onClick={onCancel}>
             {t('cancel')}
@@ -79,6 +57,7 @@ function ImportFoldersStep({
             type="submit"
             leftSection={isNext ? <ArrowRightIcon /> : <CloudArrowDownIcon />}
             loading={isImporting}
+            disabled={selectable.length === 0}
           >
             {isNext ? t('next') : t('import')}
           </Button>

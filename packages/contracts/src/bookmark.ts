@@ -4,25 +4,28 @@ import { ContentRatingSchema, TitleTypeSchema } from './title';
 import type { EnumLiteralsOf } from './utils';
 
 /**
- * Встроенные папки — ровно четыре, у каждого пользователя. Название переводит фронт, иконку и
+ * Встроенные папки — шесть, у каждого пользователя. Название переводит фронт, иконку и
  * цвет задаёт он же; переименовать или удалить их нельзя, менять — только порядок и флаг
  * «Следить за обновлениями».
  */
 export const BUILT_IN_BOOKMARK_FOLDER = {
   READING: 'reading',
   PLANNED: 'planned',
+  ON_HOLD: 'onHold',
   COMPLETED: 'completed',
   DROPPED: 'dropped',
+  FAVORITE: 'favorite',
 } as const;
 export type BuiltInBookmarkFolder = EnumLiteralsOf<typeof BUILT_IN_BOOKMARK_FOLDER>;
 
 export const BuiltInBookmarkFolderSchema = z.enum(BUILT_IN_BOOKMARK_FOLDER);
 
-/** Иконки своих папок. Первые четыре после закладки — у встроенных, но доступны и своим. */
+/** Иконки своих папок. Первые шесть после закладки — у встроенных, но доступны и своим. */
 export const BOOKMARK_FOLDER_ICON = {
   BOOKMARK: 'bookmark',
   BOOK_OPEN: 'bookOpen',
   CLOCK: 'clock',
+  PAUSE: 'pause',
   CHECK_CIRCLE: 'checkCircle',
   ARCHIVE: 'archive',
   HEART: 'heart',

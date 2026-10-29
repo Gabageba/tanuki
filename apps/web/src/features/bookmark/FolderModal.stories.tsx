@@ -3,7 +3,7 @@ import { http } from 'msw';
 import { screen, userEvent } from 'storybook/test';
 import { API_ERROR_CODE } from '@tanuki/contracts';
 import { I18N } from '@/shared/lib/i18n';
-import { FAVORITE_FOLDER } from '@/shared/storybook/fixtures';
+import { CUSTOM_FOLDER } from '@/shared/storybook/fixtures';
 import { apiError, apiPath } from '@/shared/storybook/handlers';
 import ModalStage from '@/shared/storybook/ModalStage';
 import FolderModal from './FolderModal';
@@ -30,7 +30,7 @@ export const Rename: Story = {
   render: () => (
     <ModalStage>
       {({ opened, close }) => (
-        <FolderModal opened={opened} onClose={close} folder={FAVORITE_FOLDER} />
+        <FolderModal opened={opened} onClose={close} folder={CUSTOM_FOLDER} />
       )}
     </ModalStage>
   ),

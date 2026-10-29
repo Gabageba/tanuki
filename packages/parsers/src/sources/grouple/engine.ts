@@ -1346,9 +1346,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     },
     getList,
     getDetails,
-    ...(cfg.id === SOURCE_ID.MINTMANGA
-      ? { getBookmarks: () => fetchGroupleBookmarks(cfg, ctx, login) }
-      : {}),
+    getBookmarks: () => fetchGroupleBookmarks(cfg, ctx, login),
     getPages,
     getHome,
     getFilters,

@@ -24,10 +24,14 @@ export const getBuiltInLabel = (folder: BuiltInBookmarkFolder) => {
       return 'Читаю';
     case BUILT_IN_BOOKMARK_FOLDER.PLANNED:
       return 'В планах';
+    case BUILT_IN_BOOKMARK_FOLDER.ON_HOLD:
+      return 'Отложено';
     case BUILT_IN_BOOKMARK_FOLDER.COMPLETED:
       return 'Прочитано';
     case BUILT_IN_BOOKMARK_FOLDER.DROPPED:
       return 'Брошено';
+    case BUILT_IN_BOOKMARK_FOLDER.FAVORITE:
+      return 'Любимое';
   }
 };
 

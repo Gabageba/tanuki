@@ -33,11 +33,25 @@ export type GroupMove = { titleKeys: string[]; folder: FolderRef };
 export const isSameRef = (a: FolderRef, b: FolderRef) =>
   a.id !== undefined ? a.id === b.id : a.key === b.key;
 
+/** Эти имена были доступны своим папкам до появления соответствующих встроенных. */
+export const getLegacyBuiltInFolder = (name: string) => {
+  switch (name) {
+    case 'любимое':
+    case 'favorites':
+      return BUILT_IN_BOOKMARK_FOLDER.FAVORITE;
+    case 'отложено':
+    case 'on hold':
+      return BUILT_IN_BOOKMARK_FOLDER.ON_HOLD;
+  }
+  return null;
+};
+
 /**
  * Чужие папки на папки пользователя. Встроенная — по `builtIn`; своя — по имени без учёта
  * регистра (тот же ключ, что у уникального индекса): совпала — это она, иначе создаётся в конце, в
  * порядке `position`, пока не кончится лимит. Не поместившиеся и с занятым встроенной именем
- * ложатся во «В планах».
+ * ложатся во «В планах». Прежние свои «Любимое» и «Отложено» из старых копий — во
+ * встроенные с тем же смыслом, если своей папки с таким именем у пользователя уже нет.
  */
 export const planFolders = (incoming: MergeFolder[], folders: BookmarkFolderRecord[]) => {
   const planned = folders.find(({ builtIn }) => builtIn === BUILT_IN_BOOKMARK_FOLDER.PLANNED);
@@ -74,7 +88,9 @@ export const planFolders = (incoming: MergeFolder[], folders: BookmarkFolderReco
       if (existing.id !== undefined) matched.add(existing.id);
       targets.set(folder.key, { ref: existing, isOverLimit: false });
     } else if (isReservedFolderName(name)) {
-      targets.set(folder.key, { ref: plannedRef, isOverLimit: false });
+      const builtIn = getLegacyBuiltInFolder(lowered);
+      const id = builtIn ? byBuiltIn.get(builtIn) : undefined;
+      targets.set(folder.key, { ref: id ? { id } : plannedRef, isOverLimit: false });
     } else if (slots > 0) {
       slots -= 1;
       const ref: FolderRef = { key: folder.key };

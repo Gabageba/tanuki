@@ -27,5 +27,5 @@ export const DEFAULT_IMPORT_CHOICES: ImportChoices = {
   progressPolicy: RESTORE_PROGRESS_POLICY.FURTHEST,
 };
 
-/** Выше список папок прокручивается внутри модалки. */
+/** Предел высоты списка папок; на низком экране он занимает не больше половины вьюпорта. */
 export const FOLDERS_LIST_MAX_HEIGHT = 420;

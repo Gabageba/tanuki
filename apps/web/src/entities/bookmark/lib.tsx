@@ -15,6 +15,7 @@ import {
   LeafIcon,
   LightningIcon,
   MoonIcon,
+  PauseIcon,
   PuzzlePieceIcon,
   SmileyIcon,
   StarIcon,
@@ -54,6 +55,8 @@ export const renderBookmarkFolderIcon = (icon: BookmarkFolderIcon, props: IconPr
       return <BookOpenIcon {...props} />;
     case BOOKMARK_FOLDER_ICON.CLOCK:
       return <ClockIcon {...props} />;
+    case BOOKMARK_FOLDER_ICON.PAUSE:
+      return <PauseIcon {...props} />;
     case BOOKMARK_FOLDER_ICON.CHECK_CIRCLE:
       return <CheckCircleIcon {...props} />;
     case BOOKMARK_FOLDER_ICON.ARCHIVE:
@@ -93,10 +96,14 @@ export const getBuiltInBookmarkFolderLabel = (folder: BuiltInBookmarkFolder, t: 
       return t('reading');
     case BUILT_IN_BOOKMARK_FOLDER.PLANNED:
       return t('planned');
+    case BUILT_IN_BOOKMARK_FOLDER.ON_HOLD:
+      return t('onHold');
     case BUILT_IN_BOOKMARK_FOLDER.COMPLETED:
       return t('completed');
     case BUILT_IN_BOOKMARK_FOLDER.DROPPED:
       return t('dropped');
+    case BUILT_IN_BOOKMARK_FOLDER.FAVORITE:
+      return t('favorite');
   }
 };
 
@@ -107,10 +114,14 @@ export const getBuiltInBookmarkFolderIcon = (folder: BuiltInBookmarkFolder): Boo
       return BOOKMARK_FOLDER_ICON.BOOK_OPEN;
     case BUILT_IN_BOOKMARK_FOLDER.PLANNED:
       return BOOKMARK_FOLDER_ICON.CLOCK;
+    case BUILT_IN_BOOKMARK_FOLDER.ON_HOLD:
+      return BOOKMARK_FOLDER_ICON.PAUSE;
     case BUILT_IN_BOOKMARK_FOLDER.COMPLETED:
       return BOOKMARK_FOLDER_ICON.CHECK_CIRCLE;
     case BUILT_IN_BOOKMARK_FOLDER.DROPPED:
       return BOOKMARK_FOLDER_ICON.ARCHIVE;
+    case BUILT_IN_BOOKMARK_FOLDER.FAVORITE:
+      return BOOKMARK_FOLDER_ICON.HEART;
   }
 };
 
@@ -123,10 +134,14 @@ export const getBuiltInBookmarkFolderColor = (
       return BOOKMARK_FOLDER_COLOR.BLUE;
     case BUILT_IN_BOOKMARK_FOLDER.PLANNED:
       return BOOKMARK_FOLDER_COLOR.VIOLET;
+    case BUILT_IN_BOOKMARK_FOLDER.ON_HOLD:
+      return BOOKMARK_FOLDER_COLOR.ORANGE;
     case BUILT_IN_BOOKMARK_FOLDER.COMPLETED:
       return BOOKMARK_FOLDER_COLOR.TEAL;
     case BUILT_IN_BOOKMARK_FOLDER.DROPPED:
       return BOOKMARK_FOLDER_COLOR.GRAY;
+    case BUILT_IN_BOOKMARK_FOLDER.FAVORITE:
+      return BOOKMARK_FOLDER_COLOR.PINK;
   }
 };
 

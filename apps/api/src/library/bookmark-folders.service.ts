@@ -197,17 +197,26 @@ export class BookmarkFoldersService {
   }
 
   /**
-   * Четыре встроенные папки — первыми, в порядке BUILT_IN_BOOKMARK_FOLDER. Гонка двух первых
+   * Недостающие встроенные папки добавляются в конец, сохраняя порядок существующих.
+   * У нового пользователя — в порядке BUILT_IN_BOOKMARK_FOLDER. Гонка двух первых
    * запросов безопасна: уникальный индекс (userId, builtIn) пропустит только одну вставку.
    */
   private async ensureBuiltIns(userId: string): Promise<void> {
+    const folders = await this.database.db
+      .select({ builtIn: bookmarkFolders.builtIn, position: bookmarkFolders.position })
+      .from(bookmarkFolders)
+      .where(eq(bookmarkFolders.userId, userId));
+    const existing = new Set(folders.map(({ builtIn }) => builtIn));
+    const missing = BUILT_IN_ORDER.filter((builtIn) => !existing.has(builtIn));
+    if (missing.length === 0) return;
+    const nextPosition = Math.max(-1, ...folders.map(({ position }) => position)) + 1;
     await this.database.db
       .insert(bookmarkFolders)
       .values(
-        BUILT_IN_ORDER.map((builtIn, position) => ({
+        missing.map((builtIn, index) => ({
           userId,
           builtIn,
-          position,
+          position: nextPosition + index,
           trackUpdates: isTrackedByDefault(builtIn),
         })),
       )

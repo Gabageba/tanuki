@@ -172,6 +172,68 @@ const plan = (overrides: Partial<RestorePlanInput>) =>
   });
 
 describe('buildRestorePlan — папки', () => {
+  it.each([
+    { name: '  ЛЮБИМОЕ  ', builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE },
+    { name: 'Favorites', builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE },
+    { name: '  ОТЛОЖЕНО  ', builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD },
+    { name: 'On hold', builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD },
+  ])('восстанавливает прежнюю свою «$name» в системную папку', ({ name, builtIn }) => {
+    const result = plan({
+      folders: [
+        ...USER_FOLDERS,
+        folder({ id: 'target', builtIn }),
+        ...Array.from({ length: CUSTOM_BOOKMARK_FOLDERS_LIMIT - 1 }, (_, index) =>
+          folder({ id: `custom-${index}`, name: `Своя ${index}` }),
+        ),
+      ],
+      backup: backupOf({
+        folders: [...BACKUP_BUILT_INS, backupFolder({ key: 'legacy', name })],
+        bookmarks: [backupBookmark(SOURCE_A, '/a', 'legacy')],
+      }),
+    });
+
+    expect(result.folderCreates).toEqual([]);
+    expect(result.bookmarkInserts.map(({ folder }) => folder)).toEqual([{ id: 'target' }]);
+    expect(result.counts).toMatchObject({ foldersOverLimit: 0, titlesToPlanned: 0 });
+  });
+
+  it('сохраняет прежнюю свою папку при восстановлении в тот же аккаунт', () => {
+    const result = plan({
+      folders: [
+        ...USER_FOLDERS,
+        folder({ id: 'legacy', name: 'Любимое' }),
+        folder({ id: 'favorite', builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE }),
+      ],
+      backup: backupOf({
+        folders: [...BACKUP_BUILT_INS, backupFolder({ key: 'b-legacy', name: 'Любимое' })],
+        bookmarks: [backupBookmark(SOURCE_A, '/a', 'b-legacy')],
+      }),
+    });
+
+    expect(result.folderCreates).toEqual([]);
+    expect(result.bookmarkInserts.map(({ folder }) => folder)).toEqual([{ id: 'legacy' }]);
+    expect(result.counts.foldersMatched).toBe(1);
+  });
+
+  it('восстанавливает «Отложено» в системную папку', () => {
+    const result = plan({
+      folders: [
+        ...USER_FOLDERS,
+        folder({ id: 'on-hold', builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD, position: 5 }),
+      ],
+      backup: backupOf({
+        folders: [
+          ...BACKUP_BUILT_INS,
+          backupFolder({ key: 'b-on-hold', builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD, name: null }),
+        ],
+        bookmarks: [backupBookmark(SOURCE_A, '/a', 'b-on-hold')],
+      }),
+    });
+
+    expect(result.folderCreates).toEqual([]);
+    expect(result.bookmarkInserts.map(({ folder }) => folder)).toEqual([{ id: 'on-hold' }]);
+  });
+
   it('встроенные сопоставляет по builtIn, свою — по имени без учёта регистра', () => {
     const result = plan({
       backup: backupOf({

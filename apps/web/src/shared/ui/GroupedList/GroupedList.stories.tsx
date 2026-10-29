@@ -118,3 +118,30 @@ export const Empty: Story = {
     </Box>
   ),
 };
+
+export const WithAside: Story = {
+  name: 'Боковой блок',
+  render: () => (
+    <Box p="md">
+      <GroupedList
+        label="Аккаунт"
+        aside={
+          <GroupedList.Header
+            isAside
+            icon={<KeyIcon />}
+            color="teal"
+            title={
+              <Text inherit ff="monospace">
+                tanuki_admin
+              </Text>
+            }
+            description="Один аккаунт для всех сайтов справа"
+          />
+        }
+      >
+        <GroupedList.Row icon={<KeyIcon />} title="Первый сайт" description="Чтение глав" />
+        <GroupedList.Row icon={<KeyIcon />} title="Второй сайт" description="Импорт закладок" />
+      </GroupedList>
+    </Box>
+  ),
+};

@@ -4,46 +4,47 @@ import { BUILT_IN_BOOKMARK_FOLDER, SOURCE_AUTH_FAMILY } from '@tanuki/contracts'
 import { fetchGroupleBookmarks } from '../src/sources/grouple/bookmarks';
 import { GROUPLE_CONFIGS } from '../src/sources/grouple/config';
 import { createGroupleParser } from '../src/sources/grouple/engine';
-import { SOURCE_ID } from '../src/sources/catalog';
+import { catalogEntryFor } from '../src/sources/catalog';
 import { runWithSourceAccounts } from '../src/core/source-accounts';
 import { generateUid } from '../src/core/uid';
 import { ParseError, SourceAuthRequiredError } from '../src/errors';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
 
-const CFG = GROUPLE_CONFIGS.find((cfg) => cfg.id === SOURCE_ID.MINTMANGA)!;
-const DOMAIN = 'mintmanga.example';
 const SETTINGS =
   '<script>var BOOKMARK_SETTINGS = {"custom1Enabled":true,"customName1":"На потом; ещё"};</script>';
-const ITEM = {
-  element: {
-    elementId: { siteId: 2, type: 'MANGA' },
-    elementUrl: '/One-Piece',
-    name: 'Ван-Пис',
-    picUrl: '//images.example/cover.jpg',
-  },
-  resume: { url: 'https://mintmanga.example/One-Piece/vol3/12.5?mature=1' },
-};
 
-const setup = async () => {
-  const http = new FakeHttpClient();
-  const jar = new CookieJar();
-  await jar.setCookie('gwt=user-token; Path=/; Secure', `https://${DOMAIN}/`);
-  const ctx: ParserContext = {
-    http,
-    jar: new CookieJar(),
-    domain: DOMAIN,
-    credentials: {},
-    logger: { info: () => {}, warn: () => {}, error: () => {} },
+describe.each(GROUPLE_CONFIGS)('$id bookmarks', (CFG) => {
+  const DOMAIN = catalogEntryFor(CFG.id).domains[0];
+  const AUTH_FAMILY = catalogEntryFor(CFG.id).authFamily!;
+  const ITEM = {
+    element: {
+      elementId: { siteId: CFG.siteId, type: 'MANGA' },
+      elementUrl: '/One-Piece',
+      name: 'Ван-Пис',
+      picUrl: '//images.example/cover.jpg',
+    },
+    resume: { url: `https://${DOMAIN}/One-Piece/vol3/12.5?mature=1` },
   };
-  const run = (login = vi.fn(async () => true)) =>
-    runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.GROUPLE]: { jar } }, () =>
-      fetchGroupleBookmarks(CFG, ctx, login),
-    );
-  return { http, jar, ctx, run };
-};
 
-describe('MintManga bookmarks', () => {
+  const setup = async () => {
+    const http = new FakeHttpClient();
+    const jar = new CookieJar();
+    await jar.setCookie('gwt=user-token; Path=/; Secure', `https://${DOMAIN}/`);
+    const ctx: ParserContext = {
+      http,
+      jar: new CookieJar(),
+      domain: DOMAIN,
+      credentials: {},
+      logger: { info: () => {}, warn: () => {}, error: () => {} },
+    };
+    const run = () =>
+      runWithSourceAccounts({ [AUTH_FAMILY]: { jar } }, () =>
+        createGroupleParser(CFG, ctx).getBookmarks!(),
+      );
+    return { http, jar, ctx, run };
+  };
+
   it('imports folders, filters other sites and reviews, preserves title IDs and fractional progress across pages', async () => {
     const { http, run, jar } = await setup();
     http.register((url) => url.endsWith('/private/bookmarks'), { status: 200, body: SETTINGS });
@@ -60,8 +61,14 @@ describe('MintManga bookmarks', () => {
               }))
             : [
                 ITEM,
-                { ...ITEM, element: { ...ITEM.element, elementId: { siteId: 1 } } },
-                { ...ITEM, element: { ...ITEM.element, elementId: { siteId: 2, type: 'REVIEW' } } },
+                {
+                  ...ITEM,
+                  element: { ...ITEM.element, elementId: { siteId: CFG.siteId === 1 ? 2 : 1 } },
+                },
+                {
+                  ...ITEM,
+                  element: { ...ITEM.element, elementId: { siteId: CFG.siteId, type: 'REVIEW' } },
+                },
               ];
         return { status: 200, body: JSON.stringify({ list, total: 53 }) };
       },
@@ -95,17 +102,25 @@ describe('MintManga bookmarks', () => {
     expect(folders.find((folder) => folder.id === 'DROPPED')?.builtIn).toBe(
       BUILT_IN_BOOKMARK_FOLDER.DROPPED,
     );
+    expect(folders.find((folder) => folder.id === 'ON_HOLD')?.builtIn).toBe(
+      BUILT_IN_BOOKMARK_FOLDER.ON_HOLD,
+    );
+    expect(folders.find((folder) => folder.id === 'FAVORITE')?.builtIn).toBe(
+      BUILT_IN_BOOKMARK_FOLDER.FAVORITE,
+    );
     expect(
       http.requests
         .filter((req) => req.body)
         .every(
           (req) =>
             req.headers.Authorization === 'Bearer user-token' &&
-            JSON.parse(req.body!).siteFilter[0] === 2,
+            JSON.parse(req.body!).siteFilter[0] === CFG.siteId,
         ),
     ).toBe(true);
+    expect(http.requests.every((req) => new URL(req.url).host === CFG.authGateway)).toBe(true);
     expect(
-      (await jar.getCookies('https://3.grouple.co/')).find((cookie) => cookie.key === 'gwt')?.value,
+      (await jar.getCookies(`https://${CFG.authGateway}/`)).find((cookie) => cookie.key === 'gwt')
+        ?.value,
     ).toBe('user-token');
   });
 
@@ -114,6 +129,20 @@ describe('MintManga bookmarks', () => {
     await expect(fetchGroupleBookmarks(CFG, ctx, vi.fn())).rejects.toBeInstanceOf(
       SourceAuthRequiredError,
     );
+    expect(http.requests).toEqual([]);
+  });
+
+  it('does not use an account from the other authentication family', async () => {
+    const { http, jar, ctx } = await setup();
+    const OTHER_FAMILY =
+      AUTH_FAMILY === SOURCE_AUTH_FAMILY.GROUPLE
+        ? SOURCE_AUTH_FAMILY.ALLHENTAI
+        : SOURCE_AUTH_FAMILY.GROUPLE;
+    await expect(
+      runWithSourceAccounts({ [OTHER_FAMILY]: { jar } }, () =>
+        createGroupleParser(CFG, ctx).getBookmarks!(),
+      ),
+    ).rejects.toBeInstanceOf(SourceAuthRequiredError);
     expect(http.requests).toEqual([]);
   });
 
@@ -137,7 +166,7 @@ describe('MintManga bookmarks', () => {
           {
             ...ITEM,
             resume: null,
-            element: { ...ITEM.element, elementUrl: 'https://old.mintmanga.example/One-Piece?x=1' },
+            element: { ...ITEM.element, elementUrl: `https://old.${DOMAIN}/One-Piece?x=1` },
           },
         ],
         total: 1,
@@ -186,7 +215,7 @@ describe('MintManga bookmarks', () => {
     });
     await runWithSourceAccounts(
       {
-        [SOURCE_AUTH_FAMILY.GROUPLE]: {
+        [AUTH_FAMILY]: {
           jar,
           credentials: { username: 'reader', password: 'password' },
         },
@@ -205,16 +234,5 @@ describe('MintManga bookmarks', () => {
       body: '{"list":[],"total":2}',
     });
     await expect(run()).rejects.toBeInstanceOf(ParseError);
-  });
-
-  it('exposes import only for the verified source', async () => {
-    const { ctx } = await setup();
-    expect(createGroupleParser(CFG, ctx).getBookmarks).toBeTypeOf('function');
-    expect(
-      createGroupleParser(
-        GROUPLE_CONFIGS.find((cfg) => cfg.id === SOURCE_ID.READMANGA_RU)!,
-        ctx,
-      ).getBookmarks,
-    ).toBeUndefined();
   });
 });

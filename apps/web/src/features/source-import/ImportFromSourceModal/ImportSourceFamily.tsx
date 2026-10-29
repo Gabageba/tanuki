@@ -1,17 +1,13 @@
-import { Button } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
-import { ArrowClockwiseIcon, SignInIcon } from '@phosphor-icons/react';
-import { SOURCE_ACCOUNT_STATUS, type Source, type SourceAccount } from '@tanuki/contracts';
+import type { Source, SourceAccount } from '@tanuki/contracts';
 import GroupedList from '@/shared/ui/GroupedList';
-import { SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
 import {
   getSourceAccountStatusColor,
   getSourceAccountStatusLabel,
-  getSourcesWithoutLogin,
 } from '@/entities/source-account/lib';
 import SourceAccountStatusIcon from '@/entities/source-account/SourceAccountStatusIcon';
 import ImportSourceRow from './ImportSourceRow';
+import { isImportableSource } from './lib';
 
 type Props = {
   title: string;
@@ -21,47 +17,24 @@ type Props = {
 };
 
 /**
- * Сеть в выборе «откуда импортировать»: шапка аккаунта, как на вкладке аккаунтов, под ней
- * источники сети. Войти отсюда нельзя — кнопка ведёт на вкладку аккаунтов.
+ * Сеть в выборе «откуда импортировать»: только источники с входом и поддержкой импорта.
+ * Сеть без доступных источников скрыта целиком.
  */
 function ImportSourceFamily({ title, sources, account, sourceId }: Props) {
   const { t } = useTranslation();
-  const color = getSourceAccountStatusColor(account);
-  const sourcesWithoutLogin = getSourcesWithoutLogin(account, sources);
-  const isReloginRequired = account?.status === SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED;
+  const importableSources = sources.filter(isImportableSource);
 
-  const getDescription = () => {
-    if (sourcesWithoutLogin.length > 0) {
-      return t('noLoginOn', {
-        sites: sourcesWithoutLogin.map((source) => source.title).join(', '),
-      });
-    }
-    return account?.login;
-  };
+  if (importableSources.length === 0) return null;
 
   return (
     <GroupedList label={title}>
       <GroupedList.Header
-        color={color}
+        color={getSourceAccountStatusColor(account)}
         icon={<SourceAccountStatusIcon account={account} />}
         title={getSourceAccountStatusLabel(account, t)}
-        description={getDescription()}
-        action={
-          (!account || isReloginRequired || sourcesWithoutLogin.length > 0) && (
-            <Button
-              component={Link}
-              to={SOURCE_ACCOUNTS_PATH}
-              size="xs"
-              variant="muted"
-              color={color}
-              leftSection={isReloginRequired ? <ArrowClockwiseIcon /> : <SignInIcon />}
-            >
-              {isReloginRequired ? t('logInAgain') : t('logIn')}
-            </Button>
-          )
-        }
+        description={account?.login}
       />
-      {sources.map((source) => (
+      {importableSources.map((source) => (
         <ImportSourceRow key={source.id} source={source} isSelected={source.id === sourceId} />
       ))}
     </GroupedList>

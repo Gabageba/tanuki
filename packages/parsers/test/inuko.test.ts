@@ -665,7 +665,7 @@ describe('Inkstory getBookmarks', () => {
 
     expect(folders.map(({ id, builtIn, name }) => ({ id, builtIn, name }))).toEqual([
       { id: READING_ID, builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: 'Читаю' },
-      { id: FAVORITES_ID, builtIn: null, name: 'Любимые' },
+      { id: FAVORITES_ID, builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE, name: 'Любимые' },
       { id: OWN_ID, builtIn: null, name: 'Перечитать' },
     ]);
     expect(folders[0]!.items).toEqual([

@@ -146,8 +146,8 @@ const mangaTypeByLabel = (label: string | null): RawTitleType | null => {
   }
 };
 
-/** Статус списка манги (`data-status` на странице тайтла) → встроенная папка; «Отложено» и
- *  «Любимое» — свои папки сайта. Проверено вживую 2026-10-26. */
+/** Статус списка манги (`data-status` на странице тайтла) → встроенная папка;
+ *  «Отложено» импортируется в одноимённую системную папку. */
 const getBuiltInBookmarkFolder = (status: string): BuiltInBookmarkFolder | null => {
   switch (status) {
     case 'watching':
@@ -158,6 +158,10 @@ const getBuiltInBookmarkFolder = (status: string): BuiltInBookmarkFolder | null 
       return BUILT_IN_BOOKMARK_FOLDER.COMPLETED;
     case 'dropped':
       return BUILT_IN_BOOKMARK_FOLDER.DROPPED;
+    case 'on_hold':
+      return BUILT_IN_BOOKMARK_FOLDER.ON_HOLD;
+    case 'favorites':
+      return BUILT_IN_BOOKMARK_FOLDER.FAVORITE;
     default:
       return null;
   }

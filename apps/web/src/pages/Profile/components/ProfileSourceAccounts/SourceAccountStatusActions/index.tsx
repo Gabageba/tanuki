@@ -38,11 +38,10 @@ function SourceAccountStatusActions({
 
   return (
     <>
-      <Group gap={8} wrap="nowrap" w={{ base: '100%', xs: 'auto' }}>
+      <Group gap={8} flex="none" maw="100%">
         {(!account || sourcesWithoutLogin.length > 0) && (
           <Button
             size="xs"
-            flex={{ base: 1, xs: 'none' }}
             variant="muted"
             color="terracotta"
             leftSection={<SignInIcon />}
@@ -57,7 +56,6 @@ function SourceAccountStatusActions({
             {isReloginRequired && (
               <Button
                 size="xs"
-                flex={{ base: 1, xs: 'none' }}
                 variant="muted"
                 color="gold"
                 leftSection={<ArrowClockwiseIcon />}
@@ -69,7 +67,6 @@ function SourceAccountStatusActions({
             )}
             <Button
               size="xs"
-              flex={{ base: 1, xs: 'none' }}
               variant="muted"
               color="red"
               leftSection={<LinkBreakIcon />}

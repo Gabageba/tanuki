@@ -233,7 +233,7 @@ const FORMAT_KEYS = [
   'WEB',
 ];
 
-/** Стандартная папка сайта → встроенная; «Любимые» и созданные человеком — свои папки. Сайт
+/** Стандартная папка сайта → встроенная; созданные человеком — свои папки. Сайт
  *  отдаёт имена системных папок, ключа статуса у них нет. Проверено вживую 2026-10-27. */
 const getBuiltInBookmarkFolder = (folder: FolderJson): BuiltInBookmarkFolder | null => {
   if (!folder.system) return null;
@@ -246,6 +246,8 @@ const getBuiltInBookmarkFolder = (folder: FolderJson): BuiltInBookmarkFolder | n
       return BUILT_IN_BOOKMARK_FOLDER.COMPLETED;
     case 'Брошено':
       return BUILT_IN_BOOKMARK_FOLDER.DROPPED;
+    case 'Любимые':
+      return BUILT_IN_BOOKMARK_FOLDER.FAVORITE;
     default:
       return null;
   }

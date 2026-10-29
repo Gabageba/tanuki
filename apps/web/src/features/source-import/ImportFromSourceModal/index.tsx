@@ -17,7 +17,7 @@ import ImportFoldersStep from './ImportFoldersStep';
 import ImportParsingStep from './ImportParsingStep';
 import ImportQuestionsStep from './ImportQuestionsStep';
 import ImportSourceStep from './ImportSourceStep';
-import { getDefaultFolderIds, isImportableSource, sortImportableFamiliesFirst } from './lib';
+import { getDefaultFolderIds, isImportableSource } from './lib';
 import {
   DEFAULT_IMPORT_CHOICES,
   SOURCE_IMPORT_STEP,
@@ -56,7 +56,7 @@ function ImportFromSourceModal({ opened, onClose }: Props) {
   const importMutation = useSourceImport();
   const isDone = step === SOURCE_IMPORT_STEP.DONE;
 
-  const families = sortImportableFamiliesFirst(groupSourcesByAccount(sources));
+  const families = groupSourcesByAccount(sources);
   const importableIds = families.flatMap((item) =>
     item.sources.filter(isImportableSource).map(({ id }) => id),
   );

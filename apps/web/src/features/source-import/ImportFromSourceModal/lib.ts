@@ -18,21 +18,11 @@ export const isImportableSource = (source: Source) =>
   source.isLoggedIn && source.isBookmarksImportSupported;
 
 /**
- * Сети, откуда можно импортировать уже сейчас, — выше остальных, чтобы выбор не терялся под
- * сетями без входа. Внутри обеих частей — порядок каталога (сортировка устойчивая).
- */
-export const sortImportableFamiliesFirst = <T extends { sources: Source[] }>(families: T[]) =>
-  families.toSorted(
-    (a, b) =>
-      Number(b.sources.some(isImportableSource)) - Number(a.sources.some(isImportableSource)),
-  );
-
-/**
- * Папку без нового выбрать нельзя — забирать из неё нечего. Новое — и отметки «где остановился»:
- * повторный импорт папки, где всё уже лежит, переносит главы, до которых дочитали на сайте.
+ * Выбираются папки с новыми тайтлами или расхождениями папок и отметок «где остановился»:
+ * повторный импорт позволяет перенести тайтлы и главы, до которых дочитали на сайте.
  */
 export const isSelectableFolder = (folder: SourceImportFolder) =>
-  folder.fresh > 0 || folder.progressDiffers > 0;
+  folder.fresh > 0 || folder.otherFolder > 0 || folder.progressDiffers > 0;
 
 /** По умолчанию выбраны все папки, где есть новое. */
 export const getDefaultFolderIds = (preview: SourceImportPreview) =>

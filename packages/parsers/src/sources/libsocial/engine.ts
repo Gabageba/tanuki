@@ -325,6 +325,8 @@ const getBuiltInBookmarkFolder = (folderId: number): BuiltInBookmarkFolder | nul
       return BUILT_IN_BOOKMARK_FOLDER.DROPPED;
     case 4:
       return BUILT_IN_BOOKMARK_FOLDER.COMPLETED;
+    case 5:
+      return BUILT_IN_BOOKMARK_FOLDER.FAVORITE;
     default:
       return null;
   }

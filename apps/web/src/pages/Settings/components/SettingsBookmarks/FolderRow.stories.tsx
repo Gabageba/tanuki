@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Paper } from '@mantine/core';
 import { fn, screen, userEvent } from 'storybook/test';
 import { I18N } from '@/shared/lib/i18n';
-import { FAVORITE_FOLDER, PLANNED_FOLDER } from '@/shared/storybook/fixtures';
+import { CUSTOM_FOLDER, FAVORITE_FOLDER, PLANNED_FOLDER } from '@/shared/storybook/fixtures';
 import FolderRow from './FolderRow';
 
 const META = {
@@ -18,7 +18,7 @@ export const Custom: Story = {
   render: () => (
     <Paper withBorder m="md" maw={560}>
       <FolderRow
-        folder={FAVORITE_FOLDER}
+        folder={CUSTOM_FOLDER}
         onRename={fn().mockName('onRename')}
         onDelete={fn().mockName('onDelete')}
       />
@@ -34,6 +34,19 @@ export const BuiltIn: Story = {
     <Paper withBorder m="md" maw={560}>
       <FolderRow
         folder={PLANNED_FOLDER}
+        onRename={fn().mockName('onRename')}
+        onDelete={fn().mockName('onDelete')}
+      />
+    </Paper>
+  ),
+};
+
+export const Favorite: Story = {
+  name: 'Системная папка «Любимое»',
+  render: () => (
+    <Paper withBorder m="md" maw={560}>
+      <FolderRow
+        folder={FAVORITE_FOLDER}
         onRename={fn().mockName('onRename')}
         onDelete={fn().mockName('onDelete')}
       />

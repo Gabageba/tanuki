@@ -65,6 +65,7 @@ export type SourceImportFolder = z.infer<typeof SourceImportFolderSchema>;
 /** Что нашлось в закладках на сайте. Ничего не записано. */
 export const SourceImportPreviewSchema = z.object({
   sourceId: z.string(),
+  /** По порядку папок пользователя; новые и не поместившиеся — в конце, в порядке сайта. */
   folders: z.array(SourceImportFolderSchema),
 });
 export type SourceImportPreview = z.infer<typeof SourceImportPreviewSchema>;

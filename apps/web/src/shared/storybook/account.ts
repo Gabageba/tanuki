@@ -391,7 +391,9 @@ export const BACKUP_RESTORE_RESULT: BackupRestoreResult = {
 const SOURCE_IMPORT_TARGET = {
   READING: { builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: null, icon: null, color: null },
   PLANNED: { builtIn: BUILT_IN_BOOKMARK_FOLDER.PLANNED, name: null, icon: null, color: null },
+  ON_HOLD: { builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD, name: null, icon: null, color: null },
   COMPLETED: { builtIn: BUILT_IN_BOOKMARK_FOLDER.COMPLETED, name: null, icon: null, color: null },
+  FAVORITE: { builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE, name: null, icon: null, color: null },
 };
 
 /** Закладки на сайте с конфликтами: тайтлы в других папках и расходящиеся отметки. */
@@ -421,15 +423,20 @@ export const SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
     {
       id: 'favorites',
       name: 'Любимые',
-      target: SOURCE_IMPORT_FOLDER_TARGET.MATCHED,
-      targetFolder: {
-        builtIn: null,
-        name: 'Любимые',
-        icon: BOOKMARK_FOLDER_ICON.HEART,
-        color: BOOKMARK_FOLDER_COLOR.PINK,
-      },
+      target: SOURCE_IMPORT_FOLDER_TARGET.BUILT_IN,
+      targetFolder: SOURCE_IMPORT_TARGET.FAVORITE,
       total: 9,
       fresh: 9,
+      otherFolder: 0,
+      progressDiffers: 0,
+    },
+    {
+      id: 'on_hold',
+      name: 'Отложено',
+      target: SOURCE_IMPORT_FOLDER_TARGET.BUILT_IN,
+      targetFolder: SOURCE_IMPORT_TARGET.ON_HOLD,
+      total: 4,
+      fresh: 4,
       otherFolder: 0,
       progressDiffers: 0,
     },
@@ -486,6 +493,28 @@ export const NOTHING_NEW_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
   })),
 };
 
+/** Все тайтлы уже импортированы, один из них лежит у пользователя в другой папке. */
+export const OTHER_FOLDER_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
+  ...NOTHING_NEW_SOURCE_IMPORT_PREVIEW,
+  folders: NOTHING_NEW_SOURCE_IMPORT_PREVIEW.folders.map((folder, index) => ({
+    ...folder,
+    fresh: index === 0 ? 1 : 0,
+    otherFolder: index === 0 ? 1 : 0,
+  })),
+};
+
+/** Длинный список папок: прокрутка внутри модалки, кнопки остаются снаружи. */
+export const MANY_FOLDERS_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
+  ...SOURCE_IMPORT_PREVIEW,
+  folders: Array.from({ length: 3 }, (_, index) =>
+    SOURCE_IMPORT_PREVIEW.folders.map((folder) => ({
+      ...folder,
+      id: `${folder.id}-${index}`,
+      name: `${folder.name} (${index + 1})`,
+    })),
+  ).flat(),
+};
+
 /** На сайте закладок нет. */
 export const EMPTY_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
   sourceId: 'readmanga_ru',
@@ -499,7 +528,7 @@ export const SOURCE_IMPORT_RESULT: SourceImportResult = {
   bookmarksMoved: 7,
   titlesToPlanned: 6,
   foldersCreated: 1,
-  foldersMatched: 1,
+  foldersMatched: 0,
   foldersOverLimit: 1,
   pendingProgress: 112,
 };

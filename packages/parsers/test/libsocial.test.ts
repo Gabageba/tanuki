@@ -668,7 +668,7 @@ describe('LibSocial getBookmarks', () => {
     expect(folders.map(({ id, builtIn, name }) => ({ id, builtIn, name }))).toEqual([
       { id: '1', builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: 'Читаю' },
       { id: '2', builtIn: BUILT_IN_BOOKMARK_FOLDER.PLANNED, name: 'В планах' },
-      { id: '5', builtIn: null, name: 'Любимые' },
+      { id: '5', builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE, name: 'Любимые' },
     ]);
     const [reading, planned, favourites] = folders;
     expect(

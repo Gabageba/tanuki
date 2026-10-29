@@ -43,12 +43,14 @@ const USER_FOLDERS = [
   folder({ id: 'planned', builtIn: BUILT_IN_BOOKMARK_FOLDER.PLANNED, position: 1 }),
   folder({ id: 'completed', builtIn: BUILT_IN_BOOKMARK_FOLDER.COMPLETED, position: 2 }),
   folder({ id: 'dropped', builtIn: BUILT_IN_BOOKMARK_FOLDER.DROPPED, position: 3 }),
+  folder({ id: 'favorite', builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE, position: 4 }),
+  folder({ id: 'on-hold', builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD, position: 5 }),
   folder({
     id: 'favorites',
-    name: 'Любимые',
+    name: 'Перечитать',
     icon: BOOKMARK_FOLDER_ICON.STAR,
     color: BOOKMARK_FOLDER_COLOR.BLUE,
-    position: 4,
+    position: 6,
   }),
 ];
 
@@ -114,24 +116,151 @@ const plan = (overrides: Partial<SourceImportPlanInput>) =>
 const READING = BUILT_IN_BOOKMARK_FOLDER.READING;
 
 describe('buildSourceImportPlan', () => {
+  it('показывает папки в порядке закладок, новые — в конце в порядке сайта', () => {
+    const result = plan({
+      siteFolders: [
+        siteFolder('Новая Б', [item('/new-b')]),
+        siteFolder('planned', [item('/planned')], BUILT_IN_BOOKMARK_FOLDER.PLANNED),
+        siteFolder('reading', [item('/reading')], READING),
+        siteFolder('Любимое', [item('/favorite')]),
+        siteFolder('ПЕРЕЧИТАТЬ', [item('/custom')]),
+        siteFolder('completed', [item('/completed')], BUILT_IN_BOOKMARK_FOLDER.COMPLETED),
+        siteFolder('Новая А', [item('/new-a')]),
+        siteFolder('dropped', [item('/dropped')], BUILT_IN_BOOKMARK_FOLDER.DROPPED),
+      ],
+    });
+
+    expect(result.folders.map(({ id }) => id)).toEqual([
+      'reading',
+      'planned',
+      'completed',
+      'dropped',
+      'Любимое',
+      'ПЕРЕЧИТАТЬ',
+      'Новая Б',
+      'Новая А',
+    ]);
+    expect(result.folderCreates.map(({ key }) => key)).toEqual(['Новая Б', 'Новая А']);
+  });
+
+  it('учитывает ручной порядок папок и сохраняет приоритет дублей с сайта', () => {
+    const result = plan({
+      folders: [
+        ...USER_FOLDERS.filter(({ builtIn }) => builtIn === null),
+        ...USER_FOLDERS.filter(({ builtIn }) => builtIn !== null),
+      ].map((folder, position) => ({
+        ...folder,
+        position,
+      })),
+      siteFolders: [
+        siteFolder('reading', [item('/duplicate')], READING),
+        siteFolder('Перечитать', [item('/custom'), item('/duplicate')]),
+        siteFolder('also-reading', [item('/another')], READING),
+      ],
+    });
+
+    expect(result.folders.map(({ id, total }) => [id, total])).toEqual([
+      ['Перечитать', 1],
+      ['reading', 1],
+      ['also-reading', 1],
+    ]);
+    expect(result.bookmarkInserts.map(({ titleKey, folder }) => [titleKey, folder])).toEqual([
+      [linkKeyOf(SOURCE, '/duplicate'), { id: 'reading' }],
+      [linkKeyOf(SOURCE, '/custom'), { id: 'favorites' }],
+      [linkKeyOf(SOURCE, '/another'), { id: 'reading' }],
+    ]);
+  });
+
+  it.each([
+    'Любимое',
+    'Любимые',
+    'Любимый',
+    'Любимая',
+    '  ЛЮБИМЫЕ  ',
+    'Избранное',
+    'Избранные',
+    'Favorite',
+    'Favorites',
+    'Favourites',
+  ])('направляет папку «%s» во встроенное «Любимое», даже при лимите своих папок', (name) => {
+    const folders = [
+      ...USER_FOLDERS,
+      ...Array.from({ length: CUSTOM_BOOKMARK_FOLDERS_LIMIT - 1 }, (_, index) =>
+        folder({ id: `custom-${index}`, name: `Своя ${index}` }),
+      ),
+    ];
+    const result = plan({ folders, siteFolders: [siteFolder(name, [item('/a')])] });
+
+    expect(result.folders[0]).toMatchObject({
+      target: SOURCE_IMPORT_FOLDER_TARGET.BUILT_IN,
+      targetFolder: { builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE },
+    });
+    expect(result.bookmarkInserts[0]?.folder).toEqual({ id: 'favorite' });
+    expect(result.folderCreates).toEqual([]);
+    expect(result.counts).toMatchObject({ foldersMatched: 0, foldersOverLimit: 0 });
+  });
+
+  it('собирает разные формы «Любимого» в одну системную папку', () => {
+    const result = plan({
+      siteFolders: [
+        siteFolder('Любимые', [item('/a')]),
+        siteFolder('Любимое', [item('/b')]),
+        siteFolder('favorite-status', [item('/c')], BUILT_IN_BOOKMARK_FOLDER.FAVORITE),
+      ],
+    });
+
+    expect(result.bookmarkInserts.map(({ folder }) => folder)).toEqual([
+      { id: 'favorite' },
+      { id: 'favorite' },
+      { id: 'favorite' },
+    ]);
+    expect(result.folderCreates).toEqual([]);
+  });
+
+  it('не считает папку «Любимые авторы» системной', () => {
+    const result = plan({ siteFolders: [siteFolder('Любимые авторы', [item('/a')])] });
+    expect(result.folders[0]?.target).toBe(SOURCE_IMPORT_FOLDER_TARGET.CREATED);
+    expect(result.folderCreates[0]?.name).toBe('Любимые авторы');
+  });
+
+  it('направляет статус и точные названия «Отложено» в отдельную системную папку', () => {
+    const result = plan({
+      siteFolders: [
+        siteFolder('on_hold', [item('/a')], BUILT_IN_BOOKMARK_FOLDER.ON_HOLD),
+        siteFolder('  ОТЛОЖЕНО ', [item('/b')]),
+        siteFolder('On hold', [item('/c')]),
+        siteFolder('Отложено на лето', [item('/d')]),
+      ],
+    });
+
+    expect(result.bookmarkInserts.map(({ folder }) => folder)).toEqual([
+      { id: 'on-hold' },
+      { id: 'on-hold' },
+      { id: 'on-hold' },
+      { key: 'Отложено на лето' },
+    ]);
+    expect(result.folders[0]?.targetFolder.builtIn).toBe(BUILT_IN_BOOKMARK_FOLDER.ON_HOLD);
+    expect(result.folderCreates.map(({ name }) => name)).toEqual(['Отложено на лето']);
+  });
+
   it('раскладывает папки сайта: встроенная, совпавшая по имени, новая', () => {
     const result = plan({
       siteFolders: [
         siteFolder('reading', [item('/a')], READING),
-        siteFolder('ЛЮБИМЫЕ', [item('/b')]),
-        siteFolder('Отложено', [item('/c'), item('/d')]),
+        siteFolder('ПЕРЕЧИТАТЬ', [item('/b')]),
+        siteFolder('На лето', [item('/c'), item('/d')]),
       ],
     });
 
     expect(result.folders.map(({ id, target }) => [id, target])).toEqual([
       ['reading', SOURCE_IMPORT_FOLDER_TARGET.BUILT_IN],
-      ['ЛЮБИМЫЕ', SOURCE_IMPORT_FOLDER_TARGET.MATCHED],
-      ['Отложено', SOURCE_IMPORT_FOLDER_TARGET.CREATED],
+      ['ПЕРЕЧИТАТЬ', SOURCE_IMPORT_FOLDER_TARGET.MATCHED],
+      ['На лето', SOURCE_IMPORT_FOLDER_TARGET.CREATED],
     ]);
     expect(result.folders[2]).toMatchObject({
       total: 2,
       fresh: 2,
-      targetFolder: { name: 'Отложено', icon: BOOKMARK_FOLDER_ICON.BOOKMARK },
+      targetFolder: { name: 'На лето', icon: BOOKMARK_FOLDER_ICON.BOOKMARK },
     });
     expect(result.folderCreates).toHaveLength(1);
     expect(result.counts).toMatchObject({
@@ -142,8 +271,8 @@ describe('buildSourceImportPlan', () => {
     expect(result.bookmarkInserts.map(({ folder }) => folder)).toEqual([
       { id: 'reading' },
       { id: 'favorites' },
-      { key: 'Отложено' },
-      { key: 'Отложено' },
+      { key: 'На лето' },
+      { key: 'На лето' },
     ]);
   });
 

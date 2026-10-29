@@ -86,11 +86,17 @@ describe('правила папок', () => {
   it('«Брошено» по умолчанию не отслеживается, остальные встроенные — да', () => {
     expect(isTrackedByDefault(BUILT_IN_BOOKMARK_FOLDER.DROPPED)).toBe(false);
     expect(isTrackedByDefault(BUILT_IN_BOOKMARK_FOLDER.READING)).toBe(true);
+    expect(isTrackedByDefault(BUILT_IN_BOOKMARK_FOLDER.FAVORITE)).toBe(true);
+    expect(isTrackedByDefault(BUILT_IN_BOOKMARK_FOLDER.ON_HOLD)).toBe(true);
   });
 
   it('название встроенной папки на любом языке занято, без учёта регистра и пробелов', () => {
     expect(isReservedFolderName('  ЧИТАЮ ')).toBe(true);
     expect(isReservedFolderName('Dropped')).toBe(true);
+    expect(isReservedFolderName('  ЛЮБИМОЕ ')).toBe(true);
+    expect(isReservedFolderName('Favorites')).toBe(true);
+    expect(isReservedFolderName('  ОТЛОЖЕНО ')).toBe(true);
+    expect(isReservedFolderName('On hold')).toBe(true);
     expect(isReservedFolderName('Избранное')).toBe(false);
   });
 
@@ -109,6 +115,65 @@ describe('правила папок', () => {
 });
 
 describe('BookmarkFoldersService', () => {
+  it.each([
+    { name: 'новому пользователю создаёт все системные папки', existing: [] },
+    {
+      name: 'добавляет «Отложено» после существующих папок, сохраняя их порядок и слежение',
+      existing: [
+        ...Object.values(BUILT_IN_BOOKMARK_FOLDER)
+          .filter((builtIn) => builtIn !== BUILT_IN_BOOKMARK_FOLDER.ON_HOLD)
+          .map((builtIn, position) =>
+            folder({ id: builtIn, builtIn, name: null, position, trackUpdates: false }),
+          ),
+        folder({ id: 'custom', name: 'Перечитать', position: 12 }),
+      ],
+    },
+    {
+      name: 'не создаёт системные папки повторно',
+      existing: Object.values(BUILT_IN_BOOKMARK_FOLDER).map((builtIn, position) =>
+        folder({ id: builtIn, builtIn, name: null, position }),
+      ),
+    },
+  ])('$name', async ({ existing }) => {
+    const values = vi.fn(() => ({ onConflictDoNothing: vi.fn().mockResolvedValue(undefined) }));
+    const insert = vi.fn(() => ({ values }));
+    const select = vi
+      .fn()
+      .mockReturnValueOnce({ from: () => ({ where: async () => existing }) })
+      .mockReturnValueOnce({
+        from: () => ({ where: () => ({ orderBy: async () => existing }) }),
+      });
+    const service = new BookmarkFoldersService(
+      { db: { select, insert } } as unknown as DatabaseService,
+      {} as TitleLinksService,
+      {} as NotificationsService,
+    );
+
+    await service.list('user');
+
+    if (existing.length === 0) {
+      expect(values).toHaveBeenCalledWith(
+        Object.values(BUILT_IN_BOOKMARK_FOLDER).map((builtIn, position) => ({
+          userId: 'user',
+          builtIn,
+          position,
+          trackUpdates: builtIn !== BUILT_IN_BOOKMARK_FOLDER.DROPPED,
+        })),
+      );
+    } else if (existing.some(({ builtIn }) => builtIn === BUILT_IN_BOOKMARK_FOLDER.ON_HOLD)) {
+      expect(insert).not.toHaveBeenCalled();
+    } else {
+      expect(values).toHaveBeenCalledWith([
+        {
+          userId: 'user',
+          builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD,
+          position: 13,
+          trackUpdates: true,
+        },
+      ]);
+    }
+  });
+
   it(`не создаёт ${CUSTOM_BOOKMARK_FOLDERS_LIMIT + 1}-ю свою папку`, async () => {
     const { service } = createService();
     const custom = Array.from({ length: CUSTOM_BOOKMARK_FOLDERS_LIMIT }, (_, index) =>

@@ -81,12 +81,16 @@ export type CountedBookmarkGroup = BookmarkGroup & {
 export const BUILT_IN_BOOKMARK_FOLDER_NAMES = [
   'читаю',
   'в планах',
+  'отложено',
   'прочитано',
   'брошено',
+  'любимое',
   'reading',
   'planned',
+  'on hold',
   'completed',
   'dropped',
+  'favorites',
 ];
 
 export const BOOKMARK_UPDATES_JOB_NAME = 'bookmark-updates';

@@ -1,6 +1,7 @@
 import {
   BOOKMARK_FOLDER_COLOR,
   BOOKMARK_FOLDER_ICON,
+  BUILT_IN_BOOKMARK_FOLDER,
   CONTENT_RATING,
   RESTORE_FOLDER_POLICY,
   RESTORE_PROGRESS_POLICY,
@@ -36,7 +37,7 @@ export type SourceImportPlanInput = {
   sourceId: string;
   /** Закладки на сайте по его папкам. */
   siteFolders: RawBookmarkFolder[];
-  /** Папки пользователя, встроенные уже созданы. */
+  /** Папки пользователя по порядку вкладок, встроенные уже созданы. */
   folders: BookmarkFolderRecord[];
   bookmarks: BookmarkRecord[];
   progress: ImportProgressMark[];
@@ -50,16 +51,29 @@ export type SourceImportPlanInput = {
   now: Date;
 };
 
-/** Своя папка сайта создаётся у нас с иконкой и цветом по умолчанию и со слежением, как у копии. */
-const toMergeFolder = (folder: RawBookmarkFolder, position: number): MergeFolder => ({
-  key: folder.id,
-  builtIn: folder.builtIn,
-  name: folder.builtIn ? null : folder.name,
-  icon: folder.builtIn ? null : BOOKMARK_FOLDER_ICON.BOOKMARK,
-  color: folder.builtIn ? null : BOOKMARK_FOLDER_COLOR.GRAY,
-  trackUpdates: true,
-  position,
-});
+/** Точное название без регистра: папки вроде «Любимые авторы» остаются своими. */
+const FAVORITE_FOLDER_NAME = /^(?:любим(?:ое|ые|ый|ая)|избранн(?:ое|ые|ый|ая)|favou?rites?)$/iu;
+const ON_HOLD_FOLDER_NAME = /^(?:отложено|on hold)$/iu;
+
+const getBuiltInFolderByName = (name: string) => {
+  if (FAVORITE_FOLDER_NAME.test(name.trim())) return BUILT_IN_BOOKMARK_FOLDER.FAVORITE;
+  if (ON_HOLD_FOLDER_NAME.test(name.trim())) return BUILT_IN_BOOKMARK_FOLDER.ON_HOLD;
+  return null;
+};
+
+/** «Любимое» и «Отложено» узнаются и среди своих папок сайта. */
+const toMergeFolder = (folder: RawBookmarkFolder, position: number): MergeFolder => {
+  const builtIn = folder.builtIn ?? getBuiltInFolderByName(folder.name);
+  return {
+    key: folder.id,
+    builtIn,
+    name: builtIn ? null : folder.name,
+    icon: builtIn ? null : BOOKMARK_FOLDER_ICON.BOOKMARK,
+    color: builtIn ? null : BOOKMARK_FOLDER_COLOR.GRAY,
+    trackUpdates: true,
+    position,
+  };
+};
 
 /** Как папка сайта легла: по ссылке на нашу папку и по тому, что с ней сделал `planFolders`. */
 const describeTarget = (
@@ -305,8 +319,18 @@ export const buildSourceImportPlan = (input: SourceImportPlanInput): SourceImpor
     },
   );
 
+  // Меняется только порядок строк сводки: приоритет дублей и лимит новых папок остаются
+  // в порядке сайта. Новые и не поместившиеся папки показываются после существующих.
+  const folderOrder = new Map(input.folders.map(({ id }, index) => [id, index]));
+  const previewOrder = (folder: SourceImportFolder) => {
+    const { ref, isOverLimit } = folderPlan.targetOf(folder.id);
+    return ref.id !== undefined && !isOverLimit
+      ? (folderOrder.get(ref.id) ?? input.folders.length)
+      : input.folders.length;
+  };
+
   return {
-    folders,
+    folders: folders.sort((a, b) => previewOrder(a) - previewOrder(b)),
     folderCreates,
     bookmarkInserts: inserts,
     groupMoves: moves,

@@ -33,18 +33,26 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
 
 type AccountGroup = { key: string; title: string; family: SourceAuthFamily; sources: Source[] };
 
-const byTitle = (a: Source, b: Source) => a.title.localeCompare(b.title);
-
-/** Группы источников с аккаунтом в порядке SOURCE_AUTH_FAMILY — по одной на сеть, ведь и аккаунт у
- *  сети один. Источники без входа сюда не попадают. */
+/** По одной группе на аккаунт: место группы задаёт первый источник в порядке пользователя,
+ *  остальные источники сохраняют свой относительный порядок внутри неё. */
 export const groupSourcesByAccount = (data?: SourcesResponse) => {
-  const sources = flattenSources(data);
-  return Object.values(SOURCE_AUTH_FAMILY).flatMap<AccountGroup>((family) => {
-    const members = sources.filter((source) => source.authFamily === family).sort(byTitle);
-    return members.length > 0
-      ? [{ key: family, title: getSourceAuthFamilyTitle(family), family, sources: members }]
-      : [];
-  });
+  const groups = new Map<SourceAuthFamily, AccountGroup>();
+  for (const source of flattenSources(data)) {
+    const family = source.authFamily;
+    if (!family) continue;
+    const group = groups.get(family);
+    if (group) {
+      group.sources.push(source);
+    } else {
+      groups.set(family, {
+        key: family,
+        title: getSourceAuthFamilyTitle(family),
+        family,
+        sources: [source],
+      });
+    }
+  }
+  return [...groups.values()];
 };
 
 /** Цвет состояния аккаунта в шапке группы: без входа — фирменный, как призыв войти. */

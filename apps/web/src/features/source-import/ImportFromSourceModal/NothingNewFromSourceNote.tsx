@@ -8,7 +8,7 @@ type Props = {
   folders: SourceImportFolder[];
 };
 
-/** «Нового нет» над папками — повторный импорт, где всё уже в закладках. */
+/** «Нового нет» вместо папок — повторный импорт без новых тайтлов и расхождений. */
 function NothingNewFromSourceNote({ sourceTitle, folders }: Props) {
   const { t } = useTranslation();
 

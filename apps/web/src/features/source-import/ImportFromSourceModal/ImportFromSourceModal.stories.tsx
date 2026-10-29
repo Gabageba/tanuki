@@ -1,11 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { delay, http, HttpResponse } from 'msw';
-import { expect, screen, userEvent, waitFor } from 'storybook/test';
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test';
 import type { SourceImportPreview } from '@tanuki/contracts';
 import { I18N } from '@/shared/lib/i18n';
 import {
   EMPTY_SOURCE_IMPORT_PREVIEW,
+  MANY_FOLDERS_SOURCE_IMPORT_PREVIEW,
   NOTHING_NEW_SOURCE_IMPORT_PREVIEW,
+  OTHER_FOLDER_SOURCE_IMPORT_PREVIEW,
   REPEAT_SOURCE_IMPORT_PREVIEW,
 } from '@/shared/storybook/account';
 import { apiPath } from '@/shared/storybook/handlers';
@@ -18,9 +20,10 @@ const clickButton = async (name: string) => {
   await userEvent.click(button);
 };
 
-/** Источник выбирается сам, когда список загрузился: до этого кнопка покажет ошибку под ним. */
+/** Выбираем источник сводки явно: первый доступный источник может быть другим. */
 const findBookmarks = async () => {
   await screen.findByRole('radio', { checked: true });
+  await userEvent.click(screen.getByRole('radio', { name: /ReadManga/ }));
   await clickButton(I18N.t('findBookmarks'));
 };
 
@@ -73,10 +76,44 @@ export const FoldersRepeat: Story = {
   play: openFolders,
 };
 
+export const FoldersMany: Story = {
+  name: 'Шаг 3: много папок',
+  parameters: { msw: [previewHandler(MANY_FOLDERS_SOURCE_IMPORT_PREVIEW)] },
+  play: openFolders,
+};
+
 export const FoldersNothingNew: Story = {
   name: 'Шаг 3: нового нет',
   parameters: { msw: [previewHandler(NOTHING_NEW_SOURCE_IMPORT_PREVIEW)] },
-  play: openFolders,
+  play: async () => {
+    await findBookmarks();
+    await screen.findByText(I18N.t('nothingNewAllInBookmarks', { source: 'ReadManga' }));
+  },
+};
+
+export const FoldersOtherFolder: Story = {
+  name: 'Шаг 3: всё уже есть, один тайтл в другой папке',
+  parameters: { msw: [previewHandler(OTHER_FOLDER_SOURCE_IMPORT_PREVIEW)] },
+  play: async () => {
+    await openFolders();
+    const folder = screen.getByRole('checkbox', {
+      name: OTHER_FOLDER_SOURCE_IMPORT_PREVIEW.folders[0]!.name,
+    });
+    await expect(folder).toBeChecked();
+    await expect(folder).toBeEnabled();
+    await expect(screen.getByText(I18N.t('countInOtherFolder', { count: 1 }))).toBeVisible();
+    await userEvent.click(folder);
+    await expect(folder).not.toBeChecked();
+    await expect(screen.queryByRole('button', { name: I18N.t('next') })).not.toBeInTheDocument();
+    await userEvent.click(folder);
+    await clickButton(I18N.t('next'));
+    await expect(
+      screen.getByText(I18N.t('titlesInBookmarksInOtherFolder', { count: 1 })),
+    ).toBeVisible();
+    // Кнопка возврата в заголовке — первая кнопка диалога, без текстовой подписи.
+    await userEvent.click(within(screen.getByRole('dialog')).getAllByRole('button')[0]!);
+    await expect(screen.getByText(I18N.t('countInOtherFolder', { count: 1 }))).toBeVisible();
+  },
 };
 
 export const FoldersEmpty: Story = {
