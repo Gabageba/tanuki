@@ -272,6 +272,8 @@ export const fetchLibSocialAccountName = async (
  */
 export type LibSocialAuthorization = {
   authorizeUrl: string;
+  /** Секреты этого входа — по ним вход, прерванный кодом из письма, продолжается позже. */
+  pkce: LibSocialPkce;
   /**
    * Код из адреса, если браузер вернулся на callback сайта, иначе null. Бросает, если сайт
    * вернул ошибку авторизации или чужой state.
@@ -280,14 +282,20 @@ export type LibSocialAuthorization = {
   exchange(code: string): Promise<LibSocialTokenState>;
 };
 
+/** PKCE-verifier и state одного входа — что связывает callback сайта с начатым входом. */
+export type LibSocialPkce = { codeVerifier: string; state: string };
+
 export const createLibSocialAuthorization = (
   auth: LibSocialAuthConfig,
   siteId: number,
   label: string,
+  pkce: LibSocialPkce = {
+    codeVerifier: randomBytes(64).toString('base64url'),
+    state: randomBytes(24).toString('base64url'),
+  },
 ): LibSocialAuthorization => {
-  const codeVerifier = randomBytes(64).toString('base64url');
+  const { codeVerifier, state } = pkce;
   const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
-  const state = randomBytes(24).toString('base64url');
   const redirect = new URL(auth.redirectUri);
 
   const authorizeUrl = new URL(`${auth.authOrigin}/auth/oauth/authorize`);
@@ -303,6 +311,7 @@ export const createLibSocialAuthorization = (
 
   return {
     authorizeUrl: authorizeUrl.toString(),
+    pkce,
     readCallback(url) {
       const parsed = new URL(url);
       if (parsed.origin !== redirect.origin || parsed.pathname !== redirect.pathname) return null;

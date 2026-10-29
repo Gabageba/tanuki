@@ -25,11 +25,7 @@ import {
 } from '../common/errors';
 import { toServerDateTime } from '../common/dates';
 import { PARSERS } from '../parsers-client/parsers.provider';
-import {
-  SourceAccessService,
-  type LibSocialTokens,
-  type SourceAccountRow,
-} from './source-access.service';
+import { SourceAccessService, type SourceAccountRow } from './source-access.service';
 
 const toSourceAccount = (row: SourceAccountRow, sourceIds: string[] | null): SourceAccount => ({
   family: row.family,
@@ -44,7 +40,8 @@ const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamil
   family === SOURCE_AUTH_FAMILY.GROUPLE ||
   family === SOURCE_AUTH_FAMILY.ALLHENTAI ||
   family === SOURCE_AUTH_FAMILY.NUDEMOON ||
-  family === SOURCE_AUTH_FAMILY.DESU;
+  family === SOURCE_AUTH_FAMILY.DESU ||
+  family === SOURCE_AUTH_FAMILY.MANGABUFF;
 
 const isSessionFamily = (family: SourceAuthFamily): family is SessionAuthFamily =>
   family === SOURCE_AUTH_FAMILY.INUKO;
@@ -75,9 +72,9 @@ export class SourceAccountsService {
   }
 
   /**
-   * Grouple, AllHentai, Nude-Moon и Desu: сервер сам входит на сайт (у Grouple и AllHentai —
-   * через шлюз SSO) и сохраняет полученную сессию. Пароль хранится, только если человек
-   * разрешил, — иначе он нужен лишь на время входа.
+   * Grouple, AllHentai, Nude-Moon, Desu и MangaBuff: сервер сам входит на сайт (у Grouple и
+   * AllHentai — через шлюз SSO) и сохраняет полученную сессию. Пароль хранится, только если
+   * человек разрешил, — иначе он нужен лишь на время входа.
    */
   async linkWithPassword(
     userId: string,
@@ -126,44 +123,6 @@ export class SourceAccountsService {
       login: linked.login || null,
       password: null,
       state: { cookies },
-    });
-  }
-
-  /**
-   * LibSocial: учётка общая на всю сеть, а токен каждый сайт выдаёт свой — поэтому сервер
-   * проходит форму входа (с ALTCHA) на каждом сайте с одними и теми же логином и паролем.
-   * С сохранённым паролем он войдёт заново сам, когда refresh_token перестанет приниматься.
-   */
-  async linkLibSocialWithPassword(
-    userId: string,
-    input: { login: string; password: string; rememberPassword: boolean },
-  ): Promise<void> {
-    if (!this.sourceAccess.isLinkingAvailable) throw new SourceLinkingUnavailableException();
-
-    const sourceIds = this.parsers.libSocialLoginSourceIds();
-    const results = await Promise.allSettled(
-      sourceIds.map((sourceId) =>
-        this.parsers.loginLibSocial(sourceId, { username: input.login, password: input.password }),
-      ),
-    );
-
-    const tokens: LibSocialTokens = {};
-    results.forEach((result, index) => {
-      const sourceId = sourceIds[index];
-      if (!sourceId) return;
-      if (result.status === 'fulfilled' && result.value) {
-        tokens[sourceId] = result.value;
-      } else if (result.status === 'rejected') {
-        this.logger.warn(`Вход в ${sourceId} не удался: ${(result.reason as Error).message}`);
-      }
-    });
-    // Хватит и одного сайта — остальные останутся закрытыми, пока человек не войдёт заново.
-    if (Object.keys(tokens).length === 0) throw new SourceLoginFailedException();
-
-    await this.sourceAccess.save(userId, SOURCE_AUTH_FAMILY.LIBSOCIAL, {
-      login: input.login,
-      password: input.rememberPassword ? input.password : null,
-      state: { tokens },
     });
   }
 

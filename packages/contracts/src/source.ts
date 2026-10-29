@@ -97,7 +97,7 @@ export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 /**
  * Аккаунт, которым пользователь открывает источник. Одна учётка обслуживает всё семейство:
  * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у LibSocial — аккаунт lib.social,
- * у Nude-Moon и Desu — аккаунт самого сайта, у сети inuko (Inkstory, PureManga) — сессия сайта поверх общей SSO.
+ * у Nude-Moon, Desu и MangaBuff — аккаунт самого сайта, у сети inuko (Inkstory, PureManga) — сессия сайта поверх общей SSO.
  * Что именно без аккаунта закрыто — loginRequirement и loginBenefits источника.
  */
 export const SOURCE_AUTH_FAMILY = {
@@ -107,6 +107,7 @@ export const SOURCE_AUTH_FAMILY = {
   NUDEMOON: 'nudemoon',
   DESU: 'desu',
   INUKO: 'inuko',
+  MANGABUFF: 'mangabuff',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 
@@ -192,6 +193,24 @@ export const LinkSourceAccountRequestSchema = z.object({
   rememberPassword: z.boolean(),
 });
 export type LinkSourceAccountRequest = z.infer<typeof LinkSourceAccountRequestSchema>;
+
+/**
+ * Шаг входа в LibSocial. Сайты сети входят по очереди, и каждый может прислать на почту код:
+ * pendingSourceId — сайт, который ждёт свой код, null — вход завершён.
+ */
+export const LibSocialLoginStepSchema = z.object({
+  pendingSourceId: z.string().nullable(),
+});
+export type LibSocialLoginStep = z.infer<typeof LibSocialLoginStepSchema>;
+
+/** Сайты LibSocial присылают код из 6 цифр, он действует 10 минут. */
+export const LIBSOCIAL_LOGIN_CODE_LENGTH = 6;
+
+export const ConfirmLibSocialLoginRequestSchema = z.object({
+  /** Код из письма сайта, который ждёт его (LibSocialLoginStep.pendingSourceId). */
+  code: z.string().length(LIBSOCIAL_LOGIN_CODE_LENGTH).regex(/^\d+$/),
+});
+export type ConfirmLibSocialLoginRequest = z.infer<typeof ConfirmLibSocialLoginRequestSchema>;
 
 export const LinkLibSocialTokenRequestSchema = z.object({
   /** Сайт сети, с которого взят токен: у каждого он свой. */

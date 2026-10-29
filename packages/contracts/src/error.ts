@@ -12,6 +12,10 @@ export const API_ERROR_CODE = {
   SOURCE_RELOGIN_REQUIRED: 'sourceReloginRequired',
   // Привязка аккаунта не удалась: источник не принял логин/пароль или токен.
   SOURCE_LOGIN_FAILED: 'sourceLoginFailed',
+  // Сайт не принял код из письма, которым подтверждается вход.
+  SOURCE_LOGIN_CODE_REJECTED: 'sourceLoginCodeRejected',
+  // Начатый вход с кодом из письма истёк или потерян — начинать надо с логина и пароля.
+  SOURCE_LOGIN_EXPIRED: 'sourceLoginExpired',
   // На сервере не задан ключ шифрования аккаунтов — привязывать их некуда.
   SOURCE_LINKING_UNAVAILABLE: 'sourceLinkingUnavailable',
   // Источник или тайтл 18+ скрыт настройками пользователя (UserSettings.showAdultSources /

@@ -65,6 +65,7 @@ export {
   type TokenStore,
 } from './core/source-accounts';
 export { parseLibSocialAuthValue } from './sources/libsocial/auth';
+export type { LibSocialLoginResult, LibSocialPendingLogin } from './sources/libsocial/login';
 export { CookieJar } from 'tough-cookie';
 
 export { decompress } from './core/http/decompress';

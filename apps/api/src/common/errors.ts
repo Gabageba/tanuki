@@ -138,6 +138,22 @@ export class SourceLoginFailedException extends ApiException {
   }
 }
 
+export class SourceLoginCodeRejectedException extends ApiException {
+  constructor() {
+    super(API_ERROR_CODE.SOURCE_LOGIN_CODE_REJECTED, 'sourceRejectedCode', HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class SourceLoginExpiredException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.SOURCE_LOGIN_EXPIRED,
+      'loginExpiredEnterPasswordAgain',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
 export class SourceLinkingUnavailableException extends ApiException {
   constructor() {
     super(

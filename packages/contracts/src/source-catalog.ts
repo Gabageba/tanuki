@@ -285,8 +285,10 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['mangabuff.ru'],
     color: '#8C00FF',
-    authFamily: null,
-    loginRequirement: null,
+    // Всё открыто гостю; аккаунт нужен только импорту закладок — список читается от имени
+    // вошедшего: свои папки бывают скрытыми (`is_public` при создании), их видит лишь хозяин.
+    authFamily: SOURCE_AUTH_FAMILY.MANGABUFF,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   senkuro: {

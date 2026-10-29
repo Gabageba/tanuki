@@ -26,6 +26,8 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
       return 'Desu';
     case SOURCE_AUTH_FAMILY.INUKO:
       return 'Inuko';
+    case SOURCE_AUTH_FAMILY.MANGABUFF:
+      return 'MangaBuff';
   }
 };
 

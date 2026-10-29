@@ -14,7 +14,12 @@ import { GROUPLE_CONFIGS } from './sources/grouple/config';
 import { createGroupleParser } from './sources/grouple/engine';
 import { authenticateAllHentai, authenticateGrouple } from './sources/grouple/auth';
 import { fetchLibSocialAccountName } from './sources/libsocial/auth';
-import { loginLibSocialWithPassword } from './sources/libsocial/login';
+import {
+  confirmLibSocialLogin,
+  loginLibSocialWithPassword,
+  type LibSocialLoginResult,
+  type LibSocialPendingLogin,
+} from './sources/libsocial/login';
 import { createDesuParser } from './sources/desu';
 import { loginDesu } from './sources/desu/auth';
 import { LIBSOCIAL_API_HOST, LIBSOCIAL_CONFIGS } from './sources/libsocial/config';
@@ -23,6 +28,7 @@ import { CHAN_CONFIGS } from './sources/chan/config';
 import { createChanParser } from './sources/chan/engine';
 import { createRemangaParser } from './sources/remanga';
 import { createMangaBuffParser } from './sources/mangabuff';
+import { loginMangaBuff } from './sources/mangabuff/auth';
 import { INUKO_CONFIGS } from './sources/inuko/config';
 import { createInukoParser } from './sources/inuko/engine';
 import {
@@ -235,7 +241,8 @@ export type PasswordAuthFamily =
   | typeof SOURCE_AUTH_FAMILY.GROUPLE
   | typeof SOURCE_AUTH_FAMILY.ALLHENTAI
   | typeof SOURCE_AUTH_FAMILY.NUDEMOON
-  | typeof SOURCE_AUTH_FAMILY.DESU;
+  | typeof SOURCE_AUTH_FAMILY.DESU
+  | typeof SOURCE_AUTH_FAMILY.MANGABUFF;
 
 /**
  * Семейства, вход в которые закрыт капчей для людей: человек входит в своём браузере и
@@ -253,8 +260,8 @@ export type ParsersRegistry = {
   decodeImage(sourceId: string, bytes: Buffer, imageUrl: string): Promise<Buffer>;
   init(): Promise<void>;
   /**
-   * Входит в Grouple, AllHentai, Nude-Moon или Desu под учёткой пользователя, в свежий jar — общий
-   * и чужие сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
+   * Входит в Grouple, AllHentai, Nude-Moon, Desu или MangaBuff под учёткой пользователя, в свежий
+   * jar — общий и чужие сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
    */
   loginAccount(
     family: PasswordAuthFamily,
@@ -279,11 +286,15 @@ export type ParsersRegistry = {
   libSocialLoginSourceIds(): string[];
   /**
    * Входит в LibSocial логином и паролем (форма сайта с ALTCHA, затем OAuth-код) и возвращает
-   * свою пару токенов; null — сайт не принял логин или пароль.
+   * свою пару токенов, начатый вход, если сайт прислал код на почту, или null — сайт не принял
+   * логин или пароль.
    */
-  loginLibSocial(
+  loginLibSocial(sourceId: string, credentials: GroupleCredentials): Promise<LibSocialLoginResult>;
+  /** Завершает вход в LibSocial кодом из письма; null — сайт не принял код. */
+  confirmLibSocialLogin(
     sourceId: string,
-    credentials: GroupleCredentials,
+    pending: LibSocialPendingLogin,
+    code: string,
   ): Promise<LibSocialTokenState | null>;
   /**
    * Resolves once the init() kicked off at boot has settled (immediately if init() was never
@@ -424,6 +435,23 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         }
       }
 
+      if (family === SOURCE_AUTH_FAMILY.MANGABUFF) {
+        const jar = new CookieJar();
+        const http = new HttpClientImpl({
+          sourceId: SOURCE_ID.MANGABUFF,
+          jar,
+          defaultHeaders: SOURCES[SOURCE_ID.MANGABUFF].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const domain = SOURCES[SOURCE_ID.MANGABUFF].domains[0];
+          const userId = await loginMangaBuff(http, domain, credentials, opts.logger);
+          return userId !== null ? jar : null;
+        } finally {
+          await http.close();
+        }
+      }
+
       const memberId =
         family === SOURCE_AUTH_FAMILY.ALLHENTAI ? SOURCE_ID.ALLHENTAI : SOURCE_ID.READMANGA_RU;
       const cfg = GROUPLE_CONFIGS.find((config) => config.id === memberId);
@@ -498,6 +526,11 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       const cfg = LIBSOCIAL_CONFIGS.find((config) => config.id === sourceId);
       if (!cfg?.auth) throw new UnknownSourceError(sourceId);
       return loginLibSocialWithPassword(cfg.auth, cfg.siteId, credentials, sourceId);
+    },
+    async confirmLibSocialLogin(sourceId, pending, code) {
+      const cfg = LIBSOCIAL_CONFIGS.find((config) => config.id === sourceId);
+      if (!cfg?.auth) throw new UnknownSourceError(sourceId);
+      return confirmLibSocialLogin(cfg.auth, cfg.siteId, pending, code, sourceId);
     },
     async close() {
       await Promise.allSettled(

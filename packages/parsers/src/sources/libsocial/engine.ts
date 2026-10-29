@@ -599,7 +599,11 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
         store,
         cfg.id,
         ctx.logger,
-        (creds) => loginLibSocialWithPassword(auth, cfg.siteId, creds, cfg.id),
+        // Код из письма серверу не ввести: если сайт его спросил, вход заново не удался.
+        async (creds) => {
+          const result = await loginLibSocialWithPassword(auth, cfg.siteId, creds, cfg.id);
+          return result && 'tokens' in result ? result.tokens : null;
+        },
       );
       return next({ ...req, headers: { ...req.headers, Authorization: `Bearer ${token}` } });
     });

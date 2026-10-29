@@ -1,4 +1,6 @@
 import type { EnumLiteralsOf } from '@tanuki/contracts';
+import type { LibSocialPendingLogin } from '@tanuki/parsers';
+import type { LibSocialTokens } from './source-access.service';
 
 /**
  * От чьего имени идёт запрос к источнику. Внутренняя деталь сервера: наружу не уходит.
@@ -21,3 +23,15 @@ export const SOURCE_SESSIONS_CACHE_SIZE = 500;
 
 /** Как часто сохранять обновившуюся сессию (новые cookie, повёрнутый токен) в БД. */
 export const SOURCE_SESSION_PERSIST_DELAY_MS = 2_000;
+
+export const PENDING_LOGIN_TTL_MS = 10 * 60_000;
+
+export type LoginInput = { login: string; password: string; rememberPassword: boolean };
+
+export type LoginAttempt = LoginInput & {
+  tokens: LibSocialTokens;
+  queue: string[];
+  pending: { sourceId: string; state: LibSocialPendingLogin } | null;
+  expiry: NodeJS.Timeout | null;
+  busy: boolean;
+};
