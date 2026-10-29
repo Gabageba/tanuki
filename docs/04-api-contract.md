@@ -561,7 +561,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu, Inuko) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu, Inuko, MangaBuff) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -584,8 +584,10 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ```
 GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }
-POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu)
-POST   /source-accounts/libsocial/login { login, password, rememberPassword } → 204
+POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu, mangabuff)
+POST   /source-accounts/libsocial/login { login, password, rememberPassword } → { pendingSourceId }
+POST   /source-accounts/libsocial/login/code { code } → { pendingSourceId }
+POST   /source-accounts/libsocial/login/skip → { pendingSourceId }
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
 POST   /source-accounts/:family/session { value } → 204  (inuko)
 DELETE /source-accounts/:family → 204
@@ -594,18 +596,32 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
 ```
 
 - Аккаунт один на семейство. Grouple и AllHentai: сервер сам входит на SSO-шлюз и хранит
-  cookie jar. Nude-Moon и Desu — так же, но через форму входа самого сайта (Nude-Moon —
+  cookie jar. Nude-Moon, Desu и MangaBuff — так же, но через форму входа самого сайта (Nude-Moon —
   `/setuser.php`, cookie `fusion_user`; Desu — `/login/login` XenForo, `user_id` посетителя на
-  странице). Пароль хранится, только если человек разрешил: тогда истёкшая сессия
+  странице; MangaBuff — AJAX `POST /login` Laravel с почтой и CSRF-токеном страницы входа,
+  неверный пароль — 422, `window.user_id` на `/`; капча сайта (428) — ошибка источника, а не
+  неверный пароль). Пароль хранится, только если человек разрешил: тогда истёкшая сессия
   восстанавливается сама. LibSocial: учётка общая на всю сеть, но у MangaLib и HentaiLib свои
   OAuth-шлюзы, и токен каждый выдаёт свой. Аккаунт хранит токены по сайтам
   (`SourceAccount.sourceIds` — у каких сайтов токен есть), сайт без токена закрыт (`locked`),
   а отвергнутый сайтом токен забывается только у этого сайта. Вход по паролю проходит
-  все сайты сети разом, вставленный токен добавляется к аккаунту только для своего сайта.
+  все сайты сети, вставленный токен добавляется к аккаунту только для своего сайта.
   Сервер сам проходит вход сайта без браузера (`packages/parsers/src/sources/libsocial/login.ts`): OAuth2 + PKCE,
-  форма `/auth/login` с ALTCHA (proof-of-work, решается перебором SHA-256), страница согласия,
-  если она есть, и код из редиректа на callback сайта — сам callback не открывается. С
-  сохранённым паролем отвергнутый refresh_token заменяется новым входом. Запасной путь для
+  форма `/auth/login` с ALTCHA (proof-of-work, решается перебором SHA-256), код из письма, если
+  сайт его спросил, страница согласия, если она есть, и код из редиректа на callback сайта — сам
+  callback не открывается. Код из письма (проверено вживую 2026-10-29): после пароля сайт уводит
+  на `/auth/login/otp` и шлёт на почту 6 цифр, действующих 10 минут, форма — `POST
+/auth/login/otp/verify` (`_token`, `code`), неверный код — та же форма с «Неверный код.».
+  Каждый сайт сети шлёт свой код, а в письмах не сказано, от какого он сайта, — поэтому сайты
+  входят по очереди (`LibSocialLoginService`): `login` входит, пока какой-то сайт не спросит код,
+  и отвечает `pendingSourceId` этого сайта (null — вход завершён и аккаунт сохранён); `login/code`
+  отправляет код и идёт к следующему сайту, `login/skip` пропускает сайт — он останется закрытым.
+  Начатый вход (cookie сессии входа сайта, PKCE, форма кода, пароль) живёт в памяти процесса API
+  10 минут, без него — `SOURCE_LOGIN_EXPIRED`, неверный код — `SOURCE_LOGIN_CODE_REJECTED`. Новая
+  попытка отменяет прежнюю; её запоздалые ответы и таймеры не меняют новую попытку, а
+  подтверждение и пропуск одного шага не выполняются одновременно. С
+  сохранённым паролем отвергнутый refresh_token заменяется новым входом — если сайт не спросит
+  код: его серверу не ввести, такой вход не удаётся, и аккаунт просит войти заново. Запасной путь для
   входящих через VK или Яндекс — вставить значение ключа `auth` из localStorage сайта. Такой токен
   проверяется через `/api/auth/me`.
 - Inuko (Inkstory, PureManga — семейство `inuko`, одна учётка на всю сеть): вход на SSO
