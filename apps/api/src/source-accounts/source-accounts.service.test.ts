@@ -21,26 +21,32 @@ const createService = () => {
   return { service, login, linkSession, fetchLibSocialAccountName, save };
 };
 
+describe.each([SOURCE_AUTH_FAMILY.REMANGA, SOURCE_AUTH_FAMILY.TOMILOLIB])(
+  '%s password account linking',
+  (family) => {
+    it.each([false, true])(
+      'accepts email/password; rememberPassword=%s controls password storage',
+      async (rememberPassword) => {
+        const { service, login, save } = createService();
+        await service.linkWithPassword('user', family, {
+          ...INPUT,
+          rememberPassword,
+        });
+        expect(login).toHaveBeenCalledWith(family, {
+          username: INPUT.login,
+          password: INPUT.password,
+        });
+        expect(save).toHaveBeenCalledWith('user', family, {
+          login: INPUT.login,
+          password: rememberPassword ? INPUT.password : null,
+          state: { cookies: expect.any(Object) },
+        });
+      },
+    );
+  },
+);
+
 describe('ReManga account linking', () => {
-  it.each([false, true])(
-    'accepts email/password; rememberPassword=%s controls password storage',
-    async (rememberPassword) => {
-      const { service, login, save } = createService();
-      await service.linkWithPassword('user', SOURCE_AUTH_FAMILY.REMANGA, {
-        ...INPUT,
-        rememberPassword,
-      });
-      expect(login).toHaveBeenCalledWith(SOURCE_AUTH_FAMILY.REMANGA, {
-        username: INPUT.login,
-        password: INPUT.password,
-      });
-      expect(save).toHaveBeenCalledWith('user', SOURCE_AUTH_FAMILY.REMANGA, {
-        login: INPUT.login,
-        password: rememberPassword ? INPUT.password : null,
-        state: { cookies: expect.any(Object) },
-      });
-    },
-  );
   it('explains the session fallback when the site requests a second factor', async () => {
     const { service, login, save } = createService();
     login.mockRejectedValue(

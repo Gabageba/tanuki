@@ -98,7 +98,7 @@ export const SortDirectionSchema = z.enum(SORT_DIRECTION);
  * Аккаунт, которым пользователь открывает источник. Одна учётка обслуживает всё семейство:
  * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у MangaLib и HentaiLib — отдельные аккаунты сайтов,
  * у Nude-Moon, Desu и MangaBuff — аккаунт самого сайта, у сети inuko (Inkstory, PureManga) — сессия сайта поверх общей SSO, у ReManga — токен сессии сайта.
- * Senkuro и Senkognito используют один аккаунт SSO и общий токен.
+ * Senkuro и Senkognito используют один аккаунт SSO и общий токен; TomiloLib — пару access/refresh токенов сайта.
  * Что именно без аккаунта закрыто — loginRequirement и loginBenefits источника.
  */
 export const SOURCE_AUTH_FAMILY = {
@@ -114,6 +114,7 @@ export const SOURCE_AUTH_FAMILY = {
   MANGABUFF: 'mangabuff',
   REMANGA: 'remanga',
   SENKURO: 'senkuro',
+  TOMILOLIB: 'tomilolib',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 

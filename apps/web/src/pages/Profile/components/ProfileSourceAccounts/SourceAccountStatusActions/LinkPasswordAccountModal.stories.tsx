@@ -25,3 +25,18 @@ export const Grouple: Story = {
     </ModalStage>
   ),
 };
+
+export const TomiloLib: Story = {
+  name: 'Вход в TomiloLib',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkPasswordAccountModal
+          family={SOURCE_AUTH_FAMILY.TOMILOLIB}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};

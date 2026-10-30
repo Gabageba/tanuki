@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { SignInIcon } from '@phosphor-icons/react';
-import type { SourceAuthFamily } from '@tanuki/contracts';
+import { SOURCE_AUTH_FAMILY, type SourceAuthFamily } from '@tanuki/contracts';
 import useLinkSourceAccount from '../hooks/useLinkSourceAccount';
 import { getSourceAuthFamilyTitle } from '@/entities/source-account/lib';
 import PasswordAccountForm from './PasswordAccountForm';
@@ -13,7 +13,7 @@ type Props = {
   onClose: () => void;
 };
 
-/** Grouple и AllHentai: сервер сам входит на шлюз источника с этими данными. */
+/** Сервер входит в аккаунт источника с этими данными. */
 function LinkPasswordAccountModal({ family, opened, onClose }: Props) {
   const { t } = useTranslation();
   const linkAccount = useLinkSourceAccount();
@@ -27,6 +27,7 @@ function LinkPasswordAccountModal({ family, opened, onClose }: Props) {
       title={t('logInToName', { name: getSourceAuthFamilyTitle(family) })}
     >
       <PasswordAccountForm
+        emailOnly={family === SOURCE_AUTH_FAMILY.TOMILOLIB}
         isPending={linkAccount.isPending}
         onSubmit={(values) => linkAccount.mutateAsync({ family, ...values }).then(onClose)}
         onCancel={onClose}

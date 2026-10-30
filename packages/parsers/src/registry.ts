@@ -45,6 +45,7 @@ import {
 } from './sources/inuko/auth';
 import { createComxParser } from './sources/comx';
 import { createTomiloLibParser } from './sources/tomilolib';
+import { loginTomiloLib, saveTomiloLibTokens } from './sources/tomilolib/auth';
 import { createWaMangaParser } from './sources/wamanga';
 import { createNudeMoonParser } from './sources/nudemoon';
 import { loginNudeMoon } from './sources/nudemoon/auth';
@@ -255,7 +256,8 @@ export type PasswordAuthFamily =
   | typeof SOURCE_AUTH_FAMILY.NUDEMOON
   | typeof SOURCE_AUTH_FAMILY.DESU
   | typeof SOURCE_AUTH_FAMILY.MANGABUFF
-  | typeof SOURCE_AUTH_FAMILY.REMANGA;
+  | typeof SOURCE_AUTH_FAMILY.REMANGA
+  | typeof SOURCE_AUTH_FAMILY.TOMILOLIB;
 
 /**
  * Семейства с переносом сессии: человек входит в своём браузере и переносит cookie,
@@ -277,7 +279,7 @@ export type ParsersRegistry = {
   decodeImage(sourceId: string, bytes: Buffer, imageUrl: string): Promise<Buffer>;
   init(): Promise<void>;
   /**
-   * Входит в Grouple, AllHentai, Nude-Moon, Desu, MangaBuff или ReManga под учёткой пользователя, в свежий
+   * Входит в Grouple, AllHentai, Nude-Moon, Desu, MangaBuff, ReManga или TomiloLib под учёткой пользователя, в свежий
    * jar — общий и чужие сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
    */
   loginAccount(
@@ -420,6 +422,25 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       return initPromise ?? Promise.resolve();
     },
     async loginAccount(family, credentials) {
+      if (family === SOURCE_AUTH_FAMILY.TOMILOLIB) {
+        const sourceId = SOURCE_ID.TOMILOLIB;
+        const domain = SOURCES[sourceId].domains[0];
+        const jar = new CookieJar();
+        const http = new HttpClientImpl({
+          sourceId,
+          jar,
+          defaultHeaders: SOURCES[sourceId].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const tokens = await loginTomiloLib(http, domain, credentials);
+          if (!tokens) return null;
+          await saveTomiloLibTokens(jar, domain, tokens);
+          return jar;
+        } finally {
+          await http.close();
+        }
+      }
       if (family === SOURCE_AUTH_FAMILY.REMANGA) {
         const sourceId = SOURCE_ID.REMANGA;
         const domain = SOURCES[sourceId].domains[0];

@@ -328,8 +328,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['tomilo-lib.ru'],
     color: '#DC3933',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.TOMILOLIB,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   wamanga: {
