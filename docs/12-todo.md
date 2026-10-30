@@ -29,10 +29,15 @@
       ([plans/source-import.md](plans/source-import.md)).
       [`ImportFromSourceModal/`](../apps/web/src/features/source-import/ImportFromSourceModal)
 - [ ] **Импорт из источника: разбор закладок сайтов** — `getBookmarks` готов в LibSocial
-      (MangaLib, HentaiLib), Desu, MangaBuff, сети inuko, ReManga и всех источниках Grouple
-      (включая AllHentai); Nude-Moon ждёт образцов ответов с вошедшим аккаунтом. ReManga проверен
-      фикстурами и публичным клиентом; заполненный аккаунт ещё нужно проверить вживую. Пока метода нет, источник в модалке не выбирается («Импорт отсюда пока
+      (MangaLib, HentaiLib), Desu, MangaBuff, сети inuko, ReManga, Senkuro, Senkognito и всех источниках Grouple
+      (включая AllHentai); Nude-Moon ждёт образцов ответов с вошедшим аккаунтом. ReManga, Senkuro и Senkognito проверены
+      фикстурами и публичным клиентом; полный импорт личной библиотеки ещё нужно проверить вживую. Пока метода нет, источник в модалке не выбирается («Импорт отсюда пока
       не поддерживается»).
+      У Senkuro/Senkognito общий токен и доступ к закладкам обоих API проверены вживую;
+      полный импорт библиотеки ещё не запускался.
+- [ ] **Вход в Senkuro/Senkognito через браузер без переноса cookie** — нужен зарегистрированный
+      OAuth-клиент Tanuki с разрешённым callback: клиент Senkuro ответил `redirect_uri mismatch`
+      на тестовый локальный адрес после входа ([plans/source-import.md](plans/source-import.md)).
 - [x] **«Удалить скачанные главы»** — всегда `disabled`, а `onClick` открывает модалку очистки
       кеша браузера. Связать с экраном загрузок офлайна.
       [`ProfileData/index.tsx:79`](../apps/web/src/pages/Profile/components/ProfileData/index.tsx#L79)

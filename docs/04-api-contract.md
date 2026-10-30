@@ -561,7 +561,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu, Inuko, MangaBuff, ReManga) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, MangaLib, HentaiLib, Nude-Moon, Desu, Inuko, MangaBuff, ReManga) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -585,11 +585,11 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 ```
 GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }
 POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu, mangabuff, remanga)
-POST   /source-accounts/libsocial/login { login, password, rememberPassword } → { pendingSourceId }
-POST   /source-accounts/libsocial/login/code { code } → { pendingSourceId }
-POST   /source-accounts/libsocial/login/skip → { pendingSourceId }
+POST   /source-accounts/libsocial/login { sourceId, login, password, rememberPassword } → { pendingSourceId }
+POST   /source-accounts/libsocial/login/code { sourceId, code } → { pendingSourceId }
+POST   /source-accounts/libsocial/login/skip { sourceId } → { pendingSourceId }
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
-POST   /source-accounts/:family/session { value } → 204  (inuko, remanga)
+POST   /source-accounts/:family/session { value } → 204  (inuko, remanga, senkuro)
 DELETE /source-accounts/:family → 204
 
 PUT    /sources/:sourceId/enabled      { isEnabled } → 204
@@ -601,25 +601,27 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
   странице; MangaBuff — AJAX `POST /login` Laravel с почтой и CSRF-токеном страницы входа,
   неверный пароль — 422, `window.user_id` на `/`; капча сайта (428) — ошибка источника, а не
   неверный пароль). Пароль хранится, только если человек разрешил: тогда истёкшая сессия
-  восстанавливается сама. LibSocial: учётка общая на всю сеть, но у MangaLib и HentaiLib свои
-  OAuth-шлюзы, и токен каждый выдаёт свой. Аккаунт хранит токены по сайтам
-  (`SourceAccount.sourceIds` — у каких сайтов токен есть), сайт без токена закрыт (`locked`),
-  а отвергнутый сайтом токен забывается только у этого сайта. Вход по паролю проходит
-  все сайты сети, вставленный токен добавляется к аккаунту только для своего сайта.
+  восстанавливается сама. MangaLib и HentaiLib — независимые аккаунты (`family: mangalib` и
+  `family: hentailib`): у каждого свои пароль, OAuth-шлюз, токен и состояние входа.
+  `SourceAccount.sourceIds` содержит только свой сайт. Вход, перенос токена, истечение сессии
+  и отвязка одного сайта не затрагивают другой. Перенос токена заменяет аккаунт выбранного
+  сайта и сбрасывает сохранённый пароль, чтобы не восстановить прежний аккаунт.
+  Старые общие аккаунты `libsocial` разделяются при первом обращении: токены перешифровываются
+  для новых семейств с сохранением статуса, дат и разрешения хранить пароль. Перенос идёт в
+  транзакции с блокировкой старой строки и не перезаписывает уже созданные отдельные аккаунты.
   Сервер сам проходит вход сайта без браузера (`packages/parsers/src/sources/libsocial/login.ts`): OAuth2 + PKCE,
   форма `/auth/login` с ALTCHA (proof-of-work, решается перебором SHA-256), код из письма, если
   сайт его спросил, страница согласия, если она есть, и код из редиректа на callback сайта — сам
   callback не открывается. Код из письма (проверено вживую 2026-10-29): после пароля сайт уводит
   на `/auth/login/otp` и шлёт на почту 6 цифр, действующих 10 минут, форма — `POST
 /auth/login/otp/verify` (`_token`, `code`), неверный код — та же форма с «Неверный код.».
-  Каждый сайт сети шлёт свой код, а в письмах не сказано, от какого он сайта, — поэтому сайты
-  входят по очереди (`LibSocialLoginService`): `login` входит, пока какой-то сайт не спросит код,
-  и отвечает `pendingSourceId` этого сайта (null — вход завершён и аккаунт сохранён); `login/code`
-  отправляет код и идёт к следующему сайту, `login/skip` пропускает сайт — он останется закрытым.
+  Вход всегда выполняется только для переданного `sourceId`. `LibSocialLoginService` отвечает
+  `pendingSourceId` этого сайта (null — вход завершён и аккаунт сохранён); `login/code` отправляет
+  код этому сайту и сохраняет только его аккаунт, `login/skip` отменяет ожидающий код вход.
   Начатый вход (cookie сессии входа сайта, PKCE, форма кода, пароль) живёт в памяти процесса API
   10 минут, без него — `SOURCE_LOGIN_EXPIRED`, неверный код — `SOURCE_LOGIN_CODE_REJECTED`. Новая
-  попытка отменяет прежнюю; её запоздалые ответы и таймеры не меняют новую попытку, а
-  подтверждение и пропуск одного шага не выполняются одновременно. С
+  попытка отменяет прежнюю только для той же пары пользователь + сайт; запоздалые ответы и
+  таймеры не меняют новую попытку, подтверждение и отмена не выполняются одновременно. С
   сохранённым паролем отвергнутый refresh_token заменяется новым входом — если сайт не спросит
   код: его серверу не ввести, такой вход не удаётся, и аккаунт просит войти заново. Запасной путь для
   входящих через VK или Яндекс — вставить значение ключа `auth` из localStorage сайта. Такой токен
@@ -650,6 +652,20 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
   `SOURCE_LOGIN_FAILED`, при импорте без сохранённого пароля или после неудачного повторного
   входа — истёкшая сессия с переходом аккаунта в `reloginRequired`.
   Вход необязателен для каталога и чтения, нужен для импорта.
+- Senkuro и Senkognito (общее семейство `senkuro`): одна привязка сессии на оба сайта через
+  cookie `access_token` (значение, пара или строка Cookie). Токен передаётся в GraphQL API как
+  `Authorization: Bearer …`, каталог задаёт `app-id`. Проверка — `viewer.user { id name }`;
+  гость (`user: null`), HTTP 401 или GraphQL `NOT_AUTHORIZED`/`UNAUTHENTICATED` при привязке —
+  `SOURCE_LOGIN_FAILED`, при импорте — `reloginRequired`. Вход через SSO по почте и паролю
+  требует Cloudflare Turnstile или Yandex SmartCaptcha: `/api/v1/auth/login` без капчи
+  отвечает 400 с кодом `4602` (`Missing captcha input`, проверено 2026-10-30).
+  Человек проходит вход в браузере; пароль не сохраняется, истёкшую сессию переносят заново.
+  Автоматического OAuth-возврата в Tanuki пока нет: клиент Senkuro отклоняет локальный callback
+  с `redirect_uri mismatch` (проверено пользователем 2026-10-30). Нужен OAuth-клиент Tanuki
+  с зарегистрированным callback.
+  Каталог и чтение доступны без привязки, аккаунт нужен импорту закладок.
+  Один токен принят обоими GraphQL API с их `app-id`, оба вернули один аккаунт и разрешили
+  `userBookmarks` (живая проверка с разрешения пользователя, 2026-10-30).
 - Сессии и пароли шифруются AES-256-GCM ключом `SOURCE_SECRETS_KEY`. Без ключа привязка
   отвечает 503 `SOURCE_LINKING_UNAVAILABLE`. Источник, не принявший данные, — 400
   `SOURCE_LOGIN_FAILED`. Отвергнутая источником сессия переводит аккаунт в `reloginRequired`.

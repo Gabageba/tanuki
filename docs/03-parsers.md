@@ -78,7 +78,7 @@ export interface Parser {
 `RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
 пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже), Desu,
 MangaBuff, всех источниках движка Grouple (ReadManga, MintManga, SelfManga, SeiManga, Usagi,
-AllHentai), ReManga и сети inuko (Inkstory, PureManga);
+AllHentai), ReManga, Senkuro, Senkognito и сети inuko (Inkstory, PureManga);
 Nude-Moon ждёт образцов ответов сайта
 ([plans/source-import.md](plans/source-import.md)).
 
@@ -158,6 +158,30 @@ ReManga (API и параметры сверены с публичным JavaScri
 6 («Не интересно»), 8 (пользовательская) и неизвестные типы остаются своими папками. Снимок
 тайтла — `title`, `id` и `url` нормализуются тем же кодом, что у каталога. `read_progress` —
 счётчик прочитанных глав, поэтому номер и том последней главы остаются `null`.
+
+Senkuro и Senkognito (публичный клиент и гостевые ответы GraphQL сверены 2026-10-30;
+полный импорт личной библиотеки пока не проверен вживую): перенос одной cookie `access_token`
+с любого сайта для общей привязки семейства `senkuro`,
+поскольку вход по почте и паролю через SSO требует капчу: `sso.senkuro.org` предпочитает
+Cloudflare Turnstile, `sso.senkuro.net` — Yandex SmartCaptcha (`/api/v1/captcha-config`).
+`POST /api/v1/auth/login` без капчи отвечает HTTP 400, код `4602`, `Missing captcha input`
+(проверено с заведомо несуществующей тестовой почтой). Поэтому серверный вход по паролю не добавлен.
+Браузерный OAuth клиента Senkuro с callback на локальном Tanuki после входа отклонён:
+`redirect_uri mismatch` (ручная проверка пользователя, 2026-10-30). Для автоматического
+возврата нужен зарегистрированный OAuth-клиент Tanuki с разрешённым callback;
+callback клиента Senkognito отдельно не проверялся.
+Один токен проверен вживую с разрешения пользователя 2026-10-30: оба GraphQL API с собственными
+`app-id` узнали один аккаунт и разрешили запрос `userBookmarks`. Jar хранит токен по одному
+общему адресу, чтобы смена каталога или зеркала не требовала повторного переноса.
+Токен передаётся как `Authorization: Bearer …`, каталог выбирает `app-id` сайта. Аккаунт и папки — `viewer.user` и
+`viewer.userBookmarkCollections`; учитываются только коллекции `entityType: MANGA`, имя берётся
+из `preference.name`, если оно задано. Системные `WATCHING`, `PLANNING`, `COMPLETED`, `FAVORITED`,
+`PAUSED`, `DROPPED` сопоставляются встроенным папкам; перечитывание, неизвестные статусы и свои
+коллекции сохраняются отдельно. Закладки — `userBookmarks(userId:, subjectType: MANGA)` по 20
+с курсором `pageInfo.endCursor` до `hasNextPage: false`. Дополнительно проверяется
+`entity.applicationId`: закладки соседнего каталога пропускаются. Номер главы — `number`,
+том не отдаётся (`null`), снимок тайтла разбирается тем же кодом, что у каталога.
+Ошибки страниц и зацикленная пагинация не возвращают частичную библиотеку.
 
 Источники с общим движком (Grouple, LibSocial, Chan) реализованы как **фабрика с конфигом**
 (`createGroupleParser(config, ctx)`), а не через наследование — в Kotlin один класс на источник
@@ -262,8 +286,9 @@ Grouple-сеть (ReadManga/MintManga/SelfManga/SeiManga/Usagi) логинитс
 AsyncLocalStorage (`runWithSourceAccounts`, `core/source-accounts.ts`). `HttpClientImpl`
 семейства с аккаунтом в scope берёт cookie только из jar этого аккаунта, общий jar с сервисной
 сессией не видит и не пополняет. Движок Grouple входит повторно по сохранённому паролю
-пользователя. LibSocial берёт токен своего сайта из `tokenStore` аккаунта вместо файла: учётка у сети одна, а
-токен каждый сайт выдаёт свой (`libSocialLoginSourceIds` — сайты, в которые умеем входить). Реестр отдаёт
+пользователя. LibSocial берёт токен своего сайта из `tokenStore` аккаунта вместо файла. MangaLib
+и HentaiLib используют отдельные семейства аккаунтов (`mangalib`, `hentailib`): у каждого свои
+пароль, токен и код из письма. `libSocialLoginSourceIds` перечисляет сайты, в которые умеем входить. Реестр отдаёт
 `loginAccount` (вход в свежий jar) и `fetchLibSocialAccountName` (проверка токена) для привязки.
 Платные главы LibSocial: `restricted_view` бывает только у них. Открытые аккаунту остаются с
 `isPaid`, закрытые пропускаются, у тайтла ставится `hasPaidChapters`.
@@ -301,10 +326,10 @@ AsyncLocalStorage (`runWithSourceAccounts`, `core/source-accounts.ts`). `HttpCli
 MANGA_WTF и ZENMANGA — один и тот же сайт под новым брендом (домен `inkstory.net`, ранее
 `inkstory.me` — переехал в августе 2026), объединены в единый источник INKSTORY.
 
-SENKOGNITO (`ne.senkognito.com`) — 18+ витрина Senkuro: тот же бэкенд и тот же каталог
-(`api.senkognito.com` отдаёт ту же схему и те же данные, что `api.senkuro.com`), но показывает
-именно те adult-метки, которые SENKURO отфильтровывает. Разнесены на два источника по образцу
-MULTPORN / MULTPORN_HENTAI — один движок, два конфига (`sources/senkuro/config.ts`).
+SENKOGNITO (`ne.senkognito.com`) — 18+ сайт на общем с Senkuro GraphQL-бэкенде, со своим
+каталогом. Каталог выбирает `app-id`: `4026531840100` у Senkuro, `5033164800100` у Senkognito.
+Один движок, два конфига (`sources/senkuro/config.ts`); закладки фильтруются по
+`applicationId` тайтла. Аккаунт и токен общие, одна привязка семейства `senkuro` открывает оба сайта.
 
 Все 23 источника (14 движков) реализованы. Пять из них — USAGI, YAOILIB (SlashLib), YAOICHAN,
 ACOMICS и COMX — несут `isBroken: true` и потому всегда отдаются как `status: 'down'` через
