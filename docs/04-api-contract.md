@@ -561,7 +561,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu, Inuko, MangaBuff) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon, Desu, Inuko, MangaBuff, ReManga) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -584,12 +584,12 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ```
 GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }
-POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu, mangabuff)
+POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu, mangabuff, remanga)
 POST   /source-accounts/libsocial/login { login, password, rememberPassword } → { pendingSourceId }
 POST   /source-accounts/libsocial/login/code { code } → { pendingSourceId }
 POST   /source-accounts/libsocial/login/skip → { pendingSourceId }
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
-POST   /source-accounts/:family/session { value } → 204  (inuko)
+POST   /source-accounts/:family/session { value } → 204  (inuko, remanga)
 DELETE /source-accounts/:family → 204
 
 PUT    /sources/:sourceId/enabled      { isEnabled } → 204
@@ -637,6 +637,19 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
   семейства (`inkstory`), перенесены миграцией `0032_inuko_family`.
   Пароля нет, cookie живёт около года; истёкшая сессия переводит аккаунт в `reloginRequired`, и
   её переносят заново.
+- ReManga (`remanga`): основной вход — логин/почта и пароль через
+  `POST /api/users/login/` (`user`, `password`). Ответ `content.access_token` сохраняется в
+  зашифрованном jar как cookie `auth:token`; неверные данные — HTTP 400 → `SOURCE_LOGIN_FAILED`.
+  `content.two_factor_auth` — тоже `SOURCE_LOGIN_FAILED`, но текст предлагает войти на сайте и
+  перенести сессию на вкладке «Токен». Пароль хранится только с разрешения человека: тогда при
+  401 сервер один раз входит заново, сохраняет новый токен и повторяет запрос; одновременные
+  запросы одного аккаунта делят один вход.
+  Запасной способ для Яндекса и других соцсетей, а также 2FA — перенос cookie `auth:token`
+  (значение, пара `auth:token=…` или строка Cookie). Проверка токена —
+  `GET /api/v2/users/current/` с `Authorization: Bearer …`. Ответ 401 при привязке —
+  `SOURCE_LOGIN_FAILED`, при импорте без сохранённого пароля или после неудачного повторного
+  входа — истёкшая сессия с переходом аккаунта в `reloginRequired`.
+  Вход необязателен для каталога и чтения, нужен для импорта.
 - Сессии и пароли шифруются AES-256-GCM ключом `SOURCE_SECRETS_KEY`. Без ключа привязка
   отвечает 503 `SOURCE_LINKING_UNAVAILABLE`. Источник, не принявший данные, — 400
   `SOURCE_LOGIN_FAILED`. Отвергнутая источником сессия переводит аккаунт в `reloginRequired`.
