@@ -561,7 +561,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, MangaLib, HentaiLib, Nude-Moon, Desu, Inuko, MangaBuff, ReManga, TomiloLib, Senkuro) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, MangaLib, HentaiLib, Nude-Moon, Desu, Inuko, MangaBuff, ReManga, TomiloLib, WaManga, Senkuro) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -584,7 +584,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ```
 GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }
-POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu, mangabuff, remanga)
+POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu, mangabuff, remanga, tomilolib, wamanga)
 POST   /source-accounts/libsocial/login { sourceId, login, password, rememberPassword } → { pendingSourceId }
 POST   /source-accounts/libsocial/login/code { sourceId, code } → { pendingSourceId }
 POST   /source-accounts/libsocial/login/skip { sourceId } → { pendingSourceId }
@@ -658,6 +658,13 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
   сохраняет оба новых токена и повторяет запрос. Параллельные запросы делят одно обновление.
   Если refresh-токен отвергнут, сохранённый с разрешения человека пароль позволяет войти заново;
   без него или после неудачного входа аккаунт переходит в `reloginRequired`.
+  Каталог и чтение открыты без аккаунта; вход нужен для импорта закладок.
+- WaManga (`wamanga`): логин и пароль через `POST /api/v1/auth/login` (`username`, `password`).
+  `access_token` и `refresh_token` хранятся в зашифрованном jar; неверные данные (401/404)
+  → `SOURCE_LOGIN_FAILED`. При 401/403 запрос обновляет токены через `/api/v1/auth/refresh`
+  с `{ token: refresh_token }` и прежним Bearer, затем повторяется один раз. Параллельные
+  запросы делят обновление. Если refresh отвергнут — повторный вход с сохранённым паролем;
+  без него или после отказа входа аккаунт переходит в `reloginRequired`.
   Каталог и чтение открыты без аккаунта; вход нужен для импорта закладок.
 - Senkuro и Senkognito (общее семейство `senkuro`): одна привязка сессии на оба сайта через
   cookie `access_token` (значение, пара или строка Cookie). Токен передаётся в GraphQL API как

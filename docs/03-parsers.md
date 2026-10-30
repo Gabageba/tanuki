@@ -78,7 +78,7 @@ export interface Parser {
 `RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
 пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже), Desu,
 MangaBuff, всех источниках движка Grouple (ReadManga, MintManga, SelfManga, SeiManga, Usagi,
-AllHentai), ReManga, TomiloLib, Senkuro, Senkognito и сети inuko (Inkstory, PureManga);
+AllHentai), ReManga, TomiloLib, WaManga, Senkuro, Senkognito и сети inuko (Inkstory, PureManga);
 Nude-Moon ждёт образцов ответов сайта
 ([plans/source-import.md](plans/source-import.md)).
 
@@ -176,6 +176,21 @@ TomiloLib (публичный JavaScript-клиент и ответы на не�
 `/api/users/profile/history?page=&limit=100&light=false`, все страницы `pagination.pages`;
 максимальный прочитанный номер, включая 0 и дробные, том — `null`. Счётчик прочитанных глав
 не используется как номер. Повреждённый ответ или ошибка страницы прерывает импорт.
+
+WaManga (OpenAPI и публичный JavaScript-клиент сверены 2026-10-31; полный импорт личного
+аккаунта пока не проверен вживую): вход — `POST /api/v1/auth/login` с `username` и `password`,
+ответ — `access_token` и `refresh_token`. Токены сохраняются в зашифрованном jar аккаунта.
+Запросы получают `Authorization: Bearer …`; при 401/403 — один `/api/v1/auth/refresh`
+с `{ token: refresh_token }` и прежним Bearer. Если обновление отвергнуто, сохранённый пароль
+позволяет войти заново. Одновременные запросы делят обновление; новая пара сохраняется.
+Библиотека — `GET /api/v1/user/library?limit=50&offset=`, массив до страницы короче 50.
+`reading`, `completed`, `planned`, `on_hold`, `dropped` → встроенные папки.
+`favorite` — отдельный признак: тайтл виден и в статусе, и в «Избранном»; при выборе всех
+папок импорт берёт его в «Любимое» по общему правилу первой папки. Записи только из истории
+(`status: null`, `favorite: false`) не становятся закладками. `mangaId`, `type`, `slug`,
+`title`, `coverUrl` дают снимок с теми же id и url, что каталог; возрастной рейтинг неизвестен.
+`chapterPosition` — номер главы, включая 0 и дробные; том — `null`. Ошибка страницы,
+неизвестный статус, повреждённый ответ или повтор полной страницы прерывают импорт.
 
 Senkuro и Senkognito (публичный клиент и гостевые ответы GraphQL сверены 2026-10-30;
 полный импорт личной библиотеки пока не проверен вживую): перенос одной cookie `access_token`

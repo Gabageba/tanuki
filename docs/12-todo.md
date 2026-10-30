@@ -29,8 +29,8 @@
       ([plans/source-import.md](plans/source-import.md)).
       [`ImportFromSourceModal/`](../apps/web/src/features/source-import/ImportFromSourceModal)
 - [ ] **Импорт из источника: разбор закладок сайтов** — `getBookmarks` готов в LibSocial
-      (MangaLib, HentaiLib), Desu, MangaBuff, сети inuko, ReManga, TomiloLib, Senkuro, Senkognito и всех источниках Grouple
-      (включая AllHentai); Nude-Moon ждёт образцов ответов с вошедшим аккаунтом. ReManga, TomiloLib, Senkuro и Senkognito проверены
+      (MangaLib, HentaiLib), Desu, MangaBuff, сети inuko, ReManga, TomiloLib, WaManga, Senkuro, Senkognito и всех источниках Grouple
+      (включая AllHentai); Nude-Moon ждёт образцов ответов с вошедшим аккаунтом. ReManga, TomiloLib, WaManga, Senkuro и Senkognito проверены
       фикстурами и публичным клиентом; полный импорт личной библиотеки ещё нужно проверить вживую. Пока метода нет, источник в модалке не выбирается («Импорт отсюда пока
       не поддерживается»).
       У Senkuro/Senkognito общий токен и доступ к закладкам обоих API проверены вживую;
