@@ -78,7 +78,7 @@ export interface Parser {
 `RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
 пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже), Desu,
 MangaBuff, всех источниках движка Grouple (ReadManga, MintManga, SelfManga, SeiManga, Usagi,
-AllHentai), ReManga, Senkuro, Senkognito и сети inuko (Inkstory, PureManga);
+AllHentai), ReManga, TomiloLib, Senkuro, Senkognito и сети inuko (Inkstory, PureManga);
 Nude-Moon ждёт образцов ответов сайта
 ([plans/source-import.md](plans/source-import.md)).
 
@@ -158,6 +158,24 @@ ReManga (API и параметры сверены с публичным JavaScri
 6 («Не интересно»), 8 (пользовательская) и неизвестные типы остаются своими папками. Снимок
 тайтла — `title`, `id` и `url` нормализуются тем же кодом, что у каталога. `read_progress` —
 счётчик прочитанных глав, поэтому номер и том последней главы остаются `null`.
+
+TomiloLib (публичный JavaScript-клиент и ответы на неверные тестовые данные проверены
+2026-10-30; полный импорт личной библиотеки пока не проверен вживую): вход —
+`POST /api/auth/login` с `email` и `password`, ответ — `data.access_token` и
+`data.refresh_token` (также принимается ответ без обёртки `data`). Неверные данные — HTTP 401.
+Токены хранятся в зашифрованном jar аккаунта; запросы получают `Authorization: Bearer …`.
+При 401 — один `POST /api/auth/refresh` с `refresh_token`, затем повтор запроса. Если refresh
+отвергнут и пароль сохранён — повторный вход; иначе аккаунт требует войти заново.
+Одновременные запросы одного jar используют одно обновление, новые токены сохраняются.
+Закладки — полный список `data.bookmarks` из `GET /api/users/profile`, пользовательские
+группы — `GET /api/users/profile/bookmark-groups` (`id` вида `group:<id>`, `name`).
+`reading`, `planned`, `completed`, `favorites`, `dropped` → соответствующие встроенные папки;
+группы остаются своими папками. Снимок берётся из заполненного `titleId` или `title`, старые
+закладки с одним id догружаются через `/api/titles/<id>?populateChapters=false`.
+Удалённые тайтлы пропускаются. Номера глав — из полной истории
+`/api/users/profile/history?page=&limit=100&light=false`, все страницы `pagination.pages`;
+максимальный прочитанный номер, включая 0 и дробные, том — `null`. Счётчик прочитанных глав
+не используется как номер. Повреждённый ответ или ошибка страницы прерывает импорт.
 
 Senkuro и Senkognito (публичный клиент и гостевые ответы GraphQL сверены 2026-10-30;
 полный импорт личной библиотеки пока не проверен вживую): перенос одной cookie `access_token`

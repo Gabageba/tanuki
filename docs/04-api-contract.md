@@ -561,7 +561,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, MangaLib, HentaiLib, Nude-Moon, Desu, Inuko, MangaBuff, ReManga) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, MangaLib, HentaiLib, Nude-Moon, Desu, Inuko, MangaBuff, ReManga, TomiloLib, Senkuro) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -652,6 +652,13 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
   `SOURCE_LOGIN_FAILED`, при импорте без сохранённого пароля или после неудачного повторного
   входа — истёкшая сессия с переходом аккаунта в `reloginRequired`.
   Вход необязателен для каталога и чтения, нужен для импорта.
+- TomiloLib (`tomilolib`): почта и пароль через `POST /api/auth/login` (`email`, `password`).
+  `access_token` и `refresh_token` сохраняются в зашифрованном jar; неверные данные — HTTP 401
+  → `SOURCE_LOGIN_FAILED`. При истечении access-токена сервер вызывает `/api/auth/refresh`,
+  сохраняет оба новых токена и повторяет запрос. Параллельные запросы делят одно обновление.
+  Если refresh-токен отвергнут, сохранённый с разрешения человека пароль позволяет войти заново;
+  без него или после неудачного входа аккаунт переходит в `reloginRequired`.
+  Каталог и чтение открыты без аккаунта; вход нужен для импорта закладок.
 - Senkuro и Senkognito (общее семейство `senkuro`): одна привязка сессии на оба сайта через
   cookie `access_token` (значение, пара или строка Cookie). Токен передаётся в GraphQL API как
   `Authorization: Bearer …`, каталог задаёт `app-id`. Проверка — `viewer.user { id name }`;
