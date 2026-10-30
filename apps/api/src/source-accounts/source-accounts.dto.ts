@@ -1,6 +1,8 @@
 import { createZodDto } from 'nestjs-zod';
 import {
   ConfirmLibSocialLoginRequestSchema,
+  LinkLibSocialAccountRequestSchema,
+  LibSocialLoginSourceRequestSchema,
   LibSocialLoginStepSchema,
   LinkLibSocialTokenRequestSchema,
   LinkSourceAccountRequestSchema,
@@ -9,6 +11,14 @@ import {
 } from '@tanuki/contracts';
 
 export class LinkSourceAccountRequestDto extends createZodDto(LinkSourceAccountRequestSchema) {}
+
+export class LinkLibSocialAccountRequestDto extends createZodDto(
+  LinkLibSocialAccountRequestSchema,
+) {}
+
+export class LibSocialLoginSourceRequestDto extends createZodDto(
+  LibSocialLoginSourceRequestSchema,
+) {}
 
 export class LibSocialLoginStepDto extends createZodDto(LibSocialLoginStepSchema) {}
 

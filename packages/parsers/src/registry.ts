@@ -51,6 +51,11 @@ import { loginNudeMoon } from './sources/nudemoon/auth';
 import { createAComicsParser } from './sources/acomics';
 import { SENKURO_CONFIGS } from './sources/senkuro/config';
 import { createSenkuroParser } from './sources/senkuro/engine';
+import {
+  createSenkuroSessionJar,
+  fetchSenkuroViewer,
+  parseSenkuroSessionValue,
+} from './sources/senkuro/auth';
 import { createHentaichanCcParser } from './sources/hentaichancc';
 import { createSexKomix2Parser } from './sources/sexkomix2';
 import { MULTPORN_CONFIGS } from './sources/multporn/config';
@@ -254,9 +259,13 @@ export type PasswordAuthFamily =
 
 /**
  * Семейства с переносом сессии: человек входит в своём браузере и переносит cookie,
- * сервер её только проверяет (Inuko — капча, ReManga — запасной путь для соцсетей и 2FA).
+ * сервер её только проверяет (Inuko — капча, Senkuro/Senkognito — SSO,
+ * ReManga — запасной путь для соцсетей и 2FA).
  */
-export type SessionAuthFamily = typeof SOURCE_AUTH_FAMILY.INUKO | typeof SOURCE_AUTH_FAMILY.REMANGA;
+export type SessionAuthFamily =
+  | typeof SOURCE_AUTH_FAMILY.INUKO
+  | typeof SOURCE_AUTH_FAMILY.REMANGA
+  | typeof SOURCE_AUTH_FAMILY.SENKURO;
 
 /** Принятая сессия: jar для аккаунта и имя, под которым человек вошёл на сайт. */
 export type LinkedSession = { jar: CookieJar; login: string };
@@ -502,6 +511,29 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       }
     },
     async linkSession(family, value) {
+      if (family === SOURCE_AUTH_FAMILY.SENKURO) {
+        const token = parseSenkuroSessionValue(value);
+        if (!token) return null;
+        const cfg = SENKURO_CONFIGS.find(({ id }) => SOURCE_CATALOG[id].authFamily === family)!;
+        const sourceId = cfg.id;
+        const domain = SOURCES[sourceId].domains[0];
+        const jar = await createSenkuroSessionJar(token);
+        const http = new HttpClientImpl({
+          sourceId,
+          jar,
+          defaultHeaders: SOURCES[sourceId].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const viewer = await fetchSenkuroViewer(http, cfg, domain, token);
+          return { jar, login: viewer.user!.name };
+        } catch (error) {
+          if (error instanceof SourceTokenExpiredError) return null;
+          throw error;
+        } finally {
+          await http.close();
+        }
+      }
       if (family === SOURCE_AUTH_FAMILY.REMANGA) {
         const token = parseRemangaSessionValue(value);
         if (!token) return null;

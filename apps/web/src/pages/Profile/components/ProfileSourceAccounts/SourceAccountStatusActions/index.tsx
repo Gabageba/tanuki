@@ -7,6 +7,7 @@ import {
   SOURCE_ACCOUNT_STATUS,
   SOURCE_AUTH_FAMILY,
   SOURCE_STATUS_REASON,
+  isLibSocialAuthFamily,
   type SourceAccount,
   type SourceAuthFamily,
 } from '@tanuki/contracts';
@@ -35,6 +36,9 @@ function SourceAccountStatusActions({
   const [opened, { open, close }] = useDisclosure(false);
   const unlink = useUnlinkSourceAccount();
 
+  const isLoginAvailable =
+    isLinkingAvailable &&
+    sources.some((source) => source.statusReason !== SOURCE_STATUS_REASON.BROKEN);
   const isReloginRequired = account?.status === SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED;
 
   return (
@@ -46,7 +50,7 @@ function SourceAccountStatusActions({
             variant="muted"
             color="terracotta"
             leftSection={<SignInIcon />}
-            disabled={!isLinkingAvailable}
+            disabled={!isLoginAvailable}
             onClick={open}
           >
             {t('logIn')}
@@ -60,7 +64,7 @@ function SourceAccountStatusActions({
                 variant="muted"
                 color="gold"
                 leftSection={<ArrowClockwiseIcon />}
-                disabled={!isLinkingAvailable}
+                disabled={!isLoginAvailable}
                 onClick={open}
               >
                 {t('logInAgain')}
@@ -80,13 +84,8 @@ function SourceAccountStatusActions({
         )}
       </Group>
 
-      {family === SOURCE_AUTH_FAMILY.LIBSOCIAL && (
-        <LinkLibSocialModal
-          sources={sources.filter((source) => source.statusReason !== SOURCE_STATUS_REASON.BROKEN)}
-          defaultTokenSourceId={sourcesWithoutLogin[0]?.id}
-          opened={opened}
-          onClose={close}
-        />
+      {isLibSocialAuthFamily(family) && (
+        <LinkLibSocialModal source={sources[0]!} opened={opened} onClose={close} />
       )}
       {family === SOURCE_AUTH_FAMILY.INUKO && (
         <LinkSessionAccountModal
@@ -101,9 +100,20 @@ function SourceAccountStatusActions({
       {family === SOURCE_AUTH_FAMILY.REMANGA && (
         <LinkRemangaModal source={sources[0]} opened={opened} onClose={close} />
       )}
-      {family !== SOURCE_AUTH_FAMILY.LIBSOCIAL &&
+      {family === SOURCE_AUTH_FAMILY.SENKURO && (
+        <LinkSessionAccountModal
+          family={family}
+          cookieName="access_token"
+          description={t('loginProtectedByCaptcha')}
+          source={sources[0]}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+      {!isLibSocialAuthFamily(family) &&
         family !== SOURCE_AUTH_FAMILY.INUKO &&
-        family !== SOURCE_AUTH_FAMILY.REMANGA && (
+        family !== SOURCE_AUTH_FAMILY.REMANGA &&
+        family !== SOURCE_AUTH_FAMILY.SENKURO && (
           <LinkPasswordAccountModal family={family} opened={opened} onClose={close} />
         )}
     </>

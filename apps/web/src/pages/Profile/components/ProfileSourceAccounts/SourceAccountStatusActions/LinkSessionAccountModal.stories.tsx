@@ -36,6 +36,43 @@ export const Default: Story = {
   name: 'Обычная',
 };
 
+export const Senkuro: Story = {
+  name: 'Senkuro',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkSessionAccountModal
+          family={SOURCE_AUTH_FAMILY.SENKURO}
+          cookieName="access_token"
+          description={I18N.t('loginProtectedByCaptcha')}
+          source={SOURCES.find(({ id }) => id === 'senkuro')}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};
+
+export const Senkognito: Story = {
+  ...Senkuro,
+  name: 'Senkognito',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkSessionAccountModal
+          family={SOURCE_AUTH_FAMILY.SENKURO}
+          cookieName="access_token"
+          description={I18N.t('loginProtectedByCaptcha')}
+          source={SOURCES.find(({ id }) => id === 'senkognito')}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};
+
 export const SessionRejected: Story = {
   name: 'Сессия не принята',
   parameters: {

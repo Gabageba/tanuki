@@ -628,7 +628,7 @@ describe('LibSocial getBookmarks', () => {
     contentType: 'application/json',
   });
   const asUser = <T>(fn: () => Promise<T>) =>
-    runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.LIBSOCIAL]: { tokenStore: () => null } }, fn);
+    runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.MANGALIB]: { tokenStore: () => null } }, fn);
 
   const setUp = () => {
     const http = new FakeHttpClient();
@@ -694,6 +694,33 @@ describe('LibSocial getBookmarks', () => {
 
     await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
     expect(http.requests).toHaveLength(0);
+  });
+
+  it('an account on the other site does not grant access to bookmarks', async () => {
+    const http = setUp();
+    const parser = createLibSocialParser(AUTH_CFG, makeContext(http));
+    await runWithSourceAccounts(
+      { [SOURCE_AUTH_FAMILY.HENTAILIB]: { tokenStore: () => null } },
+      async () => {
+        await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
+      },
+    );
+    expect(http.requests).toHaveLength(0);
+  });
+
+  it('HentaiLib reads bookmarks with its own account', async () => {
+    const http = setUp();
+    const parser = createLibSocialParser(
+      { ...AUTH_CFG, id: SOURCE_ID.HENTAILIB, siteId: 4, isNsfw: true },
+      makeContext(http),
+    );
+    await runWithSourceAccounts(
+      { [SOURCE_AUTH_FAMILY.HENTAILIB]: { tokenStore: () => null } },
+      async () => {
+        await expect(parser.getBookmarks!()).resolves.toEqual(expect.any(Array));
+      },
+    );
+    expect(http.requests.some(({ url }) => url.endsWith('/api/auth/me'))).toBe(true);
   });
 
   it('a network site without login has no bookmarks import', () => {

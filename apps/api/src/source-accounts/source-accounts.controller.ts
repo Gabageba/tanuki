@@ -14,6 +14,8 @@ import { LibSocialLoginService } from './libsocial-login.service';
 import {
   ConfirmLibSocialLoginRequestDto,
   LibSocialLoginStepDto,
+  LinkLibSocialAccountRequestDto,
+  LibSocialLoginSourceRequestDto,
   LinkLibSocialTokenRequestDto,
   LinkSourceAccountRequestDto,
   LinkSourceSessionRequestDto,
@@ -83,23 +85,22 @@ export class SourceAccountsController {
   }
 
   @ApiOperation({
-    summary:
-      'Входит в LibSocial логином и паролем — сервер сам проходит форму входа сайтов сети по очереди',
+    summary: 'Входит на выбранный сайт LibSocial логином и паролем',
   })
-  @ApiBody({ type: LinkSourceAccountRequestDto })
+  @ApiBody({ type: LinkLibSocialAccountRequestDto })
   @ApiOkResponse({ type: LibSocialLoginStepDto })
   @HttpCode(HttpStatus.OK)
   @Post('libsocial/login')
   async loginLibSocial(
     @CurrentUser() user: SessionUser,
-    @Body() body: LinkSourceAccountRequestDto,
+    @Body() body: LinkLibSocialAccountRequestDto,
   ): Promise<LibSocialLoginStep> {
     await this.rateLimit.consume(
       `source-login:${user.id}:libsocial`,
       RATE_LIMIT.SOURCE_LOGIN.limit,
       RATE_LIMIT.SOURCE_LOGIN.windowSeconds,
     );
-    return this.libSocialLogin.start(user.id, body);
+    return this.libSocialLogin.start(user.id, body.sourceId, body);
   }
 
   @ApiOperation({ summary: 'Отправляет код из письма сайту LibSocial, который ждёт его' })
@@ -117,15 +118,19 @@ export class SourceAccountsController {
       RATE_LIMIT.SOURCE_LOGIN.limit,
       RATE_LIMIT.SOURCE_LOGIN.windowSeconds,
     );
-    return this.libSocialLogin.confirm(user.id, body.code);
+    return this.libSocialLogin.confirm(user.id, body.sourceId, body.code);
   }
 
-  @ApiOperation({ summary: 'Пропускает сайт LibSocial, ждущий код, и входит в следующий' })
+  @ApiOperation({ summary: 'Отменяет ожидающий код вход на выбранный сайт LibSocial' })
   @ApiOkResponse({ type: LibSocialLoginStepDto })
   @HttpCode(HttpStatus.OK)
   @Post('libsocial/login/skip')
-  async skipLibSocialLogin(@CurrentUser() user: SessionUser): Promise<LibSocialLoginStep> {
-    return this.libSocialLogin.skip(user.id);
+  @ApiBody({ type: LibSocialLoginSourceRequestDto })
+  async skipLibSocialLogin(
+    @CurrentUser() user: SessionUser,
+    @Body() body: LibSocialLoginSourceRequestDto,
+  ): Promise<LibSocialLoginStep> {
+    return this.libSocialLogin.skip(user.id, body.sourceId);
   }
 
   @ApiOperation({ summary: 'Добавляет к аккаунту LibSocial токен сайта из его localStorage' })

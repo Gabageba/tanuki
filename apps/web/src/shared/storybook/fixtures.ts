@@ -61,6 +61,8 @@ const BOOKMARKS_IMPORT_SOURCE_IDS: string[] = [
   'selfmanga',
   'seimanga',
   'remanga',
+  'senkuro',
+  'senkognito',
 ];
 
 const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source => {

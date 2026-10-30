@@ -6,6 +6,7 @@ import {
   SOURCE_AUTH_FAMILY,
   SOURCE_LOGIN_REQUIREMENT,
   catalogEntryFor,
+  isLibSocialAuthFamily,
   type Source,
   type SourceAccess,
   type SourceAuthFamily,
@@ -29,10 +30,11 @@ import { DatabaseService } from '../database/database.service';
 import { sourceAccounts } from '../database/schema';
 import { SOURCE_SESSION_PERSIST_DELAY_MS, SOURCE_SESSIONS_CACHE_SIZE, VIEWER_KIND } from './models';
 import { getViewer } from './viewer-context';
+import { splitLibSocialAccount } from './libsocial-accounts';
 
 export type SourceAccountRow = typeof sourceAccounts.$inferSelect;
 
-/** Токены LibSocial по сайтам сети: учётка одна, а токен каждый сайт выдаёт свой. */
+/** Токен сайта LibSocial; у старых общих аккаунтов здесь могло быть несколько сайтов. */
 export type LibSocialTokens = Partial<Record<string, LibSocialTokenState>>;
 
 /** Что лежит в encrypted_state: jar Grouple/AllHentai или токены LibSocial. */
@@ -160,10 +162,13 @@ export class SourceAccessService {
   }
 
   async listRows(userId: string): Promise<SourceAccountRow[]> {
-    return this.database.withFallback(
-      () => this.database.db.select().from(sourceAccounts).where(eq(sourceAccounts.userId, userId)),
-      [],
-    );
+    return this.database.withFallback(async () => {
+      await this.migrateLibSocialAccounts(userId);
+      return this.database.db
+        .select()
+        .from(sourceAccounts)
+        .where(eq(sourceAccounts.userId, userId));
+    }, []);
   }
 
   /**
@@ -172,9 +177,9 @@ export class SourceAccessService {
    */
   async getLibSocialSecrets(
     userId: string,
-    row?: SourceAccountRow,
+    row: SourceAccountRow,
   ): Promise<{ tokens: LibSocialTokens; password: string | null }> {
-    const account = await this.loadLive(userId, SOURCE_AUTH_FAMILY.LIBSOCIAL, row);
+    const account = await this.loadLive(userId, row.family, row);
     return { tokens: account?.tokens ?? {}, password: account?.password ?? null };
   }
 
@@ -198,6 +203,7 @@ export class SourceAccessService {
     };
 
     try {
+      if (isLibSocialAuthFamily(family)) await this.migrateLibSocialAccounts(userId);
       await this.database.db
         .insert(sourceAccounts)
         .values({ userId, family, ...values })
@@ -213,6 +219,7 @@ export class SourceAccessService {
 
   async remove(userId: string, family: SourceAuthFamily): Promise<void> {
     try {
+      if (isLibSocialAuthFamily(family)) await this.migrateLibSocialAccounts(userId);
       await this.database.db.delete(sourceAccounts).where(this.whereAccount(userId, family));
     } catch {
       throw new StorageUnavailableException();
@@ -222,23 +229,12 @@ export class SourceAccessService {
 
   /**
    * Сессия аккаунта больше не принимается источником. Аккаунт остаётся привязанным, но источник
-   * закрывается до повторного входа — так человек видит, что именно нужно сделать. У LibSocial
-   * отвергнут токен одного сайта: забываем только его, остальные сайты сети продолжают работать.
+   * закрывается до повторного входа — так человек видит, что именно нужно сделать.
+   * MangaLib и HentaiLib независимы: меняется только аккаунт выбранного сайта.
    */
   async markReloginRequired(userId: string, sourceId: string): Promise<void> {
     const family = catalogEntryFor(sourceId).authFamily;
     if (!family) return;
-
-    if (family === SOURCE_AUTH_FAMILY.LIBSOCIAL) {
-      const account = await this.loadLive(userId, family);
-      const hasOtherTokens = Object.keys(account?.tokens ?? {}).some((id) => id !== sourceId);
-      if (account && hasOtherTokens) {
-        this.logger.warn(`Токен ${sourceId} пользователя ${userId} больше не действует`);
-        delete account.tokens[sourceId];
-        await this.persist(accountKey(userId, family), account);
-        return;
-      }
-    }
 
     await this.markFamilyReloginRequired(userId, family);
   }
@@ -247,7 +243,7 @@ export class SourceAccessService {
     if (account.row.status === SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED) {
       return SOURCE_ACCESS.RELOGIN_REQUIRED;
     }
-    if (account.row.family === SOURCE_AUTH_FAMILY.LIBSOCIAL && !account.tokens[sourceId]) {
+    if (isLibSocialAuthFamily(account.row.family) && !account.tokens[sourceId]) {
       return SOURCE_ACCESS.LOCKED;
     }
     return SOURCE_ACCESS.AVAILABLE;
@@ -283,6 +279,7 @@ export class SourceAccessService {
     const found =
       row ??
       (await this.database.withFallback(async () => {
+        if (isLibSocialAuthFamily(family)) await this.migrateLibSocialAccounts(userId);
         const [first] = await this.database.db
           .select()
           .from(sourceAccounts)
@@ -372,8 +369,11 @@ export class SourceAccessService {
     if (!this.key) return;
     const { session, row, tokens } = account;
     const cookies = session.jar?.serializeSync();
-    const state: SourceAccountState | null =
-      row.family === SOURCE_AUTH_FAMILY.LIBSOCIAL ? { tokens } : cookies ? { cookies } : null;
+    const state: SourceAccountState | null = isLibSocialAuthFamily(row.family)
+      ? { tokens }
+      : cookies
+        ? { cookies }
+        : null;
     if (!state) return;
 
     await this.database.withFallback(async () => {
@@ -386,6 +386,44 @@ export class SourceAccessService {
         .where(this.whereAccount(row.userId, row.family));
       return true;
     }, false);
+  }
+
+  /** Старую строку блокируем до конца переноса: параллельный вход/отвязка не воскресит токены. */
+  private async migrateLibSocialAccounts(userId: string): Promise<void> {
+    if (!this.key) return;
+    const secretKey = this.key;
+    await this.database.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(sourceAccounts)
+        .where(this.whereAccount(userId, SOURCE_AUTH_FAMILY.LIBSOCIAL))
+        .for('update');
+      if (!row) return;
+      let split;
+      try {
+        split = splitLibSocialAccount(row, secretKey);
+      } catch (error) {
+        this.logger.warn(
+          `Не удалось разделить аккаунт LibSocial пользователя ${userId}: ${(error as Error).message}`,
+        );
+        return;
+      }
+      const { accounts, legacy } = split;
+      if (!accounts.length) return;
+      // Новый самостоятельный вход имеет приоритет перед старой общей привязкой.
+      await tx.insert(sourceAccounts).values(accounts).onConflictDoNothing();
+      if (legacy) {
+        await tx
+          .update(sourceAccounts)
+          .set({ encryptedState: legacy.encryptedState })
+          .where(this.whereAccount(userId, SOURCE_AUTH_FAMILY.LIBSOCIAL));
+      } else {
+        await tx
+          .delete(sourceAccounts)
+          .where(this.whereAccount(userId, SOURCE_AUTH_FAMILY.LIBSOCIAL));
+      }
+      this.evict(accountKey(userId, SOURCE_AUTH_FAMILY.LIBSOCIAL));
+    });
   }
 
   private evict(key: string): void {

@@ -1,6 +1,5 @@
 import type { EnumLiteralsOf } from '@tanuki/contracts';
 import type { LibSocialPendingLogin } from '@tanuki/parsers';
-import type { LibSocialTokens } from './source-access.service';
 
 /**
  * От чьего имени идёт запрос к источнику. Внутренняя деталь сервера: наружу не уходит.
@@ -29,9 +28,9 @@ export const PENDING_LOGIN_TTL_MS = 10 * 60_000;
 export type LoginInput = { login: string; password: string; rememberPassword: boolean };
 
 export type LoginAttempt = LoginInput & {
-  tokens: LibSocialTokens;
-  queue: string[];
-  pending: { sourceId: string; state: LibSocialPendingLogin } | null;
+  userId: string;
+  sourceId: string;
+  pending: LibSocialPendingLogin | null;
   expiry: NodeJS.Timeout | null;
   busy: boolean;
 };

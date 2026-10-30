@@ -1,7 +1,7 @@
-import { SOURCE_ID } from '../catalog';
+import { SOURCE_ID, type SourceId } from '../catalog';
 
 export type SenkuroConfig = {
-  id: string;
+  id: SourceId;
   /** GraphQL endpoint serving both the `mangas` connection and the `mangaTachiyomi*` queries. */
   apiEndpoint: string;
   /** Value of the `app-id` request header — this, not the host, selects the catalog. */

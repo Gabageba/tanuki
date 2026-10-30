@@ -13,7 +13,6 @@ import {
   formatCompactNumber,
   type FilterRangePreset,
   type TitleState,
-  SOURCE_AUTH_FAMILY,
   SOURCE_LOCALE,
   BUILT_IN_BOOKMARK_FOLDER,
   type BuiltInBookmarkFolder,
@@ -577,6 +576,7 @@ const SEARCH_FILTER_SPEC: SearchFilterSpec = {
 
 export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
+  const authFamily = catalogEntryFor(cfg.id).authFamily!;
   let imageServersPromise: Promise<Map<string, string>> | null = null;
 
   ctx.http.use((req, next) =>
@@ -592,7 +592,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     ctx.http.use(async (req, next) => {
       // Запрос от пользователя идёт только с его токеном — сервисная учётка ему не подменяется,
       // даже если своего токена на этом источнике у него нет (такой запрос API не пропустит).
-      const account = currentSourceAccount(SOURCE_AUTH_FAMILY.LIBSOCIAL);
+      const account = currentSourceAccount(authFamily);
       const store = account ? (account.tokenStore?.(cfg.id) ?? null) : serviceTokenStore;
       if (!store) return next(req);
       const token = await getValidAccessToken(
@@ -1194,7 +1194,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
 
   const getBookmarks = async (): Promise<RawBookmarkFolder[]> => {
     // Без аккаунта пользователя запрос ушёл бы от сервисной учётки — её закладки не нужны никому.
-    if (!currentSourceAccount(SOURCE_AUTH_FAMILY.LIBSOCIAL)) {
+    if (!currentSourceAccount(authFamily)) {
       throw new SourceAuthRequiredError('Bookmarks require the user’s own account', cfg.id);
     }
     const me = await ctx.http.getJson<{ data: { id: number } }>(

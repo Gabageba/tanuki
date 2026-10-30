@@ -96,23 +96,34 @@ export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 
 /**
  * Аккаунт, которым пользователь открывает источник. Одна учётка обслуживает всё семейство:
- * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у LibSocial — аккаунт lib.social,
+ * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у MangaLib и HentaiLib — отдельные аккаунты сайтов,
  * у Nude-Moon, Desu и MangaBuff — аккаунт самого сайта, у сети inuko (Inkstory, PureManga) — сессия сайта поверх общей SSO, у ReManga — токен сессии сайта.
+ * Senkuro и Senkognito используют один аккаунт SSO и общий токен.
  * Что именно без аккаунта закрыто — loginRequirement и loginBenefits источника.
  */
 export const SOURCE_AUTH_FAMILY = {
   GROUPLE: 'grouple',
   ALLHENTAI: 'allhentai',
+  /** SlashLib; также прежний общий ключ MangaLib/HentaiLib до разделения аккаунтов. */
   LIBSOCIAL: 'libsocial',
+  MANGALIB: 'mangalib',
+  HENTAILIB: 'hentailib',
   NUDEMOON: 'nudemoon',
   DESU: 'desu',
   INUKO: 'inuko',
   MANGABUFF: 'mangabuff',
   REMANGA: 'remanga',
+  SENKURO: 'senkuro',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 
 export const SourceAuthFamilySchema = z.enum(SOURCE_AUTH_FAMILY);
+
+/** Общий OAuth-движок, но независимые аккаунты и токены сайтов. */
+export const isLibSocialAuthFamily = (family: SourceAuthFamily) =>
+  family === SOURCE_AUTH_FAMILY.MANGALIB ||
+  family === SOURCE_AUTH_FAMILY.HENTAILIB ||
+  family === SOURCE_AUTH_FAMILY.LIBSOCIAL;
 
 /**
  * Нужен ли вход, чтобы источник открывался: REQUIRED закрыт, пока пользователь не привяжет свой
@@ -163,13 +174,12 @@ export type SourceAccountStatus = EnumLiteralsOf<typeof SOURCE_ACCOUNT_STATUS>;
 export const SourceAccountStatusSchema = z.enum(SOURCE_ACCOUNT_STATUS);
 
 /**
- * Привязанный аккаунт источника — один на всё семейство. У LibSocial учётка общая на всю сеть,
- * но токен каждый сайт выдаёт свой: вход по паролю получает их все разом, а вставка токена —
- * только для сайта, с которого он взят.
+ * Привязанный аккаунт источника — один на семейство. MangaLib и HentaiLib — отдельные
+ * семейства: у каждого свои пароль, токен и состояние входа.
  */
 export const SourceAccountSchema = z.object({
   family: SourceAuthFamilySchema,
-  /** LibSocial — сайты сети, для которых у аккаунта есть токен. null — открыто всё семейство. */
+  /** LibSocial — сайт, для которого у аккаунта есть токен. null — открыто всё семейство. */
   sourceIds: z.array(z.string()).nullable(),
   /** Имя аккаунта на источнике — чтобы человек видел, под кем вошёл. */
   login: z.string().nullable(),
@@ -195,10 +205,17 @@ export const LinkSourceAccountRequestSchema = z.object({
 });
 export type LinkSourceAccountRequest = z.infer<typeof LinkSourceAccountRequestSchema>;
 
-/**
- * Шаг входа в LibSocial. Сайты сети входят по очереди, и каждый может прислать на почту код:
- * pendingSourceId — сайт, который ждёт свой код, null — вход завершён.
- */
+/** Выбранный сайт для входа, подтверждения или отмены. */
+export const LibSocialLoginSourceRequestSchema = z.object({
+  sourceId: z.string().min(1),
+});
+
+export const LinkLibSocialAccountRequestSchema = LinkSourceAccountRequestSchema.extend(
+  LibSocialLoginSourceRequestSchema.shape,
+);
+export type LinkLibSocialAccountRequest = z.infer<typeof LinkLibSocialAccountRequestSchema>;
+
+/** pendingSourceId — выбранный сайт, который ждёт код из письма; null — вход завершён. */
 export const LibSocialLoginStepSchema = z.object({
   pendingSourceId: z.string().nullable(),
 });
@@ -207,7 +224,7 @@ export type LibSocialLoginStep = z.infer<typeof LibSocialLoginStepSchema>;
 /** Сайты LibSocial присылают код из 6 цифр, он действует 10 минут. */
 export const LIBSOCIAL_LOGIN_CODE_LENGTH = 6;
 
-export const ConfirmLibSocialLoginRequestSchema = z.object({
+export const ConfirmLibSocialLoginRequestSchema = LibSocialLoginSourceRequestSchema.extend({
   /** Код из письма сайта, который ждёт его (LibSocialLoginStep.pendingSourceId). */
   code: z.string().length(LIBSOCIAL_LOGIN_CODE_LENGTH).regex(/^\d+$/),
 });

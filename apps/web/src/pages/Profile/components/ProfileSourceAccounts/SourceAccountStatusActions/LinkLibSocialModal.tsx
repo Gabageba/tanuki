@@ -2,9 +2,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Tabs, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { KeyIcon, PasswordIcon, SignInIcon } from '@phosphor-icons/react';
-import { SOURCE_AUTH_FAMILY, type LibSocialLoginStep, type Source } from '@tanuki/contracts';
+import type { LibSocialLoginStep, Source } from '@tanuki/contracts';
 import useLinkLibSocialAccount from '../hooks/useLinkLibSocialAccount';
-import { getSourceAuthFamilyTitle } from '@/entities/source-account/lib';
 import PasswordAccountForm from './PasswordAccountForm';
 import LibSocialTokenForm from './LibSocialTokenForm';
 import LibSocialCodeStep from './LibSocialCodeStep';
@@ -12,10 +11,7 @@ import ToneModal from '@/shared/ui/ToneModal';
 import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 
 type Props = {
-  /** Сайты сети, в которые можно войти. */
-  sources: Source[];
-  /** Сайт, который предлагается во вкладке токена первым, — тот, где входа ещё нет. */
-  defaultTokenSourceId: string | undefined;
+  source: Source;
   opened: boolean;
   onClose: () => void;
 };
@@ -25,13 +21,8 @@ const LOGIN_TAB = {
   TOKEN: 'token',
 } as const;
 
-/**
- * LibSocial: основной путь — логин и пароль, с ними сервер сам проходит форму входа на каждом
- * сайте сети, а сайт, приславший код на почту, ждёт его на внутреннем шаге. Запасной — перенос
- * токена из localStorage сайта, для входящих туда через VK или Яндекс: токен подходит только
- * своему сайту, поэтому переносится для каждого отдельно.
- */
-function LinkLibSocialModal({ sources, defaultTokenSourceId, opened, onClose }: Props) {
+/** Общая форма OAuth для независимого входа на выбранный сайт. */
+function LinkLibSocialModal({ source, opened, onClose }: Props) {
   const { t } = useTranslation();
   const linkAccount = useLinkLibSocialAccount();
   /** Сайт, ждущий код из письма; null — шаг логина и пароля. */
@@ -65,9 +56,7 @@ function LinkLibSocialModal({ sources, defaultTokenSourceId, opened, onClose }: 
     [handleClose],
   );
 
-  const pendingSite = pendingSourceId
-    ? (sources.find((source) => source.id === pendingSourceId)?.title ?? pendingSourceId)
-    : null;
+  const pendingSite = pendingSourceId ? source.title : null;
 
   const TABS = useMemo(
     () => [
@@ -78,10 +67,12 @@ function LinkLibSocialModal({ sources, defaultTokenSourceId, opened, onClose }: 
         content: (
           <PasswordAccountForm
             isPending={linkAccount.isPending}
-            onSubmit={(values) => handleStep(() => linkAccount.mutateAsync(values))}
+            onSubmit={(values) =>
+              handleStep(() => linkAccount.mutateAsync({ ...values, sourceId: source.id }))
+            }
             onCancel={handleClose}
             meta={
-              <Text fz={12} c="dimmed">
+              <Text fz={13} c="dimmed">
                 {t('logInViaVkOrYandexSetPasswordOrUseToken')}
               </Text>
             }
@@ -92,16 +83,10 @@ function LinkLibSocialModal({ sources, defaultTokenSourceId, opened, onClose }: 
         id: LOGIN_TAB.TOKEN,
         icon: <KeyIcon />,
         title: t('token'),
-        content: (
-          <LibSocialTokenForm
-            sources={sources}
-            defaultSourceId={defaultTokenSourceId}
-            onClose={handleClose}
-          />
-        ),
+        content: <LibSocialTokenForm source={source} onClose={handleClose} />,
       },
     ],
-    [defaultTokenSourceId, handleClose, handleStep, linkAccount, sources, t],
+    [handleClose, handleStep, linkAccount, source, t],
   );
 
   return (
@@ -110,17 +95,13 @@ function LinkLibSocialModal({ sources, defaultTokenSourceId, opened, onClose }: 
       icon={SignInIcon}
       opened={opened}
       onClose={handleClose}
-      title={
-        pendingSite
-          ? t('enterCode')
-          : t('logInToName', { name: getSourceAuthFamilyTitle(SOURCE_AUTH_FAMILY.LIBSOCIAL) })
-      }
+      title={pendingSite ? t('enterCode') : t('logInToName', { name: source.title })}
       // Назад — к логину и паролю: вход начнётся заново, начатый на сервере отбросится.
       onBack={pendingSite ? handleBack : undefined}
       size="lg"
     >
       {pendingSite ? (
-        <LibSocialCodeStep key={pendingSourceId} site={pendingSite} onStep={handleStep} />
+        <LibSocialCodeStep key={pendingSourceId} source={source} onStep={handleStep} />
       ) : (
         <Tabs defaultValue={LOGIN_TAB.PASSWORD} keepMounted={false}>
           <Tabs.List>

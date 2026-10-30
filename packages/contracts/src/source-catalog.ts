@@ -146,7 +146,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['mangalib.org', 'mangalib.me'],
     color: '#FF8C02',
-    authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
+    authFamily: SOURCE_AUTH_FAMILY.MANGALIB,
     loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [SOURCE_LOGIN_BENEFIT.MEMBER_CHAPTERS, SOURCE_LOGIN_BENEFIT.PURCHASED_CHAPTERS],
   },
@@ -158,7 +158,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['v1.hentailib.org', 'hentailib.me'],
     color: '#FF0048',
-    authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
+    authFamily: SOURCE_AUTH_FAMILY.HENTAILIB,
     loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
     loginBenefits: [
       SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING,
@@ -301,8 +301,8 @@ export const SOURCE_CATALOG = {
     // some RU users); both hit the same api.senkuro.com backend, see sources/senkuro/config.ts.
     domains: ['senkuro.me', 'ne.senkuro.com', 'senkuro.com'],
     color: '#FE6E00',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.SENKURO,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   senkognito: {
@@ -316,8 +316,8 @@ export const SOURCE_CATALOG = {
     // unblocked hostname. See sources/senkuro/config.ts for how the two are split.
     domains: ['ne.senkognito.com', 'senkognito.com'],
     color: '#FE6E00',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.SENKURO,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   tomilolib: {

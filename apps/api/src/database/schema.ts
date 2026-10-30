@@ -312,7 +312,7 @@ export const disabledSources = pgTable(
 
 /**
  * Личные аккаунты пользователя на источниках. Grouple и AllHentai — одна строка на семейство
- * (sourceId = ''), у LibSocial — строка на каждый источник сети: токены у них свои.
+ * (одна SSO), у MangaLib и HentaiLib — независимые семейства и строки: токены у них свои.
  * Всё секретное хранится только зашифрованным (common/secret-box.ts).
  */
 export const sourceAccounts = pgTable(
@@ -321,7 +321,7 @@ export const sourceAccounts = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    /** Аккаунт один на семейство — у LibSocial тоже: токены сайтов сети лежат в его state. */
+    /** Аккаунт один на семейство; MangaLib и HentaiLib хранятся отдельно. */
     family: text('family').$type<SourceAuthFamily>().notNull(),
     status: text('status').$type<SourceAccountStatus>().notNull(),
     /** Имя аккаунта на источнике — для показа в настройках. */

@@ -18,8 +18,12 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
       return 'Grouple';
     case SOURCE_AUTH_FAMILY.ALLHENTAI:
       return 'AllHentai';
+    case SOURCE_AUTH_FAMILY.MANGALIB:
+      return 'MangaLib';
+    case SOURCE_AUTH_FAMILY.HENTAILIB:
+      return 'HentaiLib';
     case SOURCE_AUTH_FAMILY.LIBSOCIAL:
-      return 'LibSocial';
+      return 'SlashLib';
     case SOURCE_AUTH_FAMILY.NUDEMOON:
       return 'Nude-Moon';
     case SOURCE_AUTH_FAMILY.DESU:
@@ -28,6 +32,8 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
       return 'Inuko';
     case SOURCE_AUTH_FAMILY.REMANGA:
       return 'ReManga';
+    case SOURCE_AUTH_FAMILY.SENKURO:
+      return 'Senkuro';
     case SOURCE_AUTH_FAMILY.MANGABUFF:
       return 'MangaBuff';
   }
@@ -79,8 +85,8 @@ export const getSourceAccountStatusLabel = (account: SourceAccount | undefined, 
 };
 
 /**
- * Сайты LibSocial, для которых у действующего аккаунта нет токена: вход по паролю мог пройти не
- * везде, а вставленный токен подходит только своему сайту. Сломанные источники не в счёт — в них
+ * Сайты, для которых у действующего аккаунта нет токена. У MangaLib и HentaiLib
+ * по одному сайту на аккаунт. Сломанные источники не в счёт — в них
  * всё равно не войти.
  */
 export const getSourcesWithoutLogin = (account: SourceAccount | undefined, sources: Source[]) => {

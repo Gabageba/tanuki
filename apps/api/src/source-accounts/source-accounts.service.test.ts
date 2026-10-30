@@ -10,12 +10,15 @@ const createService = () => {
   const linkSession = vi
     .fn<ParsersRegistry['linkSession']>()
     .mockResolvedValue({ jar: new CookieJar(), login: 'reader' });
+  const fetchLibSocialAccountName = vi
+    .fn<ParsersRegistry['fetchLibSocialAccountName']>()
+    .mockResolvedValue('new-reader');
   const save = vi.fn().mockResolvedValue(undefined);
   const service = new SourceAccountsService(
-    { loginAccount: login, linkSession } as unknown as ParsersRegistry,
+    { loginAccount: login, linkSession, fetchLibSocialAccountName } as unknown as ParsersRegistry,
     { isLinkingAvailable: true, save } as unknown as SourceAccessService,
   );
-  return { service, login, linkSession, save };
+  return { service, login, linkSession, fetchLibSocialAccountName, save };
 };
 
 describe('ReManga account linking', () => {
@@ -58,4 +61,43 @@ describe('ReManga account linking', () => {
       state: { cookies: expect.any(Object) },
     });
   });
+});
+
+describe('Senkuro account linking', () => {
+  it('stores a shared session for Senkuro and Senkognito', async () => {
+    const family = SOURCE_AUTH_FAMILY.SENKURO;
+    const { service, linkSession, save } = createService();
+    await service.linkSession('user', family, 'browser-token');
+    expect(linkSession).toHaveBeenCalledWith(family, 'browser-token');
+    expect(save).toHaveBeenCalledWith('user', family, {
+      login: 'reader',
+      password: null,
+      state: { cookies: expect.any(Object) },
+    });
+  });
+});
+
+describe('LibSocial token linking', () => {
+  it.each([SOURCE_AUTH_FAMILY.MANGALIB, SOURCE_AUTH_FAMILY.HENTAILIB])(
+    'replaces only the %s account and drops the previous saved password',
+    async (family) => {
+      const { service, fetchLibSocialAccountName, save } = createService();
+      const tokens = {
+        accessToken: 'fresh-access',
+        refreshToken: 'fresh-refresh',
+        expiresAt: 20_000,
+      };
+      fetchLibSocialAccountName.mockImplementation(async (_, store) => {
+        await store.write(tokens);
+        return 'new-reader';
+      });
+      await service.linkLibSocialToken('user', family, 'browser-refresh-token-12345');
+      expect(fetchLibSocialAccountName).toHaveBeenCalledWith(family, expect.any(Object));
+      expect(save).toHaveBeenCalledExactlyOnceWith('user', family, {
+        login: 'new-reader',
+        password: null,
+        state: { tokens: { [family]: tokens } },
+      });
+    },
+  );
 });

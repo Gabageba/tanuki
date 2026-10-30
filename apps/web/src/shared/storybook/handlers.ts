@@ -169,10 +169,11 @@ export const DEFAULT_HANDLERS = [
     HttpResponse.json(SOURCES.find(({ id }) => id === params.sourceId) ?? SOURCES[0]),
   ),
   http.get(apiPath('/source-accounts'), () => HttpResponse.json(SOURCE_ACCOUNTS_RESPONSE)),
-  // Вход в LibSocial: MangaLib просит код из письма, с кодом или пропуском вход завершается.
-  http.post(apiPath('/source-accounts/libsocial/login'), () =>
-    HttpResponse.json({ pendingSourceId: 'mangalib' }),
-  ),
+  // Выбранный сайт LibSocial просит код из письма; подтверждение завершает его вход.
+  http.post(apiPath('/source-accounts/libsocial/login'), async ({ request }) => {
+    const { sourceId } = (await request.json()) as { sourceId: string };
+    return HttpResponse.json({ pendingSourceId: sourceId });
+  }),
   http.post(apiPath('/source-accounts/libsocial/login/*'), () =>
     HttpResponse.json({ pendingSourceId: null }),
   ),

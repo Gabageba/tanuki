@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
-  SOURCE_ACCOUNT_STATUS,
   SOURCE_AUTH_FAMILY,
+  isLibSocialAuthFamily,
   catalogEntryFor,
   type SourceAccount,
   type SourceAccountsResponse,
@@ -46,7 +46,9 @@ const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamil
   family === SOURCE_AUTH_FAMILY.REMANGA;
 
 const isSessionFamily = (family: SourceAuthFamily): family is SessionAuthFamily =>
-  family === SOURCE_AUTH_FAMILY.INUKO || family === SOURCE_AUTH_FAMILY.REMANGA;
+  family === SOURCE_AUTH_FAMILY.INUKO ||
+  family === SOURCE_AUTH_FAMILY.REMANGA ||
+  family === SOURCE_AUTH_FAMILY.SENKURO;
 
 /** Привязка и отвязка личных аккаунтов источников — то, что человек делает в настройках. */
 @Injectable()
@@ -64,7 +66,7 @@ export class SourceAccountsService {
       rows.map(async (row) =>
         toSourceAccount(
           row,
-          row.family === SOURCE_AUTH_FAMILY.LIBSOCIAL
+          isLibSocialAuthFamily(row.family)
             ? Object.keys((await this.sourceAccess.getLibSocialSecrets(userId, row)).tokens)
             : null,
         ),
@@ -107,7 +109,7 @@ export class SourceAccountsService {
   }
 
   /**
-   * Inuko и ReManga: человек входит на сайте сам и переносит cookie сессии. Сервер проверяет
+   * Inuko, ReManga, Senkuro и Senkognito: человек входит на сайте сам и переносит cookie сессии. Сервер проверяет
    * аккаунт через сайт или API; пароль при переносе не сохраняется, истёкшую сессию переносят заново.
    */
   async linkSession(userId: string, family: SourceAuthFamily, value: string): Promise<void> {
@@ -132,10 +134,11 @@ export class SourceAccountsService {
   /**
    * LibSocial, запасной путь: человек входит на сайте сам и вставляет токен из его localStorage
    * — для тех, у кого на сайте нет пароля (вход через VK или Яндекс). Токен подходит только
-   * сайту, с которого взят, и добавляется к токенам уже привязанного аккаунта.
+   * сайту, с которого взят, и заменяет только его аккаунт.
    */
   async linkLibSocialToken(userId: string, sourceId: string, value: string): Promise<void> {
-    if (catalogEntryFor(sourceId).authFamily !== SOURCE_AUTH_FAMILY.LIBSOCIAL) {
+    const family = catalogEntryFor(sourceId).authFamily;
+    if (!family || !isLibSocialAuthFamily(family)) {
       throw new BadRequestApiException();
     }
     if (!this.sourceAccess.isLinkingAvailable) throw new SourceLinkingUnavailableException();
@@ -158,21 +161,10 @@ export class SourceAccountsService {
     }
     if (accountName === null) throw new SourceLoginFailedException();
 
-    // Токены действующего аккаунта сохраняем, а после отвергнутой сессии начинаем с чистого
-    // листа — неизвестно, какой из старых токенов сайт перестал принимать.
-    const rows = await this.sourceAccess.listRows(userId);
-    const current = rows.find(
-      (row) =>
-        row.family === SOURCE_AUTH_FAMILY.LIBSOCIAL && row.status === SOURCE_ACCOUNT_STATUS.ACTIVE,
-    );
-    const { tokens, password } = current
-      ? await this.sourceAccess.getLibSocialSecrets(userId, current)
-      : { tokens: {}, password: null };
-
-    await this.sourceAccess.save(userId, SOURCE_AUTH_FAMILY.LIBSOCIAL, {
-      login: current?.login ?? (accountName || null),
-      password,
-      state: { tokens: { ...tokens, [sourceId]: token } },
+    await this.sourceAccess.save(userId, family, {
+      login: accountName || null,
+      password: null,
+      state: { tokens: { [sourceId]: token } },
     });
   }
 

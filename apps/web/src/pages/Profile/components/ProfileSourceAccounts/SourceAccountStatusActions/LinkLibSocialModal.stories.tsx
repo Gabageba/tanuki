@@ -1,16 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { delay, http, HttpResponse } from 'msw';
 import { expect, screen, userEvent, waitFor } from 'storybook/test';
-import { API_ERROR_CODE, SOURCE_AUTH_FAMILY } from '@tanuki/contracts';
+import { API_ERROR_CODE } from '@tanuki/contracts';
 import { I18N } from '@/shared/lib/i18n';
 import { SOURCES } from '@/shared/storybook/fixtures';
 import { apiError, apiPath } from '@/shared/storybook/handlers';
 import ModalStage from '@/shared/storybook/ModalStage';
 import LinkLibSocialModal from './LinkLibSocialModal';
 
-const LIBSOCIAL_SOURCES = SOURCES.filter(
-  ({ authFamily }) => authFamily === SOURCE_AUTH_FAMILY.LIBSOCIAL,
-);
+const MANGALIB = SOURCES.find(({ id }) => id === 'mangalib')!;
+const HENTAILIB = SOURCES.find(({ id }) => id === 'hentailib')!;
 
 const logIn = async () => {
   await userEvent.type(await screen.findByPlaceholderText(I18N.t('loginOrEmail')), 'reader');
@@ -20,19 +19,15 @@ const logIn = async () => {
 
 const META = {
   title: 'Модалки/Профиль/LinkLibSocialModal',
-  render: () => (
+  args: { source: MANGALIB },
+  render: ({ source }) => (
     <ModalStage>
       {({ opened, close }) => (
-        <LinkLibSocialModal
-          sources={LIBSOCIAL_SOURCES}
-          defaultTokenSourceId={LIBSOCIAL_SOURCES[0]?.id}
-          opened={opened}
-          onClose={close}
-        />
+        <LinkLibSocialModal source={source} opened={opened} onClose={close} />
       )}
     </ModalStage>
   ),
-} satisfies Meta;
+} satisfies Meta<{ source: typeof MANGALIB }>;
 
 export default META;
 
@@ -40,6 +35,17 @@ type Story = StoryObj<typeof META>;
 
 export const Password: Story = {
   name: 'Логин и пароль',
+};
+
+export const HentaiLib: Story = {
+  name: 'HentaiLib',
+  args: { source: HENTAILIB },
+};
+
+export const HentaiLibCode: Story = {
+  name: 'HentaiLib — код из письма',
+  args: { source: HENTAILIB },
+  play: logIn,
 };
 
 export const Token: Story = {
