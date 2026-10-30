@@ -34,6 +34,8 @@ import { toAbsoluteUrl } from '../../core/html/urls';
 import { toTitleCase } from '../../core/text/strings';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { toHomeSections } from '../../core/home';
+import type { MangaJson } from './models';
+import { fetchWaMangaBookmarks } from './bookmarks';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.WAMANGA;
 
@@ -111,31 +113,6 @@ type HomepageJson = {
   dayTop?: MangaJson[];
   latestPublished?: MangaJson[];
   freshUpdates?: MangaJson[];
-};
-
-type MangaJson = {
-  id: string;
-  slug: string;
-  title: string;
-  titleEnglish?: string;
-  alternateTitles?: string[];
-  coverUrl?: string;
-  imageUrl?: string;
-  genres?: string[];
-  statusTitle?: string;
-  translationStatus?: string;
-  authors?: string[];
-  artists?: string[];
-  publishers?: string[];
-  isAdult?: boolean;
-  description?: string;
-  teams?: { name?: string }[];
-  year?: number;
-  type?: string;
-  pegiRating?: string;
-  likes?: number;
-  views?: number;
-  createdAt?: string;
 };
 
 /** `/manga/get/{type}/{slug}?chapters=true` is the site's own manga-page endpoint (it doubles as
@@ -521,6 +498,7 @@ export const createWaMangaParser = (ctx: ParserContext): Parser => {
       isSearchWithFiltersSupported: true,
       homeSections: WAMANGA_HOME_SECTIONS,
     },
+    getBookmarks: () => fetchWaMangaBookmarks(ctx, parseManga),
     getList,
     getDetails,
     getPages,

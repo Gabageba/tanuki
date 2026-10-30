@@ -32,6 +32,8 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
       return 'Inuko';
     case SOURCE_AUTH_FAMILY.REMANGA:
       return 'ReManga';
+    case SOURCE_AUTH_FAMILY.WAMANGA:
+      return 'WaManga';
     case SOURCE_AUTH_FAMILY.TOMILOLIB:
       return 'TomiloLib';
     case SOURCE_AUTH_FAMILY.SENKURO:

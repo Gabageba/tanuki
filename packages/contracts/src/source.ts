@@ -115,6 +115,7 @@ export const SOURCE_AUTH_FAMILY = {
   REMANGA: 'remanga',
   SENKURO: 'senkuro',
   TOMILOLIB: 'tomilolib',
+  WAMANGA: 'wamanga',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 

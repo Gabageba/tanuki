@@ -340,8 +340,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['wamanga.ru'],
     color: '#5A5EE7',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.WAMANGA,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   inkstory: {

@@ -40,3 +40,18 @@ export const TomiloLib: Story = {
     </ModalStage>
   ),
 };
+
+export const WaManga: Story = {
+  name: 'Вход в WaManga',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkPasswordAccountModal
+          family={SOURCE_AUTH_FAMILY.WAMANGA}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};

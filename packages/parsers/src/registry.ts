@@ -47,6 +47,7 @@ import { createComxParser } from './sources/comx';
 import { createTomiloLibParser } from './sources/tomilolib';
 import { loginTomiloLib, saveTomiloLibTokens } from './sources/tomilolib/auth';
 import { createWaMangaParser } from './sources/wamanga';
+import { loginWaManga, saveWaMangaTokens } from './sources/wamanga/auth';
 import { createNudeMoonParser } from './sources/nudemoon';
 import { loginNudeMoon } from './sources/nudemoon/auth';
 import { createAComicsParser } from './sources/acomics';
@@ -257,7 +258,8 @@ export type PasswordAuthFamily =
   | typeof SOURCE_AUTH_FAMILY.DESU
   | typeof SOURCE_AUTH_FAMILY.MANGABUFF
   | typeof SOURCE_AUTH_FAMILY.REMANGA
-  | typeof SOURCE_AUTH_FAMILY.TOMILOLIB;
+  | typeof SOURCE_AUTH_FAMILY.TOMILOLIB
+  | typeof SOURCE_AUTH_FAMILY.WAMANGA;
 
 /**
  * Семейства с переносом сессии: человек входит в своём браузере и переносит cookie,
@@ -436,6 +438,25 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
           const tokens = await loginTomiloLib(http, domain, credentials);
           if (!tokens) return null;
           await saveTomiloLibTokens(jar, domain, tokens);
+          return jar;
+        } finally {
+          await http.close();
+        }
+      }
+      if (family === SOURCE_AUTH_FAMILY.WAMANGA) {
+        const sourceId = SOURCE_ID.WAMANGA;
+        const domain = SOURCES[sourceId].domains[0];
+        const jar = new CookieJar();
+        const http = new HttpClientImpl({
+          sourceId,
+          jar,
+          defaultHeaders: SOURCES[sourceId].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const tokens = await loginWaManga(http, domain, credentials);
+          if (!tokens) return null;
+          await saveWaMangaTokens(jar, domain, tokens);
           return jar;
         } finally {
           await http.close();
