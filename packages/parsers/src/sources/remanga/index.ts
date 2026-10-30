@@ -45,6 +45,16 @@ import { parseFloatOrNull } from '../../core/text/numbers';
 import { NotFoundError } from '../../errors';
 import { fetchHomeSections } from '../../core/home';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { fetchRemangaBookmarks } from './bookmarks';
+import type {
+  MangaJson,
+  TagJson,
+  CreatorJson,
+  BranchJson,
+  ChapterJson,
+  PageJson,
+  DictionaryJson,
+} from './models';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.REMANGA;
 const PAGE_SIZE = 20;
@@ -189,97 +199,6 @@ const CREATOR_TYPE = {
   PUBLISHER: 3,
   ARTIST: 4,
 } as const;
-
-type CoverJson = {
-  mid?: string;
-  high?: string;
-};
-
-type TagJson = {
-  id: number;
-  name: string;
-};
-
-type StatusJson = {
-  id?: number;
-};
-
-type AgeLimitJson = {
-  id?: number;
-};
-
-type TypeJson = {
-  id?: number;
-};
-
-/** `creators[].type` — see CREATOR_TYPE below for what each id means. */
-type CreatorJson = {
-  name: string;
-  type?: number;
-};
-
-type PublisherJson = {
-  name?: string;
-};
-
-type BranchJson = {
-  id: number;
-  publishers?: PublisherJson[];
-};
-
-type MangaJson = {
-  dir: string;
-  main_name: string;
-  secondary_name?: string;
-  another_name?: string;
-  /** Числом в каталоге, строкой («7.5») в слайдерах главной. */
-  avg_rating?: number | string;
-  cover: CoverJson;
-  type?: TypeJson;
-  status?: StatusJson;
-  /** Status of remanga's own translation, distinct from `status` (the original's release). */
-  translate_status?: StatusJson;
-  age_limit?: AgeLimitJson;
-  issue_year?: number;
-  genres?: TagJson[];
-  /** Narrower trope/setting tags shown alongside `genres` on the source itself (e.g.
-   *  «Средневековье», «Исекай», «ГГ мужчина») — a second, more specific vocabulary, not a subset
-   *  of genres. */
-  categories?: TagJson[];
-  description?: string;
-  /** Original work's writer/artist/publisher credits — absent on list items, only `getDetails`
-   *  requests carry it. */
-  creators?: CreatorJson[];
-  /** Vote count backing `avg_rating` — only present on `getDetails`, unlike `total_votes`/
-   *  `total_views` below which the list endpoint already carries. */
-  count_rating?: number;
-  /** Unbounded "likes" counter, distinct from the 0..10 `avg_rating`. */
-  total_votes?: number;
-  total_views?: number;
-  branches?: BranchJson[];
-  detail?: { message?: string };
-};
-
-type ChapterJson = {
-  id: number;
-  /** API отдаёт номер строкой («205.1»), а в старых ответах встречается и числом. */
-  chapter?: number | string;
-  tome?: number | string;
-  name?: string;
-  upload_date?: string;
-  is_paid?: boolean;
-  is_bought?: boolean;
-  publishers?: PublisherJson[];
-};
-
-type PageJson = {
-  link: string;
-};
-
-type DictionaryJson = {
-  id: number;
-  name: string;
-};
 
 /** Type/status/translate_status/age_limit are small, closed enumerations the site itself never
  *  changes without a redesign — verified live against api.remanga.org's own catalog SSR payload
@@ -873,6 +792,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     getFilters,
     getHome,
     getHomeSection,
+    getBookmarks: () => fetchRemangaBookmarks(ctx, parseManga),
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };

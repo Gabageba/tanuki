@@ -1,7 +1,7 @@
 import { Button, Checkbox, Divider, PasswordInput, Stack, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useTranslation } from 'react-i18next';
-import { SignInIcon, UserIcon } from '@phosphor-icons/react';
+import { PasswordIcon, SignInIcon, UserIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import type { LinkSourceAccountRequest } from '@tanuki/contracts';
 import { ApiRequestError } from '@/shared/api/client';
@@ -47,6 +47,7 @@ function PasswordAccountForm({ isPending, onSubmit, onCancel, meta }: Props) {
           {...form.getInputProps('login')}
         />
         <PasswordInput
+          leftSection={<PasswordIcon />}
           placeholder={t('password')}
           autoComplete="off"
           {...form.getInputProps('password')}

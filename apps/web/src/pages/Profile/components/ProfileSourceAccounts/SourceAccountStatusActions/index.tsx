@@ -10,7 +10,8 @@ import {
   type SourceAccount,
   type SourceAuthFamily,
 } from '@tanuki/contracts';
-import LinkInukoModal from './LinkInukoModal';
+import LinkSessionAccountModal from './LinkSessionAccountModal';
+import LinkRemangaModal from './LinkRemangaModal';
 import LinkLibSocialModal from './LinkLibSocialModal';
 import LinkPasswordAccountModal from './LinkPasswordAccountModal';
 import useUnlinkSourceAccount from '../hooks/useUnlinkSourceAccount';
@@ -88,11 +89,23 @@ function SourceAccountStatusActions({
         />
       )}
       {family === SOURCE_AUTH_FAMILY.INUKO && (
-        <LinkInukoModal source={sources[0]} opened={opened} onClose={close} />
+        <LinkSessionAccountModal
+          family={family}
+          cookieName="__otaku_session"
+          description={t('loginProtectedByCaptcha')}
+          source={sources[0]}
+          opened={opened}
+          onClose={close}
+        />
       )}
-      {family !== SOURCE_AUTH_FAMILY.LIBSOCIAL && family !== SOURCE_AUTH_FAMILY.INUKO && (
-        <LinkPasswordAccountModal family={family} opened={opened} onClose={close} />
+      {family === SOURCE_AUTH_FAMILY.REMANGA && (
+        <LinkRemangaModal source={sources[0]} opened={opened} onClose={close} />
       )}
+      {family !== SOURCE_AUTH_FAMILY.LIBSOCIAL &&
+        family !== SOURCE_AUTH_FAMILY.INUKO &&
+        family !== SOURCE_AUTH_FAMILY.REMANGA && (
+          <LinkPasswordAccountModal family={family} opened={opened} onClose={close} />
+        )}
     </>
   );
 }

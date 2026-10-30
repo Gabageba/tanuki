@@ -235,8 +235,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['remanga.org'],
     color: '#000000',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.REMANGA,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   nudemoon: {

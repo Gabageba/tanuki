@@ -9,6 +9,7 @@ import {
 } from '@tanuki/contracts';
 import {
   SourceBlockedError,
+  SourceLoginRequiresSessionError,
   SourceUnavailableError,
   parseLibSocialAuthValue,
   type LibSocialTokenState,
@@ -41,10 +42,11 @@ const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamil
   family === SOURCE_AUTH_FAMILY.ALLHENTAI ||
   family === SOURCE_AUTH_FAMILY.NUDEMOON ||
   family === SOURCE_AUTH_FAMILY.DESU ||
-  family === SOURCE_AUTH_FAMILY.MANGABUFF;
+  family === SOURCE_AUTH_FAMILY.MANGABUFF ||
+  family === SOURCE_AUTH_FAMILY.REMANGA;
 
 const isSessionFamily = (family: SourceAuthFamily): family is SessionAuthFamily =>
-  family === SOURCE_AUTH_FAMILY.INUKO;
+  family === SOURCE_AUTH_FAMILY.INUKO || family === SOURCE_AUTH_FAMILY.REMANGA;
 
 /** Привязка и отвязка личных аккаунтов источников — то, что человек делает в настройках. */
 @Injectable()
@@ -72,7 +74,7 @@ export class SourceAccountsService {
   }
 
   /**
-   * Grouple, AllHentai, Nude-Moon, Desu и MangaBuff: сервер сам входит на сайт (у Grouple и
+   * Grouple, AllHentai, Nude-Moon, Desu, MangaBuff и ReManga: сервер сам входит на сайт (у Grouple и
    * AllHentai — через шлюз SSO) и сохраняет полученную сессию. Пароль хранится, только если
    * человек разрешил, — иначе он нужен лишь на время входа.
    */
@@ -88,6 +90,8 @@ export class SourceAccountsService {
     const jar = await this.parsers
       .loginAccount(family, { username: input.login, password: input.password })
       .catch((error: unknown) => {
+        if (error instanceof SourceLoginRequiresSessionError)
+          throw new SourceLoginFailedException('sourceRequiresCodeTransferSession');
         if (error instanceof SourceBlockedError) throw new SourceBlockedException();
         if (error instanceof SourceUnavailableError) throw new SourceUnavailableException();
         throw error;
@@ -103,9 +107,8 @@ export class SourceAccountsService {
   }
 
   /**
-   * Сеть inuko (Inkstory, PureManga): вход на SSO закрыт капчей для людей, поэтому человек входит
-   * на любом сайте сети сам и переносит cookie сессии. Сервер только проверяет, что один из сайтов
-   * её узнаёт, — пароля нет, и истёкшую сессию человек переносит заново.
+   * Inuko и ReManga: человек входит на сайте сам и переносит cookie сессии. Сервер проверяет
+   * аккаунт через сайт или API; пароль при переносе не сохраняется, истёкшую сессию переносят заново.
    */
   async linkSession(userId: string, family: SourceAuthFamily, value: string): Promise<void> {
     if (!isSessionFamily(family)) throw new BadRequestApiException();

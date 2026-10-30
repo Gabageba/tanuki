@@ -602,6 +602,8 @@
   "copyAuthKeyValue": "Скопируйте значение ключа <key>auth</key>",
   "closeWindowWithoutLoggingOut": "Закройте окно, не выходя из аккаунта, — иначе вставленный токен перестанет работать",
   "authKeyValue": "Значение ключа auth",
+  "transferSessionForYandexOrTwoFactor": "Входите через Яндекс или на сайте включена двухфакторная проверка? Перенесите сессию на вкладке «Токен».",
+  "transferBrowserSession": "Войдите на сайт в своём браузере и перенесите сессию — пароль для этого не нужен.",
   "loginProtectedByCaptcha": "Вход на сайт защищён капчей, поэтому Tanuki не может войти сам. Войдите в своём браузере и перенесите сессию — пароль для этого не нужен.",
   "openDevToolsCookies": "Откройте инструменты разработчика (F12) → Application → Cookies",
   "copyCookieValue": "Скопируйте значение cookie <name>{{name}}</name>",

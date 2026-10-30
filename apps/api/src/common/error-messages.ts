@@ -14,6 +14,8 @@ const ERROR_MESSAGES_RU = {
   sourceNoLongerAcceptsSavedLogin:
     '{{source}} больше не принимает сохранённый вход — войдите заново',
   sourceRejectedLoginData: 'Источник не принял данные для входа',
+  sourceRequiresCodeTransferSession:
+    'Источник требует код подтверждения — войдите на сайте и перенесите сессию на вкладке «Токен»',
   sourceRejectedCode: 'Источник не принял код',
   loginExpiredEnterPasswordAgain: 'Вход истёк — введите логин и пароль заново',
   sourceAccountLinkingNotConfigured: 'Привязка аккаунтов источников не настроена на сервере',
@@ -79,6 +81,8 @@ const ERROR_MESSAGES_EN: Record<ErrorMessageKey, string> = {
   sourceOpensOnlyViaYourAccount: '{{source}} opens only via your own account on it',
   sourceNoLongerAcceptsSavedLogin: '{{source}} no longer accepts the saved login — log in again',
   sourceRejectedLoginData: 'The source rejected the login data',
+  sourceRequiresCodeTransferSession:
+    'The source requires a verification code — log in on the site and transfer your session in the Token tab',
   sourceRejectedCode: 'The source rejected the code',
   loginExpiredEnterPasswordAgain: 'The login has expired — enter the login and password again',
   sourceAccountLinkingNotConfigured: 'Source account linking is not configured on the server',

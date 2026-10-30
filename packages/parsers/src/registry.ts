@@ -6,7 +6,7 @@ import type { RawSourceInfo } from './types';
 import { HttpClientImpl, type Timeouts } from './core/http/client';
 import { UserAgents } from './core/http/user-agents';
 import { jarFor } from './core/http/cookies';
-import { NotImplementedError, UnknownSourceError } from './errors';
+import { NotImplementedError, SourceTokenExpiredError, UnknownSourceError } from './errors';
 import { SOURCE_LOCALE } from '@tanuki/contracts';
 import { SOURCE_CATALOG, SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/catalog';
 export { SOURCE_ID, SOURCE_IDS, type SourceId } from './sources/catalog';
@@ -27,6 +27,13 @@ import { createLibSocialParser } from './sources/libsocial/engine';
 import { CHAN_CONFIGS } from './sources/chan/config';
 import { createChanParser } from './sources/chan/engine';
 import { createRemangaParser } from './sources/remanga';
+import {
+  createRemangaSessionJar,
+  fetchRemangaViewer,
+  parseRemangaSessionValue,
+  loginRemanga,
+  saveRemangaSessionToken,
+} from './sources/remanga/auth';
 import { createMangaBuffParser } from './sources/mangabuff';
 import { loginMangaBuff } from './sources/mangabuff/auth';
 import { INUKO_CONFIGS } from './sources/inuko/config';
@@ -242,13 +249,14 @@ export type PasswordAuthFamily =
   | typeof SOURCE_AUTH_FAMILY.ALLHENTAI
   | typeof SOURCE_AUTH_FAMILY.NUDEMOON
   | typeof SOURCE_AUTH_FAMILY.DESU
-  | typeof SOURCE_AUTH_FAMILY.MANGABUFF;
+  | typeof SOURCE_AUTH_FAMILY.MANGABUFF
+  | typeof SOURCE_AUTH_FAMILY.REMANGA;
 
 /**
- * Семейства, вход в которые закрыт капчей для людей: человек входит в своём браузере и
- * переносит cookie сессии, сервер её только проверяет.
+ * Семейства с переносом сессии: человек входит в своём браузере и переносит cookie,
+ * сервер её только проверяет (Inuko — капча, ReManga — запасной путь для соцсетей и 2FA).
  */
-export type SessionAuthFamily = typeof SOURCE_AUTH_FAMILY.INUKO;
+export type SessionAuthFamily = typeof SOURCE_AUTH_FAMILY.INUKO | typeof SOURCE_AUTH_FAMILY.REMANGA;
 
 /** Принятая сессия: jar для аккаунта и имя, под которым человек вошёл на сайт. */
 export type LinkedSession = { jar: CookieJar; login: string };
@@ -260,7 +268,7 @@ export type ParsersRegistry = {
   decodeImage(sourceId: string, bytes: Buffer, imageUrl: string): Promise<Buffer>;
   init(): Promise<void>;
   /**
-   * Входит в Grouple, AllHentai, Nude-Moon, Desu или MangaBuff под учёткой пользователя, в свежий
+   * Входит в Grouple, AllHentai, Nude-Moon, Desu, MangaBuff или ReManga под учёткой пользователя, в свежий
    * jar — общий и чужие сессии не задеваются. Возвращает jar с сессией или null, если вход не удался.
    */
   loginAccount(
@@ -269,7 +277,7 @@ export type ParsersRegistry = {
   ): Promise<CookieJar | null>;
   /**
    * Проверяет перенесённую из браузера cookie сессии: открывает сайты семейства с ней в свежем
-   * jar и смотрит, кого сайт узнал. Cookie host-only, а с какого сайта сети её сняли, неизвестно,
+   * jar и смотрит, кого сайт узнал. У ReManga cookie содержит Bearer-токен API. У Inuko cookie host-only, а с какого сайта сети её сняли, неизвестно,
    * — принимается первый домен, на котором сайт узнал человека, и jar хранит cookie на нём.
    * null — значение не похоже на сессию или ни один сайт не узнал человека.
    */
@@ -403,6 +411,25 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       return initPromise ?? Promise.resolve();
     },
     async loginAccount(family, credentials) {
+      if (family === SOURCE_AUTH_FAMILY.REMANGA) {
+        const sourceId = SOURCE_ID.REMANGA;
+        const domain = SOURCES[sourceId].domains[0];
+        const jar = new CookieJar();
+        const http = new HttpClientImpl({
+          sourceId,
+          jar,
+          defaultHeaders: SOURCES[sourceId].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const token = await loginRemanga(http, domain, credentials);
+          if (!token) return null;
+          await saveRemangaSessionToken(jar, domain, token);
+          return jar;
+        } finally {
+          await http.close();
+        }
+      }
       if (family === SOURCE_AUTH_FAMILY.NUDEMOON) {
         const jar = new CookieJar();
         const http = new HttpClientImpl({
@@ -475,6 +502,28 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       }
     },
     async linkSession(family, value) {
+      if (family === SOURCE_AUTH_FAMILY.REMANGA) {
+        const token = parseRemangaSessionValue(value);
+        if (!token) return null;
+        const sourceId = SOURCE_ID.REMANGA;
+        const domain = SOURCES[sourceId].domains[0];
+        const jar = await createRemangaSessionJar(domain, token);
+        const http = new HttpClientImpl({
+          sourceId,
+          jar,
+          defaultHeaders: SOURCES[sourceId].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const viewer = await fetchRemangaViewer(http, domain, token);
+          return { jar, login: viewer.username };
+        } catch (error) {
+          if (error instanceof SourceTokenExpiredError) return null;
+          throw error;
+        } finally {
+          await http.close();
+        }
+      }
       const session = parseInukoSessionValue(value);
       if (!session) return null;
       const memberIds = SOURCE_IDS.filter((id) => SOURCE_CATALOG[id].authFamily === family);

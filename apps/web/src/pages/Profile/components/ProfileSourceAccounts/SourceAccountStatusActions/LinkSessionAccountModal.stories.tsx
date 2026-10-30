@@ -1,21 +1,28 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { http } from 'msw';
-import { screen, userEvent } from 'storybook/test';
+import { expect, screen, userEvent, waitFor } from 'storybook/test';
 import { API_ERROR_CODE, SOURCE_AUTH_FAMILY } from '@tanuki/contracts';
 import { I18N } from '@/shared/lib/i18n';
 import { SOURCES } from '@/shared/storybook/fixtures';
 import { apiError, apiPath } from '@/shared/storybook/handlers';
 import ModalStage from '@/shared/storybook/ModalStage';
-import LinkInukoModal from './LinkInukoModal';
+import LinkSessionAccountModal from './LinkSessionAccountModal';
 
 const INUKO_SOURCE = SOURCES.find(({ authFamily }) => authFamily === SOURCE_AUTH_FAMILY.INUKO);
 
 const META = {
-  title: 'Модалки/Профиль/LinkInukoModal',
+  title: 'Модалки/Профиль/LinkSessionAccountModal',
   render: () => (
     <ModalStage>
       {({ opened, close }) => (
-        <LinkInukoModal source={INUKO_SOURCE} opened={opened} onClose={close} />
+        <LinkSessionAccountModal
+          family={SOURCE_AUTH_FAMILY.INUKO}
+          cookieName="__otaku_session"
+          description={I18N.t('loginProtectedByCaptcha')}
+          source={INUKO_SOURCE}
+          opened={opened}
+          onClose={close}
+        />
       )}
     </ModalStage>
   ),
@@ -43,6 +50,8 @@ export const SessionRejected: Story = {
       await screen.findByPlaceholderText(I18N.t('cookieValue', { name: '__otaku_session' })),
       'expired-session',
     );
-    await userEvent.click(await screen.findByRole('button', { name: I18N.t('logIn') }));
+    const button = await screen.findByRole('button', { name: I18N.t('logIn') });
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.click(button);
   },
 };

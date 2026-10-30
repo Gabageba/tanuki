@@ -27,6 +27,9 @@ export class SourceAuthRequiredError extends ParserError {}
  */
 export class SourceTokenExpiredError extends ParserError {}
 
+/** Вход требует шага в браузере (например, 2FA); можно перенести готовую сессию. */
+export class SourceLoginRequiresSessionError extends SourceTokenExpiredError {}
+
 /** Connect/DNS/timeout failure, or upstream responded with a server error. */
 export class SourceUnavailableError extends ParserError {}
 

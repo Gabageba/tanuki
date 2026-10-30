@@ -63,7 +63,7 @@ export class SourceAccountsController {
   }
 
   @ApiOperation({
-    summary: 'Привязывает аккаунт сети inuko (Inkstory, PureManga) cookie сессии из браузера',
+    summary: 'Привязывает аккаунт Inuko или ReManga cookie сессии из браузера',
   })
   @ApiParam({ name: 'family' })
   @ApiBody({ type: LinkSourceSessionRequestDto })

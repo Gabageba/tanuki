@@ -133,8 +133,8 @@ export class AdultContentHiddenException extends ApiException {
 }
 
 export class SourceLoginFailedException extends ApiException {
-  constructor() {
-    super(API_ERROR_CODE.SOURCE_LOGIN_FAILED, 'sourceRejectedLoginData', HttpStatus.BAD_REQUEST);
+  constructor(messageKey: ErrorMessageKey = 'sourceRejectedLoginData') {
+    super(API_ERROR_CODE.SOURCE_LOGIN_FAILED, messageKey, HttpStatus.BAD_REQUEST);
   }
 }
 

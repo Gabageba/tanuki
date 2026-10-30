@@ -564,6 +564,8 @@
   "copyAuthKeyValue": "Copy the value of the <key>auth</key> key",
   "closeWindowWithoutLoggingOut": "Close the window without logging out — otherwise the pasted token stops working",
   "authKeyValue": "Value of the auth key",
+  "transferSessionForYandexOrTwoFactor": "Do you log in via Yandex or have two-factor authentication enabled on the site? Transfer your session in the Token tab.",
+  "transferBrowserSession": "Log in to the site in your browser and transfer the session — no password is needed.",
   "loginProtectedByCaptcha": "Logging in to the site is protected by a captcha, so Tanuki can't log in by itself. Log in in your own browser and transfer the session — no password needed.",
   "openDevToolsCookies": "Open the developer tools (F12) → Application → Cookies",
   "copyCookieValue": "Copy the value of the <name>{{name}}</name> cookie",
