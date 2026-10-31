@@ -78,7 +78,7 @@ export interface Parser {
 `RawSourceInfo.isBookmarksImportSupported` реестр выводит из наличия метода — в движке флаг не
 пишется. Реализован в LibSocial (MangaLib, HentaiLib — у SlashLib входа нет, метода тоже), Desu,
 MangaBuff, всех источниках движка Grouple (ReadManga, MintManga, SelfManga, SeiManga, Usagi,
-AllHentai), ReManga, TomiloLib, WaManga, Senkuro, Senkognito и сети inuko (Inkstory, PureManga);
+AllHentai), ReManga, TomiloLib, WaManga, HentaiChan, Senkuro, Senkognito и сети inuko (Inkstory, PureManga);
 Nude-Moon ждёт образцов ответов сайта
 ([plans/source-import.md](plans/source-import.md)).
 
@@ -414,6 +414,39 @@ Inkstory (`inkstory.net`) и PureManga (`v1.puremanga.me`, хентай; гол�
 описанный вручную, а не портированный из Kotlin. Один элемент каталога — один релиз
 (one-shot или отдельная переведённая глава, не вся серия целиком): live-проверка показала
 `chapters: 1` у 7035 из 7036 записей.
+
+Импорт HentaiChan (2026-10-31): вход через XChan SSO остаётся в браузере, Tanuki принимает
+cookie `__Secure-better-auth.session_token` и проверяет аккаунт через
+`/api/auth/get-session?disableCookieCache=true`. Лайки переносятся в «Любимое», история — в
+«Читаю»; при выборе обеих папок дубли остаются в «Любимом». Списки читаются страницами через
+Next.js Server Actions `getProfileLikes` / `getProfileHistory`: их текущие хеши находятся в
+JS-модулях профиля, а не закреплены в парсере. `historyPage` из
+`/api/manga/:id/engagement` — страница с единицы по всему релизу; по количеству страниц глав
+Directus она переводится в номер главы и индекс страницы с нуля. История не становится
+статистикой чтения: её даты и события не создаются. Публичные лайки, граница пагинации,
+закрытая история гостя и клиент читалки проверены вживую. Полное чтение лайков, истории
+и ответов с прогрессом проверено на привязанной личной сессии 2026-11-01; запись импорта
+в библиотеку Tanuki этой проверкой не запускалась.
+
+Исправление 2026-11-01: идентификатор Server Action читается как непрозрачная hex-строка.
+Фиксированная длина 40 отбрасывала реальные 42-символьные идентификаторы Next.js
+(дополнительный байт метаданных перед хешем) и приводила к `profile actions is malformed`.
+Регрессия покрыта обоими форматами — 40 и 42 символа.
+
+Вход по паролю проверен отдельно 2026-10-31. Форма `id.xchan.one/sign-in` отправляет
+`identifier`, `password`, `captchaToken` через Server Action `signInAction`: без токена
+возвращается ошибка валидации, с заведомо неверным токеном — `serverError` «Проверка
+\"Я не робот\" не пройдена». В форме есть Cloudflare Turnstile; проверка обязательна и на
+сервере. Стандартный `POST /api/auth/sign-in/email` отвечает HTTP 400
+`EMAIL_PASSWORD_DISABLED`, `/api/auth/sign-in/username` — HTTP 404.
+Старый Directus `POST https://backend.hentaichan.cc/auth/login` на вымышленные почту и пароль
+отвечает HTTP 401 `INVALID_CREDENTIALS`. С предоставленной пользователем учёткой вход по
+почте и паролю успешно проверен: получена пара access/refresh. Однако `/users/me` возвращает
+только `id`, а `/permissions/me` и авторизованный OpenAPI не открывают личные лайки и историю.
+При передаче полученного Bearer в `/api/auth/get-session?disableCookieCache=true` оба сайта —
+`hentaichan.cc` и `id.xchan.one` — возвращают `null`: токен Directus не является веб-сессией.
+Таким образом, проверенный Directus-вход пока не даёт пути к импорту личной библиотеки;
+автоматический вход по паролю не добавлен. Учётные данные и токены не сохранялись в файлы.
 
 `SEXKOMIX2` (`sexkomix2.com`) — тоже не порт, обычная серверно-рендеренная PHP-вёрстка
 (своя CMS, не DLE), обнаруженная и описанная вручную по разметке. Каталог (`li.comix`) и

@@ -589,7 +589,7 @@ POST   /source-accounts/libsocial/login { sourceId, login, password, rememberPas
 POST   /source-accounts/libsocial/login/code { sourceId, code } → { pendingSourceId }
 POST   /source-accounts/libsocial/login/skip { sourceId } → { pendingSourceId }
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
-POST   /source-accounts/:family/session { value } → 204  (inuko, remanga, senkuro)
+POST   /source-accounts/:family/session { value } → 204  (inuko, remanga, senkuro, hentaichanCc)
 DELETE /source-accounts/:family → 204
 
 PUT    /sources/:sourceId/enabled      { isEnabled } → 204
@@ -680,6 +680,18 @@ PUT    /sources/:sourceId/enabled      { isEnabled } → 204
   Каталог и чтение доступны без привязки, аккаунт нужен импорту закладок.
   Один токен принят обоими GraphQL API с их `app-id`, оба вернули один аккаунт и разрешили
   `userBookmarks` (живая проверка с разрешения пользователя, 2026-10-30).
+- HentaiChan (`hentaichanCc`): перенос cookie `__Secure-better-auth.session_token` после
+  входа через XChan SSO в браузере. Проверка — `/api/auth/get-session?disableCookieCache=true`;
+  `directusId` пользователя (либо `id`) задаёт профиль. Принимается значение cookie, пара
+  или строка Cookie; подпись и percent-encoding сохраняются. Пароль не сохраняется.
+  Серверный вход по паролю не подключён: XChan требует Turnstile в `signInAction`, а
+  стандартный email/password endpoint отвечает `EMAIL_PASSWORD_DISABLED` (проверено 2026-10-31).
+  Вход через Directus `/auth/login` с предоставленной пользователем учёткой успешен, но
+  полученный Bearer не принимается `get-session` ни HentaiChan, ни XChan; доступные
+  разрешения Directus личную библиотеку не открывают.
+  Гостевой или истёкший ответ при привязке — `SOURCE_LOGIN_FAILED`, при импорте —
+  `reloginRequired`. Лайки → «Любимое», история → «Читаю», при выборе обеих папок
+  приоритет у «Любимого». Прогресс переносится до страницы внутри главы.
 - Сессии и пароли шифруются AES-256-GCM ключом `SOURCE_SECRETS_KEY`. Без ключа привязка
   отвечает 503 `SOURCE_LINKING_UNAVAILABLE`. Источник, не принявший данные, — 400
   `SOURCE_LOGIN_FAILED`. Отвергнутая источником сессия переводит аккаунт в `reloginRequired`.
@@ -841,7 +853,10 @@ SourceImportResult  = { sourceId, bookmarksAdded, bookmarksAsSource, bookmarksMo
 - **«Где остановился»** — не сразу: строки `source_import_progress` (по одной на тайтл с номером
   главы, который политика разрешает записать). Крон `SourceImportProgressService` раз в минуту
   берёт порции на источник, запрашивает детали от аккаунта пользователя, ищет главу по номеру в
-  основной ветке и пишет отметку (начало главы) по политике на момент записи. Сбой — до 3 попыток;
+  основной ветке и пишет отметку по политике на момент записи. Источник с точной страницей
+  сохраняет её в `page_index`; перед записью индекс ограничивается текущим количеством страниц.
+  Остальные источники переносят начало главы. Страницы сравниваются только для одного тайтла
+  одного источника, у совпадений на других источниках сравниваются том и глава. Сбой — до 3 попыток;
   сессия не принята — ждёт повторного входа до суток. Закладку удалили — строка уходит каскадом.
   Когда у импорта не осталось ждущих строк — уведомление `sourceImportFinished` («перенесено N из
   M»), строки удаляются.
