@@ -510,7 +510,7 @@ _Позже заменено: загрузка глав — скелетон с�
     (`UploadSimpleIcon`, [Резервная копия библиотеки](#резервная-копия-библиотеки); заменила
     «Экспорт закладок» и «Импорт закладок»), «Импорт из источника»
     (`CloudArrowDownIcon`, [Импорт из источника](#импорт-из-источника)), «Новый аватар» (`CropIcon`), «Добавить тайтл вручную» (`LinkIcon`),
-    «Вход в …» (`SignInIcon`; TomiloLib — почта и пароль, WaManga — логин и пароль в общей форме `PasswordAccountForm`; Inuko — перенос cookie; ReManga — `LinkRemangaModal`: сначала
+    «Вход в …» (`SignInIcon`; TomiloLib — почта и пароль, WaManga и MultPorn — логин и пароль в общей форме `PasswordAccountForm`; у MultPorn и MultPorn Hentai один аккаунт; Inuko — перенос cookie; ReManga — `LinkRemangaModal`: сначала
     «Логин и пароль», запасная вкладка «Токен» с cookie `auth:token` для Яндекса и 2FA;
     Senkuro и Senkognito — перенос cookie `access_token` своего сайта: вход через SSO
     по почте и паролю требует Turnstile или SmartCaptcha, пояснение в форме — про капчу;
