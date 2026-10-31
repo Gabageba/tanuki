@@ -140,6 +140,7 @@ export class SourceImportService {
           titleId: row.titleId,
           chapterNumber: row.chapterNumber,
           chapterVolume: row.chapterVolume,
+          pageIndex: row.pageIndex ?? null,
           progressPolicy,
           status: SOURCE_IMPORT_PROGRESS_STATUS.PENDING,
         })),
@@ -162,6 +163,7 @@ export class SourceImportService {
           titleKey: readingProgress.titleKey,
           chapterVolume: readingProgress.chapterVolume,
           chapterNumber: readingProgress.chapterNumber,
+          pageIndex: readingProgress.pageIndex,
           updatedAt: readingProgress.updatedAt,
         })
         .from(readingProgress)

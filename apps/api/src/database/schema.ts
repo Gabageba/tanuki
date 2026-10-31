@@ -703,6 +703,8 @@ export const sourceImportProgress = pgTable(
     chapterNumber: doublePrecision('chapter_number').notNull(),
     chapterVolume: doublePrecision('chapter_volume'),
     progressPolicy: text('progress_policy').$type<RestoreProgressPolicy>().notNull(),
+    /** Точная страница внутри главы, если источник её отдаёт. */
+    pageIndex: integer('page_index'),
     status: text('status').$type<SourceImportProgressStatus>().notNull(),
     attempts: integer('attempts').notNull().default(0),
     nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),

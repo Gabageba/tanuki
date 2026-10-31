@@ -59,6 +59,11 @@ import {
   parseSenkuroSessionValue,
 } from './sources/senkuro/auth';
 import { createHentaichanCcParser } from './sources/hentaichancc';
+import {
+  createHentaichanCcSessionJar,
+  fetchHentaichanCcViewer,
+  parseHentaichanCcSessionValue,
+} from './sources/hentaichancc/auth';
 import { createSexKomix2Parser } from './sources/sexkomix2';
 import { MULTPORN_CONFIGS } from './sources/multporn/config';
 import { createMultpornParser } from './sources/multporn/engine';
@@ -269,7 +274,8 @@ export type PasswordAuthFamily =
 export type SessionAuthFamily =
   | typeof SOURCE_AUTH_FAMILY.INUKO
   | typeof SOURCE_AUTH_FAMILY.REMANGA
-  | typeof SOURCE_AUTH_FAMILY.SENKURO;
+  | typeof SOURCE_AUTH_FAMILY.SENKURO
+  | typeof SOURCE_AUTH_FAMILY.HENTAICHAN_CC;
 
 /** Принятая сессия: jar для аккаунта и имя, под которым человек вошёл на сайт. */
 export type LinkedSession = { jar: CookieJar; login: string };
@@ -553,6 +559,28 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       }
     },
     async linkSession(family, value) {
+      if (family === SOURCE_AUTH_FAMILY.HENTAICHAN_CC) {
+        const session = parseHentaichanCcSessionValue(value);
+        if (!session) return null;
+        const sourceId = SOURCE_ID.HENTAICHAN_CC;
+        const domain = SOURCES[sourceId].domains[0];
+        const jar = await createHentaichanCcSessionJar(domain, session);
+        const http = new HttpClientImpl({
+          sourceId,
+          jar,
+          defaultHeaders: SOURCES[sourceId].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          const viewer = await fetchHentaichanCcViewer(http, domain);
+          return { jar, login: viewer.name };
+        } catch (error) {
+          if (error instanceof SourceTokenExpiredError) return null;
+          throw error;
+        } finally {
+          await http.close();
+        }
+      }
       if (family === SOURCE_AUTH_FAMILY.SENKURO) {
         const token = parseSenkuroSessionValue(value);
         if (!token) return null;

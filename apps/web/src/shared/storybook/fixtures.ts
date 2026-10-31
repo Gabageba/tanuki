@@ -64,6 +64,7 @@ const BOOKMARKS_IMPORT_SOURCE_IDS: string[] = [
   'senkuro',
   'senkognito',
   'tomilolib',
+  'hentaichan_cc',
 ];
 
 const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source => {

@@ -61,7 +61,7 @@ export const findChapterByPosition = (chapters: RawChapter[], position: ChapterP
   return null;
 };
 
-/** Отметка, которую пишет импорт: начало главы, снимок тайтла — из его деталей. */
+/** Отметка импорта: точная страница, если известна, иначе начало главы. */
 export const toImportedProgress = (row: ProgressRow, title: RawTitle, chapter: RawChapter) => ({
   userId: row.userId,
   titleKey: row.titleKey,
@@ -71,7 +71,7 @@ export const toImportedProgress = (row: ProgressRow, title: RawTitle, chapter: R
   chapterNumber: chapter.number,
   chapterTitle: chapter.title,
   branchId: chapter.branch ?? DEFAULT_BRANCH_ID,
-  pageIndex: 0,
+  pageIndex: row.pageIndex ?? 0,
   titleId: row.titleId,
   titleName: title.title,
   coverUrl: title.coverUrl,
@@ -201,11 +201,22 @@ export class SourceImportProgressService {
    * пишется всегда.
    */
   private async writeProgress(row: ProgressRow, title: RawTitle, chapter: RawChapter) {
+    let pageIndex = row.pageIndex;
+    if (pageIndex != null) {
+      const { data } = await runAsViewer({ kind: VIEWER_KIND.USER, userId: row.userId }, () =>
+        this.parsersClient.getPages(row.sourceId, chapter.url),
+      );
+      if (data.items.length === 0) throw new Error('Imported chapter has no pages');
+      pageIndex = Math.min(pageIndex, data.items.length - 1);
+    }
+    const position = { ...row, pageIndex };
     const groupKeys = [row.titleKey, ...(await this.links.listConfirmedGroup(row.titleKey))];
     const marks = await this.database.db
       .select({
         chapterVolume: readingProgress.chapterVolume,
         chapterNumber: readingProgress.chapterNumber,
+        pageIndex: readingProgress.pageIndex,
+        titleKey: readingProgress.titleKey,
         updatedAt: readingProgress.updatedAt,
       })
       .from(readingProgress)
@@ -216,9 +227,9 @@ export class SourceImportProgressService {
       (latest, mark) => (!latest || mark.updatedAt > latest.updatedAt ? mark : latest),
       undefined,
     );
-    if (!winsSiteProgress(row.progressPolicy, row, mine)) return;
+    if (!winsSiteProgress(row.progressPolicy, position, mine)) return;
 
-    const values = toImportedProgress(row, title, chapter);
+    const values = toImportedProgress(position, title, chapter);
     // Ключ строки при конфликте не переписывается — только отметка и снимок.
     const { userId: _userId, titleKey: _titleKey, ...update } = values;
     await this.database.db

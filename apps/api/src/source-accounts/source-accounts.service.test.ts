@@ -84,6 +84,19 @@ describe('Senkuro account linking', () => {
   });
 });
 
+describe('HentaiChan account linking', () => {
+  it('stores the verified browser session without a password', async () => {
+    const { service, linkSession, save } = createService();
+    await service.linkSession('user', SOURCE_AUTH_FAMILY.HENTAICHAN_CC, 'signed-session');
+    expect(linkSession).toHaveBeenCalledWith(SOURCE_AUTH_FAMILY.HENTAICHAN_CC, 'signed-session');
+    expect(save).toHaveBeenCalledWith('user', SOURCE_AUTH_FAMILY.HENTAICHAN_CC, {
+      login: 'reader',
+      password: null,
+      state: { cookies: expect.any(Object) },
+    });
+  });
+});
+
 describe('LibSocial token linking', () => {
   it.each([SOURCE_AUTH_FAMILY.MANGALIB, SOURCE_AUTH_FAMILY.HENTAILIB])(
     'replaces only the %s account and drops the previous saved password',

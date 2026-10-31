@@ -111,11 +111,22 @@ function SourceAccountStatusActions({
         />
       )}
       {!isLibSocialAuthFamily(family) &&
+        family !== SOURCE_AUTH_FAMILY.HENTAICHAN_CC &&
         family !== SOURCE_AUTH_FAMILY.INUKO &&
         family !== SOURCE_AUTH_FAMILY.REMANGA &&
         family !== SOURCE_AUTH_FAMILY.SENKURO && (
           <LinkPasswordAccountModal family={family} opened={opened} onClose={close} />
         )}
+      {family === SOURCE_AUTH_FAMILY.HENTAICHAN_CC && (
+        <LinkSessionAccountModal
+          family={family}
+          cookieName="__Secure-better-auth.session_token"
+          description={t('loginProtectedByCaptcha')}
+          source={sources[0]}
+          opened={opened}
+          onClose={close}
+        />
+      )}
     </>
   );
 }

@@ -1,9 +1,23 @@
-import { describe, expect, it } from 'vitest';
-import { DEFAULT_BRANCH_ID, SOURCE_IMPORT_PROGRESS_STATUS } from '@tanuki/contracts';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  DEFAULT_BRANCH_ID,
+  RESTORE_PROGRESS_POLICY,
+  SOURCE_IMPORT_PROGRESS_STATUS,
+} from '@tanuki/contracts';
 import { SourceAccountRequiredException, SourceUnavailableException } from '../common/errors';
-import type { RawChapter } from '../parsers-client/parsers-client.types';
+import { titleIdOf } from '../common/normalize';
+import type { DatabaseService } from '../database/database.service';
+import type { TitleLinksService } from '../matches/title-links.service';
+import type { NotificationsService } from '../notifications/notifications.service';
+import type { ParsersClientService } from '../parsers-client/parsers-client.service';
+import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.types';
 import { SOURCE_IMPORT_PROGRESS_MAX_ATTEMPTS, SOURCE_IMPORT_RELOGIN_WAIT_MS } from './models';
-import { findChapterByPosition, getFailureUpdate } from './source-import-progress.service';
+import {
+  findChapterByPosition,
+  getFailureUpdate,
+  toImportedProgress,
+  SourceImportProgressService,
+} from './source-import-progress.service';
 
 const chapter = (overrides: Partial<RawChapter>): RawChapter =>
   ({
@@ -133,4 +147,96 @@ describe('getFailureUpdate', () => {
       attempts: SOURCE_IMPORT_PROGRESS_MAX_ATTEMPTS,
     });
   });
+});
+
+describe('toImportedProgress', () => {
+  it.each([null, 0, 7])(
+    'сохраняет страницу %s, а при её отсутствии — начало главы',
+    (pageIndex) => {
+      const row = {
+        id: 'pending',
+        userId: 'user',
+        sourceId: 'hentaichan_cc',
+        titleKey: 'title-key',
+        titleId: 'title-id',
+        pageIndex,
+      } as Parameters<typeof toImportedProgress>[0];
+      const title = { title: 'Релиз', coverUrl: null, contentRating: null } as RawTitle;
+      expect(toImportedProgress(row, title, chapter({ number: 2 }))).toMatchObject({
+        chapterNumber: 2,
+        pageIndex: pageIndex ?? 0,
+        titleKey: row.titleKey,
+      });
+    },
+  );
+});
+
+describe('page progress completion', () => {
+  it.each([1, 4])(
+    'ограничивает страницу числом страниц и повторно проверяет политику (моя: %s)',
+    async (minePage) => {
+      const row: Parameters<typeof toImportedProgress>[0] = {
+        id: 'pending',
+        userId: 'user',
+        sourceId: 'hentaichan_cc',
+        titleKey: 'hentaichan_cc:title',
+        titleId: titleIdOf('hentaichan_cc', { id: 6640, url: '6640,,test-release' }),
+        importId: 'import',
+        chapterNumber: 1,
+        chapterVolume: null,
+        pageIndex: 8,
+        progressPolicy: RESTORE_PROGRESS_POLICY.FURTHEST,
+        status: SOURCE_IMPORT_PROGRESS_STATUS.PENDING,
+        attempts: 0,
+        createdAt: new Date(),
+        nextAttemptAt: new Date(),
+      };
+      const title = {
+        title: 'Релиз',
+        coverUrl: null,
+        contentRating: null,
+        chapters: [chapter({})],
+      } as RawTitle;
+      const select = vi
+        .fn()
+        .mockReturnValueOnce({ from: () => ({ where: () => ({ orderBy: async () => [row] }) }) })
+        .mockReturnValueOnce({
+          from: () => ({
+            where: async () => [
+              {
+                titleKey: row.titleKey,
+                chapterNumber: 1,
+                chapterVolume: null,
+                pageIndex: minePage,
+                updatedAt: new Date(),
+              },
+            ],
+          }),
+        })
+        .mockReturnValueOnce({ from: () => ({ groupBy: () => ({ having: async () => [] }) }) });
+      const values = vi.fn().mockReturnValue({ onConflictDoUpdate: async () => {} });
+      const set = vi.fn().mockReturnValue({ where: async () => {} });
+      const db = { select, insert: () => ({ values }), update: () => ({ set }) };
+      const database = {
+        db,
+        withFallback: (fn: () => Promise<unknown>) => fn(),
+      } as unknown as DatabaseService;
+      const parsers = {
+        getDetails: vi.fn().mockResolvedValue({ data: title }),
+        getPages: vi.fn().mockResolvedValue({ data: { items: [{}, {}, {}] } }),
+      } as unknown as ParsersClientService;
+      const service = new SourceImportProgressService(
+        database,
+        parsers,
+        { listConfirmedGroup: async () => [] } as unknown as TitleLinksService,
+        {} as NotificationsService,
+      );
+      await service.processDue();
+      expect(parsers.getPages).toHaveBeenCalledWith(row.sourceId, '/c');
+      if (minePage === 1)
+        expect(values).toHaveBeenCalledWith(expect.objectContaining({ pageIndex: 2 }));
+      else expect(values).not.toHaveBeenCalled();
+      expect(set).toHaveBeenCalledWith({ status: SOURCE_IMPORT_PROGRESS_STATUS.DONE });
+    },
+  );
 });

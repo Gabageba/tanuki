@@ -414,6 +414,54 @@ describe('buildSourceImportPlan', () => {
     expect(result.pendingProgress.map(({ chapterNumber }) => chapterNumber)).toEqual([50]);
   });
 
+  it('переносит точную страницу и сравнивает её при повторном импорте той же главы', () => {
+    const result = plan({
+      siteFolders: [
+        siteFolder('reading', [item('/a', { lastChapterNumber: 1, lastPageIndex: 8 })], READING),
+      ],
+      bookmarks: [userBookmark(SOURCE, '/a', 'reading')],
+      progress: [{ ...mark(SOURCE, '/a', 1), pageIndex: 3 }],
+    });
+    expect(result.folders[0]).toMatchObject({ fresh: 0, progressDiffers: 1 });
+    expect(result.pendingProgress).toEqual([
+      expect.objectContaining({ chapterNumber: 1, pageIndex: 8 }),
+    ]);
+  });
+
+  it('страницы другого источника не сравнивает как страницы того же издания', () => {
+    const titleKey = linkKeyOf(SOURCE, '/a');
+    const otherKey = linkKeyOf(OTHER_SOURCE, '/b');
+    const result = plan({
+      siteFolders: [
+        siteFolder('reading', [item('/a', { lastChapterNumber: 1, lastPageIndex: 8 })], READING),
+      ],
+      progress: [{ ...mark(OTHER_SOURCE, '/b', 1), pageIndex: 2 }],
+      canonical: new Map([
+        [titleKey, titleKey],
+        [otherKey, titleKey],
+      ]),
+    });
+    expect(result.folders[0]!.progressDiffers).toBe(0);
+    expect(result.pendingProgress).toEqual([]);
+  });
+
+  it.each([
+    [RESTORE_PROGRESS_POLICY.FURTHEST, 9, false],
+    [RESTORE_PROGRESS_POLICY.FURTHEST, 3, true],
+    [RESTORE_PROGRESS_POLICY.KEEP_MINE, 3, false],
+    [RESTORE_PROGRESS_POLICY.FROM_BACKUP, 9, true],
+    [RESTORE_PROGRESS_POLICY.FROM_BACKUP, 8, false],
+  ])('политика %s учитывает страницу своей главы (моя: %s)', (policy, pageIndex, expected) => {
+    const titleKey = linkKeyOf(SOURCE, '/a');
+    expect(
+      winsSiteProgress(
+        policy,
+        { chapterNumber: 1, chapterVolume: null, pageIndex: 8, titleKey },
+        { chapterNumber: 1, chapterVolume: null, pageIndex, titleKey },
+      ),
+    ).toBe(expected);
+  });
+
   it('считает расхождения «где остановился» и кладёт в ожидание то, что запишется', () => {
     const result = plan({
       siteFolders: [

@@ -6,13 +6,16 @@ import type { GroupMove, MergeBookmarkInsert, MergeFolder } from '../library/lib
 export type ImportProgressMark = Pick<
   typeof readingProgress.$inferSelect,
   'titleKey' | 'chapterVolume' | 'chapterNumber' | 'updatedAt'
->;
+> & { pageIndex?: number | null };
 
 /** Место главы: номер и том — у сайтов, где нумерация начинается заново в каждом томе, номер
  *  без тома неоднозначен. Том null — сайт его не отдаёт. */
 export type ChapterPosition = {
   chapterVolume: number | null;
   chapterNumber: number;
+  /** Страницы сравниваются только для одного тайтла на одном источнике. */
+  titleKey?: string;
+  pageIndex?: number | null;
 };
 
 /** Отметка, которую крон достроит по главе с сайта. */

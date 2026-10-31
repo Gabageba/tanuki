@@ -50,7 +50,8 @@ const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamil
 const isSessionFamily = (family: SourceAuthFamily): family is SessionAuthFamily =>
   family === SOURCE_AUTH_FAMILY.INUKO ||
   family === SOURCE_AUTH_FAMILY.REMANGA ||
-  family === SOURCE_AUTH_FAMILY.SENKURO;
+  family === SOURCE_AUTH_FAMILY.SENKURO ||
+  family === SOURCE_AUTH_FAMILY.HENTAICHAN_CC;
 
 /** Привязка и отвязка личных аккаунтов источников — то, что человек делает в настройках. */
 @Injectable()

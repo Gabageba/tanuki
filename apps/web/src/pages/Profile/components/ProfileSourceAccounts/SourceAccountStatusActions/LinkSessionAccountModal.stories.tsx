@@ -54,6 +54,24 @@ export const Senkuro: Story = {
   ),
 };
 
+export const HentaiChan: Story = {
+  name: 'HentaiChan',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkSessionAccountModal
+          family={SOURCE_AUTH_FAMILY.HENTAICHAN_CC}
+          cookieName="__Secure-better-auth.session_token"
+          description={I18N.t('loginProtectedByCaptcha')}
+          source={SOURCES.find(({ id }) => id === 'hentaichan_cc')}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};
+
 export const Senkognito: Story = {
   ...Senkuro,
   name: 'Senkognito',

@@ -117,24 +117,36 @@ export const compareChapterPositions = (a: ChapterPosition, b: ChapterPosition) 
 /** Порядок главы сайта относительно отметки; null — у отметки нет номера, сравнивать нечего. */
 const compareWithMark = (
   site: ChapterPosition,
-  mine: Pick<ImportProgressMark, 'chapterVolume' | 'chapterNumber'>,
-) =>
-  mine.chapterNumber === null
-    ? null
-    : compareChapterPositions(site, {
-        chapterVolume: mine.chapterVolume,
-        chapterNumber: mine.chapterNumber,
-      });
+  mine: Pick<ImportProgressMark, 'chapterVolume' | 'chapterNumber'> &
+    Partial<Pick<ImportProgressMark, 'titleKey' | 'pageIndex'>>,
+) => {
+  if (mine.chapterNumber === null) return null;
+  const order = compareChapterPositions(site, {
+    chapterVolume: mine.chapterVolume,
+    chapterNumber: mine.chapterNumber,
+  });
+  if (
+    order === 0 &&
+    site.pageIndex != null &&
+    site.titleKey !== undefined &&
+    site.titleKey === mine.titleKey
+  )
+    return site.pageIndex - (mine.pageIndex ?? 0);
+  return order;
+};
 
 /**
- * Писать ли «где остановился» с сайта: отметки нет — всегда; есть — решает политика. Сайт отдаёт
- * только номер и том главы, поэтому «дальше» сравнивается по ним; у отметки без номера
- * сравнивать нечего — она остаётся.
+ * Писать ли «где остановился» с сайта: отметки нет — всегда; есть — решает политика.
+ * Сначала сравниваются том и глава, затем точная страница одного и того же тайтла,
+ * если источник её отдаёт. Страницы разных изданий несопоставимы.
  */
 export const winsSiteProgress = (
   policy: RestoreProgressPolicy,
   site: ChapterPosition,
-  mine: Pick<ImportProgressMark, 'chapterVolume' | 'chapterNumber'> | undefined,
+  mine:
+    | (Pick<ImportProgressMark, 'chapterVolume' | 'chapterNumber'> &
+        Partial<Pick<ImportProgressMark, 'titleKey' | 'pageIndex'>>)
+    | undefined,
 ) => {
   if (mine === undefined) return true;
   const order = compareWithMark(site, mine);
@@ -149,10 +161,14 @@ export const winsSiteProgress = (
 };
 
 /** «Где остановился» закладки сайта; null — сайт его не отдал. */
-const sitePositionOf = (item: RawBookmark): ChapterPosition | null =>
+const sitePositionOf = (item: RawBookmark, titleKey: string): ChapterPosition | null =>
   item.lastChapterNumber === null
     ? null
-    : { chapterVolume: item.lastChapterVolume, chapterNumber: item.lastChapterNumber };
+    : {
+        chapterVolume: item.lastChapterVolume,
+        chapterNumber: item.lastChapterNumber,
+        ...(item.lastPageIndex != null ? { pageIndex: item.lastPageIndex, titleKey } : {}),
+      };
 
 /**
  * Что куда ляжет из закладок сайта. Ничего не пишет: по нему сводка считает папки, а запись —
@@ -274,7 +290,7 @@ export const buildSourceImportPlan = (input: SourceImportPlanInput): SourceImpor
         if (!isImported) summary.fresh += 1;
 
         const mark = marks.get(key);
-        const sitePosition = sitePositionOf(item);
+        const sitePosition = sitePositionOf(item, titleKey);
         if (
           sitePosition !== null &&
           mark !== undefined &&

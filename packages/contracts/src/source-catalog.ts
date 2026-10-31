@@ -381,8 +381,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['hentaichan.cc'],
     color: '#5CA656',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.HENTAICHAN_CC,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   sexkomix2: {
