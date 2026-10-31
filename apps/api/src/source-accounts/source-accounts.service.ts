@@ -45,7 +45,8 @@ const isPasswordFamily = (family: SourceAuthFamily): family is PasswordAuthFamil
   family === SOURCE_AUTH_FAMILY.MANGABUFF ||
   family === SOURCE_AUTH_FAMILY.REMANGA ||
   family === SOURCE_AUTH_FAMILY.TOMILOLIB ||
-  family === SOURCE_AUTH_FAMILY.WAMANGA;
+  family === SOURCE_AUTH_FAMILY.WAMANGA ||
+  family === SOURCE_AUTH_FAMILY.MULTPORN;
 
 const isSessionFamily = (family: SourceAuthFamily): family is SessionAuthFamily =>
   family === SOURCE_AUTH_FAMILY.INUKO ||
@@ -79,7 +80,7 @@ export class SourceAccountsService {
   }
 
   /**
-   * Grouple, AllHentai, Nude-Moon, Desu, MangaBuff, ReManga, TomiloLib и WaManga: сервер сам входит на сайт (у Grouple и
+   * Grouple, AllHentai, Nude-Moon, Desu, MangaBuff, ReManga, TomiloLib, WaManga и MultPorn: сервер сам входит на сайт (у Grouple и
    * AllHentai — через шлюз SSO) и сохраняет полученную сессию. Пароль хранится, только если
    * человек разрешил, — иначе он нужен лишь на время входа.
    */

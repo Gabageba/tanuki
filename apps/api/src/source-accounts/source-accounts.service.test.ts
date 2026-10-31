@@ -25,6 +25,7 @@ describe.each([
   SOURCE_AUTH_FAMILY.REMANGA,
   SOURCE_AUTH_FAMILY.TOMILOLIB,
   SOURCE_AUTH_FAMILY.WAMANGA,
+  SOURCE_AUTH_FAMILY.MULTPORN,
 ])('%s password account linking', (family) => {
   it.each([false, true])(
     'accepts email/password; rememberPassword=%s controls password storage',

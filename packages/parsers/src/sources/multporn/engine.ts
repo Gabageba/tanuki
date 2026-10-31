@@ -28,6 +28,7 @@ import { ParseError } from '../../errors';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { catalogEntryFor } from '../catalog';
 import type { MultpornConfig } from './config';
+import { fetchMultpornBookmarks } from './bookmarks';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
 
 const BROWSE_PAGE_SIZE = 15;
@@ -725,6 +726,7 @@ export const createMultpornParser = (cfg: MultpornConfig, ctx: ParserContext): P
     getList,
     getDetails,
     getPages,
+    getBookmarks: () => fetchMultpornBookmarks(cfg, ctx),
     ...(cfg.filters ? { getFilters } : {}),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };

@@ -117,6 +117,7 @@ export const SOURCE_AUTH_FAMILY = {
   TOMILOLIB: 'tomilolib',
   WAMANGA: 'wamanga',
   HENTAICHAN_CC: 'hentaichanCc',
+  MULTPORN: 'multporn',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 

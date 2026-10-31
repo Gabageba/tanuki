@@ -67,6 +67,7 @@ import {
 import { createSexKomix2Parser } from './sources/sexkomix2';
 import { MULTPORN_CONFIGS } from './sources/multporn/config';
 import { createMultpornParser } from './sources/multporn/engine';
+import { loginMultporn } from './sources/multporn/auth';
 
 export type SourceDescriptor = {
   info: RawSourceInfo;
@@ -264,7 +265,8 @@ export type PasswordAuthFamily =
   | typeof SOURCE_AUTH_FAMILY.MANGABUFF
   | typeof SOURCE_AUTH_FAMILY.REMANGA
   | typeof SOURCE_AUTH_FAMILY.TOMILOLIB
-  | typeof SOURCE_AUTH_FAMILY.WAMANGA;
+  | typeof SOURCE_AUTH_FAMILY.WAMANGA
+  | typeof SOURCE_AUTH_FAMILY.MULTPORN;
 
 /**
  * Семейства с переносом сессии: человек входит в своём браузере и переносит cookie,
@@ -430,6 +432,23 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       return initPromise ?? Promise.resolve();
     },
     async loginAccount(family, credentials) {
+      if (family === SOURCE_AUTH_FAMILY.MULTPORN) {
+        const sourceId = SOURCE_ID.MULTPORN;
+        const jar = new CookieJar();
+        const http = new HttpClientImpl({
+          sourceId,
+          jar,
+          defaultHeaders: SOURCES[sourceId].defaultHeaders,
+          timeouts: opts.timeouts,
+        });
+        try {
+          return (await loginMultporn(http, SOURCES[sourceId].domains[0], credentials))
+            ? jar
+            : null;
+        } finally {
+          await http.close();
+        }
+      }
       if (family === SOURCE_AUTH_FAMILY.TOMILOLIB) {
         const sourceId = SOURCE_ID.TOMILOLIB;
         const domain = SOURCES[sourceId].domains[0];

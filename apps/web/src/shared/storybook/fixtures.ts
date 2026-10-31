@@ -65,6 +65,9 @@ const BOOKMARKS_IMPORT_SOURCE_IDS: string[] = [
   'senkognito',
   'tomilolib',
   'hentaichan_cc',
+  'multporn',
+  'multporn_hentai',
+  'nudemoon',
 ];
 
 const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source => {

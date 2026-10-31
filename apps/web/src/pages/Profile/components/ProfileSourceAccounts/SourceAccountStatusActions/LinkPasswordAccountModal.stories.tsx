@@ -55,3 +55,33 @@ export const WaManga: Story = {
     </ModalStage>
   ),
 };
+
+export const Multporn: Story = {
+  name: 'Вход в MultPorn',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkPasswordAccountModal
+          family={SOURCE_AUTH_FAMILY.MULTPORN}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};
+
+export const NudeMoon: Story = {
+  name: 'Вход в Nude-Moon',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkPasswordAccountModal
+          family={SOURCE_AUTH_FAMILY.NUDEMOON}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};

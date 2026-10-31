@@ -405,8 +405,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['multporn.net'],
     color: '#A42511',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.MULTPORN,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   multporn_hentai: {
@@ -417,8 +417,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['multporn.net'],
     color: '#A42511',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.MULTPORN,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
 } satisfies Record<string, CatalogEntry>;

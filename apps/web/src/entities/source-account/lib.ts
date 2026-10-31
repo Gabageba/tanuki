@@ -34,6 +34,8 @@ export const getSourceAuthFamilyTitle = (family: SourceAuthFamily) => {
       return 'ReManga';
     case SOURCE_AUTH_FAMILY.WAMANGA:
       return 'WaManga';
+    case SOURCE_AUTH_FAMILY.MULTPORN:
+      return 'MultPorn';
     case SOURCE_AUTH_FAMILY.HENTAICHAN_CC:
       return 'HentaiChan';
     case SOURCE_AUTH_FAMILY.TOMILOLIB:
