@@ -1,17 +1,29 @@
-import { Button, EmptyState } from '@mantine/core';
+import { Anchor, Button, EmptyState } from '@mantine/core';
 import { BookmarkSimpleIcon, CompassIcon } from '@phosphor-icons/react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import { useTranslation } from 'react-i18next';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 
-/** Ни одной закладки ещё нет — ни в одной папке. */
-function BookmarksEmpty() {
+type Props = {
+  onImport: () => void;
+};
+
+/**
+ * Ни одной закладки ещё нет — ни в одной папке. Кнопка одна — каталог; кто уже читает на другом
+ * сайте, импортирует закладки ссылкой в конце описания.
+ */
+function BookmarksEmpty({ onImport }: Props) {
   const { t } = useTranslation();
 
   return (
     <EmptyState
       title={t('yourBookmarksWillBeHere')}
-      description={t('addTitleWithToBookmarks')}
+      description={
+        <Trans
+          i18nKey="addTitleWithToBookmarksOrImport"
+          components={{ link: <Anchor component="button" inherit onClick={onImport} /> }}
+        />
+      }
       icon={<BookmarkSimpleIcon />}
     >
       <EmptyState.Actions>

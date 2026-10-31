@@ -7,7 +7,7 @@ import {
   type Language,
 } from '@tanuki/contracts';
 import type { PushMessage, PushSource } from './models';
-import { text } from './payload.util';
+import { count, text } from './payload.util';
 
 const sourceTitle = (sourceId: unknown): string => {
   try {
@@ -29,6 +29,15 @@ const formatNewChapters = (count: number, language: Language): string => {
   if (rest10 === 1 && rest100 !== 11) return `${count} новая глава`;
   if (rest10 >= 2 && rest10 <= 4 && (rest100 < 12 || rest100 > 14)) return `${count} новые главы`;
   return `${count} новых глав`;
+};
+
+/** «Отметки перенесены для 120 из 124 тайтлов»: склонение — по общему числу. */
+const formatTransferredMarks = (transferred: number, total: number, language: Language): string => {
+  if (language === LANGUAGE.EN) {
+    return `Marks transferred for ${transferred} of ${total} title${total === 1 ? '' : 's'}`;
+  }
+  const isOne = total % 10 === 1 && total % 100 !== 11;
+  return `Отметки перенесены для ${transferred} из ${total} ${isOne ? 'тайтла' : 'тайтлов'}`;
 };
 
 /**
@@ -117,6 +126,19 @@ export const buildPushMessage = (source: PushSource, language: Language): PushMe
         title: isRu ? 'Приглашение истекло' : 'Invite expired',
         body: isRu ? 'Приглашением никто не воспользовался' : 'Nobody used the invite',
         url: '/management?tab=invites',
+      };
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
+      return {
+        ...base,
+        title: isRu
+          ? `Импорт из ${sourceTitle(payload['sourceId'])} завершён`
+          : `Import from ${sourceTitle(payload['sourceId'])} finished`,
+        body: formatTransferredMarks(
+          count(payload['transferred']),
+          count(payload['total']),
+          language,
+        ),
+        url: '/bookmarks',
       };
   }
 };

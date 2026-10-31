@@ -500,6 +500,7 @@ export class BookmarksService {
             titleId: titleChapterSnapshots.titleId,
             checkedAt: titleChapterSnapshots.checkedAt,
             missing: titleChapterSnapshots.missing,
+            chaptersCount: titleChapterSnapshots.chaptersCount,
           })
           .from(titleChapterSnapshots)
           .where(inArray(titleChapterSnapshots.titleKey, keys)),

@@ -132,8 +132,10 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['desu.uno', 'x.desu.city', 'desu.city', 'desu.work', 'desu.store', 'desu.win'],
     color: '#915806',
-    authFamily: null,
-    loginRequirement: null,
+    // Всё открыто гостю; аккаунт нужен только импорту закладок — список читается от имени
+    // вошедшего, чтобы взять именно его (проверено вживую 26 октября 2026).
+    authFamily: SOURCE_AUTH_FAMILY.DESU,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   mangalib: {
@@ -144,7 +146,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['mangalib.org', 'mangalib.me'],
     color: '#FF8C02',
-    authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
+    authFamily: SOURCE_AUTH_FAMILY.MANGALIB,
     loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [SOURCE_LOGIN_BENEFIT.MEMBER_CHAPTERS, SOURCE_LOGIN_BENEFIT.PURCHASED_CHAPTERS],
   },
@@ -156,7 +158,7 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['v1.hentailib.org', 'hentailib.me'],
     color: '#FF0048',
-    authFamily: SOURCE_AUTH_FAMILY.LIBSOCIAL,
+    authFamily: SOURCE_AUTH_FAMILY.HENTAILIB,
     loginRequirement: SOURCE_LOGIN_REQUIREMENT.REQUIRED,
     loginBenefits: [
       SOURCE_LOGIN_BENEFIT.CATALOG_AND_READING,
@@ -233,8 +235,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['remanga.org'],
     color: '#000000',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.REMANGA,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   nudemoon: {
@@ -283,8 +285,10 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['mangabuff.ru'],
     color: '#8C00FF',
-    authFamily: null,
-    loginRequirement: null,
+    // Всё открыто гостю; аккаунт нужен только импорту закладок — список читается от имени
+    // вошедшего: свои папки бывают скрытыми (`is_public` при создании), их видит лишь хозяин.
+    authFamily: SOURCE_AUTH_FAMILY.MANGABUFF,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   senkuro: {
@@ -297,8 +301,8 @@ export const SOURCE_CATALOG = {
     // some RU users); both hit the same api.senkuro.com backend, see sources/senkuro/config.ts.
     domains: ['senkuro.me', 'ne.senkuro.com', 'senkuro.com'],
     color: '#FE6E00',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.SENKURO,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   senkognito: {
@@ -312,8 +316,8 @@ export const SOURCE_CATALOG = {
     // unblocked hostname. See sources/senkuro/config.ts for how the two are split.
     domains: ['ne.senkognito.com', 'senkognito.com'],
     color: '#FE6E00',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.SENKURO,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   tomilolib: {
@@ -324,8 +328,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['tomilo-lib.ru'],
     color: '#DC3933',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.TOMILOLIB,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   wamanga: {
@@ -336,8 +340,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['wamanga.ru'],
     color: '#5A5EE7',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.WAMANGA,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   inkstory: {
@@ -348,8 +352,25 @@ export const SOURCE_CATALOG = {
     requiresVpn: false,
     domains: ['inkstory.net'],
     color: '#2B7FFF',
-    authFamily: null,
-    loginRequirement: null,
+    // Всё открыто гостю; аккаунт нужен только импорту закладок. Вход на SSO inuko закрыт
+    // Yandex SmartCaptcha, поэтому сессию сайта человек переносит из своего браузера.
+    authFamily: SOURCE_AUTH_FAMILY.INUKO,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
+    loginBenefits: [],
+  },
+  // Хентай-сайт той же сети inuko, что Inkstory: общий API, SSO и разметка — см. sources/inuko.
+  // Голый puremanga.me отвечает 404, сайт живёт на поддомене v1. (проверено 2026-10-27).
+  puremanga: {
+    title: 'PureManga',
+    contentType: SOURCE_CONTENT_TYPE.HENTAI,
+    isBroken: false,
+    isAdult: true,
+    requiresVpn: false,
+    domains: ['v1.puremanga.me'],
+    // Красный с логотипа: акцент самого сайта зависит от выбранной темы.
+    color: '#D22A4B',
+    authFamily: SOURCE_AUTH_FAMILY.INUKO,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   hentaichan_cc: {
@@ -360,8 +381,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['hentaichan.cc'],
     color: '#5CA656',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.HENTAICHAN_CC,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   sexkomix2: {
@@ -384,8 +405,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['multporn.net'],
     color: '#A42511',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.MULTPORN,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
   multporn_hentai: {
@@ -396,8 +417,8 @@ export const SOURCE_CATALOG = {
     requiresVpn: true,
     domains: ['multporn.net'],
     color: '#A42511',
-    authFamily: null,
-    loginRequirement: null,
+    authFamily: SOURCE_AUTH_FAMILY.MULTPORN,
+    loginRequirement: SOURCE_LOGIN_REQUIREMENT.OPTIONAL,
     loginBenefits: [],
   },
 } satisfies Record<string, CatalogEntry>;

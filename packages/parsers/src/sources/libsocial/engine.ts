@@ -13,8 +13,9 @@ import {
   formatCompactNumber,
   type FilterRangePreset,
   type TitleState,
-  SOURCE_AUTH_FAMILY,
   SOURCE_LOCALE,
+  BUILT_IN_BOOKMARK_FOLDER,
+  type BuiltInBookmarkFolder,
   type EnumLiteralsOf,
   type HomeSectionVariant,
   type TitleType,
@@ -41,6 +42,8 @@ import type {
   RawHomeSectionInfo,
   RawHomeSectionPage,
   RawHomeSectionParams,
+  RawBookmark,
+  RawBookmarkFolder,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -284,6 +287,48 @@ type TopViewsJson = {
 type LatestUpdatesJson = {
   data: MangaListItemJson[];
   meta?: { current_page?: number; has_next_page?: boolean };
+};
+
+/** `GET /api/bookmarks/folder/{userId}` — папки закладок аккаунта на всю сеть, каждая со своими
+ *  `site_ids` (21+ — папки аниме-сайта сети). Стандартные статусы — 1–4, «Любимые» — 5, свои папки
+ *  человека — дальше (проверено вживую 2026-10-26). */
+type BookmarkFolderJson = {
+  id: number;
+  name: string;
+  count?: number;
+  site_ids?: number[];
+};
+
+/** `GET /api/bookmarks?user_id=&status=<id папки>&page=` — по 24, `links.next` пропадает на
+ *  последней странице. `item` — последняя прочитанная глава (номер и том), `media.site` — сайт сети. */
+type BookmarkJson = {
+  media: MangaListItemJson & { site?: number };
+  item?: { model?: string; volume?: number | string; number?: number | string } | null;
+};
+
+type BookmarksPageJson = {
+  data: BookmarkJson[];
+  links?: { next?: string | null };
+};
+
+/** Потолок порций на одну папку — 4800 тайтлов, чтобы сломанная пагинация не крутилась вечно. */
+const BOOKMARKS_MAX_PAGES = 200;
+
+const getBuiltInBookmarkFolder = (folderId: number): BuiltInBookmarkFolder | null => {
+  switch (folderId) {
+    case 1:
+      return BUILT_IN_BOOKMARK_FOLDER.READING;
+    case 2:
+      return BUILT_IN_BOOKMARK_FOLDER.PLANNED;
+    case 3:
+      return BUILT_IN_BOOKMARK_FOLDER.DROPPED;
+    case 4:
+      return BUILT_IN_BOOKMARK_FOLDER.COMPLETED;
+    case 5:
+      return BUILT_IN_BOOKMARK_FOLDER.FAVORITE;
+    default:
+      return null;
+  }
 };
 
 const isReadingNowSection = (id: string): id is Parameters<typeof getReadingNowTabKey>[0] =>
@@ -531,6 +576,7 @@ const SEARCH_FILTER_SPEC: SearchFilterSpec = {
 
 export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
+  const authFamily = catalogEntryFor(cfg.id).authFamily!;
   let imageServersPromise: Promise<Map<string, string>> | null = null;
 
   ctx.http.use((req, next) =>
@@ -546,7 +592,7 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     ctx.http.use(async (req, next) => {
       // Запрос от пользователя идёт только с его токеном — сервисная учётка ему не подменяется,
       // даже если своего токена на этом источнике у него нет (такой запрос API не пропустит).
-      const account = currentSourceAccount(SOURCE_AUTH_FAMILY.LIBSOCIAL);
+      const account = currentSourceAccount(authFamily);
       const store = account ? (account.tokenStore?.(cfg.id) ?? null) : serviceTokenStore;
       if (!store) return next(req);
       const token = await getValidAccessToken(
@@ -555,7 +601,11 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
         store,
         cfg.id,
         ctx.logger,
-        (creds) => loginLibSocialWithPassword(auth, cfg.siteId, creds, cfg.id),
+        // Код из письма серверу не ввести: если сайт его спросил, вход заново не удался.
+        async (creds) => {
+          const result = await loginLibSocialWithPassword(auth, cfg.siteId, creds, cfg.id);
+          return result && 'tokens' in result ? result.tokens : null;
+        },
       );
       return next({ ...req, headers: { ...req.headers, Authorization: `Bearer ${token}` } });
     });
@@ -1110,6 +1160,62 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     return null;
   };
 
+  const fetchFolderBookmarks = async (userId: number, folderId: number): Promise<RawBookmark[]> => {
+    const items: RawBookmark[] = [];
+    for (let page = 1; page <= BOOKMARKS_MAX_PAGES; page += 1) {
+      const url = new URL(`https://${LIBSOCIAL_API_HOST}/api/bookmarks`);
+      url.searchParams.set('user_id', String(userId));
+      url.searchParams.set('status', String(folderId));
+      url.searchParams.set('sort_by', 'name');
+      url.searchParams.set('sort_type', 'asc');
+      url.searchParams.set('page', String(page));
+      const json = await ctx.http.getJson<BookmarksPageJson>(url.toString());
+      for (const { media, item } of json.data) {
+        // Папки общие на всю сеть — закладки других сайтов сети этому источнику не нужны.
+        if (media.site !== undefined && media.site !== cfg.siteId) continue;
+        const title = parseManga(media);
+        const chapter = item?.model === 'chapter' ? item : null;
+        items.push({
+          id: title.id,
+          url: title.url,
+          title: title.title,
+          coverUrl: title.coverUrl,
+          contentRating: title.contentRating,
+          type: title.type ?? null,
+          lastChapterNumber: chapter ? toNumber(chapter.number) : null,
+          // Нумерация глав начинается заново в каждом томе — без тома номер неоднозначен.
+          lastChapterVolume: chapter ? toNumber(chapter.volume) : null,
+        });
+      }
+      if (json.data.length === 0 || !json.links?.next) break;
+    }
+    return items;
+  };
+
+  const getBookmarks = async (): Promise<RawBookmarkFolder[]> => {
+    // Без аккаунта пользователя запрос ушёл бы от сервисной учётки — её закладки не нужны никому.
+    if (!currentSourceAccount(authFamily)) {
+      throw new SourceAuthRequiredError('Bookmarks require the user’s own account', cfg.id);
+    }
+    const me = await ctx.http.getJson<{ data: { id: number } }>(
+      `https://${LIBSOCIAL_API_HOST}/api/auth/me`,
+    );
+    const userId = me.data.id;
+    const folders = await ctx.http.getJson<{ data: BookmarkFolderJson[] }>(
+      `https://${LIBSOCIAL_API_HOST}/api/bookmarks/folder/${userId}`,
+    );
+    return Promise.all(
+      folders.data
+        .filter(({ site_ids: siteIds }) => !siteIds || siteIds.includes(cfg.siteId))
+        .map(async (folder) => ({
+          id: String(folder.id),
+          builtIn: getBuiltInBookmarkFolder(folder.id),
+          name: folder.name,
+          items: folder.count === 0 ? [] : await fetchFolderBookmarks(userId, folder.id),
+        })),
+    );
+  };
+
   return {
     id: cfg.id,
     info: {
@@ -1146,6 +1252,8 @@ export const createLibSocialParser = (cfg: LibSocialConfig, ctx: ParserContext):
     getHome,
     getHomeSection,
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
+    // Закладки есть только у сайтов сети, куда умеем входить.
+    ...(cfg.auth ? { getBookmarks } : {}),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
     async init() {
       if (!cfg.auth) return;

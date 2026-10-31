@@ -1,7 +1,17 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
-import { CONTENT_RATING, FILTER_TYPE, TITLE_STATE, TITLE_TYPE } from '@tanuki/contracts';
+import {
+  BUILT_IN_BOOKMARK_FOLDER,
+  CONTENT_RATING,
+  FILTER_TYPE,
+  SOURCE_AUTH_FAMILY,
+  TITLE_STATE,
+  TITLE_TYPE,
+} from '@tanuki/contracts';
 import { createDesuParser, DESU_FILTER_GROUP } from '../src/sources/desu';
+import { loginDesu } from '../src/sources/desu/auth';
+import { runWithSourceAccounts, type SourceAccountSession } from '../src/core/source-accounts';
+import { SourceAuthRequiredError, SourceBlockedError, SourceUnavailableError } from '../src/errors';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
@@ -375,5 +385,198 @@ describe('Desu getHome', () => {
     const sections = await createDesuParser(makeContext(http)).getHome!();
 
     expect(sections.every(({ items }) => items.length === 0)).toBe(true);
+  });
+});
+
+describe('Desu getBookmarks', () => {
+  const USER_ID = 87654;
+  const pageWithVisitor = (userId: number) =>
+    `<html><body><script>XenForo.init({ visitor: { user_id: ${userId} } });</script></body></html>`;
+
+  const row = (id: number, chapters: number, bookmark: string | null, altName = 'Выходной') => `
+    <tr class="user_rate selectable editable" data-manga_id="${id}">
+      <td class="index"><span>1</span></td>
+      <td class="cover"><img class="lazy" src="data:image/gif;base64,R0lGOD" data-src="https://static.desu.uno/data/manga/covers/x120/${id}.jpg" /></td>
+      <td class="name">
+        <div class="name-block">
+          <span class="name-block-base"><a class="tooltipped" href="manga/title-${id}.${id}/">Title ${id}</a></span>
+          <span class="name-block-altnames">${altName} </span>
+          <span class="name-block-status rewatches ongoing">выходит</span>
+        </div>
+      </td>
+      <td class="num hoverable"><span class="current-value" data-field="score">-</span></td>
+      <td class="num hoverable">
+        <span class="current-value" data-field="chapters"><span>${chapters}</span></span>
+        <span class="misc-value"></span>
+      </td>
+      <td class="num hoverable bookmark">${
+        bookmark
+          ? `<a class="Tooltip" href="/manga/title_${id}/${bookmark}/rus#page=6" title="Продолжить чтение">4 - 24</a>`
+          : ''
+      }</td>
+      <td class="num">Манхва</td>
+    </tr>`;
+
+  const group = (status: string, title: string, rows: string[]) => `
+    <header class="status-1"><div class="subheadline">${title}
+      </div></header>
+    <table id="status_${status}_block" style="display: none;" class="b-table list-lines tablesorter">
+      <thead><tr><th class="index">#</th></tr></thead>
+      <tbody class="entries">${rows.join('')}</tbody>
+    </table>`;
+
+  // Разметка списка — как у живой `/manga/list/<slug>.<id>/` (проверено 2026-10-26).
+  const LIST_HTML = `<html><body><div id="userMyList"><div class="list-groups">
+    ${group('planned', 'Запланировано', [row(3943, 0, null, '')])}
+    ${group('watching', 'Читаю', [row(2240, 23, 'vol4/ch24'), row(5759, 12, null)])}
+    ${group('on_hold', 'Отложено', [row(7001, 0, null)])}
+    ${group('favorites', 'Любимое', [])}
+  </div></div></body></html>`;
+
+  const setUp = (visitorId: number) => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: pageWithVisitor(visitorId),
+    });
+    http.register((url) => url === `https://${DOMAIN}/login/login`, {
+      status: 200,
+      body: pageWithVisitor(USER_ID),
+    });
+    http.register((url) => url === `https://${DOMAIN}/login/`, {
+      status: 200,
+      body: pageWithVisitor(0),
+    });
+    http.register((url) => url === `https://${DOMAIN}/manga/list/${USER_ID}/`, {
+      status: 200,
+      body: LIST_HTML,
+    });
+    return http;
+  };
+
+  const asUser = <T>(fn: () => Promise<T>, session: SourceAccountSession = {}) =>
+    runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.DESU]: { jar: new CookieJar(), ...session } }, fn);
+
+  it('maps list statuses to built-in or own folders, position from the bookmark', async () => {
+    const http = setUp(USER_ID);
+    const parser = createDesuParser(makeContext(http));
+
+    const folders = await asUser(() => parser.getBookmarks!());
+
+    expect(folders.map(({ id, builtIn, name }) => ({ id, builtIn, name }))).toEqual([
+      { id: 'planned', builtIn: BUILT_IN_BOOKMARK_FOLDER.PLANNED, name: 'Запланировано' },
+      { id: 'watching', builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: 'Читаю' },
+      { id: 'on_hold', builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD, name: 'Отложено' },
+      { id: 'favorites', builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE, name: 'Любимое' },
+    ]);
+    const [planned, reading] = folders;
+    expect(planned!.items[0]).toMatchObject({
+      url: '/manga/title-3943.3943/',
+      // Русского названия нет — остаётся оригинальное.
+      title: 'Title 3943',
+      coverUrl: 'https://static.desu.uno/data/manga/covers/preview/3943.jpg',
+      type: TITLE_TYPE.MANHWA,
+      lastChapterNumber: null,
+      lastChapterVolume: null,
+    });
+    expect(
+      reading!.items.map(({ title, lastChapterNumber, lastChapterVolume }) => ({
+        title,
+        lastChapterNumber,
+        lastChapterVolume,
+      })),
+    ).toEqual([
+      // Закладка точнее счётчика «Главы»: глава 24 тома 4, а не 23 прочитанных.
+      { title: 'Выходной', lastChapterNumber: 24, lastChapterVolume: 4 },
+      { title: 'Выходной', lastChapterNumber: 12, lastChapterVolume: null },
+    ]);
+    expect(http.requests.some(({ url }) => url.endsWith('/login/login'))).toBe(false);
+  });
+
+  it('an expired session with a stored password logs in again', async () => {
+    const http = setUp(0);
+    const parser = createDesuParser(makeContext(http));
+
+    const folders = await asUser(() => parser.getBookmarks!(), {
+      credentials: { username: 'reader', password: 'secret' },
+    });
+
+    expect(folders).toHaveLength(4);
+    const login = http.requests.find(({ url }) => url.endsWith('/login/login'));
+    expect(new URLSearchParams(login!.body).get('login')).toBe('reader');
+  });
+
+  it('an expired session without a password — auth required', async () => {
+    const parser = createDesuParser(makeContext(setUp(0)));
+
+    await expect(asUser(() => parser.getBookmarks!())).rejects.toBeInstanceOf(
+      SourceAuthRequiredError,
+    );
+  });
+
+  it('without the user’s own account — auth required, no request', async () => {
+    const http = setUp(USER_ID);
+    const parser = createDesuParser(makeContext(http));
+
+    await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
+    expect(http.requests).toHaveLength(0);
+  });
+});
+
+describe('Desu login', () => {
+  const LOGGER = { info: () => {}, warn: () => {}, error: () => {} };
+  const CREDENTIALS = { username: 'reader', password: 'p&ss word' };
+
+  const setUp = (loginPage: string) => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/login/`, { status: 200, body: '' });
+    http.register((url) => url === `https://${DOMAIN}/login/login`, {
+      status: 200,
+      body: loginPage,
+    });
+    return http;
+  };
+
+  it('returns the account id from the page the accepted login lands on', async () => {
+    const http = setUp('<script>XenForo.init({ visitor: { user_id: 42 } });</script>');
+
+    expect(await loginDesu(http, DOMAIN, CREDENTIALS, LOGGER)).toBe(42);
+    // Сначала страница входа — без её cookie XenForo отвергает форму, не глядя на пароль.
+    expect(http.requests.map(({ url }) => url)).toEqual([
+      `https://${DOMAIN}/login/`,
+      `https://${DOMAIN}/login/login`,
+    ]);
+    const body = new URLSearchParams(http.requests[1]!.body);
+    expect(body.get('login')).toBe('reader');
+    expect(body.get('password')).toBe('p&ss word');
+    expect(body.get('remember')).toBe('1');
+  });
+
+  it('a rejected password leaves a guest — null', async () => {
+    const http = setUp('<div class="errorPanel"></div><script>visitor: { user_id: 0 },</script>');
+
+    expect(await loginDesu(http, DOMAIN, CREDENTIALS, LOGGER)).toBeNull();
+  });
+
+  it('a site that is down is not a rejected password — the error goes up', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/login/`, { status: 503, body: '' });
+
+    await expect(loginDesu(http, DOMAIN, CREDENTIALS, LOGGER)).rejects.toBeInstanceOf(
+      SourceUnavailableError,
+    );
+  });
+
+  it('an antibot page on the form is not a rejected password either', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/login/`, { status: 200, body: '' });
+    http.register((url) => url === `https://${DOMAIN}/login/login`, {
+      status: 403,
+      body: '<title>Just a moment...</title>',
+    });
+
+    await expect(loginDesu(http, DOMAIN, CREDENTIALS, LOGGER)).rejects.toBeInstanceOf(
+      SourceBlockedError,
+    );
   });
 });

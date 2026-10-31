@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { SOURCE_ACCOUNTS_QUERY_KEY } from './useSourceAccounts';
+import { SOURCE_ACCOUNTS_QUERY_KEY } from '@/entities/source-account/hooks/useSourceAccounts';
 
 /**
  * После привязки или отвязки меняется доступ к источникам — а с ним каталог, поиск и всё, что

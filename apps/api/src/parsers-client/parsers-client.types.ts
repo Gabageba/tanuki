@@ -15,4 +15,6 @@ export type {
   RawHomeSection,
   RawHomeSectionPage,
   RawHomeSectionParams,
+  RawBookmarkFolder,
+  RawBookmark,
 } from '@tanuki/parsers';

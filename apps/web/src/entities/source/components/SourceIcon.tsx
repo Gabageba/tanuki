@@ -14,6 +14,7 @@ import mangalib from '../../../assets/sources/MANGALIB.png';
 import mintmanga from '../../../assets/sources/MINTMANGA.png';
 import multporn from '../../../assets/sources/MULTPORN.png';
 import nudemoon from '../../../assets/sources/NUDEMOON.png';
+import puremanga from '../../../assets/sources/PUREMANGA.png';
 import readmangaRu from '../../../assets/sources/READMANGA_RU.png';
 import remanga from '../../../assets/sources/REMANGA.png';
 import seimanga from '../../../assets/sources/SEIMANGA.png';
@@ -138,6 +139,11 @@ const getPropsBySourceId = (
       return {
         initials: 'IN',
         src: inkstory,
+      };
+    case SOURCE_ID.PUREMANGA:
+      return {
+        initials: 'PM',
+        src: puremanga,
       };
     case SOURCE_ID.HENTAICHAN_CC:
       return {

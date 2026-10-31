@@ -25,3 +25,63 @@ export const Grouple: Story = {
     </ModalStage>
   ),
 };
+
+export const TomiloLib: Story = {
+  name: 'Вход в TomiloLib',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkPasswordAccountModal
+          family={SOURCE_AUTH_FAMILY.TOMILOLIB}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};
+
+export const WaManga: Story = {
+  name: 'Вход в WaManga',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkPasswordAccountModal
+          family={SOURCE_AUTH_FAMILY.WAMANGA}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};
+
+export const Multporn: Story = {
+  name: 'Вход в MultPorn',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkPasswordAccountModal
+          family={SOURCE_AUTH_FAMILY.MULTPORN}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};
+
+export const NudeMoon: Story = {
+  name: 'Вход в Nude-Moon',
+  render: () => (
+    <ModalStage>
+      {({ opened, close }) => (
+        <LinkPasswordAccountModal
+          family={SOURCE_AUTH_FAMILY.NUDEMOON}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+    </ModalStage>
+  ),
+};

@@ -112,6 +112,8 @@ export const getSourceLoginBenefitLabel = (benefit: SourceLoginBenefit, t: TFunc
       return t('purchasedChapters');
     case SOURCE_LOGIN_BENEFIT.TITLE_SEARCH:
       return t('titleSearch');
+    case SOURCE_LOGIN_BENEFIT.BOOKMARKS_IMPORT:
+      return t('bookmarksImport');
   }
 };
 

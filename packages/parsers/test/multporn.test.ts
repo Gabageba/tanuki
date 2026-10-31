@@ -14,6 +14,7 @@ const DOMAIN = 'multporn.example';
 const CFG: MultpornConfig = {
   id: SOURCE_ID.MULTPORN,
   typeParam: '1',
+  bookmarksType: 'comics',
   pathPrefix: '/comics/',
   listTagSelector: '.views-field-field-category a',
   detailTagSelector: '.field-name-field-category a',
@@ -194,6 +195,7 @@ describe('MultPorn parser conformance', () => {
 const CFG_HENTAI: MultpornConfig = {
   id: SOURCE_ID.MULTPORN_HENTAI,
   typeParam: '3',
+  bookmarksType: 'hentai_comic',
   pathPrefix: '/hentai_manga/',
   listTagSelector: '.views-field-field-h-category a',
   detailTagSelector: '.field-name-field-h-category a',

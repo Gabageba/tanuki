@@ -9,11 +9,13 @@ import {
 import {
   buildBookmarkGroups,
   countBookmarkGroup,
+  countSnapshotChapters,
   matchesBookmarkQuery,
   pickStatBranch,
   sortBookmarkGroups,
   toFolderCopies,
 } from './bookmark-groups';
+import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.types';
 import type { BookmarkRecord, BranchStat, ProgressRecord, SnapshotRecord } from './models';
 
 const at = (minutes: number) => new Date(Date.UTC(2026, 9, 1, 0, minutes));
@@ -146,7 +148,10 @@ describe('buildBookmarkGroups', () => {
 
   it('без доступных источников ведёт на первый и называет его причину', () => {
     const snapshots = new Map<string, SnapshotRecord>([
-      ['c:/two', { titleKey: 'c:/two', titleId: 'c:id', checkedAt: at(0), missing: true }],
+      [
+        'c:/two',
+        { titleKey: 'c:/two', titleId: 'c:id', checkedAt: at(0), missing: true, chaptersCount: 5 },
+      ],
     ]);
     const [group] = buildBookmarkGroups({
       rows: [row('c:/two')],
@@ -157,6 +162,8 @@ describe('buildBookmarkGroups', () => {
     });
 
     expect(group?.target.availability).toBe(BOOKMARK_AVAILABILITY.TITLE_MISSING);
+    // Число глав пропавшего тайтла осталось от прошлых проверок — оно уже неправда.
+    expect(group?.sourceChaptersCount).toBeNull();
   });
 
   it('копию без известного titleId целью не делает', () => {
@@ -237,6 +244,31 @@ describe('подсчёт новых глав', () => {
     expect(counted.newChaptersCount).toBe(0);
     expect(counted.latestChapterNumber).toBeNull();
   });
+
+  it('статистики нет — число глав из снимка цели', () => {
+    const unread = { ...group!, progress: null };
+
+    expect(countBookmarkGroup({ ...unread, sourceChaptersCount: 12 }, [], true).branchTotal).toBe(
+      12,
+    );
+    expect(countBookmarkGroup({ ...group!, sourceChaptersCount: 0 }, [], true).branchTotal).toBe(0);
+  });
+
+  it('у отметки снимок не подставляет число самой длинной ветки', () => {
+    expect(
+      countBookmarkGroup({ ...group!, sourceChaptersCount: 12 }, [], true).branchTotal,
+    ).toBeNull();
+  });
+
+  it('ветку отметки не нашли — числа нет, снимок не подставляется', () => {
+    const counted = countBookmarkGroup(
+      { ...group!, sourceChaptersCount: 100 },
+      [stat('default', 100)],
+      true,
+    );
+
+    expect(counted.branchTotal).toBeNull();
+  });
 });
 
 describe('sortBookmarkGroups', () => {
@@ -308,5 +340,24 @@ describe('toFolderCopies', () => {
       { folderId: 'planned', sourceIds: ['b'] },
       { folderId: 'reading', sourceIds: ['a', 'c'] },
     ]);
+  });
+});
+
+describe('countSnapshotChapters', () => {
+  const title = (chapters: Partial<RawChapter>[], hasPaidChapters?: boolean) =>
+    ({
+      chapters: chapters.map((chapter) => ({ branch: null, ...chapter })),
+      ...(hasPaidChapters ? { hasPaidChapters } : {}),
+    }) as RawTitle;
+
+  it('считает главы самой длинной ветки', () => {
+    expect(countSnapshotChapters(title([{ branch: 'a' }, { branch: 'a' }, { branch: 'b' }]))).toBe(
+      2,
+    );
+  });
+
+  it('платные главы — число неизвестно, весь тайтл за пейволом — глав нет', () => {
+    expect(countSnapshotChapters(title([{}], true))).toBeNull();
+    expect(countSnapshotChapters(title([], true))).toBe(0);
   });
 });

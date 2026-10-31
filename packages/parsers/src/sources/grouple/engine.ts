@@ -40,6 +40,7 @@ import { catalogEntryFor, SOURCE_ID } from '../catalog';
 import { currentSourceAccount } from '../../core/source-accounts';
 import { authenticateGrouple, authenticateAllHentai } from './auth';
 import type { GroupleConfig } from './config';
+import { fetchGroupleBookmarks } from './bookmarks';
 import {
   GROUPLE_ELEMENT_TYPE,
   GROUPLE_FILTER_GROUP,
@@ -382,7 +383,9 @@ const parsePagesV3 = (data: string, pos: number, domain: string, sourceId: strin
 export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   const trendTabs = cfg.trendTabs ?? [];
-  const homeSections = getGroupleHomeSections(trendTabs);
+  const homeSections = getGroupleHomeSections(trendTabs).filter(
+    ({ id }) => cfg.hasHotNew !== false || id !== GROUPLE_HOME_SECTION.HOT_NEW,
+  );
   let cachedPagesServer: string | null = null;
 
   const authFamily = catalogEntryFor(cfg.id).authFamily;
@@ -1343,6 +1346,7 @@ export const createGroupleParser = (cfg: GroupleConfig, ctx: ParserContext): Par
     },
     getList,
     getDetails,
+    getBookmarks: () => fetchGroupleBookmarks(cfg, ctx, login),
     getPages,
     getHome,
     getFilters,

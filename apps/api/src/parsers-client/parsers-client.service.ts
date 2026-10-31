@@ -26,6 +26,7 @@ import {
   RateLimitedException,
   SourceAccountRequiredException,
   SourceAuthRequiredException,
+  SourceImportUnsupportedException,
   SourceTokenExpiredException,
   SourceUnavailableException,
 } from '../common/errors';
@@ -35,6 +36,7 @@ import { getViewer } from '../source-accounts/viewer-context';
 import { toApiException } from './parser-error.mapper';
 import { PARSERS } from './parsers.provider';
 import type {
+  RawBookmarkFolder,
   RawFilterGroup,
   RawHomeSection,
   RawHomeSectionPage,
@@ -251,6 +253,24 @@ export class ParsersClientService {
     }
     const key = cacheKey('pages', sourceId, chapterUrl);
     return this.fetchCached(key, CACHE_TTL.pages, sourceId, fetch);
+  }
+
+  /**
+   * Закладки пользователя на источнике — всегда живым запросом от его аккаунта: они личные, в
+   * кеш не кладутся. Без своего аккаунта (анонимная сессия) читать нечего.
+   */
+  async getBookmarks(sourceId: string): Promise<RawBookmarkFolder[]> {
+    let parser: Parser;
+    try {
+      parser = this.parsers.get(sourceId);
+    } catch (error) {
+      throw toApiException(error, sourceId);
+    }
+    if (!parser.getBookmarks) throw new SourceImportUnsupportedException(sourceId);
+
+    const scope = await this.sourceAccess.resolveScope(sourceId);
+    if (!hasSourceAccount(scope)) throw new SourceAccountRequiredException(sourceId);
+    return this.guardedFetch(sourceId, (fetchParser) => fetchParser.getBookmarks!(), scope);
   }
 
   private async fetchCached<T>(

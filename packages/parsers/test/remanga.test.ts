@@ -109,7 +109,7 @@ const makeContext = (http: FakeHttpClient): ParserContext => {
   };
 };
 
-const setUpFixtures = (): FakeHttpClient => {
+const setUpFixtures = (chaptersPage1 = CHAPTERS_PAGE1_JSON): FakeHttpClient => {
   const http = new FakeHttpClient();
   http.register((url) => url.startsWith(`https://${API_HOST}/api/v2/titles/genres/`), {
     status: 200,
@@ -129,7 +129,7 @@ const setUpFixtures = (): FakeHttpClient => {
         calls += 1;
         return {
           status: 200,
-          body: calls % 2 === 1 ? CHAPTERS_PAGE1_JSON : CHAPTERS_PAGE2_JSON,
+          body: calls % 2 === 1 ? chaptersPage1 : CHAPTERS_PAGE2_JSON,
           contentType: 'application/json',
         };
       };
@@ -203,6 +203,11 @@ describe('Remanga parser conformance', () => {
     expect(manga.votesCount).toBe(57);
     expect(manga.likes).toBe(1432);
     expect(manga.views).toBe(4234);
+  });
+
+  it('getDetails: без платных глав hasPaidChapters нет', async () => {
+    const manga = await parser.getDetails('/manga/one-piece');
+    expect(manga.hasPaidChapters).toBeUndefined();
   });
 
   it('getPages: absolute, pre-resolved urls', async () => {
@@ -424,5 +429,35 @@ describe('Remanga getHomeSection', () => {
     const parser = createRemangaParser(makeContext(new FakeHttpClient()));
 
     await expect(parser.getHomeSection!('nope', { page: 1 })).resolves.toBeNull();
+  });
+});
+
+describe('Remanga paid chapters', () => {
+  const chapter = (id: number, number: number, isPaid: boolean, isBought: boolean) => ({
+    id,
+    chapter: number,
+    tome: 1,
+    name: null,
+    upload_date: '2024-01-01T09:30:00',
+    is_paid: isPaid,
+    is_bought: isBought,
+    publishers: [{ name: 'TeamA' }],
+  });
+
+  it('getDetails: купленная глава остаётся, закрытая пропускается, тайтл с hasPaidChapters', async () => {
+    const http = setUpFixtures(
+      JSON.stringify({
+        results: [
+          chapter(9001, 1, false, false),
+          chapter(9002, 2, true, true),
+          chapter(9003, 3, true, false),
+        ],
+      }),
+    );
+    const manga = await createRemangaParser(makeContext(http)).getDetails('/manga/one-piece');
+
+    expect(manga.hasPaidChapters).toBe(true);
+    expect(manga.chapters!.map(({ number }) => number)).toEqual(expect.arrayContaining([1, 2]));
+    expect(manga.chapters).toHaveLength(2);
   });
 });

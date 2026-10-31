@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as Undici from 'undici';
 import type { LibSocialAuthConfig } from '../src/sources/libsocial/config';
 import {
+  confirmLibSocialLogin,
   loginLibSocialWithPassword,
   solveAltcha,
+  type LibSocialPendingLogin,
   type LoginHttpRequest,
   type LoginHttpResponse,
 } from '../src/sources/libsocial/login';
@@ -71,13 +73,36 @@ const CONSENT_PAGE = `
     <button type="submit">Отмена</button>
   </form>`;
 
-type Site = { password: string; askConsent: boolean };
+// Как на mangalib.me: рядом с формой кода — форма повторной отправки без поля.
+const CODE_PAGE = `
+  <div class="alert alert-success" role="alert">Код отправлен на ваш email.</div>
+  <form action="${ORIGIN}/auth/login/otp/verify" method="post" novalidate>
+    <input type="hidden" name="_token" value="csrf-otp" autocomplete="off">
+    <input class="form-input__field" type="text" name="code" value="" maxlength="6"
+      inputmode="numeric" autocomplete="one-time-code">
+    <button type="submit">Подтвердить</button>
+  </form>
+  <form id="resendForm" action="${ORIGIN}/auth/login/otp/resend" method="post">
+    <input type="hidden" name="_token" value="csrf-otp" autocomplete="off">
+    <button type="submit" disabled>Отправить ещё раз</button>
+  </form>`;
 
-/** Сайт LibSocial в миниатюре: authorize → вход с ALTCHA → согласие → callback с кодом. */
-const fakeSite = ({ password, askConsent }: Site) => {
+type Site = {
+  password: string;
+  askConsent: boolean;
+  /** Код из письма, который сайт спросит после пароля; без него входит сразу. */
+  emailCode?: string;
+};
+
+/**
+ * Сайт LibSocial в миниатюре: authorize → вход с ALTCHA → код из письма → согласие → callback
+ * с кодом.
+ */
+const fakeSite = ({ password, askConsent, emailCode }: Site) => {
   const requests: LoginHttpRequest[] = [];
   let state = '';
   let isLoggedIn = false;
+  let isCodeSessionAlive = true;
   const redirect = (location: string, setCookie: string[] = []): LoginHttpResponse => ({
     status: 302,
     location,
@@ -95,6 +120,7 @@ const fakeSite = ({ password, askConsent }: Site) => {
   const http = async (req: LoginHttpRequest): Promise<LoginHttpResponse> => {
     requests.push(req);
     const url = new URL(req.url);
+    if (url.protocol === 'http:') return redirect(url.toString().replace('http:', 'https:'));
     if (url.pathname === '/auth/oauth/authorize' && req.method === 'GET') {
       state = url.searchParams.get('state') ?? state;
       if (!isLoggedIn) return redirect('/auth/login', ['mangalib_session=s1; Path=/; Secure']);
@@ -110,12 +136,29 @@ const fakeSite = ({ password, askConsent }: Site) => {
       };
       if (altcha.number !== NUMBER || form.get('_token') !== 'csrf-1') return page('bad request');
       if (form.get('password') !== password) return redirect('/auth/login');
+      if (emailCode) return redirect('/auth/login/otp');
       isLoggedIn = true;
       return redirect(`/auth/oauth/authorize?state=${state}`);
     }
+    if (url.pathname === '/auth/login/otp' && req.method === 'GET') return page(CODE_PAGE);
+    if (url.pathname === '/auth/login/otp/verify' && req.method === 'POST') {
+      const form = new URLSearchParams(req.body);
+      if (!isCodeSessionAlive || !req.headers.cookie?.includes('mangalib_session=s1')) {
+        return redirect('/auth/login');
+      }
+      if (form.get('_token') !== 'csrf-otp' || form.get('code') !== emailCode) {
+        return redirect('/auth/login/otp');
+      }
+      isLoggedIn = true;
+      // Сайт уводит на authorize по http — тот сам переадресует на https.
+      return redirect(`http://mangalib.me/auth/oauth/authorize?state=${state}`);
+    }
     throw new Error(`Неожиданный запрос ${req.method} ${req.url}`);
   };
-  return { http, requests };
+  const expireCodeSession = () => {
+    isCodeSessionAlive = false;
+  };
+  return { http, requests, expireCodeSession };
 };
 
 const CREDENTIALS = { username: 'reader', password: 'secret' };
@@ -144,9 +187,11 @@ describe('loginLibSocialWithPassword', () => {
 
   it('входит, подтверждает доступ и обменивает код на свою пару токенов', async () => {
     const site = fakeSite({ password: 'secret', askConsent: true });
-    const token = await loginLibSocialWithPassword(AUTH, 1, CREDENTIALS, 'mangalib', site.http);
+    const result = await loginLibSocialWithPassword(AUTH, 1, CREDENTIALS, 'mangalib', site.http);
 
-    expect(token).toMatchObject({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+    expect(result).toMatchObject({
+      tokens: { accessToken: 'access-1', refreshToken: 'refresh-1' },
+    });
     expect(tokenRequests).toEqual([
       expect.objectContaining({ grant_type: 'authorization_code', code: 'code-1' }),
     ]);
@@ -169,14 +214,75 @@ describe('loginLibSocialWithPassword', () => {
 
   it('обходится без страницы согласия, если сайт сразу отдаёт код', async () => {
     const site = fakeSite({ password: 'secret', askConsent: false });
-    const token = await loginLibSocialWithPassword(AUTH, 1, CREDENTIALS, 'mangalib', site.http);
-    expect(token?.refreshToken).toBe('refresh-1');
+    const result = await loginLibSocialWithPassword(AUTH, 1, CREDENTIALS, 'mangalib', site.http);
+    expect(result).toMatchObject({ tokens: { refreshToken: 'refresh-1' } });
   });
 
   it('возвращает null, когда сайт не принял пароль', async () => {
     const site = fakeSite({ password: 'other', askConsent: true });
-    const token = await loginLibSocialWithPassword(AUTH, 1, CREDENTIALS, 'mangalib', site.http);
-    expect(token).toBeNull();
+    const result = await loginLibSocialWithPassword(AUTH, 1, CREDENTIALS, 'mangalib', site.http);
+    expect(result).toBeNull();
     expect(tokenRequests).toHaveLength(0);
+  });
+});
+
+describe('вход с кодом из письма', () => {
+  beforeEach(() => {
+    tokenRequests.length = 0;
+  });
+
+  /** Доходит до формы кода; начатый вход проходит через JSON, как через хранилище API. */
+  const startLogin = async (site: ReturnType<typeof fakeSite>) => {
+    const result = await loginLibSocialWithPassword(AUTH, 1, CREDENTIALS, 'mangalib', site.http);
+    if (!result || !('pending' in result)) throw new Error('сайт не спросил код');
+    return JSON.parse(JSON.stringify(result.pending)) as LibSocialPendingLogin;
+  };
+
+  it('останавливается на форме кода и запоминает её', async () => {
+    const site = fakeSite({ password: 'secret', askConsent: true, emailCode: '123456' });
+    const pending = await startLogin(site);
+
+    expect(pending.form).toEqual({
+      action: `${ORIGIN}/auth/login/otp/verify`,
+      fields: { _token: 'csrf-otp', code: '' },
+    });
+    expect(pending.codeField).toBe('code');
+    expect(pending.url).toBe(`${ORIGIN}/auth/login/otp`);
+    expect(tokenRequests).toHaveLength(0);
+  });
+
+  it('с верным кодом доводит вход до токенов того же PKCE', async () => {
+    const site = fakeSite({ password: 'secret', askConsent: true, emailCode: '123456' });
+    const pending = await startLogin(site);
+
+    const tokens = await confirmLibSocialLogin(AUTH, 1, pending, '123456', 'mangalib', site.http);
+
+    expect(tokens).toMatchObject({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+    expect(tokenRequests).toEqual([
+      expect.objectContaining({ code: 'code-1', code_verifier: pending.pkce.codeVerifier }),
+    ]);
+    const verifyPost = site.requests.find((req) => req.url.endsWith('/otp/verify'));
+    expect(verifyPost?.headers.cookie).toContain('mangalib_session=s1');
+  });
+
+  it('возвращает null на неверный код, и тот же вход принимает верный', async () => {
+    const site = fakeSite({ password: 'secret', askConsent: false, emailCode: '123456' });
+    const pending = await startLogin(site);
+
+    expect(
+      await confirmLibSocialLogin(AUTH, 1, pending, '000000', 'mangalib', site.http),
+    ).toBeNull();
+    const tokens = await confirmLibSocialLogin(AUTH, 1, pending, '123456', 'mangalib', site.http);
+    expect(tokens?.refreshToken).toBe('refresh-1');
+  });
+
+  it('бросает, когда сессия входа истекла и сайт вернул форму входа', async () => {
+    const site = fakeSite({ password: 'secret', askConsent: true, emailCode: '123456' });
+    const pending = await startLogin(site);
+    site.expireCodeSession();
+
+    await expect(
+      confirmLibSocialLogin(AUTH, 1, pending, '123456', 'mangalib', site.http),
+    ).rejects.toThrow('истёк');
   });
 });

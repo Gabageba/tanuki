@@ -10,6 +10,9 @@ import {
   SOURCE_CONTENT_TYPE,
   type TitleState,
   SOURCE_LOCALE,
+  SOURCE_AUTH_FAMILY,
+  BUILT_IN_BOOKMARK_FOLDER,
+  type BuiltInBookmarkFolder,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -23,6 +26,8 @@ import type {
   RawContentRating,
   RawFilterGroup,
   RawFilterOption,
+  RawBookmark,
+  RawBookmarkFolder,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -32,16 +37,21 @@ import { attrOrNull, textOrNull, absUrl, ownText } from '../../core/html/selecto
 import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { nullIfEmpty } from '../../core/text/strings';
 import { parseDdMmYyyy } from '../../core/text/dates';
-import { ParseError, SourceUnavailableError } from '../../errors';
+import { ParseError, SourceAuthRequiredError, SourceUnavailableError } from '../../errors';
+import { currentSourceAccount } from '../../core/source-accounts';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
 import { findHomeHeading } from '../../core/html/home';
+import { loginMangaBuff, parseMangaBuffUserId } from './auth';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.MANGABUFF;
 const PAGE_SIZE = 24;
 const CHAPTER_SELECTOR = 'a.chapters__item';
 const CHAPTER_NUMBER_REGEX = /\d+(?:[.,]\d+)?/;
+/** «Прочитано до 11» в строке закладки — ссылка `/manga/<slug>/<том>/<глава>` на место чтения. */
+const READ_POSITION_REGEX = /\/manga\/[^/]+\/(\d+)\/(\d+(?:\.\d+)?)/;
+const CSS_URL_REGEX = /url\((['"]?)(.*?)\1\)/;
 
 export const MANGABUFF_FILTER_GROUP = {
   GENRE: FILTER_GROUP.GENRE,
@@ -53,6 +63,23 @@ export const MANGABUFF_FILTER_GROUP = {
   YEAR: FILTER_GROUP.YEAR,
   CHAPTERS_COUNT: FILTER_GROUP.CHAPTERS_COUNT,
 } as const;
+
+/** Папки закладок 1–4 общие для всех аккаунтов, свои папки человека — с id от тысяч.
+ *  Проверено вживую 2026-10-29. */
+const getBuiltInBookmarkFolder = (folderId: string): BuiltInBookmarkFolder | null => {
+  switch (folderId) {
+    case '1':
+      return BUILT_IN_BOOKMARK_FOLDER.READING;
+    case '2':
+      return BUILT_IN_BOOKMARK_FOLDER.PLANNED;
+    case '3':
+      return BUILT_IN_BOOKMARK_FOLDER.COMPLETED;
+    case '4':
+      return BUILT_IN_BOOKMARK_FOLDER.DROPPED;
+    default:
+      return null;
+  }
+};
 
 const getSortKey = (order: string | undefined): string => {
   switch (order) {
@@ -226,7 +253,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
       slug;
     // Cover is a CSS background-image on .cards__img, not an <img src>.
     const style = attrOrNull($item.find('.cards__img').first(), 'style');
-    const bgMatch = style ? /url\((['"]?)(.*?)\1\)/.exec(style) : null;
+    const bgMatch = style ? CSS_URL_REGEX.exec(style) : null;
     const coverUrl = bgMatch
       ? new URL(bgMatch[2] ?? '', baseUrl).toString()
       : `https://${domain}/img/manga/posters/${slug}.jpg`;
@@ -735,6 +762,108 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     });
   };
 
+  /** Строка закладки: тайтл, обложка x70 (в карточку берём x180, как на главной) и «Прочитано
+   *  до» — где остановился. «1 том, 23 глава» рядом — последняя глава тайтла, не позиция. */
+  const parseBookmarkRow = ($row: Cheerio<AnyNode>, baseUrl: string): RawBookmark | null => {
+    const $name = $row.find('a.bookmark__manga-name').first();
+    const hrefRaw = attrOrNull($name, 'href');
+    const title = nullIfEmpty(textOrNull($name));
+    if (!hrefRaw || !title) return null;
+    const relUrl = toRelativeUrl(toAbsoluteUrl(hrefRaw, domain), domain);
+    const style = attrOrNull($row.find('.bookmark__manga-image').first(), 'style');
+    const cover = style ? CSS_URL_REGEX.exec(style)?.[2] : undefined;
+    const positionHref = attrOrNull($row.find('a.bookmark__manga-chapter').first(), 'href');
+    const position = positionHref ? READ_POSITION_REGEX.exec(positionHref) : null;
+    return {
+      id: generateUid(SOURCE_ID, relUrl),
+      url: relUrl,
+      title,
+      coverUrl: cover ? new URL(cover.replace('/x70/', '/x180/'), baseUrl).toString() : null,
+      contentRating: null,
+      type: null,
+      lastChapterNumber: position ? parseFloatOrNull(position[2]!) : null,
+      lastChapterVolume: position ? parseIntOrNull(position[1]!) : null,
+    };
+  };
+
+  /** Id аккаунта, от которого идут запросы; сессия истекла — входит заново, если пароль сохранён. */
+  const resolveListOwnerId = async (): Promise<number> => {
+    const account = currentSourceAccount(SOURCE_AUTH_FAMILY.MANGABUFF);
+    // Без аккаунта пользователя запрос ушёл бы гостем — чей список брать, неизвестно.
+    if (!account?.jar) {
+      throw new SourceAuthRequiredError('Bookmarks require the user’s own account', SOURCE_ID);
+    }
+    const res = await ctx.http.get(`https://${domain}/`);
+    const userId =
+      parseMangaBuffUserId(res.text()) ??
+      (account.credentials
+        ? await loginMangaBuff(ctx.http, domain, account.credentials, ctx.logger)
+        : null);
+    if (userId === null) throw new SourceAuthRequiredError('MangaBuff session expired', SOURCE_ID);
+    return userId;
+  };
+
+  /** Закладки папки — по 150 на страницу, следующая есть, пока пагинация ссылается на неё. */
+  const fetchFolderItems = async (userId: number, folderId: string): Promise<RawBookmark[]> => {
+    const items: RawBookmark[] = [];
+    for (let page = 1; ; page++) {
+      const url = new URL(`https://${domain}/users/${userId}/bookmarks`);
+      url.searchParams.set('folder_id', folderId);
+      if (page !== 1) url.searchParams.set('page', String(page));
+      const doc = await ctx.http.getHtml(url.toString());
+      items.push(
+        ...doc
+          .$('.bookmark__manga')
+          .toArray()
+          .map((el) => parseBookmarkRow(doc.$(el), doc.baseUrl))
+          .filter((item): item is RawBookmark => item !== null),
+      );
+      const hasNext = doc
+        .$('.pagination a')
+        .toArray()
+        .some(
+          (el) =>
+            new URL(attrOrNull(doc.$(el), 'href') ?? '#', doc.baseUrl).searchParams.get('page') ===
+            String(page + 1),
+        );
+      if (!hasNext) return items;
+    }
+  };
+
+  /**
+   * Список чтения аккаунта: папки — боковое меню `/users/{id}/bookmarks` (со счётчиками; «Весь
+   * список» без `data-folder-id` — сумма остальных), закладки — по папке. «Избранное» рядом —
+   * лайки сайта вперемешку с главами и карточками, не папка чтения: его не берём.
+   */
+  const getBookmarks = async (): Promise<RawBookmarkFolder[]> => {
+    const userId = await resolveListOwnerId();
+    const doc = await ctx.http.getHtml(`https://${domain}/users/${userId}/bookmarks`);
+    const folders = doc
+      .$('.side-menu__item[data-folder-id]')
+      .toArray()
+      .map((el) => {
+        const $item = doc.$(el);
+        const id = attrOrNull($item, 'data-folder-id') ?? '';
+        return {
+          id,
+          name: textOrNull($item.find('.side-menu__name').first()) ?? id,
+          count: parseIntOrNull(textOrNull($item.find('.side-menu__count').first())),
+        };
+      })
+      .filter(({ id }) => id.length > 0);
+    const result: RawBookmarkFolder[] = [];
+    for (const folder of folders) {
+      result.push({
+        id: folder.id,
+        builtIn: getBuiltInBookmarkFolder(folder.id),
+        name: folder.name,
+        // Пустую папку незачем открывать — счётчик в меню уже это сказал.
+        items: folder.count === 0 ? [] : await fetchFolderItems(userId, folder.id),
+      });
+    }
+    return result;
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -759,6 +888,7 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     getPages,
     getFilters,
     getHome,
+    getBookmarks,
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

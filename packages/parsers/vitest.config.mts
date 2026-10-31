@@ -13,7 +13,9 @@ export default defineConfig({
         test: {
           name: 'contract',
           include: ['contract/**/*.test.ts'],
-          testTimeout: 30_000,
+          // Один HTTP-запрос с повторами соединения может занять больше 30 секунд.
+          testTimeout: 120_000,
+          hookTimeout: 120_000,
         },
       },
     ],

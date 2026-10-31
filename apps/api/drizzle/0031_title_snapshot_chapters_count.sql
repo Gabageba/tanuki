@@ -1,0 +1,1 @@
+ALTER TABLE "title_chapter_snapshots" ADD COLUMN "chapters_count" integer;

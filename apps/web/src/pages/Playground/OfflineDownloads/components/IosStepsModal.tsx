@@ -2,7 +2,7 @@ import { Button, List, Stack, Text } from '@mantine/core';
 import { CheckIcon, DeviceMobileIcon, ExportIcon, PlusSquareIcon } from '@phosphor-icons/react';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
 import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
-import ModalFrame from './ModalFrame';
+import ModalFrame from '../../components/ModalFrame';
 
 /** H3 — нейтральная модалка с шагами установки в Safari. Значки в шагах — копии кнопок Safari,
  *  без них шаг не найти. */

@@ -3,6 +3,7 @@ import {
   catalogEntryFor,
   SOURCE_CONTENT_TYPE,
   SOURCE_IDS,
+  SOURCE_LOGIN_BENEFIT,
   SOURCE_STATUS,
   SOURCE_STATUS_REASON,
   type Source,
@@ -181,8 +182,11 @@ export class SourcesService {
       sortOrders: raw.sortOrders,
       supportsDirection: raw.supportsDirection,
       isSearchWithFiltersSupported: raw.isSearchWithFiltersSupported,
+      isBookmarksImportSupported: raw.isBookmarksImportSupported ?? false,
       authFamily: catalogEntry.authFamily,
-      loginBenefits: catalogEntry.loginBenefits,
+      loginBenefits: raw.isBookmarksImportSupported
+        ? [...catalogEntry.loginBenefits, SOURCE_LOGIN_BENEFIT.BOOKMARKS_IMPORT]
+        : catalogEntry.loginBenefits,
       isEnabled: !disabled.has(raw.id),
       position,
       // Сломанный источник не парсится в принципе — в подборках ему делать нечего.

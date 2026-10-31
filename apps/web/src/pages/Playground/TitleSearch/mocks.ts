@@ -38,6 +38,7 @@ export const makeSource = (
   sortOrders: [],
   supportsDirection: false,
   isSearchWithFiltersSupported: true,
+  isBookmarksImportSupported: false,
   authFamily: null,
   loginRequirement: null,
   loginBenefits: [],

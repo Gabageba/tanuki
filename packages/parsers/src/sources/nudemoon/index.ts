@@ -25,7 +25,7 @@ import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toAbsoluteUrl, toRelativeUrl } from '../../core/html/urls';
 import { attrOrNull, textOrNull, absUrl } from '../../core/html/selectors';
-import { toTitleCase, nullIfEmpty } from '../../core/text/strings';
+import { toTitleCase } from '../../core/text/strings';
 import { ParseError, SourceAuthRequiredError } from '../../errors';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { classifyResponse } from '../../core/http/classify';
@@ -34,6 +34,8 @@ import { currentSourceAccount } from '../../core/source-accounts';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
 import { encodeCp1251, hasNudeMoonSession, loginNudeMoon } from './auth';
+import { fetchNudeMoonBookmarks } from './bookmarks';
+import { splitNudeMoonTitle } from './lib';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.NUDEMOON;
 
@@ -153,13 +155,6 @@ const mangaTypeOfTags = (tags: RawTag[]): RawTitleType => {
   return TITLE_TYPE.MANGA;
 };
 
-/** "AltTitle / MainTitle" split on the site's own `title` attribute, not the link text. */
-const splitTitle = (raw: string): { title: string; altTitle: string | null } => {
-  const idx = raw.indexOf(' / ');
-  if (idx === -1) return { title: raw, altTitle: null };
-  return { title: raw.slice(idx + 3), altTitle: nullIfEmpty(raw.slice(0, idx)) };
-};
-
 /** Text of the first descendant `<a>` whose `href` contains `hrefSubstr`, or null. */
 const textOfLinkContaining = (
   $root: Cheerio<AnyNode>,
@@ -263,7 +258,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     if (!hrefRaw || !/^\/\d+-/.test(hrefRaw)) return null;
     const publicUrl = toAbsoluteUrl(hrefRaw, domain);
     const relUrl = toRelativeUrl(publicUrl, domain);
-    const { title, altTitle } = splitTitle(attrOrNull($a, 'title') ?? '');
+    const { title, altTitle } = splitNudeMoonTitle(attrOrNull($a, 'title') ?? '');
     const author = textOfLinkContaining($row, $, '/mangaka/');
     // The cover thumbnail is lazy-loaded: the list row's `<img>` carries no `src` at all, only
     // `data-src` (verified live — see nudemoon.test.ts LIST_HTML). Fall back to `src` for any
@@ -568,7 +563,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     // The mobile details page's only titled links are the author/series/translator ones
     // ("Показать всю мангу от ...") — the title itself lives in the page's `<h1>`, in the same
     // "AltTitle / MainTitle" form the listing puts in its link `title`.
-    const { title, altTitle } = splitTitle(textOrNull(doc.$('h1').first()) ?? '');
+    const { title, altTitle } = splitNudeMoonTitle(textOrNull(doc.$('h1').first()) ?? '');
 
     // The mobile skin (forced via the nm_mobile cookie set above) embeds every page image of the
     // gallery as `img[data-src]` right on this same details page — so both the cover placeholder
@@ -797,7 +792,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     const relUrl = toRelativeUrl(publicUrl, domain);
     if (!/^\/\d+-/.test(relUrl)) return null;
     const $img = $card.find('img.news_pic2').first();
-    const { title, altTitle } = splitTitle(attrOrNull($img, 'title') ?? '');
+    const { title, altTitle } = splitNudeMoonTitle(attrOrNull($img, 'title') ?? '');
     if (!title) return null;
     return {
       id: generateUid(SOURCE_ID, relUrl),
@@ -862,6 +857,7 @@ export const createNudeMoonParser = (ctx: ParserContext): Parser => {
     getPages,
     getFilters,
     getHome,
+    getBookmarks: () => fetchNudeMoonBookmarks(ctx),
     imageHeaders: () => ({ Referer: `https://${domain}/` }),
   };
 };

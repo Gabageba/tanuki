@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { FAVORITE_FOLDER, PLANNED_FOLDER } from '@/shared/storybook/fixtures';
+import { CUSTOM_FOLDER, PLANNED_FOLDER } from '@/shared/storybook/fixtures';
 import ModalStage from '@/shared/storybook/ModalStage';
 import DeleteFolderModal from './DeleteFolderModal';
 
@@ -18,8 +18,8 @@ export const WithTitles: Story = {
       {({ opened, close }) =>
         opened && (
           <DeleteFolderModal
-            folder={FAVORITE_FOLDER}
-            folders={[PLANNED_FOLDER, FAVORITE_FOLDER]}
+            folder={CUSTOM_FOLDER}
+            folders={[PLANNED_FOLDER, CUSTOM_FOLDER]}
             onClose={close}
           />
         )
@@ -35,8 +35,8 @@ export const Empty: Story = {
       {({ opened, close }) =>
         opened && (
           <DeleteFolderModal
-            folder={{ ...FAVORITE_FOLDER, count: 0, newCount: 0 }}
-            folders={[PLANNED_FOLDER, FAVORITE_FOLDER]}
+            folder={{ ...CUSTOM_FOLDER, count: 0, newCount: 0 }}
+            folders={[PLANNED_FOLDER, CUSTOM_FOLDER]}
             onClose={close}
           />
         )

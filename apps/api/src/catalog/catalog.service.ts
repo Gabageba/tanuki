@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { SOURCE_AUTH_FAMILY, catalogEntryFor } from '@tanuki/contracts';
+import { isLibSocialAuthFamily, catalogEntryFor } from '@tanuki/contracts';
 import type {
   CatalogResponse,
   ResolvedSearchFilters,
@@ -114,7 +114,8 @@ export class CatalogService {
     // Где бывают платные главы, сначала нужны детали: по ним видно, платная ли глава, а страницы
     // платной главы в общий кеш не кладутся. Глава, которой нет в деталях этого зрителя, тоже
     // считается платной — общий кеш не должен отдавать то, что ему не показали.
-    const hasPaidChapters = catalogEntryFor(sourceId).authFamily === SOURCE_AUTH_FAMILY.LIBSOCIAL;
+    const family = catalogEntryFor(sourceId).authFamily;
+    const hasPaidChapters = family !== null && isLibSocialAuthFamily(family);
     const [pagesResult, detailsResult] = hasPaidChapters
       ? await this.parsersClient.getDetails(sourceId, titleRef.url).then(async (details) => {
           const chapter = details.data.chapters?.find((item) => item.id === chapterRef.id);

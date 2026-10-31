@@ -29,6 +29,8 @@ export type MultpornConfig = {
   id: string;
   /** Drupal content-type filter value for the `/new?type=` browse listing. */
   typeParam: string;
+  /** Drupal machine name used by `/bookmarks?type=` (unlike `/new`'s numeric value). */
+  bookmarksType: string;
   /** Node alias prefix for this type — also used to pick this type's rows out of `/search`'s
    *  mixed-type results (comics, hentai manga, pictures, video, games, ... all share one view). */
   pathPrefix: string;
@@ -58,6 +60,7 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
   {
     id: SOURCE_ID.MULTPORN,
     typeParam: '1',
+    bookmarksType: 'comics',
     pathPrefix: '/comics/',
     listTagSelector: '.views-field-field-category a',
     detailTagSelector: '.field-name-field-category a',
@@ -76,6 +79,7 @@ export const MULTPORN_CONFIGS: MultpornConfig[] = [
   {
     id: SOURCE_ID.MULTPORN_HENTAI,
     typeParam: '3',
+    bookmarksType: 'hentai_comic',
     pathPrefix: '/hentai_manga/',
     listTagSelector: '.views-field-field-h-category a',
     detailTagSelector: '.field-name-field-h-category a',

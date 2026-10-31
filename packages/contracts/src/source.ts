@@ -96,19 +96,38 @@ export const SortDirectionSchema = z.enum(SORT_DIRECTION);
 
 /**
  * Аккаунт, которым пользователь открывает источник. Одна учётка обслуживает всё семейство:
- * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у LibSocial — аккаунт lib.social,
- * у Nude-Moon — аккаунт самого сайта. Что именно без аккаунта закрыто — loginRequirement и
- * loginBenefits источника.
+ * Grouple — общая SSO сети ReadManga, у AllHentai свой шлюз, у MangaLib и HentaiLib — отдельные аккаунты сайтов,
+ * у Nude-Moon, Desu и MangaBuff — аккаунт самого сайта, у сети inuko (Inkstory, PureManga) — сессия сайта поверх общей SSO, у ReManga — токен сессии сайта.
+ * Senkuro и Senkognito используют один аккаунт SSO и общий токен; TomiloLib — пару access/refresh токенов сайта.
+ * Что именно без аккаунта закрыто — loginRequirement и loginBenefits источника.
  */
 export const SOURCE_AUTH_FAMILY = {
   GROUPLE: 'grouple',
   ALLHENTAI: 'allhentai',
+  /** SlashLib; также прежний общий ключ MangaLib/HentaiLib до разделения аккаунтов. */
   LIBSOCIAL: 'libsocial',
+  MANGALIB: 'mangalib',
+  HENTAILIB: 'hentailib',
   NUDEMOON: 'nudemoon',
+  DESU: 'desu',
+  INUKO: 'inuko',
+  MANGABUFF: 'mangabuff',
+  REMANGA: 'remanga',
+  SENKURO: 'senkuro',
+  TOMILOLIB: 'tomilolib',
+  WAMANGA: 'wamanga',
+  HENTAICHAN_CC: 'hentaichanCc',
+  MULTPORN: 'multporn',
 } as const;
 export type SourceAuthFamily = EnumLiteralsOf<typeof SOURCE_AUTH_FAMILY>;
 
 export const SourceAuthFamilySchema = z.enum(SOURCE_AUTH_FAMILY);
+
+/** Общий OAuth-движок, но независимые аккаунты и токены сайтов. */
+export const isLibSocialAuthFamily = (family: SourceAuthFamily) =>
+  family === SOURCE_AUTH_FAMILY.MANGALIB ||
+  family === SOURCE_AUTH_FAMILY.HENTAILIB ||
+  family === SOURCE_AUTH_FAMILY.LIBSOCIAL;
 
 /**
  * Нужен ли вход, чтобы источник открывался: REQUIRED закрыт, пока пользователь не привяжет свой
@@ -131,6 +150,11 @@ export const SOURCE_LOGIN_BENEFIT = {
   PURCHASED_CHAPTERS: 'purchasedChapters',
   /** Поиск по названию: сайт отдаёт его только вошедшим — без аккаунта источник в поиске закрыт. */
   TITLE_SEARCH: 'titleSearch',
+  /**
+   * Импорт закладок с сайта. В каталоге не пишется: сервер добавляет его сам каждому источнику,
+   * чей парсер умеет `getBookmarks` (`isBookmarksImportSupported`).
+   */
+  BOOKMARKS_IMPORT: 'bookmarksImport',
 } as const;
 export type SourceLoginBenefit = EnumLiteralsOf<typeof SOURCE_LOGIN_BENEFIT>;
 export const SourceLoginBenefitSchema = z.enum(SOURCE_LOGIN_BENEFIT);
@@ -154,13 +178,12 @@ export type SourceAccountStatus = EnumLiteralsOf<typeof SOURCE_ACCOUNT_STATUS>;
 export const SourceAccountStatusSchema = z.enum(SOURCE_ACCOUNT_STATUS);
 
 /**
- * Привязанный аккаунт источника — один на всё семейство. У LibSocial учётка общая на всю сеть,
- * но токен каждый сайт выдаёт свой: вход по паролю получает их все разом, а вставка токена —
- * только для сайта, с которого он взят.
+ * Привязанный аккаунт источника — один на семейство. MangaLib и HentaiLib — отдельные
+ * семейства: у каждого свои пароль, токен и состояние входа.
  */
 export const SourceAccountSchema = z.object({
   family: SourceAuthFamilySchema,
-  /** LibSocial — сайты сети, для которых у аккаунта есть токен. null — открыто всё семейство. */
+  /** LibSocial — сайт, для которого у аккаунта есть токен. null — открыто всё семейство. */
   sourceIds: z.array(z.string()).nullable(),
   /** Имя аккаунта на источнике — чтобы человек видел, под кем вошёл. */
   login: z.string().nullable(),
@@ -186,6 +209,31 @@ export const LinkSourceAccountRequestSchema = z.object({
 });
 export type LinkSourceAccountRequest = z.infer<typeof LinkSourceAccountRequestSchema>;
 
+/** Выбранный сайт для входа, подтверждения или отмены. */
+export const LibSocialLoginSourceRequestSchema = z.object({
+  sourceId: z.string().min(1),
+});
+
+export const LinkLibSocialAccountRequestSchema = LinkSourceAccountRequestSchema.extend(
+  LibSocialLoginSourceRequestSchema.shape,
+);
+export type LinkLibSocialAccountRequest = z.infer<typeof LinkLibSocialAccountRequestSchema>;
+
+/** pendingSourceId — выбранный сайт, который ждёт код из письма; null — вход завершён. */
+export const LibSocialLoginStepSchema = z.object({
+  pendingSourceId: z.string().nullable(),
+});
+export type LibSocialLoginStep = z.infer<typeof LibSocialLoginStepSchema>;
+
+/** Сайты LibSocial присылают код из 6 цифр, он действует 10 минут. */
+export const LIBSOCIAL_LOGIN_CODE_LENGTH = 6;
+
+export const ConfirmLibSocialLoginRequestSchema = LibSocialLoginSourceRequestSchema.extend({
+  /** Код из письма сайта, который ждёт его (LibSocialLoginStep.pendingSourceId). */
+  code: z.string().length(LIBSOCIAL_LOGIN_CODE_LENGTH).regex(/^\d+$/),
+});
+export type ConfirmLibSocialLoginRequest = z.infer<typeof ConfirmLibSocialLoginRequestSchema>;
+
 export const LinkLibSocialTokenRequestSchema = z.object({
   /** Сайт сети, с которого взят токен: у каждого он свой. */
   sourceId: z.string().min(1),
@@ -193,6 +241,12 @@ export const LinkLibSocialTokenRequestSchema = z.object({
   value: z.string().min(1),
 });
 export type LinkLibSocialTokenRequest = z.infer<typeof LinkLibSocialTokenRequestSchema>;
+
+export const LinkSourceSessionRequestSchema = z.object({
+  /** Значение cookie сессии сайта или вся строка `имя=значение`. */
+  value: z.string().min(1),
+});
+export type LinkSourceSessionRequest = z.infer<typeof LinkSourceSessionRequestSchema>;
 
 /** Смысл блока главной — по нему фронт берёт иконку вкладки: названия у сайтов свои, вид общий. */
 export const HOME_SECTION_KIND = {
@@ -264,6 +318,8 @@ export const SourceSchema = z.object({
   /** Поиск по названию в каталоге источника сочетается с фильтрами. false — при запросе источник
    *  фильтры не применяет, и клиент не отправляет их, пока запрос набран. */
   isSearchWithFiltersSupported: z.boolean(),
+  /** Закладки с сайта можно импортировать — парсер умеет их читать. */
+  isBookmarksImportSupported: z.boolean(),
   /** Семейство аккаунта, которым входят на источник; null — входа на источнике нет. */
   authFamily: SourceAuthFamilySchema.nullable(),
   /** Обязателен ли вход с учётом настройки сервера; null — входа на источнике нет. */

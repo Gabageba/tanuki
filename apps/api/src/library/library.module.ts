@@ -7,6 +7,7 @@ import { BookmarkFoldersService } from './bookmark-folders.service';
 import { BookmarkUpdatesService } from './bookmark-updates.service';
 import { BookmarksController } from './bookmarks.controller';
 import { BookmarksService } from './bookmarks.service';
+import { LibraryMergeService } from './library-merge.service';
 import { TitleBookmarkController } from './title-bookmark.controller';
 import { TitleSnapshotsModule } from './title-snapshots.module';
 
@@ -15,8 +16,14 @@ import { TitleSnapshotsModule } from './title-snapshots.module';
 @Module({
   imports: [TitleLinksModule, TitleSnapshotsModule, SourcesModule, ParsersClientModule],
   controllers: [BookmarkFoldersController, BookmarksController, TitleBookmarkController],
-  providers: [BookmarkFoldersService, BookmarksService, BookmarkUpdatesService],
-  // Прогресс чтения засчитывает визит, подтверждение связи склеивает закладки.
-  exports: [BookmarksService],
+  providers: [
+    BookmarkFoldersService,
+    BookmarksService,
+    BookmarkUpdatesService,
+    LibraryMergeService,
+  ],
+  // Прогресс чтения засчитывает визит, подтверждение связи склеивает закладки, резервная копия
+  // выгружает и восстанавливает папки, импорт из источника пишет папки и закладки.
+  exports: [BookmarksService, BookmarkFoldersService, LibraryMergeService],
 })
 export class LibraryModule {}

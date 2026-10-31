@@ -38,17 +38,10 @@ import { ParseError } from '../../errors';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { toHomeSections } from '../../core/home';
 import { parseHtml } from '../../core/html/dom';
+import { fetchHentaichanCcBookmarks } from './bookmarks';
+import { API_BASE, URL_DELIMITER } from './models';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.HENTAICHAN_CC;
-/**
- * Not a domain the source config discovers dynamically — the site's Next.js frontend
- * (`ctx.domain`, used only for publicUrl/Referer) calls this Directus instance from the
- * browser, found via the frontend's `Content-Security-Policy: connect-src` header. It's a
- * fully public, unauthenticated API (no cf_clearance/API key needed, verified live) that
- * back-ends the whole catalog, unlike the Next.js pages themselves which only server-render
- * filter metadata, not the manga grid.
- */
-const API_BASE = 'https://backend.hentaichan.cc';
 /**
  * Not `${API_BASE}/assets/<uuid>` — that hits the Directus origin directly and measured
  * ~1.6-2s per image live (TTFB), vs ~0.7-1.1s and falling on repeat hits through this edge
@@ -56,8 +49,6 @@ const API_BASE = 'https://backend.hentaichan.cc';
  * file's extension, which `filename_disk` below supplies for free in the same query.
  */
 const CDN_BASE = 'https://cdn.hentaichan.cc';
-/** id and slug are both needed — id to query chapters/details, slug to rebuild publicUrl. */
-const URL_DELIMITER = ',,';
 
 export const HENTAICHAN_CC_FILTER_GROUP = {
   TAG: FILTER_GROUP.TAG,
@@ -797,6 +788,7 @@ export const createHentaichanCcParser = (ctx: ParserContext): Parser => {
       homeSections: HENTAICHAN_CC_HOME_SECTIONS,
     },
     getList,
+    getBookmarks: () => fetchHentaichanCcBookmarks(ctx),
     getDetails,
     getPages,
     getFilters,

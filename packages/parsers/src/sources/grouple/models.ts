@@ -118,3 +118,43 @@ export const getGroupleTrendTab = (
       return 'popular-latest';
   }
 };
+
+/** Значения REST API Grouple — написание закреплено внешним контрактом. */
+export const GROUPLE_BOOKMARK_STATUS = {
+  WATCHING: 'WATCHING',
+  REVIEWING: 'REVIEWING',
+  PLANNED: 'PLANED',
+  ON_HOLD: 'ON_HOLD',
+  COMPLETED: 'COMPLETED',
+  FAVORITE: 'FAVORITE',
+  DROPPED: 'DROPPED',
+  USER_DEFINED: 'USER_DEFINED',
+  USER_DEFINED_TWO: 'USER_DEFINED_TWO',
+  USER_DEFINED_THREE: 'USER_DEFINED_THREE',
+} as const;
+
+export type GroupleBookmarkStatus = EnumLiteralsOf<typeof GROUPLE_BOOKMARK_STATUS>;
+
+export type GroupleBookmarkSettings = {
+  custom1Enabled?: boolean;
+  custom2Enabled?: boolean;
+  custom3Enabled?: boolean;
+  customName1?: string;
+  customName2?: string;
+  customName3?: string;
+};
+
+export type GroupleBookmarkItem = {
+  element: {
+    elementId: { siteId: number; type?: string };
+    elementUrl: string;
+    name: string;
+    picUrl?: string | null;
+  };
+  resume?: { url: string; title?: string } | null;
+};
+
+export type GroupleBookmarksResponse = {
+  list: GroupleBookmarkItem[];
+  total: number;
+};

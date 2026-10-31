@@ -41,6 +41,7 @@ import { parseFloatOrNull, parseIntOrNull } from '../../core/text/numbers';
 import { ParseError, SourceUnavailableError } from '../../errors';
 import { catalogEntryFor } from '../catalog';
 import type { SenkuroConfig } from './config';
+import { fetchSenkuroBookmarks } from './bookmarks';
 import { fetchHomeSections } from '../../core/home';
 
 const URL_DELIMITER = ',,';
@@ -1155,6 +1156,7 @@ export const createSenkuroParser = (cfg: SenkuroConfig, ctx: ParserContext): Par
     getList,
     getDetails,
     getPages,
+    getBookmarks: () => fetchSenkuroBookmarks(cfg, ctx, parseMangaCard),
     getFilters,
     getHome,
     getHomeSection,

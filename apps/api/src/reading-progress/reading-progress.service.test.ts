@@ -8,7 +8,7 @@ import type { BookmarksService } from '../library/bookmarks.service';
 import type { TitleLinksService } from '../matches/title-links.service';
 import type { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { SourcesService } from '../sources/sources.service';
-import { pickContinueReadingRows } from './continue-reading';
+import { isOnLastChapter, pickContinueReadingRows } from './continue-reading';
 import type { ReadingProgressRow } from './models';
 import {
   projectLinkedRow,
@@ -225,9 +225,51 @@ describe('pickContinueReadingRows', () => {
   });
 });
 
+describe('isOnLastChapter', () => {
+  const mark = (chapterVolume: number | null, chapterNumber: number) => ({
+    ...row('readmanga_ru:/a', 'readmanga_ru', chapterNumber, '2026-09-20T10:00:00Z'),
+    chapterVolume,
+  });
+
+  const latest = (volume: number | null, number: number, maxNumber = number) => ({
+    volume,
+    number,
+    maxNumber,
+  });
+
+  it('последняя глава ветки — дочитано, есть следующая — нет', () => {
+    expect(isOnLastChapter(mark(null, 12), latest(null, 12))).toBe(true);
+    expect(isOnLastChapter(mark(null, 11), latest(null, 12))).toBe(false);
+  });
+
+  it('сравнивает сначала том, глава без тома — после всех томов', () => {
+    expect(isOnLastChapter(mark(3, 60), latest(2, 60))).toBe(true);
+    expect(isOnLastChapter(mark(2, 60), latest(3, 1, 60))).toBe(false);
+    expect(isOnLastChapter(mark(5, 80), latest(null, 81))).toBe(false);
+  });
+
+  it('глава с большим номером в другом томе — не последняя', () => {
+    expect(isOnLastChapter(mark(null, 100), latest(null, 100, 110))).toBe(false);
+  });
+
+  it('последняя глава неизвестна — тайтл остаётся в ленте', () => {
+    expect(isOnLastChapter(mark(null, 12), undefined)).toBe(false);
+  });
+});
+
 describe('ReadingProgressService.listRecent', () => {
-  /** select()…limit() отдаёт строки, update()…where() — пишет снимок в журнал. */
-  const fakeDatabase = (rows: ReadingProgressRow[], updates: unknown[]) => {
+  /** select()…limit() отдаёт строки, update()…where() — пишет снимок в журнал, execute() —
+   *  последние главы. */
+  const fakeDatabase = (
+    rows: ReadingProgressRow[],
+    updates: unknown[],
+    latest: {
+      title_key: string;
+      chapter_volume: number | null;
+      chapter_number: number;
+      max_number: number;
+    }[] = [],
+  ) => {
     const chain = (result: unknown) => {
       const node: Record<string, unknown> = {};
       for (const method of ['from', 'where', 'orderBy', 'limit', 'set']) {
@@ -241,7 +283,11 @@ describe('ReadingProgressService.listRecent', () => {
     };
     return {
       withFallback: <T>(operation: () => Promise<T>) => operation(),
-      db: { select: () => chain(rows), update: () => chain(undefined) },
+      db: {
+        select: () => chain(rows),
+        update: () => chain(undefined),
+        execute: () => Promise.resolve(latest),
+      },
     } as unknown as DatabaseService;
   };
 
@@ -297,5 +343,39 @@ describe('ReadingProgressService.listRecent', () => {
     expect(items[0]!.chapter).toMatchObject({ number: 5, id: 'readmanga_ru:chapter' });
     expect(items[1]!.title.id).toMatch(/^readmanga_ru:/);
     expect(updates).toEqual([expect.objectContaining({ titleName: 'Дописан' })]);
+  });
+
+  it('не показывает тайтлы, дочитанные до последней главы', async () => {
+    const rows = [
+      withSnapshot('readmanga_ru:/finished', '2026-09-25T10:00:00Z'),
+      withSnapshot('readmanga_ru:/ongoing', '2026-09-24T10:00:00Z'),
+    ];
+    const latest = [
+      {
+        title_key: 'readmanga_ru:/finished',
+        chapter_volume: null,
+        chapter_number: 5,
+        max_number: 5,
+      },
+      {
+        title_key: 'readmanga_ru:/ongoing',
+        chapter_volume: null,
+        chapter_number: 6,
+        max_number: 6,
+      },
+    ];
+    const service = new ReadingProgressService(
+      ENV,
+      fakeDatabase(rows, [], latest),
+      links,
+      {} as ParsersClientService,
+      {} as AdultContentService,
+      {} as BookmarksService,
+      sources,
+    );
+
+    const { items } = await service.listRecent('user');
+
+    expect(items.map(({ title }) => title.id)).toEqual(['readmanga_ru:readmanga_ru:/ongoing']);
   });
 });

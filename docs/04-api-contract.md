@@ -371,7 +371,12 @@ ContinueReadingItem = {
 
 - До 20 тайтлов, свежие первыми; группа подтверждённых совпадений — одна карточка с источником и
   главой самой свежей отметки. Тайтлы выключенных и скрытых настройкой 18+ источников не
-  попадают. Дочитанные не отсеиваются — их убирают руками.
+  попадают. Отметка на последней главе своей ветки (по `title_chapters_seen`: том, потом номер,
+  глава без тома — после всех томов; глава с большим номером в любом томе ветки — значит, не
+  последняя) не попадает тоже; вышла следующая глава — тайтл снова в ленте. Последняя глава
+  неизвестна — тайтл остаётся: у отметки нет номера, снимка глав нет, он старше суток (вне
+  отслеживаемых закладок его обновляет только открытие тайтла), последняя проверка не удалась
+  или у тайтла есть платные главы (`chapters_count` пуст — их в снимке нет).
 - Снимок названия, обложки, рейтинга и типа пишет `PUT /progress` из деталей источника (как у
   закладок; обложка — сырым адресом, подпись прокси ставится при чтении). Строкам без снимка он
   досниматься из деталей при выдаче; не вышло — строка ждёт следующего чтения.
@@ -429,6 +434,11 @@ GET /img?u=<base64url>&s=<sourceId>&sig=<hmac>&w=<width>&f=webp|avif|orig
   контент по нему неизменен.
 - Ресайз через `sharp` только для обложек. **Страницы глав не трогаем**: перекодирование
   убивает качество текста и съедает CPU на каждой странице.
+- Ходит только по `http`/`https` и только на публичные адреса: loopback, частные сети,
+  link-local, CGNAT и multicast закрыты — адрес-литерал проверяется сразу, имя хоста — `lookup`
+  агента undici после DNS (`img-proxy/upstream-guard.ts`), иначе `400 badRequest`. Адреса обложек
+  приходят и из резервных копий, которые человек загружает сам, — без этого подписанный `/img`
+  стучался бы во внутреннюю сеть сервера.
 
 ### Аккаунты и инвайты
 
@@ -551,7 +561,7 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ### Личные аккаунты источников
 
-У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, LibSocial, Nude-Moon) в каталоге
+У источников с входом (`SOURCE_CATALOG[id].authFamily`: Grouple, AllHentai, MangaLib, HentaiLib, Nude-Moon, Desu, Inuko, MangaBuff, ReManga, TomiloLib, WaManga, Senkuro) в каталоге
 записано, обязателен ли вход (`loginRequirement`: `required` — без аккаунта источник не работает,
 `optional` — читается и гостем), и `Source.loginRequirement` отдаёт это значение как есть. Источник с `required` закрыт для
 пользователя, пока он не привяжет свой аккаунт: запрос к нему — 403 `SOURCE_ACCOUNT_REQUIRED` с
@@ -562,7 +572,8 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 задачи. `Source.loginBenefits` — всё, что вход даёт (`catalogAndReading` — сам источник, у каждого
 `required`; `memberChapters`; `purchasedChapters`; `titleSearch` — поиск по названию, который
 сайт отдаёт только вошедшим: без аккаунта источник в `/search` — `locked`, а поле поиска в его
-каталоге закрыто),
+каталоге закрыто; `bookmarksImport` — импорт закладок, в каталоге не пишется: сервер добавляет его
+сам источнику с `isBookmarksImportSupported`),
 `Source.isLoggedIn` — есть ли действующий аккаунт.
 Источник с `optional` всегда `access: available`. Если аккаунт привязан, но источник
 перестал принимать его сессию, закрытый источник отвечает 403 `SOURCE_RELOGIN_REQUIRED`.
@@ -573,28 +584,114 @@ POST   /account/deletion/cancel { token } → CurrentUser, ставит cookie �
 
 ```
 GET    /source-accounts                → { items: SourceAccount[], isLinkingAvailable }
-POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon)
-POST   /source-accounts/libsocial/login { login, password, rememberPassword } → 204
+POST   /source-accounts/:family/login  { login, password, rememberPassword } → 204  (grouple, allhentai, nudemoon, desu, mangabuff, remanga, tomilolib, wamanga)
+POST   /source-accounts/libsocial/login { sourceId, login, password, rememberPassword } → { pendingSourceId }
+POST   /source-accounts/libsocial/login/code { sourceId, code } → { pendingSourceId }
+POST   /source-accounts/libsocial/login/skip { sourceId } → { pendingSourceId }
 POST   /source-accounts/libsocial/token { sourceId, value } → 204
+POST   /source-accounts/:family/session { value } → 204  (inuko, remanga, senkuro, hentaichanCc)
 DELETE /source-accounts/:family → 204
 
 PUT    /sources/:sourceId/enabled      { isEnabled } → 204
 ```
 
 - Аккаунт один на семейство. Grouple и AllHentai: сервер сам входит на SSO-шлюз и хранит
-  cookie jar. Nude-Moon — так же, но через форму входа самого сайта (`/setuser.php`, cookie
-  `fusion_user`). Пароль хранится, только если человек разрешил: тогда истёкшая сессия
-  восстанавливается сама. LibSocial: учётка общая на всю сеть, но у MangaLib и HentaiLib свои
-  OAuth-шлюзы, и токен каждый выдаёт свой. Аккаунт хранит токены по сайтам
-  (`SourceAccount.sourceIds` — у каких сайтов токен есть), сайт без токена закрыт (`locked`),
-  а отвергнутый сайтом токен забывается только у этого сайта. Вход по паролю проходит
-  все сайты сети разом, вставленный токен добавляется к аккаунту только для своего сайта.
+  cookie jar. Nude-Moon, Desu и MangaBuff — так же, но через форму входа самого сайта (Nude-Moon —
+  `/setuser.php`, cookie `fusion_user`; Desu — `/login/login` XenForo, `user_id` посетителя на
+  странице; MangaBuff — AJAX `POST /login` Laravel с почтой и CSRF-токеном страницы входа,
+  неверный пароль — 422, `window.user_id` на `/`; капча сайта (428) — ошибка источника, а не
+  неверный пароль). Пароль хранится, только если человек разрешил: тогда истёкшая сессия
+  восстанавливается сама. MangaLib и HentaiLib — независимые аккаунты (`family: mangalib` и
+  `family: hentailib`): у каждого свои пароль, OAuth-шлюз, токен и состояние входа.
+  `SourceAccount.sourceIds` содержит только свой сайт. Вход, перенос токена, истечение сессии
+  и отвязка одного сайта не затрагивают другой. Перенос токена заменяет аккаунт выбранного
+  сайта и сбрасывает сохранённый пароль, чтобы не восстановить прежний аккаунт.
+  Старые общие аккаунты `libsocial` разделяются при первом обращении: токены перешифровываются
+  для новых семейств с сохранением статуса, дат и разрешения хранить пароль. Перенос идёт в
+  транзакции с блокировкой старой строки и не перезаписывает уже созданные отдельные аккаунты.
   Сервер сам проходит вход сайта без браузера (`packages/parsers/src/sources/libsocial/login.ts`): OAuth2 + PKCE,
-  форма `/auth/login` с ALTCHA (proof-of-work, решается перебором SHA-256), страница согласия,
-  если она есть, и код из редиректа на callback сайта — сам callback не открывается. С
-  сохранённым паролем отвергнутый refresh_token заменяется новым входом. Запасной путь для
+  форма `/auth/login` с ALTCHA (proof-of-work, решается перебором SHA-256), код из письма, если
+  сайт его спросил, страница согласия, если она есть, и код из редиректа на callback сайта — сам
+  callback не открывается. Код из письма (проверено вживую 2026-10-29): после пароля сайт уводит
+  на `/auth/login/otp` и шлёт на почту 6 цифр, действующих 10 минут, форма — `POST
+/auth/login/otp/verify` (`_token`, `code`), неверный код — та же форма с «Неверный код.».
+  Вход всегда выполняется только для переданного `sourceId`. `LibSocialLoginService` отвечает
+  `pendingSourceId` этого сайта (null — вход завершён и аккаунт сохранён); `login/code` отправляет
+  код этому сайту и сохраняет только его аккаунт, `login/skip` отменяет ожидающий код вход.
+  Начатый вход (cookie сессии входа сайта, PKCE, форма кода, пароль) живёт в памяти процесса API
+  10 минут, без него — `SOURCE_LOGIN_EXPIRED`, неверный код — `SOURCE_LOGIN_CODE_REJECTED`. Новая
+  попытка отменяет прежнюю только для той же пары пользователь + сайт; запоздалые ответы и
+  таймеры не меняют новую попытку, подтверждение и отмена не выполняются одновременно. С
+  сохранённым паролем отвергнутый refresh_token заменяется новым входом — если сайт не спросит
+  код: его серверу не ввести, такой вход не удаётся, и аккаунт просит войти заново. Запасной путь для
   входящих через VK или Яндекс — вставить значение ключа `auth` из localStorage сайта. Такой токен
   проверяется через `/api/auth/me`.
+- Inuko (Inkstory, PureManga — семейство `inuko`, одна учётка на всю сеть): вход на SSO
+  `sso.inuko.me` закрыт Yandex SmartCaptcha — проверкой «вы человек», а не proof-of-work, как
+  ALTCHA у LibSocial, — поэтому сервер не входит сам. Человек входит на любом сайте сети в своём
+  браузере и вставляет cookie `__otaku_session` (одно значение, пара `имя=значение` или вся
+  строка Cookie). Cookie host-only, а с какого сайта её сняли, неизвестно: сервер по очереди
+  кладёт её в свежий jar на домене каждого сайта семейства и открывает там `/faq`. Принимается
+  первый сайт, у которого в SSR-состоянии `currentUser` — id и имя вошедшего; аккаунт хранит jar
+  с cookie на этом домене. Если все сайты видят гостя (`null`) — 400 `SOURCE_LOGIN_FAILED`, если
+  не ответил ни один — ошибка источника. Импорт закладок работает с обоих сайтов: библиотеку API
+  отдаёт по `userId`, а сайт выбирает `serviceName`. Аккаунты, привязанные до переименования
+  семейства (`inkstory`), перенесены миграцией `0032_inuko_family`.
+  Пароля нет, cookie живёт около года; истёкшая сессия переводит аккаунт в `reloginRequired`, и
+  её переносят заново.
+- ReManga (`remanga`): основной вход — логин/почта и пароль через
+  `POST /api/users/login/` (`user`, `password`). Ответ `content.access_token` сохраняется в
+  зашифрованном jar как cookie `auth:token`; неверные данные — HTTP 400 → `SOURCE_LOGIN_FAILED`.
+  `content.two_factor_auth` — тоже `SOURCE_LOGIN_FAILED`, но текст предлагает войти на сайте и
+  перенести сессию на вкладке «Токен». Пароль хранится только с разрешения человека: тогда при
+  401 сервер один раз входит заново, сохраняет новый токен и повторяет запрос; одновременные
+  запросы одного аккаунта делят один вход.
+  Запасной способ для Яндекса и других соцсетей, а также 2FA — перенос cookie `auth:token`
+  (значение, пара `auth:token=…` или строка Cookie). Проверка токена —
+  `GET /api/v2/users/current/` с `Authorization: Bearer …`. Ответ 401 при привязке —
+  `SOURCE_LOGIN_FAILED`, при импорте без сохранённого пароля или после неудачного повторного
+  входа — истёкшая сессия с переходом аккаунта в `reloginRequired`.
+  Вход необязателен для каталога и чтения, нужен для импорта.
+- TomiloLib (`tomilolib`): почта и пароль через `POST /api/auth/login` (`email`, `password`).
+  `access_token` и `refresh_token` сохраняются в зашифрованном jar; неверные данные — HTTP 401
+  → `SOURCE_LOGIN_FAILED`. При истечении access-токена сервер вызывает `/api/auth/refresh`,
+  сохраняет оба новых токена и повторяет запрос. Параллельные запросы делят одно обновление.
+  Если refresh-токен отвергнут, сохранённый с разрешения человека пароль позволяет войти заново;
+  без него или после неудачного входа аккаунт переходит в `reloginRequired`.
+  Каталог и чтение открыты без аккаунта; вход нужен для импорта закладок.
+- WaManga (`wamanga`): логин и пароль через `POST /api/v1/auth/login` (`username`, `password`).
+  `access_token` и `refresh_token` хранятся в зашифрованном jar; неверные данные (401/404)
+  → `SOURCE_LOGIN_FAILED`. При 401/403 запрос обновляет токены через `/api/v1/auth/refresh`
+  с `{ token: refresh_token }` и прежним Bearer, затем повторяется один раз. Параллельные
+  запросы делят обновление. Если refresh отвергнут — повторный вход с сохранённым паролем;
+  без него или после отказа входа аккаунт переходит в `reloginRequired`.
+  Каталог и чтение открыты без аккаунта; вход нужен для импорта закладок.
+- Senkuro и Senkognito (общее семейство `senkuro`): одна привязка сессии на оба сайта через
+  cookie `access_token` (значение, пара или строка Cookie). Токен передаётся в GraphQL API как
+  `Authorization: Bearer …`, каталог задаёт `app-id`. Проверка — `viewer.user { id name }`;
+  гость (`user: null`), HTTP 401 или GraphQL `NOT_AUTHORIZED`/`UNAUTHENTICATED` при привязке —
+  `SOURCE_LOGIN_FAILED`, при импорте — `reloginRequired`. Вход через SSO по почте и паролю
+  требует Cloudflare Turnstile или Yandex SmartCaptcha: `/api/v1/auth/login` без капчи
+  отвечает 400 с кодом `4602` (`Missing captcha input`, проверено 2026-10-30).
+  Человек проходит вход в браузере; пароль не сохраняется, истёкшую сессию переносят заново.
+  Автоматического OAuth-возврата в Tanuki пока нет: клиент Senkuro отклоняет локальный callback
+  с `redirect_uri mismatch` (проверено пользователем 2026-10-30). Нужен OAuth-клиент Tanuki
+  с зарегистрированным callback.
+  Каталог и чтение доступны без привязки, аккаунт нужен импорту закладок.
+  Один токен принят обоими GraphQL API с их `app-id`, оба вернули один аккаунт и разрешили
+  `userBookmarks` (живая проверка с разрешения пользователя, 2026-10-30).
+- HentaiChan (`hentaichanCc`): перенос cookie `__Secure-better-auth.session_token` после
+  входа через XChan SSO в браузере. Проверка — `/api/auth/get-session?disableCookieCache=true`;
+  `directusId` пользователя (либо `id`) задаёт профиль. Принимается значение cookie, пара
+  или строка Cookie; подпись и percent-encoding сохраняются. Пароль не сохраняется.
+  Серверный вход по паролю не подключён: XChan требует Turnstile в `signInAction`, а
+  стандартный email/password endpoint отвечает `EMAIL_PASSWORD_DISABLED` (проверено 2026-10-31).
+  Вход через Directus `/auth/login` с предоставленной пользователем учёткой успешен, но
+  полученный Bearer не принимается `get-session` ни HentaiChan, ни XChan; доступные
+  разрешения Directus личную библиотеку не открывают.
+  Гостевой или истёкший ответ при привязке — `SOURCE_LOGIN_FAILED`, при импорте —
+  `reloginRequired`. Лайки → «Любимое», история → «Читаю», при выборе обеих папок
+  приоритет у «Любимого». Прогресс переносится до страницы внутри главы.
 - Сессии и пароли шифруются AES-256-GCM ключом `SOURCE_SECRETS_KEY`. Без ключа привязка
   отвечает 503 `SOURCE_LINKING_UNAVAILABLE`. Источник, не принявший данные, — 400
   `SOURCE_LOGIN_FAILED`. Отвергнутая источником сессия переводит аккаунт в `reloginRequired`.
@@ -630,7 +727,7 @@ PUT    /titles/:titleId/bookmark          { folderId } — положить ил
 DELETE /titles/:titleId/bookmark          → { rows } — удалённые строки для restore
 POST   /titles/:titleId/bookmark/visit    → { newChapterIds } — главы с прошлого визита
 
-BookmarkFolder = { id, builtIn: "reading" | "planned" | "completed" | "dropped" | null,
+BookmarkFolder = { id, builtIn: "reading" | "planned" | "onHold" | "completed" | "dropped" | "favorite" | null,
                    name, icon, color (null у встроенных), trackUpdates, count, newCount }
 BookmarkItem = { titleId, sourceId, name, coverUrl, contentRating, type, folderId,
                  progress: { chapterNumber, total } | null, chaptersCount, newChaptersCount,
@@ -641,7 +738,7 @@ BookmarkItem = { titleId, sourceId, name, coverUrl, contentRating, type, folderI
 - **Ключ** — тайтл на источнике (`sourceId:адрес`, как у прогресса и связей), а показ и правки —
   по группе подтверждённых совпадений: смена папки и удаление касаются всех строк группы, тайтл
   «в закладках», если в закладках он сам или любая копия. Одна папка на тайтл.
-- **Папки:** четыре встроенные создаются лениво, переименовать и удалить их нельзя
+- **Папки:** шесть встроенных создаются лениво, переименовать и удалить их нельзя
   (`builtInBookmarkFolderReadonly`); своих — не больше 20 (`bookmarkFolderLimit`), название 1–32
   символа и уникально без учёта регистра, в том числе против названий встроенных на любом языке
   (`bookmarkFolderNameTaken`). «Следить за обновлениями» по умолчанию включено у всех, кроме
@@ -656,8 +753,12 @@ BookmarkItem = { titleId, sourceId, name, coverUrl, contentRating, type, folderI
   Первый снимок тайтла — базовый, его главы новыми не считаются. Новые — увиденные впервые после
   последнего визита в группу; визит — открытие страницы тайтла или сохранение прогресса. Число
   считается по ветке отметки цели (без отметки — по самой длинной), наружу карточка показывает
-  только точку. Снимки, которых нет ни в закладках, ни в отметках, чистятся раз в сутки
-  (`BOOKMARK_SNAPSHOTS_CLEANUP_CRON`).
+  только точку. `chaptersCount` / `progress.total` — из статистики ветки; статистики нет совсем
+  (глав 0 или база не ответила) — из `title_chapter_snapshots.chapters_count`: глав в самой
+  длинной ветке при последней удачной проверке, `null` у тайтла с платными главами (список
+  зависит от зрителя, кеш их режет; весь тайтл за пейволом — `0`) и у пропавшего. `0` — карточка пишет «Нет глав»; `null` —
+  «Главы ещё не проверены», но только у доступной цели без отметки. Снимки, которых нет ни в
+  закладках, ни в отметках, чистятся раз в сутки (`BOOKMARK_SNAPSHOTS_CLEANUP_CRON`).
 - **Склейка:** `PUT /titles/:id/links` с `confirmed` принимает необязательный `bookmarkFolderId`.
   Если у подтверждающего обе стороны лежат в закладках в разных папках, а поля нет — `409
 bookmarkFolderConflict`, фронт спрашивает папку и повторяет запрос. У остальных пользователей
@@ -667,6 +768,98 @@ bookmarkFolderConflict`, фронт спрашивает папку и повт�
 - **«Новые главы в закладках» на главной** — `GET /bookmarks/new-chapters`: группы с
   `newChaptersCount > 0` (у неотслеживаемых папок счётчик всегда 0), свежая новая глава первой,
   до 8.
+
+### Резервная копия
+
+Выгрузка всей библиотеки и настроек файлом и восстановление из него — на этом или другом
+инстансе. Реализация — `apps/api/src/backup` (`BackupModule`), план —
+[`plans/library-backup.md`](plans/library-backup.md), контракты —
+`packages/contracts/src/backup.ts`.
+
+```
+GET  /backup          → Backup — файл, Content-Disposition: attachment; filename="tanuki-backup-YYYY-MM-DD.json"
+POST /backup/preview  { backup }                                              → BackupPreview
+POST /backup/restore  { backup, folderPolicy, progressPolicy, applySettings }  → BackupRestoreResult
+
+Backup = { format: "tanuki-backup", version: 1, exportedAt, origin, username,
+           settings: { user, sourceOrder, reader, disabledSources },
+           folders: { key, builtIn, name, icon, color, trackUpdates, position }[],
+           bookmarks: { titleId, folderKey, name, coverUrl, contentRating, type,
+                        visitedAt, createdAt, updatedAt }[],
+           progress: { titleKey, sourceId, chapterId, chapterVolume, chapterNumber, chapterTitle,
+                       branchId, pageIndex, titleId, titleName, coverUrl, contentRating, type,
+                       hiddenAt, updatedAt }[],
+           chapterReads: { chapterId, sourceId, titleKey, chapterVolume, chapterNumber, tags,
+                           readAt }[],
+           readingActivity: { minute, seconds }[] }
+folderPolicy   = "keepMine" | "fromBackup"
+progressPolicy = "furthest" | "keepMine" | "fromBackup"
+```
+
+- **В копии** — папки, закладки, отметки «где остановился», журнал прочитанных глав, минуты
+  чтения, общие настройки, читалка, порядок и выключенные источники. Нет: аккаунтов источников,
+  истории поиска, уведомлений, устройств, аватара, связей тайтлов и подтверждения возраста.
+  `folderKey` — id папки на исходном инстансе, связывает закладку с папкой внутри файла; источник
+  и ключ закладки сервер выводит из `titleId`.
+- **Сводка и запись** считают один план (`backup-plan.ts`); сводка ничего не пишет, файл
+  отправляется дважды — сервер ничего не хранит между шагами.
+- **Источники**, которых нет в каталоге инстанса, пропускаются и считаются в `skipped`;
+  выключенные и скрытые 18+ — загружаются.
+- **Папки:** встроенные — по `builtIn`, свои — по имени без учёта регистра; новые создаются в
+  конце, сверх лимита 20 — не создаются, их тайтлы ложатся во «В планах».
+- **Закладки** — по группе подтверждённых совпадений. Тайтл в другой папке: `keepMine` не трогает,
+  `fromBackup` переносит всю группу. Недостающая копия группы становится ещё одним источником той
+  же закладки.
+- **Отметки:** нет — пишется всегда; разошлись — `furthest` (больше номер главы, при равенстве —
+  страница; без номера — свежая), `keepMine`, `fromBackup`.
+- **Статистика** — объединение: журнал без повторов, минута — большее из двух.
+- **Настройки** — только с `applySettings`: заменяются целиком, источники и блоки подборок
+  незнакомых источников отбрасываются, выключение истории поиска стирает её. Настройки 18+ из
+  копии применяются, только если возраст на этом инстансе уже подтверждён (`ageConfirmed`):
+  сервер открывает 18+ по одному `showAdultSources`, и файл обходил бы вопрос «вам есть 18?».
+- **Запись** — одной транзакцией, по одной на пользователя (`pg_try_advisory_xact_lock`, общий с
+  импортом из источника): вторая параллельная — `409 restoreInProgress`. Версия файла новее поддерживаемой — `400
+backupVersionUnsupported`.
+- **Лимит тела** — `BACKUP_MAX_BYTES` (20 МБ) плюс запас 1 МБ, только на `/backup/*` (хук
+  `onRoute` в `main.ts`); у остальных маршрутов общий 1 МБ.
+
+### Импорт из источника
+
+Закладки с сайта, где у пользователя привязан аккаунт. Реализация — `apps/api/src/source-import`
+(`SourceImportModule`), план — [`plans/source-import.md`](plans/source-import.md), контракты —
+`packages/contracts/src/source-import.ts`.
+
+```
+POST /source-import/preview  { sourceId }                                    → SourceImportPreview
+POST /source-import          { sourceId, folderIds, folderPolicy, progressPolicy } → SourceImportResult
+
+SourceImportPreview = { sourceId, folders: { id, name, target, targetFolder: { builtIn, name, icon, color },
+                                              total, fresh, otherFolder, progressDiffers }[] }
+target = "builtIn" | "matched" | "created" | "overLimit"
+SourceImportResult  = { sourceId, bookmarksAdded, bookmarksAsSource, bookmarksMoved, titlesToPlanned,
+                        foldersCreated, foldersMatched, foldersOverLimit, pendingProgress }
+```
+
+- **Сайт читается дважды** — на сводке и на записи (`ParsersClientService.getBookmarks`, живым
+  запросом от аккаунта пользователя, без кеша); сервер ничего не хранит между шагами. Без своего
+  аккаунта — `403 sourceAccountRequired` / `sourceReloginRequired`, источник без `getBookmarks` —
+  `400 badRequest`.
+- **Правила — как у копии** (общие `planFolders` и `LibraryMergeService` в `library/`): папки по
+  `builtIn` и имени, сверх лимита — во «В планах»; закладки по группе совпадений, `keepMine` /
+  `fromBackup`. Уже импортированное (тот же `titleKey` в той же папке) не считается в `fresh` и не
+  пишется. Тайтл, что на сайте в двух папках, берётся из первой.
+- **Запись** — одной транзакцией, общий с восстановлением замок на пользователя: вторая
+  параллельная — `409 restoreInProgress`.
+- **«Где остановился»** — не сразу: строки `source_import_progress` (по одной на тайтл с номером
+  главы, который политика разрешает записать). Крон `SourceImportProgressService` раз в минуту
+  берёт порции на источник, запрашивает детали от аккаунта пользователя, ищет главу по номеру в
+  основной ветке и пишет отметку по политике на момент записи. Источник с точной страницей
+  сохраняет её в `page_index`; перед записью индекс ограничивается текущим количеством страниц.
+  Остальные источники переносят начало главы. Страницы сравниваются только для одного тайтла
+  одного источника, у совпадений на других источниках сравниваются том и глава. Сбой — до 3 попыток;
+  сессия не принята — ждёт повторного входа до суток. Закладку удалили — строка уходит каскадом.
+  Когда у импорта не осталось ждущих строк — уведомление `sourceImportFinished` («перенесено N из
+  M»), строки удаляются.
 
 ### Уведомления
 
@@ -758,6 +951,8 @@ NotificationItem = { id, type, category, count, createdAt, updatedAt, payload } 
 | `bookmarkFolderNameTaken`       | 409  | Папка с таким названием уже есть                                     |
 | `builtInBookmarkFolderReadonly` | 400  | Встроенную папку нельзя переименовать или удалить                    |
 | `bookmarkFolderConflict`        | 409  | Связь склеила бы закладки из разных папок — нужен `bookmarkFolderId` |
+| `backupVersionUnsupported`      | 400  | Резервная копия сделана версией формата новее, чем понимает сервер   |
+| `restoreInProgress`             | 409  | Восстановление из копии у этого пользователя уже идёт                |
 
 `message` переводится на язык из `Accept-Language` (`ru`/`en`, по умолчанию `ru`) — фронт
 выводит его как есть, своих текстов под коды не держит. Словари — `apps/api/src/common/error-messages.ts`;

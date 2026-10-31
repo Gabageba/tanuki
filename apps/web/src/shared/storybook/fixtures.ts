@@ -15,6 +15,7 @@ import {
   SOURCE_CONTENT_TYPE,
   SOURCE_IDS,
   SOURCE_LOCALE,
+  SOURCE_LOGIN_BENEFIT,
   SOURCE_LOGIN_REQUIREMENT,
   SOURCE_STATUS,
   SOURCE_STATUS_REASON,
@@ -53,10 +54,27 @@ export const CURRENT_USER: CurrentUser = {
 /** Вход есть на Grouple — у остальных семейств с обязательным входом источник закрыт. */
 const LOGGED_IN_FAMILIES: string[] = [SOURCE_AUTH_FAMILY.GROUPLE];
 
+/** Источники, откуда можно импортировать закладки; Usagi — вошли, но импорт не поддерживается. */
+const BOOKMARKS_IMPORT_SOURCE_IDS: string[] = [
+  'readmanga_ru',
+  'mintmanga',
+  'selfmanga',
+  'seimanga',
+  'remanga',
+  'senkuro',
+  'senkognito',
+  'tomilolib',
+  'hentaichan_cc',
+  'multporn',
+  'multporn_hentai',
+  'nudemoon',
+];
+
 const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source => {
   const entry = SOURCE_CATALOG[id];
   const isLoggedIn = entry.authFamily !== null && LOGGED_IN_FAMILIES.includes(entry.authFamily);
   const isLocked = entry.loginRequirement === SOURCE_LOGIN_REQUIREMENT.REQUIRED && !isLoggedIn;
+  const isBookmarksImportSupported = BOOKMARKS_IMPORT_SOURCE_IDS.includes(id);
 
   return {
     id,
@@ -75,9 +93,13 @@ const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source
     sortOrders: [],
     supportsDirection: false,
     isSearchWithFiltersSupported: true,
+    isBookmarksImportSupported,
     authFamily: entry.authFamily,
     loginRequirement: entry.loginRequirement,
-    loginBenefits: entry.loginBenefits,
+    // Как на сервере: импорт закладок добавляется к пользам из каталога.
+    loginBenefits: isBookmarksImportSupported
+      ? [...entry.loginBenefits, SOURCE_LOGIN_BENEFIT.BOOKMARKS_IMPORT]
+      : entry.loginBenefits,
     isLoggedIn,
     position,
     isEnabled: true,
@@ -125,6 +147,8 @@ export const FOLDER_ID = {
   COMPLETED: '0b6c8c1e-2a7d-4c8e-9a51-0d1c5f8b7a03',
   DROPPED: '0b6c8c1e-2a7d-4c8e-9a51-0d1c5f8b7a04',
   FAVORITE: '0b6c8c1e-2a7d-4c8e-9a51-0d1c5f8b7a05',
+  ON_HOLD: '0b6c8c1e-2a7d-4c8e-9a51-0d1c5f8b7a07',
+  CUSTOM: '0b6c8c1e-2a7d-4c8e-9a51-0d1c5f8b7a06',
 } as const;
 
 export const BOOKMARK_FOLDERS_RESPONSE: BookmarkFoldersResponse = {
@@ -150,6 +174,16 @@ export const BOOKMARK_FOLDERS_RESPONSE: BookmarkFoldersResponse = {
       newCount: 0,
     },
     {
+      id: FOLDER_ID.ON_HOLD,
+      builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD,
+      name: null,
+      icon: null,
+      color: null,
+      trackUpdates: true,
+      count: 4,
+      newCount: 0,
+    },
+    {
       id: FOLDER_ID.COMPLETED,
       builtIn: BUILT_IN_BOOKMARK_FOLDER.COMPLETED,
       name: null,
@@ -171,28 +205,49 @@ export const BOOKMARK_FOLDERS_RESPONSE: BookmarkFoldersResponse = {
     },
     {
       id: FOLDER_ID.FAVORITE,
-      builtIn: null,
-      name: 'Любимое',
-      icon: BOOKMARK_FOLDER_ICON.HEART,
-      color: BOOKMARK_FOLDER_COLOR.PINK,
+      builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE,
+      name: null,
+      icon: null,
+      color: null,
       trackUpdates: true,
       count: 5,
       newCount: 1,
+    },
+    {
+      id: FOLDER_ID.CUSTOM,
+      builtIn: null,
+      name: 'Перечитать',
+      icon: BOOKMARK_FOLDER_ICON.STAR,
+      color: BOOKMARK_FOLDER_COLOR.BLUE,
+      trackUpdates: true,
+      count: 3,
+      newCount: 0,
     },
   ],
   hasNew: true,
 };
 
-/** Своя папка уже в виде, какой её отдаёт `useBookmarkFolders`. */
+/** Папка уже в виде, какой её отдаёт `useBookmarkFolders`. */
 export const FAVORITE_FOLDER: ResolvedBookmarkFolder = {
   id: FOLDER_ID.FAVORITE,
-  builtIn: null,
+  builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE,
   name: 'Любимое',
   icon: BOOKMARK_FOLDER_ICON.HEART,
   color: BOOKMARK_FOLDER_COLOR.PINK,
   trackUpdates: true,
   count: 5,
   newCount: 1,
+};
+
+export const CUSTOM_FOLDER: ResolvedBookmarkFolder = {
+  id: FOLDER_ID.CUSTOM,
+  builtIn: null,
+  name: 'Перечитать',
+  icon: BOOKMARK_FOLDER_ICON.STAR,
+  color: BOOKMARK_FOLDER_COLOR.BLUE,
+  trackUpdates: true,
+  count: 3,
+  newCount: 0,
 };
 
 export const PLANNED_FOLDER: ResolvedBookmarkFolder = {

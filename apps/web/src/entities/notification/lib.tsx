@@ -4,6 +4,7 @@ import {
   BookOpenTextIcon,
   CalendarXIcon,
   CheckCircleIcon,
+  CloudArrowDownIcon,
   DevicesIcon,
   EnvelopeSimpleIcon,
   PlugsIcon,
@@ -67,6 +68,7 @@ export const getNotificationTone = (type: NotificationType): NotificationTone =>
       return NOTIFICATION_TONE.WARNING;
     case NOTIFICATION_TYPE.SOURCE_RECOVERED:
     case NOTIFICATION_TYPE.PARSER_RECOVERED:
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
       return NOTIFICATION_TONE.SUCCESS;
     case NOTIFICATION_TYPE.INVITE_USED:
     case NOTIFICATION_TYPE.INVITE_EXPIRED:
@@ -124,6 +126,8 @@ export const getNotificationIcon = (type: NotificationType, size = 20) => {
       return <UserPlusIcon size={size} />;
     case NOTIFICATION_TYPE.INVITE_EXPIRED:
       return <CalendarXIcon size={size} />;
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
+      return <CloudArrowDownIcon size={size} />;
   }
 };
 
@@ -163,7 +167,7 @@ export const getCategoryDescription = (
     case NOTIFICATION_CATEGORY.CHAPTERS:
       return t('newChaptersInTrackedFolders');
     case NOTIFICATION_CATEGORY.ACCOUNT:
-      return t('newDeviceSignInEmailChangeAccountDeletion');
+      return t('newDeviceSignInEmailChangeAccountDeletionSourceImport');
     case NOTIFICATION_CATEGORY.SOURCES:
       return t('bookmarkedSourceDownOrWorksAgain');
     case NOTIFICATION_CATEGORY.ADMINISTRATION:
@@ -202,10 +206,13 @@ export const getNotificationTitle = (item: NotificationItem, t: TFunction) => {
       return t('userSignedUpWithInvite', { username: item.payload.username });
     case NOTIFICATION_TYPE.INVITE_EXPIRED:
       return t('inviteExpiredUnused');
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
+      return t('importFromSourceNameFinished', { name: getSourceTitle(item.payload.sourceId) });
   }
 };
 
-/** Уточнение под заголовком: что изменится или что делать. У истёкшего инвайта его нет. */
+/** Уточнение под заголовком: что изменится, что делать или чем кончилось. У истёкшего инвайта его
+ *  нет. */
 export const getNotificationDetail = (item: NotificationItem, t: TFunction) => {
   switch (item.type) {
     case NOTIFICATION_TYPE.NEW_CHAPTERS:
@@ -228,6 +235,11 @@ export const getNotificationDetail = (item: NotificationItem, t: TFunction) => {
       return t('newUserAppearedInManagement');
     case NOTIFICATION_TYPE.INVITE_EXPIRED:
       return null;
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
+      return t('marksTransferredForCountOfTotal', {
+        done: item.payload.transferred,
+        count: item.payload.total,
+      });
   }
 };
 
@@ -248,6 +260,8 @@ export const getNotificationTargetPath = (item: NotificationItem) => {
     case NOTIFICATION_TYPE.INVITE_USED:
     case NOTIFICATION_TYPE.INVITE_EXPIRED:
       return MANAGEMENT_INVITES_PATH;
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
+      return ROUTE_PATHS.BOOKMARKS;
   }
 };
 

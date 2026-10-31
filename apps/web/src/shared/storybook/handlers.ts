@@ -15,6 +15,9 @@ import {
   type TitleBookmarkVisitResponse,
 } from '@tanuki/contracts';
 import {
+  BACKUP,
+  BACKUP_PREVIEW,
+  BACKUP_RESTORE_RESULT,
   BOOKMARKS_RESPONSE,
   INVITES_RESPONSE,
   MANAGED_USERS_RESPONSE,
@@ -22,6 +25,8 @@ import {
   NOTIFICATIONS_PAGE,
   PROFILE_STATISTICS_RESPONSE,
   SESSIONS_RESPONSE,
+  SOURCE_IMPORT_PREVIEW,
+  SOURCE_IMPORT_RESULT,
   USER_SETTINGS,
 } from './account';
 import {
@@ -164,6 +169,14 @@ export const DEFAULT_HANDLERS = [
     HttpResponse.json(SOURCES.find(({ id }) => id === params.sourceId) ?? SOURCES[0]),
   ),
   http.get(apiPath('/source-accounts'), () => HttpResponse.json(SOURCE_ACCOUNTS_RESPONSE)),
+  // Выбранный сайт LibSocial просит код из письма; подтверждение завершает его вход.
+  http.post(apiPath('/source-accounts/libsocial/login'), async ({ request }) => {
+    const { sourceId } = (await request.json()) as { sourceId: string };
+    return HttpResponse.json({ pendingSourceId: sourceId });
+  }),
+  http.post(apiPath('/source-accounts/libsocial/login/*'), () =>
+    HttpResponse.json({ pendingSourceId: null }),
+  ),
 
   // Тайтлы
   http.get(apiPath('/titles/:titleId'), () => HttpResponse.json(TITLE_DETAILS_RESPONSE)),
@@ -235,6 +248,13 @@ export const DEFAULT_HANDLERS = [
   ),
   // Поток SSE в историях не нужен: без него счётчик просто опрашивается.
   http.get(apiPath('/notifications/stream'), () => new HttpResponse(null, { status: 204 })),
+
+  // Резервная копия
+  http.get(apiPath('/backup'), () => HttpResponse.json(BACKUP)),
+  http.post(apiPath('/backup/preview'), () => HttpResponse.json(BACKUP_PREVIEW)),
+  http.post(apiPath('/backup/restore'), () => HttpResponse.json(BACKUP_RESTORE_RESULT)),
+  http.post(apiPath('/source-import/preview'), () => HttpResponse.json(SOURCE_IMPORT_PREVIEW)),
+  http.post(apiPath('/source-import'), () => HttpResponse.json(SOURCE_IMPORT_RESULT)),
 
   // Управление
   http.get(apiPath('/users'), () => HttpResponse.json(MANAGED_USERS_RESPONSE)),

@@ -4,25 +4,28 @@ import { ContentRatingSchema, TitleTypeSchema } from './title';
 import type { EnumLiteralsOf } from './utils';
 
 /**
- * Встроенные папки — ровно четыре, у каждого пользователя. Название переводит фронт, иконку и
+ * Встроенные папки — шесть, у каждого пользователя. Название переводит фронт, иконку и
  * цвет задаёт он же; переименовать или удалить их нельзя, менять — только порядок и флаг
  * «Следить за обновлениями».
  */
 export const BUILT_IN_BOOKMARK_FOLDER = {
   READING: 'reading',
   PLANNED: 'planned',
+  ON_HOLD: 'onHold',
   COMPLETED: 'completed',
   DROPPED: 'dropped',
+  FAVORITE: 'favorite',
 } as const;
 export type BuiltInBookmarkFolder = EnumLiteralsOf<typeof BUILT_IN_BOOKMARK_FOLDER>;
 
 export const BuiltInBookmarkFolderSchema = z.enum(BUILT_IN_BOOKMARK_FOLDER);
 
-/** Иконки своих папок. Первые четыре после закладки — у встроенных, но доступны и своим. */
+/** Иконки своих папок. Первые шесть после закладки — у встроенных, но доступны и своим. */
 export const BOOKMARK_FOLDER_ICON = {
   BOOKMARK: 'bookmark',
   BOOK_OPEN: 'bookOpen',
   CLOCK: 'clock',
+  PAUSE: 'pause',
   CHECK_CIRCLE: 'checkCircle',
   ARCHIVE: 'archive',
   HEART: 'heart',
@@ -136,7 +139,11 @@ export const BookmarkFoldersResponseSchema = z.object({
 });
 export type BookmarkFoldersResponse = z.infer<typeof BookmarkFoldersResponseSchema>;
 
-const BookmarkFolderNameSchema = z.string().trim().min(1).max(BOOKMARK_FOLDER_NAME_MAX_LENGTH);
+export const BookmarkFolderNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(BOOKMARK_FOLDER_NAME_MAX_LENGTH);
 
 export const CreateBookmarkFolderRequestSchema = z.object({
   name: BookmarkFolderNameSchema,
@@ -211,7 +218,7 @@ export const BookmarkItemSchema = z.object({
   folderId: z.string().uuid(),
   /** null — в группе не читали. */
   progress: BookmarkProgressSchema.nullable(),
-  /** Сколько глав в ветке цели — когда отметки нет; null — тайтл ещё не проверяли. */
+  /** Сколько глав в ветке цели — когда отметки нет; 0 — на источнике глав нет; null — неизвестно. */
   chaptersCount: z.number().int().min(0).nullable(),
   /** Карточка показывает только признак > 0; число нужно сортировке. */
   newChaptersCount: z.number().int().min(0),

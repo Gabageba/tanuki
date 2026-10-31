@@ -4,7 +4,7 @@ import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
 import { FREE_SPACE_MB, LOW_FREE_SPACE_MB } from '../mocks';
 import { DOWNLOAD_SCOPE, type ModalPicker } from '../models';
 import DownloadChaptersForm from './DownloadChaptersForm';
-import ModalFrame from './ModalFrame';
+import ModalFrame from '../../components/ModalFrame';
 
 type Props = {
   picker: ModalPicker;

@@ -10,6 +10,9 @@ import {
   SOURCE_CONTENT_TYPE,
   type TitleState,
   SOURCE_LOCALE,
+  SOURCE_AUTH_FAMILY,
+  BUILT_IN_BOOKMARK_FOLDER,
+  type BuiltInBookmarkFolder,
 } from '@tanuki/contracts';
 import type { Parser, ParserContext } from '../../core/parser';
 import type { FilterSelection, ListParams } from '../../core/paging';
@@ -22,6 +25,8 @@ import type {
   RawTitleType,
   RawFilterGroup,
   RawFilterOption,
+  RawBookmark,
+  RawBookmarkFolder,
 } from '../../types';
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
@@ -30,12 +35,14 @@ import { attrOrNull, textOrNull, selectFirstOrThrow } from '../../core/html/sele
 import { parseRuRelativeDate, parseRuFullDate, parseRuBareYear } from '../../core/text/dates';
 import { parseIntOrNull, parseFloatOrNull } from '../../core/text/numbers';
 import { toTitleCase, nullIfEmpty, findGroupValue } from '../../core/text/strings';
-import { ParseError } from '../../errors';
+import { ParseError, SourceAuthRequiredError } from '../../errors';
+import { currentSourceAccount, runWithSourceAccounts } from '../../core/source-accounts';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
 import { findHomeHeading } from '../../core/html/home';
 import { UserAgents } from '../../core/http/user-agents';
 import { FILTER_GROUP } from '../../core/filters/group';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
+import { loginDesu, parseDesuVisitorId } from './auth';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.DESUME;
 const PAGE_SIZE = 24;
@@ -61,6 +68,8 @@ const CHAPTER_TITLE_SUFFIX_REGEX = /^(?:Том\s*[\d.]+\.\s*)?Глава\s*[\d.]
 // page list comes from a follow-up JSON call built from those.
 const READER_BOOTSTRAP_REGEX = /window\.MangaReader\s*=\s*(\{.*?\});/;
 const CSS_URL_REGEX = /url\((['"]?)([^'")]+)\1\)/;
+/** Таблица статуса в списке манги — `status_<data-status сайта>_block`. */
+const LIST_STATUS_BLOCK_REGEX = /^status_(\w+)_block$/;
 
 type ReaderBootstrapJson = {
   chapter: { id: number };
@@ -97,6 +106,11 @@ const extractCssUrl = (css: string): string | null => {
   return CSS_URL_REGEX.exec(css)?.[2] ?? null;
 };
 
+/** Список манги отдаёт обложки `x120` — берём `preview`, как у карточек каталога. */
+const toPreviewCoverUrl = (coverUrl: string): string => {
+  return coverUrl.replace('/x120/', '/preview/');
+};
+
 const toLargeCoverUrl = (coverUrl: string): string => {
   return coverUrl.replace(/\/(preview|snippet|x120)\//, '/original/');
 };
@@ -129,6 +143,27 @@ const mangaTypeByLabel = (label: string | null): RawTitleType | null => {
       return null;
     default:
       return TITLE_TYPE.OTHER;
+  }
+};
+
+/** Статус списка манги (`data-status` на странице тайтла) → встроенная папка;
+ *  «Отложено» импортируется в одноимённую системную папку. */
+const getBuiltInBookmarkFolder = (status: string): BuiltInBookmarkFolder | null => {
+  switch (status) {
+    case 'watching':
+      return BUILT_IN_BOOKMARK_FOLDER.READING;
+    case 'planned':
+      return BUILT_IN_BOOKMARK_FOLDER.PLANNED;
+    case 'completed':
+      return BUILT_IN_BOOKMARK_FOLDER.COMPLETED;
+    case 'dropped':
+      return BUILT_IN_BOOKMARK_FOLDER.DROPPED;
+    case 'on_hold':
+      return BUILT_IN_BOOKMARK_FOLDER.ON_HOLD;
+    case 'favorites':
+      return BUILT_IN_BOOKMARK_FOLDER.FAVORITE;
+    default:
+      return null;
   }
 };
 
@@ -520,10 +555,14 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
   };
 
   const search = async (query: string): Promise<RawTitle[]> => {
-    const res = await ctx.http.postForm(
-      `https://${domain}/manga/search/`,
-      { q: query, _xfToken: '', _xfNoRedirect: '1', _xfResponseType: 'json' },
-      { 'X-Requested-With': 'XMLHttpRequest' },
+    // XenForo проверяет `_xfToken` у POST только вошедших — от аккаунта пользователя пустой токен
+    // не прошёл бы. Поиску аккаунт ничего не даёт, поэтому он всегда уходит гостем.
+    const res = await runWithSourceAccounts({}, () =>
+      ctx.http.postForm(
+        `https://${domain}/manga/search/`,
+        { q: query, _xfToken: '', _xfNoRedirect: '1', _xfResponseType: 'json' },
+        { 'X-Requested-With': 'XMLHttpRequest' },
+      ),
     );
     let templateHtml: string | undefined;
     try {
@@ -754,6 +793,83 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     );
   };
 
+  /** Строка списка манги: тайтл, «Главы» — сколько прочитано, «Закладка» — где остановился. */
+  const parseBookmarkRow = ($row: Cheerio<AnyNode>): RawBookmark | null => {
+    const $link = $row.find('.name-block-base a').first();
+    const href = attrOrNull($link, 'href');
+    const id = href ? CHAPTER_ID_REGEX.exec(href)?.[1] : undefined;
+    const originalTitle = textOrNull($link);
+    if (!href || !id || !originalTitle) return null;
+    const russianTitle = textOrNull($row.find('.name-block-altnames').first());
+    const coverUrl = attrOrNull($row.find('td.cover img').first(), 'data-src');
+    const bookmarkHref = attrOrNull($row.find('td.bookmark a').first(), 'href');
+    const position = bookmarkHref ? CHAPTER_PATH_REGEX.exec(bookmarkHref) : null;
+    const chaptersRead = parseFloatOrNull(textOrNull($row.find('[data-field="chapters"]').first()));
+    return {
+      id: generateUid(SOURCE_ID, id),
+      url: toRelativePath(href),
+      title: russianTitle ?? originalTitle,
+      coverUrl: coverUrl ? toPreviewCoverUrl(coverUrl) : null,
+      contentRating: null,
+      type: mangaTypeByLabel(textOrNull($row.children('td.num').last())),
+      // Закладка точнее счётчика: в ней том и глава, на которой человек остановился. Без неё —
+      // счётчик прочитанных глав, он же номер последней (тома у него нет).
+      lastChapterNumber: position
+        ? parseFloatOrNull(position[2]!)
+        : chaptersRead && chaptersRead > 0
+          ? chaptersRead
+          : null,
+      lastChapterVolume: position ? parseIntOrNull(position[1]!) : null,
+    };
+  };
+
+  /** Id аккаунта, от которого идут запросы; сессия истекла — входит заново, если пароль сохранён. */
+  const resolveListOwnerId = async (): Promise<number> => {
+    const account = currentSourceAccount(SOURCE_AUTH_FAMILY.DESU);
+    // Без аккаунта пользователя запрос ушёл бы гостем — чей список брать, неизвестно.
+    if (!account?.jar) {
+      throw new SourceAuthRequiredError('Bookmarks require the user’s own account', SOURCE_ID);
+    }
+    const res = await ctx.http.get(`https://${domain}/`);
+    const userId =
+      parseDesuVisitorId(res.text()) ??
+      (account.credentials
+        ? await loginDesu(ctx.http, domain, account.credentials, ctx.logger)
+        : null);
+    if (userId === null) throw new SourceAuthRequiredError('Desu session expired', SOURCE_ID);
+    return userId;
+  };
+
+  /**
+   * Список манги аккаунта — одна страница со всеми статусами, по таблице на статус (свёрнутые
+   * тоже в разметке). Папок своих у сайта нет, только шесть статусов.
+   */
+  const getBookmarks = async (): Promise<RawBookmarkFolder[]> => {
+    const userId = await resolveListOwnerId();
+    const doc = await ctx.http.getHtml(`https://${domain}/manga/list/${userId}/`);
+    return doc
+      .$('table.list-lines')
+      .toArray()
+      .flatMap((el) => {
+        const $table = doc.$(el);
+        const status = LIST_STATUS_BLOCK_REGEX.exec(attrOrNull($table, 'id') ?? '')?.[1];
+        if (!status) return [];
+        const name = textOrNull($table.prevAll('header').first().find('.subheadline').first());
+        return [
+          {
+            id: status,
+            builtIn: getBuiltInBookmarkFolder(status),
+            name: name ?? status,
+            items: $table
+              .find('tr.user_rate')
+              .toArray()
+              .map((row) => parseBookmarkRow(doc.$(row)))
+              .filter((item): item is RawBookmark => item !== null),
+          },
+        ];
+      });
+  };
+
   return {
     id: SOURCE_ID,
     info: {
@@ -783,6 +899,7 @@ export const createDesuParser = (ctx: ParserContext): Parser => {
     getPages,
     getFilters,
     getHome,
+    getBookmarks,
     imageHeaders: () => ({ Referer: IMAGE_REFERER, 'User-Agent': UserAgents.KOTATSU }),
   };
 };

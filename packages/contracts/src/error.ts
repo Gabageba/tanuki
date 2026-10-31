@@ -12,6 +12,10 @@ export const API_ERROR_CODE = {
   SOURCE_RELOGIN_REQUIRED: 'sourceReloginRequired',
   // Привязка аккаунта не удалась: источник не принял логин/пароль или токен.
   SOURCE_LOGIN_FAILED: 'sourceLoginFailed',
+  // Сайт не принял код из письма, которым подтверждается вход.
+  SOURCE_LOGIN_CODE_REJECTED: 'sourceLoginCodeRejected',
+  // Начатый вход с кодом из письма истёк или потерян — начинать надо с логина и пароля.
+  SOURCE_LOGIN_EXPIRED: 'sourceLoginExpired',
   // На сервере не задан ключ шифрования аккаунтов — привязывать их некуда.
   SOURCE_LINKING_UNAVAILABLE: 'sourceLinkingUnavailable',
   // Источник или тайтл 18+ скрыт настройками пользователя (UserSettings.showAdultSources /
@@ -50,6 +54,11 @@ export const API_ERROR_CODE = {
   BUILT_IN_BOOKMARK_FOLDER_READONLY: 'builtInBookmarkFolderReadonly',
   // Подтверждаемая связь склеивает закладки из разных папок — нужен bookmarkFolderId.
   BOOKMARK_FOLDER_CONFLICT: 'bookmarkFolderConflict',
+  // Резервная копия сделана версией формата новее той, что понимает сервер.
+  BACKUP_VERSION_UNSUPPORTED: 'backupVersionUnsupported',
+  // Восстановление из копии или импорт из источника у этого пользователя уже идёт — второе
+  // параллельно не запускается.
+  RESTORE_IN_PROGRESS: 'restoreInProgress',
   // Фильтр поиска (types/states) содержит значение не из TITLE_TYPE/TITLE_STATE.
   SEARCH_FILTER_INVALID: 'searchFilterInvalid',
   // Тело или параметры запроса не прошли zod-схему.

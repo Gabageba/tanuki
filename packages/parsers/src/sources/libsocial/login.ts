@@ -1,13 +1,17 @@
 import { createHash } from 'node:crypto';
 import { setImmediate as yieldToEventLoop } from 'node:timers/promises';
 import { load, type CheerioAPI } from 'cheerio';
-import { CookieJar } from 'tough-cookie';
+import { CookieJar, type SerializedCookieJar } from 'tough-cookie';
 import { request as undiciRequest } from 'undici';
 import { decodeBytes } from '../../core/html/dom';
 import { decompress } from '../../core/http/decompress';
 import type { GroupleCredentials } from '../../core/parser';
 import type { LibSocialTokenState } from '../../core/source-accounts';
-import { createLibSocialAuthorization } from './auth';
+import {
+  createLibSocialAuthorization,
+  type LibSocialAuthorization,
+  type LibSocialPkce,
+} from './auth';
 import type { LibSocialAuthConfig } from './config';
 
 export type LoginHttpRequest = {
@@ -105,6 +109,12 @@ const readForm = ($: CheerioAPI, form: ReturnType<CheerioAPI>, baseUrl: string):
   return { action: new URL(form.attr('action') ?? baseUrl, baseUrl).toString(), fields };
 };
 
+/** Форма кода из письма (`/auth/login/otp`) — рядом с ней форма «Отправить ещё раз» без поля. */
+const findCodeForm = ($: CheerioAPI) =>
+  $('form')
+    .filter((_, form) => $(form).find('input[autocomplete="one-time-code"]').length > 0)
+    .first();
+
 const findLoginForm = ($: CheerioAPI) =>
   $('form')
     .filter((_, form) => $(form).find('input[type="password"]').length > 0)
@@ -125,21 +135,33 @@ const findConsentForm = ($: CheerioAPI) =>
     .first();
 
 /**
- * Вход в LibSocial логином и паролем — без браузера: тот же OAuth2 + PKCE, что проходит сайт,
- * только форму входа (с ALTCHA) заполняет сервер. Возвращает свою пару токенов или null, если
- * сайт не принял логин или пароль. Бросает, если страницы сайта оказались не такими, как
- * ожидалось, — значит, вход на сайте поменялся.
+ * Вход, остановленный сайтом на коде из письма. Всё, что нужно, чтобы продолжить его позже
+ * другим запросом: cookie сессии входа, секреты PKCE и форма кода. Сериализуется в JSON.
  */
-export const loginLibSocialWithPassword = async (
-  auth: LibSocialAuthConfig,
-  siteId: number,
-  credentials: GroupleCredentials,
-  label: string,
-  http: LoginHttp = undiciLoginHttp,
-): Promise<LibSocialTokenState | null> => {
-  const authorization = createLibSocialAuthorization(auth, siteId, label);
-  const jar = new CookieJar();
+export type LibSocialPendingLogin = {
+  pkce: LibSocialPkce;
+  cookies: SerializedCookieJar;
+  /** Форма кода как есть, вместе с CSRF-токеном. */
+  form: HtmlForm;
+  /** Имя поля кода в форме. */
+  codeField: string;
+  /** Страница с формой — отправляется как Referer. */
+  url: string;
+};
 
+/** Токены — вход завершён; pending — сайт ждёт код из письма; null — логин или пароль не подошли. */
+export type LibSocialLoginResult =
+  { tokens: LibSocialTokenState } | { pending: LibSocialPendingLogin } | null;
+
+type LoginStep = { code: string } | { page: string; url: string };
+
+/** Один вход на сайт: свой jar cookie и PKCE, запросы с заголовками браузера. */
+const createLoginSession = (
+  authorization: LibSocialAuthorization,
+  jar: CookieJar,
+  label: string,
+  http: LoginHttp,
+) => {
   const send = async (
     method: LoginHttpRequest['method'],
     url: string,
@@ -170,7 +192,7 @@ export const loginLibSocialWithPassword = async (
     method: LoginHttpRequest['method'],
     startUrl: string,
     extra?: { body?: string; referer?: string },
-  ): Promise<{ code: string } | { page: string; url: string }> => {
+  ): Promise<LoginStep> => {
     let url = startUrl;
     let res = await send(method, url, extra);
     for (let hop = 0; hop < MAX_REDIRECTS; hop += 1) {
@@ -186,10 +208,68 @@ export const loginLibSocialWithPassword = async (
   const submit = async (form: HtmlForm, referer: string) =>
     follow('POST', form.action, { body: new URLSearchParams(form.fields).toString(), referer });
 
-  let step = await follow('GET', authorization.authorizeUrl);
-  if ('code' in step) return authorization.exchange(step.code);
+  /**
+   * Доводит вход до токенов после отправки формы: подтверждает доступ приложению, если сайт
+   * спросил, и останавливается на коде из письма. null — сайт снова показал форму, которую
+   * только что отправили (`retryForm`): логин, пароль или код не подошли.
+   */
+  const finish = async (
+    submitted: LoginStep,
+    retryForm: ($: CheerioAPI) => ReturnType<CheerioAPI>,
+  ): Promise<LibSocialLoginResult> => {
+    let step = submitted;
+    if ('code' in step) return { tokens: await authorization.exchange(step.code) };
 
-  let $ = load(step.page);
+    let $ = load(step.page);
+    const consentForm = findConsentForm($);
+    if (consentForm.length > 0) {
+      step = await submit(readForm($, consentForm, step.url), step.url);
+      if ('code' in step) return { tokens: await authorization.exchange(step.code) };
+      $ = load(step.page);
+    }
+
+    if (retryForm($).length > 0) return null;
+
+    const codeForm = findCodeForm($);
+    if (codeForm.length > 0) {
+      const cookies = jar.serializeSync();
+      if (!cookies) throw new Error(`${label}: не удалось сохранить cookie входа`);
+      return {
+        pending: {
+          pkce: authorization.pkce,
+          cookies,
+          form: readForm($, codeForm, step.url),
+          codeField: codeForm.find('input[autocomplete="one-time-code"]').attr('name') ?? 'code',
+          url: step.url,
+        },
+      };
+    }
+    throw new Error(`${label}: после входа сайт не вернул код авторизации (${step.url})`);
+  };
+
+  return { send, follow, submit, finish };
+};
+
+/**
+ * Вход в LibSocial логином и паролем — без браузера: тот же OAuth2 + PKCE, что проходит сайт,
+ * только форму входа (с ALTCHA) заполняет сервер. Если сайт прислал код на почту, возвращает
+ * начатый вход — его завершает `confirmLibSocialLogin`. Бросает, если страницы сайта оказались
+ * не такими, как ожидалось, — значит, вход на сайте поменялся.
+ */
+export const loginLibSocialWithPassword = async (
+  auth: LibSocialAuthConfig,
+  siteId: number,
+  credentials: GroupleCredentials,
+  label: string,
+  http: LoginHttp = undiciLoginHttp,
+): Promise<LibSocialLoginResult> => {
+  const authorization = createLibSocialAuthorization(auth, siteId, label);
+  const session = createLoginSession(authorization, new CookieJar(), label, http);
+
+  const step = await session.follow('GET', authorization.authorizeUrl);
+  if ('code' in step) return { tokens: await authorization.exchange(step.code) };
+
+  const $ = load(step.page);
   const loginForm = findLoginForm($);
   if (loginForm.length === 0) throw new Error(`${label}: на странице входа нет формы входа`);
 
@@ -202,7 +282,7 @@ export const loginLibSocialWithPassword = async (
   const altcha = loginForm.find('altcha-widget');
   if (altcha.length > 0) {
     const challengeUrl = new URL(altcha.attr('challengeurl') ?? '', step.url).toString();
-    const challengeRes = await send('GET', challengeUrl, {
+    const challengeRes = await session.send('GET', challengeUrl, {
       referer: step.url,
       accept: 'application/json',
     });
@@ -211,18 +291,34 @@ export const loginLibSocialWithPassword = async (
     form.fields[altcha.attr('name') ?? 'altcha'] = solution;
   }
 
-  step = await submit(form, step.url);
-  if ('code' in step) return authorization.exchange(step.code);
+  return session.finish(await session.submit(form, step.url), findLoginForm);
+};
 
-  $ = load(step.page);
-  const consentForm = findConsentForm($);
-  if (consentForm.length > 0) {
-    step = await submit(readForm($, consentForm, step.url), step.url);
-    if ('code' in step) return authorization.exchange(step.code);
-    $ = load(step.page);
+/**
+ * Продолжает вход, остановленный на коде из письма: отправляет код в сохранённую форму и
+ * доводит вход до токенов. null — сайт не принял код и показал форму снова. Бросает, если вместо
+ * этого вернулась форма входа: начатый вход истёк, начинать надо с пароля.
+ */
+export const confirmLibSocialLogin = async (
+  auth: LibSocialAuthConfig,
+  siteId: number,
+  pending: LibSocialPendingLogin,
+  code: string,
+  label: string,
+  http: LoginHttp = undiciLoginHttp,
+): Promise<LibSocialTokenState | null> => {
+  const authorization = createLibSocialAuthorization(auth, siteId, label, pending.pkce);
+  const jar = CookieJar.deserializeSync(pending.cookies);
+  const session = createLoginSession(authorization, jar, label, http);
+
+  const form = { ...pending.form, fields: { ...pending.form.fields, [pending.codeField]: code } };
+  const step = await session.submit(form, pending.url);
+  if ('page' in step && findLoginForm(load(step.page)).length > 0) {
+    throw new Error(`${label}: вход по коду истёк — сайт вернул форму входа`);
   }
-
-  // Сайт снова показал форму входа — логин или пароль не подошли.
-  if (findLoginForm($).length > 0) return null;
-  throw new Error(`${label}: после входа сайт не вернул код авторизации (${step.url})`);
+  const result = await session.finish(step, findCodeForm);
+  if (result && 'pending' in result) {
+    throw new Error(`${label}: сайт снова запросил код после подтверждения`);
+  }
+  return result?.tokens ?? null;
 };

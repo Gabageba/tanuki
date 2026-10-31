@@ -1,8 +1,8 @@
-import { SimpleGrid, Stack, useMatches } from '@mantine/core';
+import { Stack } from '@mantine/core';
 import type { SourceAccount, SourcesResponse } from '@tanuki/contracts';
 import SourceLoginBadgeLegend from '@/entities/source/components/SourceLoginBadge/SourceLoginBadgeLegend';
 import { getPresentSourceLoginMarks } from '@/entities/source/lib';
-import { groupSourcesByAccount } from './lib';
+import { groupSourcesByAccount } from '@/entities/source-account/lib';
 import SourceFamilySection from './SourceFamilySection';
 
 type Props = {
@@ -11,33 +11,24 @@ type Props = {
   isLinkingAvailable: boolean;
 };
 
-/** Семейства источников с общим аккаунтом в колонках, под ними — легенда значков входа. */
+/** Семейства в порядке пользователя: аккаунт слева, источники справа, легенда под списком. */
 function SourceFamiliesGrid({ sourcesData, accounts, isLinkingAvailable }: Props) {
-  const columnCount = useMatches({ base: 1, md: 2 });
   const accountGroups = groupSourcesByAccount(sourcesData);
 
   return (
     <Stack gap={6}>
-      {/* Колонки складываются каждая сама по себе: под коротким семейством не остаётся
-      пустоты до высоты соседнего. Порядок по строкам тот же, что у сетки. */}
-      <SimpleGrid cols={columnCount} spacing="lg">
-        {Array.from({ length: columnCount }, (_, column) => (
-          <Stack key={column} gap="lg">
-            {accountGroups
-              .filter((_, index) => index % columnCount === column)
-              .map(({ key, title, family, sources }) => (
-                <SourceFamilySection
-                  key={key}
-                  title={title}
-                  family={family}
-                  sources={sources}
-                  accounts={accounts}
-                  isLinkingAvailable={isLinkingAvailable}
-                />
-              ))}
-          </Stack>
+      <Stack gap="lg">
+        {accountGroups.map(({ key, title, family, sources }) => (
+          <SourceFamilySection
+            key={key}
+            title={title}
+            family={family}
+            sources={sources}
+            accounts={accounts}
+            isLinkingAvailable={isLinkingAvailable}
+          />
         ))}
-      </SimpleGrid>
+      </Stack>
       <SourceLoginBadgeLegend
         marks={getPresentSourceLoginMarks(accountGroups.flatMap((group) => group.sources))}
       />

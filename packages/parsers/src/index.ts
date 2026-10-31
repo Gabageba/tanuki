@@ -11,6 +11,8 @@ export type {
   RawHomeSectionInfo,
   RawHomeSectionPage,
   RawHomeSectionParams,
+  RawBookmark,
+  RawBookmarkFolder,
 } from './types';
 export { RATING_UNKNOWN } from './types';
 
@@ -19,6 +21,7 @@ export {
   NotFoundError,
   SourceAuthRequiredError,
   SourceTokenExpiredError,
+  SourceLoginRequiresSessionError,
   SourceUnavailableError,
   SourceBlockedError,
   ParseError,
@@ -47,6 +50,8 @@ export {
   type SourceDescriptor,
   type ParsersRegistry,
   type PasswordAuthFamily,
+  type SessionAuthFamily,
+  type LinkedSession,
   type RegistryOptions,
 } from './registry';
 
@@ -61,6 +66,7 @@ export {
   type TokenStore,
 } from './core/source-accounts';
 export { parseLibSocialAuthValue } from './sources/libsocial/auth';
+export type { LibSocialLoginResult, LibSocialPendingLogin } from './sources/libsocial/login';
 export { CookieJar } from 'tough-cookie';
 
 export { decompress } from './core/http/decompress';

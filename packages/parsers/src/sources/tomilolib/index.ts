@@ -38,6 +38,8 @@ import { generateUid } from '../../core/uid';
 import { ParseError } from '../../errors';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { fetchHomeSections } from '../../core/home';
+import type { ChapterJson, MangaJson } from './models';
+import { fetchTomiloLibBookmarks } from './bookmarks';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.TOMILOLIB;
 
@@ -170,39 +172,6 @@ type FilterOptionsJson = {
   releaseYears?: number[];
   chaptersMin?: number;
   chaptersMax?: number;
-};
-
-type ChapterJson = {
-  _id?: string;
-  isPublished?: boolean;
-  chapterNumber?: number;
-  name?: string | null;
-  releaseDate?: string | null;
-  createdAt?: string | null;
-};
-
-type MangaJson = {
-  _id?: string;
-  slug?: string;
-  name?: string;
-  coverImage?: string;
-  genres?: string[];
-  tags?: string[];
-  author?: string;
-  artist?: string;
-  altNames?: string[];
-  averageRating?: number;
-  isAdult?: boolean;
-  ageLimit?: number;
-  status?: string;
-  type?: string;
-  releaseYear?: number;
-  totalChapters?: number;
-  totalRatings?: number;
-  views?: number;
-  createdAt?: string | null;
-  description?: string;
-  chapters?: ChapterJson[];
 };
 
 /** Элемент блоков главной — короче элемента каталога: `id`/`title`/`cover` вместо
@@ -789,6 +758,7 @@ export const createTomiloLibParser = (ctx: ParserContext): Parser => {
     getDetails,
     getPages,
     getFilters,
+    getBookmarks: () => fetchTomiloLibBookmarks(ctx, parseManga),
     resolveSearchFilters: (criteria) => buildSearchFilters(criteria, SEARCH_FILTER_SPEC),
     imageHeaders: () => ({ Referer: `https://${domain}/`, Accept: IMAGE_ACCEPT }),
   };

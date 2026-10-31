@@ -5,19 +5,33 @@ import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.type
 import { TitleSnapshotsService } from './title-snapshots.service';
 
 type SeenValue = { chapterId: string; branchId: string; baseline: boolean };
+type SnapshotValue = { chaptersCount?: number };
 
-/** База, в которой снимок тайтла уже есть (checkedAt) или его нет (null). */
-const createService = (checkedAt: Date | null) => {
+/**
+ * База, в которой снимок тайтла уже есть (checkedAt) или его нет (null). missing — строку оставил
+ * сбой «не найдено»; hasSeen — у тайтла уже есть увиденные главы.
+ */
+const createService = (
+  checkedAt: Date | null,
+  { missing = false, hasSeen = false }: { missing?: boolean; hasSeen?: boolean } = {},
+) => {
   const seen: SeenValue[] = [];
+  const snapshots: SnapshotValue[] = [];
   const db = {
     select: () => ({
-      from: () => ({
-        where: () => ({ limit: () => Promise.resolve(checkedAt ? [{ checkedAt }] : []) }),
+      from: (table: unknown) => ({
+        where: () => ({
+          limit: () => {
+            if (table === titleChaptersSeen) return Promise.resolve(hasSeen ? [{}] : []);
+            return Promise.resolve(checkedAt ? [{ checkedAt, missing }] : []);
+          },
+        }),
       }),
     }),
     insert: (table: unknown) => ({
-      values: (values: SeenValue | SeenValue[]) => {
+      values: (values: SeenValue[] | SnapshotValue) => {
         if (table === titleChaptersSeen) seen.push(...(values as SeenValue[]));
+        else snapshots.push(values as SnapshotValue);
         return {
           onConflictDoUpdate: () => Promise.resolve(),
           onConflictDoNothing: () => Promise.resolve(),
@@ -25,7 +39,11 @@ const createService = (checkedAt: Date | null) => {
       },
     }),
   };
-  return { service: new TitleSnapshotsService({ db } as unknown as DatabaseService), seen };
+  return {
+    service: new TitleSnapshotsService({ db } as unknown as DatabaseService),
+    seen,
+    snapshots,
+  };
 };
 
 const chapter = (id: number, overrides: Partial<RawChapter> = {}) =>
@@ -43,6 +61,28 @@ const chapter = (id: number, overrides: Partial<RawChapter> = {}) =>
 const title = (chapters: RawChapter[]) => ({ id: 1, url: '/title', chapters }) as RawTitle;
 
 describe('TitleSnapshotsService.record', () => {
+  it('запоминает число глав самой длинной ветки, а ответ без глав его не трогает', async () => {
+    const { service, snapshots } = createService(null);
+
+    await service.record(
+      'remanga',
+      '/title',
+      title([chapter(1), chapter(2), chapter(3, { branch: 'Команда' })]),
+    );
+    await service.record('remanga', '/title', title([]));
+    await service.record('remanga', '/title', { id: 1, url: '/title' } as RawTitle);
+
+    expect(snapshots.map(({ chaptersCount }) => chaptersCount)).toEqual([2, 0, undefined]);
+  });
+
+  it('у тайтла с платными главами число неизвестно — список зависит от зрителя', async () => {
+    const { service, snapshots } = createService(null);
+
+    await service.record('mangalib', '/title', { ...title([chapter(1)]), hasPaidChapters: true });
+
+    expect(snapshots[0]?.chaptersCount).toBeNull();
+  });
+
   it('первый снимок тайтла — базовый: его главы новыми не станут', async () => {
     const { service, seen } = createService(null);
 
@@ -56,6 +96,22 @@ describe('TitleSnapshotsService.record', () => {
     const { service, seen } = createService(new Date(0));
 
     await service.record('remanga', '/title', title([chapter(3)]));
+
+    expect(seen.map(({ baseline }) => baseline)).toEqual([false]);
+  });
+
+  it('снимок после сбоя «не найдено» без увиденных глав — всё ещё базовый', async () => {
+    const { service, seen } = createService(new Date(0), { missing: true });
+
+    await service.record('remanga', '/title', title([chapter(1)]));
+
+    expect(seen.map(({ baseline }) => baseline)).toEqual([true]);
+  });
+
+  it('тайтл, который пропадал, но главы уже видел, пишет новые главы небазовыми', async () => {
+    const { service, seen } = createService(new Date(0), { missing: true, hasSeen: true });
+
+    await service.record('remanga', '/title', title([chapter(4)]));
 
     expect(seen.map(({ baseline }) => baseline)).toEqual([false]);
   });

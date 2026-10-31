@@ -1,0 +1,10 @@
+@use '../../../styles/breakpoints';
+
+.aside {
+  border-right: 1px solid var(--mantine-color-default-border);
+
+  @include breakpoints.smaller-than(md) {
+    border-right: 0;
+    border-bottom: 1px solid var(--mantine-color-default-border);
+  }
+}

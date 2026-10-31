@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRegistry } from '../src/registry';
 import { runSourceContract } from '../src/core/source-contract';
 import { SOURCE_ID, type SourceId } from '../src/sources/catalog';
@@ -31,14 +31,9 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   SOURCE_ID.ALLHENTAI,
   SOURCE_ID.MANGALIB,
   SOURCE_ID.YAOILIB,
-  // HENTAILIB's getPages() is gated site-wide behind an authenticated session (see
-  // LIBSOCIAL_CONFIGS.HENTAILIB.auth in sources/libsocial/config.ts) — login itself is
-  // reCAPTCHA-gated and can only be driven by a human, once, via
-  // `pnpm --filter @tanuki/parsers login:libsocial HENTAILIB` (see scripts/libsocial-login.ts).
-  // After that one-time login, getValidAccessToken() refreshes the access token on its own from
-  // the stored refresh_token — no further human step — as long as LIBSOCIAL_TOKEN_STORE_DIR
-  // points at a directory holding that token file. Included here, but will fail like any other
-  // source if that directory/token isn't configured for this run.
+  // HENTAILIB's getPages() requires a session. CI seeds hentailib.json from its token secret.
+  // Complete the initial login with login:libsocial hentailib (including the email code);
+  // the engine then rotates the stored token without another interactive login.
   SOURCE_ID.HENTAILIB,
   SOURCE_ID.MANGACHAN,
   SOURCE_ID.HENCHAN,
@@ -50,6 +45,8 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   SOURCE_ID.REMANGA,
   SOURCE_ID.MANGABUFF,
   SOURCE_ID.INKSTORY,
+  // Same inuko network as INKSTORY (see sources/inuko/config.ts), behind the same DDoS-Guard.
+  SOURCE_ID.PUREMANGA,
   // COMX intentionally excluded: marked broken (`isBroken: true` in comx/index.ts) — every
   // request is gated behind a JS PoW + TLS/JA3 fingerprint challenge no undici client can pass.
   SOURCE_ID.TOMILOLIB,
@@ -68,7 +65,7 @@ const IMPLEMENTED_SOURCE_IDS: SourceId[] = [
   SOURCE_ID.MULTPORN_HENTAI,
 ];
 
-// REMANGA/MANGABUFF/INKSTORY/NUDEMOON: known-flaky in the nightly workflow specifically — their
+// REMANGA/MANGABUFF/INKSTORY/PUREMANGA/NUDEMOON: known-flaky in the nightly workflow specifically — their
 // Cloudflare/DDoS-Guard antibot (see looksLikeAntibotChallenge in core/http/classify.ts)
 // challenges GitHub Actions' shared runner IP ranges with a 403, but the exact same requests
 // pass from a residential IP (confirmed for NUDEMOON: g.nude-moon.fun returns 200 outside CI).
@@ -80,6 +77,7 @@ const CI_ANTIBOT_FLAKY_SOURCE_IDS: SourceId[] = [
   SOURCE_ID.REMANGA,
   SOURCE_ID.MANGABUFF,
   SOURCE_ID.INKSTORY,
+  SOURCE_ID.PUREMANGA,
   SOURCE_ID.NUDEMOON,
 ];
 
@@ -116,10 +114,12 @@ const registry = createRegistry({
   logger: { info: () => {}, warn: (msg) => console.warn(msg), error: (msg) => console.error(msg) },
 });
 
+// Прогрев сессий не расходует время первого источника. Закрываем HTTP-клиенты и после ошибок.
+beforeAll(() => registry.init());
+afterAll(() => registry.close());
+
 describe.each(RUN_SOURCE_IDS)('contract: %s', (sourceId) => {
   it('getList -> getDetails -> getPages resolves a full read path', async () => {
-    await registry.init();
-
     // Сама проверка живёт в src/core/source-contract.ts, а не здесь: тот же путь чтения гоняет
     // рантаймовый пробник в apps/api, который и проставляет источникам статус. Будь описание
     // «рабочего источника» в двух местах, статус в проде и результат этого теста разошлись бы.
@@ -128,8 +128,9 @@ describe.each(RUN_SOURCE_IDS)('contract: %s', (sourceId) => {
 });
 
 /**
- * Главная сайта для подборок: каждый описанный блок непуст, у тайтлов есть название, адрес и
- * обложка. Ловит переезд вёрстки главной — блок, которого не нашлось, парсер отдаёт пустым, и в
+ * Главная сайта для подборок: каждый описанный блок непуст, у тайтлов есть название и адрес,
+ * в каждом блоке есть обложки. Отдельная карточка может честно не иметь обложки на сайте.
+ * Ловит переезд вёрстки главной — блок, которого не нашлось, парсер отдаёт пустым, и в
  * приложении он просто пропал бы молча.
  */
 const HOME_SOURCE_IDS = RUN_SOURCE_IDS.filter(
@@ -138,7 +139,6 @@ const HOME_SOURCE_IDS = RUN_SOURCE_IDS.filter(
 
 describe.each(HOME_SOURCE_IDS)('contract home: %s', (sourceId) => {
   it('getHome fills every described section', async () => {
-    await registry.init();
     const parser = registry.get(sourceId);
 
     const sections = await parser.getHome!();
@@ -146,10 +146,14 @@ describe.each(HOME_SOURCE_IDS)('contract home: %s', (sourceId) => {
     expect(sections.map(({ id }) => id)).toEqual(parser.info.homeSections.map(({ id }) => id));
     for (const section of sections) {
       expect(section.items.length, section.id).toBeGreaterThan(0);
+      expect(
+        section.items.some((item) => Boolean(item.coverUrl)),
+        `${section.id}: covers`,
+      ).toBe(true);
       for (const item of section.items) {
         expect(item.title, section.id).toBeTruthy();
         expect(item.url, section.id).toBeTruthy();
-        expect(item.coverUrl, section.id).toBeTruthy();
+        if (item.coverUrl !== null) expect(item.coverUrl, section.id).toMatch(/^https?:\/\//);
       }
     }
   });

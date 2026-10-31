@@ -3,6 +3,7 @@ import {
   boolean,
   customType,
   doublePrecision,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -33,6 +34,8 @@ import type {
   TitleType,
   NotificationCategory,
   NotificationType,
+  RestoreProgressPolicy,
+  SourceImportProgressStatus,
 } from '@tanuki/contracts';
 import type { EmailTokenPurpose } from '../auth/models';
 
@@ -309,7 +312,7 @@ export const disabledSources = pgTable(
 
 /**
  * Личные аккаунты пользователя на источниках. Grouple и AllHentai — одна строка на семейство
- * (sourceId = ''), у LibSocial — строка на каждый источник сети: токены у них свои.
+ * (одна SSO), у MangaLib и HentaiLib — независимые семейства и строки: токены у них свои.
  * Всё секретное хранится только зашифрованным (common/secret-box.ts).
  */
 export const sourceAccounts = pgTable(
@@ -318,7 +321,7 @@ export const sourceAccounts = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    /** Аккаунт один на семейство — у LibSocial тоже: токены сайтов сети лежат в его state. */
+    /** Аккаунт один на семейство; MangaLib и HentaiLib хранятся отдельно. */
     family: text('family').$type<SourceAuthFamily>().notNull(),
     status: text('status').$type<SourceAccountStatus>().notNull(),
     /** Имя аккаунта на источнике — для показа в настройках. */
@@ -474,7 +477,7 @@ export const emailTokens = pgTable('email_tokens', {
 });
 
 /**
- * Папки закладок. Четыре встроенные (builtIn не null) создаются лениво, при первом обращении
+ * Папки закладок. Шесть встроенных (builtIn не null) создаются лениво, при первом обращении
  * пользователя к закладкам; их название, иконку и цвет задаёт фронт, поэтому эти колонки у них
  * null. Свои папки (builtIn null) пользователь создаёт, переименовывает и удаляет сам.
  */
@@ -562,6 +565,8 @@ export const titleChapterSnapshots = pgTable('title_chapter_snapshots', {
   lastError: text('last_error'),
   /** Источник ответил «не найдено» — тайтл пропал с него. */
   missing: boolean('missing').notNull().default(false),
+  /** Глав в самой длинной ветке при последней удачной проверке; null — неизвестно (есть платные). */
+  chaptersCount: integer('chapters_count'),
 });
 
 /**
@@ -674,5 +679,43 @@ export const knownDevices = pgTable(
   },
   (table) => [
     uniqueIndex('known_devices_user_fingerprint_idx').on(table.userId, table.fingerprint),
+  ],
+);
+
+/**
+ * Отметки «где остановился», которые импорт из источника достраивает в фоне: у сайта в закладках
+ * есть только номер главы, а отметке нужна сама глава — её находит крон по деталям тайтла.
+ * Строки одного импорта связаны `importId`; когда ждущих не остаётся, приходит уведомление и
+ * строки удаляются. Закладку удалили до достройки — строка уходит вместе с ней.
+ */
+export const sourceImportProgress = pgTable(
+  'source_import_progress',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    importId: uuid('import_id').notNull(),
+    sourceId: text('source_id').notNull(),
+    titleKey: text('title_key').notNull(),
+    titleId: text('title_id').notNull(),
+    /** «Где остановился» на сайте — номер главы и её том (null — сайт тома не отдаёт). */
+    chapterNumber: doublePrecision('chapter_number').notNull(),
+    chapterVolume: doublePrecision('chapter_volume'),
+    progressPolicy: text('progress_policy').$type<RestoreProgressPolicy>().notNull(),
+    /** Точная страница внутри главы, если источник её отдаёт. */
+    pageIndex: integer('page_index'),
+    status: text('status').$type<SourceImportProgressStatus>().notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId, table.titleKey],
+      foreignColumns: [bookmarks.userId, bookmarks.titleKey],
+    }).onDelete('cascade'),
+    index('source_import_progress_due_idx').on(table.status, table.nextAttemptAt),
+    index('source_import_progress_import_idx').on(table.importId),
   ],
 );

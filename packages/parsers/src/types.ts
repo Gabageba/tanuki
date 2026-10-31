@@ -13,6 +13,7 @@
  */
 
 import type {
+  BuiltInBookmarkFolder,
   ContentRating,
   FilterGroupSettings,
   FilterType,
@@ -237,4 +238,33 @@ export type RawSourceInfo = {
   isMultipleTagsSupported: boolean;
   /** Блоки главной сайта в его порядке — mirrors Parser.getHome; пустой — главной нет. */
   homeSections: RawHomeSectionInfo[];
+  /** Mirrors whether the parser implements getBookmarks() — the registry sets it from the
+   *  instantiated parser; omitted — false. */
+  isBookmarksImportSupported?: boolean;
+};
+
+/** Закладка на сайте — тайтл в тех же `id`/`url`, что у getList, плюс «где остановился». */
+export type RawBookmark = {
+  id: number;
+  url: string;
+  title: string;
+  coverUrl: string | null;
+  contentRating: RawContentRating | null;
+  type: RawTitleType | null;
+  /** Номер последней прочитанной главы, если сайт его отдаёт. */
+  lastChapterNumber: number | null;
+  /** Том этой главы — у сайтов, где нумерация глав начинается заново в каждом томе. */
+  lastChapterVolume: number | null;
+  /** Индекс страницы внутри главы (с нуля), если сайт отдаёт точную позицию. */
+  lastPageIndex?: number | null;
+};
+
+/** Папка закладок на сайте: стандартный статус — встроенная папка, иначе своя папка сайта. */
+export type RawBookmarkFolder = {
+  /** Стабильный id папки на сайте — по нему выбирают папки при импорте. */
+  id: string;
+  /** Стандартный статус → встроенная папка; null — своя папка сайта. */
+  builtIn: BuiltInBookmarkFolder | null;
+  name: string;
+  items: RawBookmark[];
 };

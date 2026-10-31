@@ -8,6 +8,7 @@ import {
   type BookmarkSort,
   type SortDirection,
 } from '@tanuki/contracts';
+import type { RawTitle } from '../parsers-client/parsers-client.types';
 import type {
   BookmarkCandidate,
   BookmarkGroup,
@@ -64,6 +65,10 @@ type BuildGroupsInput = {
   snapshots: Map<string, SnapshotRecord>;
   sourceAvailability: (sourceId: string) => BookmarkAvailability;
 };
+
+/** Число глав цели по снимку: у пропавшего тайтла оно осталось от прошлых проверок. */
+const resolveSourceChaptersCount = (snapshot: SnapshotRecord | undefined) =>
+  snapshot && !snapshot.missing ? snapshot.chaptersCount : null;
 
 /**
  * Склеивает строки закладок пользователя по группам подтверждённых совпадений и для каждой
@@ -152,6 +157,7 @@ export const buildBookmarkGroups = ({
       createdAt: firstRow.createdAt,
       readAt: groupProgress[0]?.updatedAt ?? null,
       checkedAt: snapshots.get(target.titleKey)?.checkedAt ?? null,
+      sourceChaptersCount: resolveSourceChaptersCount(snapshots.get(target.titleKey)),
     };
   });
 };
@@ -175,7 +181,8 @@ export const pickStatBranch = (
 
 /**
  * Досчитывает группе главы. Новые главы считаются только у доступной цели в папке, за которой
- * следят: у остальных пометки нет.
+ * следят: у остальных пометки нет. Статистики нет совсем (глав 0 или база не ответила) — число
+ * берётся из снимка цели.
  */
 export const countBookmarkGroup = (
   group: BookmarkGroup,
@@ -186,9 +193,16 @@ export const countBookmarkGroup = (
   const isCounted =
     isFolderTracked && group.target.availability === BOOKMARK_AVAILABILITY.AVAILABLE && !!stat;
 
+  // Снимок знает только самую длинную ветку — у отметки в другой ветке подходит лишь 0.
+  const { sourceChaptersCount } = group;
+  const fallbackTotal =
+    targetStats.length === 0 && (sourceChaptersCount === 0 || !group.progress)
+      ? sourceChaptersCount
+      : null;
+
   return {
     ...group,
-    branchTotal: stat?.total ?? null,
+    branchTotal: stat?.total ?? fallbackTotal,
     branchPosition: stat?.position ?? null,
     newChaptersCount: isCounted ? stat.newCount : 0,
     latestNewAt: isCounted ? stat.latestNewAt : null,
@@ -250,3 +264,18 @@ export const matchesBookmarkQuery = (group: BookmarkGroup, query: string | undef
 
 /** Ветка главы в снимке — так же, как в reading_progress. */
 export const toSnapshotBranchId = (branch: string | null) => branch ?? DEFAULT_BRANCH_ID;
+
+/**
+ * Число глав тайтла для снимка — по самой длинной ветке, как pickStatBranch без отметки. У тайтла
+ * с платными главами список зависит от зрителя (закрытые выкинуты, кеш режет и купленные) —
+ * число неизвестно. Пустой список — весь тайтл за пейволом: глав нет, это известно.
+ */
+export const countSnapshotChapters = (raw: RawTitle): number | null => {
+  if (raw.hasPaidChapters && raw.chapters?.length) return null;
+  const byBranch = new Map<string, number>();
+  for (const chapter of raw.chapters ?? []) {
+    const branchId = toSnapshotBranchId(chapter.branch);
+    byBranch.set(branchId, (byBranch.get(branchId) ?? 0) + 1);
+  }
+  return Math.max(0, ...byBranch.values());
+};

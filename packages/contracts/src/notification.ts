@@ -22,6 +22,7 @@ export const NOTIFICATION_TYPE = {
   PARSER_RECOVERED: 'parserRecovered',
   INVITE_USED: 'inviteUsed',
   INVITE_EXPIRED: 'inviteExpired',
+  SOURCE_IMPORT_FINISHED: 'sourceImportFinished',
 } as const;
 export type NotificationType = EnumLiteralsOf<typeof NOTIFICATION_TYPE>;
 export const NotificationTypeSchema = z.enum(NOTIFICATION_TYPE);
@@ -34,6 +35,7 @@ export const getNotificationCategory = (type: NotificationType): NotificationCat
     case NOTIFICATION_TYPE.EMAIL_CHANGED:
     case NOTIFICATION_TYPE.DELETION_REQUESTED:
     case NOTIFICATION_TYPE.NEW_DEVICE_LOGIN:
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
       return NOTIFICATION_CATEGORY.ACCOUNT;
     case NOTIFICATION_TYPE.SOURCE_DOWN:
     case NOTIFICATION_TYPE.SOURCE_RECOVERED:
@@ -128,6 +130,16 @@ export const NotificationItemSchema = z.discriminatedUnion('type', [
     ...BASE,
     type: z.literal(NOTIFICATION_TYPE.INVITE_EXPIRED),
     payload: z.object({ inviteId: z.string() }),
+  }),
+  z.object({
+    ...BASE,
+    type: z.literal(NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED),
+    /** Сколько отметок «где остановился» перенесено из скольких ожидавших. */
+    payload: z.object({
+      sourceId: z.string(),
+      transferred: z.number().int().min(0),
+      total: z.number().int().min(0),
+    }),
   }),
 ]);
 export type NotificationItem = z.infer<typeof NotificationItemSchema>;

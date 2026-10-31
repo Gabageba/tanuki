@@ -7,9 +7,12 @@ import {
   SOURCE_ACCOUNT_STATUS,
   SOURCE_AUTH_FAMILY,
   SOURCE_STATUS_REASON,
+  isLibSocialAuthFamily,
   type SourceAccount,
   type SourceAuthFamily,
 } from '@tanuki/contracts';
+import LinkSessionAccountModal from './LinkSessionAccountModal';
+import LinkRemangaModal from './LinkRemangaModal';
 import LinkLibSocialModal from './LinkLibSocialModal';
 import LinkPasswordAccountModal from './LinkPasswordAccountModal';
 import useUnlinkSourceAccount from '../hooks/useUnlinkSourceAccount';
@@ -33,19 +36,21 @@ function SourceAccountStatusActions({
   const [opened, { open, close }] = useDisclosure(false);
   const unlink = useUnlinkSourceAccount();
 
+  const isLoginAvailable =
+    isLinkingAvailable &&
+    sources.some((source) => source.statusReason !== SOURCE_STATUS_REASON.BROKEN);
   const isReloginRequired = account?.status === SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED;
 
   return (
     <>
-      <Group gap={8} wrap="nowrap" w={{ base: '100%', xs: 'auto' }}>
+      <Group gap={8} flex="none" maw="100%">
         {(!account || sourcesWithoutLogin.length > 0) && (
           <Button
             size="xs"
-            flex={{ base: 1, xs: 'none' }}
             variant="muted"
             color="terracotta"
             leftSection={<SignInIcon />}
-            disabled={!isLinkingAvailable}
+            disabled={!isLoginAvailable}
             onClick={open}
           >
             {t('logIn')}
@@ -56,11 +61,10 @@ function SourceAccountStatusActions({
             {isReloginRequired && (
               <Button
                 size="xs"
-                flex={{ base: 1, xs: 'none' }}
                 variant="muted"
                 color="gold"
                 leftSection={<ArrowClockwiseIcon />}
-                disabled={!isLinkingAvailable}
+                disabled={!isLoginAvailable}
                 onClick={open}
               >
                 {t('logInAgain')}
@@ -68,7 +72,6 @@ function SourceAccountStatusActions({
             )}
             <Button
               size="xs"
-              flex={{ base: 1, xs: 'none' }}
               variant="muted"
               color="red"
               leftSection={<LinkBreakIcon />}
@@ -81,15 +84,48 @@ function SourceAccountStatusActions({
         )}
       </Group>
 
-      {family === SOURCE_AUTH_FAMILY.LIBSOCIAL ? (
-        <LinkLibSocialModal
-          sources={sources.filter((source) => source.statusReason !== SOURCE_STATUS_REASON.BROKEN)}
-          defaultTokenSourceId={sourcesWithoutLogin[0]?.id}
+      {isLibSocialAuthFamily(family) && (
+        <LinkLibSocialModal source={sources[0]!} opened={opened} onClose={close} />
+      )}
+      {family === SOURCE_AUTH_FAMILY.INUKO && (
+        <LinkSessionAccountModal
+          family={family}
+          cookieName="__otaku_session"
+          description={t('loginProtectedByCaptcha')}
+          source={sources[0]}
           opened={opened}
           onClose={close}
         />
-      ) : (
-        <LinkPasswordAccountModal family={family} opened={opened} onClose={close} />
+      )}
+      {family === SOURCE_AUTH_FAMILY.REMANGA && (
+        <LinkRemangaModal source={sources[0]} opened={opened} onClose={close} />
+      )}
+      {family === SOURCE_AUTH_FAMILY.SENKURO && (
+        <LinkSessionAccountModal
+          family={family}
+          cookieName="access_token"
+          description={t('loginProtectedByCaptcha')}
+          source={sources[0]}
+          opened={opened}
+          onClose={close}
+        />
+      )}
+      {!isLibSocialAuthFamily(family) &&
+        family !== SOURCE_AUTH_FAMILY.HENTAICHAN_CC &&
+        family !== SOURCE_AUTH_FAMILY.INUKO &&
+        family !== SOURCE_AUTH_FAMILY.REMANGA &&
+        family !== SOURCE_AUTH_FAMILY.SENKURO && (
+          <LinkPasswordAccountModal family={family} opened={opened} onClose={close} />
+        )}
+      {family === SOURCE_AUTH_FAMILY.HENTAICHAN_CC && (
+        <LinkSessionAccountModal
+          family={family}
+          cookieName="__Secure-better-auth.session_token"
+          description={t('loginProtectedByCaptcha')}
+          source={sources[0]}
+          opened={opened}
+          onClose={close}
+        />
       )}
     </>
   );

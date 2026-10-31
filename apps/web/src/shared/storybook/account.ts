@@ -1,13 +1,22 @@
 import {
+  BACKUP_FORMAT,
+  BACKUP_VERSION,
   BOOKMARK_AVAILABILITY,
+  BOOKMARK_FOLDER_COLOR,
+  BOOKMARK_FOLDER_ICON,
+  BUILT_IN_BOOKMARK_FOLDER,
   DEVICE_TYPE,
   INVITE_STATUS,
   NOTIFICATION_CATEGORY,
   NOTIFICATION_TYPE,
+  SOURCE_IMPORT_FOLDER_TARGET,
   SOURCE_STATUS_REASON,
   USER_ROLE,
   USER_STATUS,
   VIEW_MODE,
+  type Backup,
+  type BackupPreview,
+  type BackupRestoreResult,
   type BookmarkItem,
   type BookmarksResponse,
   type InvitesResponse,
@@ -17,6 +26,8 @@ import {
   type NotificationsPage,
   type ProfileStatisticsResponse,
   type SessionsResponse,
+  type SourceImportPreview,
+  type SourceImportResult,
   type UserSettings,
 } from '@tanuki/contracts';
 import {
@@ -116,6 +127,13 @@ export const NOTIFICATIONS: NotificationItem[] = [
     category: NOTIFICATION_CATEGORY.ADMINISTRATION,
     type: NOTIFICATION_TYPE.INVITE_EXPIRED,
     payload: { inviteId: INVITE.id },
+  },
+  {
+    ...BASE,
+    id: '00000000-0000-4000-8000-000000000011',
+    category: NOTIFICATION_CATEGORY.ACCOUNT,
+    type: NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED,
+    payload: { sourceId: 'readmanga_ru', transferred: 120, total: 124 },
   },
 ];
 export const NOTIFICATIONS_PAGE: NotificationsPage = {
@@ -305,4 +323,212 @@ export const INVITES_RESPONSE: InvitesResponse = {
     },
   ],
   total: 5,
+};
+
+/** Файл копии, который скачивает «Скачать копию», — пустая библиотека, только шапка. */
+export const BACKUP: Backup = {
+  format: BACKUP_FORMAT,
+  version: BACKUP_VERSION,
+  exportedAt: '2026-10-12T10:00:00Z',
+  origin: 'https://tanuki.example.com',
+  username: CURRENT_USER.username,
+  settings: { user: {}, sourceOrder: null, reader: null, disabledSources: [] },
+  folders: [],
+  bookmarks: [],
+  progress: [],
+  chapterReads: [],
+  readingActivity: [],
+};
+
+const BACKUP_HEADER = {
+  username: BACKUP.username,
+  exportedAt: BACKUP.exportedAt,
+  origin: BACKUP.origin,
+};
+
+/** Сводка с конфликтами: тайтлы в других папках и расходящиеся отметки — будет шаг «Вопросы». */
+export const BACKUP_PREVIEW: BackupPreview = {
+  ...BACKUP_HEADER,
+  bookmarks: { added: 42, sameFolder: 12, otherFolder: 7, skipped: 3 },
+  folders: { added: 2, matched: 4, overLimit: 0 },
+  progress: { added: 30, differs: 5, skipped: 0 },
+  chapterReads: { added: 1204, skipped: 0 },
+};
+
+export const NO_CONFLICTS_BACKUP_PREVIEW: BackupPreview = {
+  ...BACKUP_HEADER,
+  bookmarks: { added: 18, sameFolder: 0, otherFolder: 0, skipped: 0 },
+  folders: { added: 1, matched: 4, overLimit: 0 },
+  progress: { added: 18, differs: 0, skipped: 0 },
+  chapterReads: { added: 312, skipped: 0 },
+};
+
+/** Повторное восстановление того же файла. */
+export const NOTHING_NEW_BACKUP_PREVIEW: BackupPreview = {
+  ...BACKUP_HEADER,
+  bookmarks: { added: 0, sameFolder: 57, otherFolder: 0, skipped: 0 },
+  folders: { added: 0, matched: 5, overLimit: 0 },
+  progress: { added: 0, differs: 0, skipped: 0 },
+  chapterReads: { added: 0, skipped: 0 },
+};
+
+/** Итог с пропущенным и не поместившимися папками. */
+export const BACKUP_RESTORE_RESULT: BackupRestoreResult = {
+  username: BACKUP.username,
+  exportedAt: BACKUP.exportedAt,
+  bookmarksAdded: 18,
+  bookmarksMoved: 0,
+  titlesToPlanned: 4,
+  foldersCreated: 1,
+  foldersOverLimit: 3,
+  progressAdded: 18,
+  progressUpdated: 0,
+  chapterReadsAdded: 312,
+  settingsApplied: true,
+  skipped: { bookmarks: 40, progress: 12, chapterReads: 233 },
+};
+
+const SOURCE_IMPORT_TARGET = {
+  READING: { builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: null, icon: null, color: null },
+  PLANNED: { builtIn: BUILT_IN_BOOKMARK_FOLDER.PLANNED, name: null, icon: null, color: null },
+  ON_HOLD: { builtIn: BUILT_IN_BOOKMARK_FOLDER.ON_HOLD, name: null, icon: null, color: null },
+  COMPLETED: { builtIn: BUILT_IN_BOOKMARK_FOLDER.COMPLETED, name: null, icon: null, color: null },
+  FAVORITE: { builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE, name: null, icon: null, color: null },
+};
+
+/** Закладки на сайте с конфликтами: тайтлы в других папках и расходящиеся отметки. */
+export const SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
+  sourceId: 'readmanga_ru',
+  folders: [
+    {
+      id: 'reading',
+      name: 'Читаю',
+      target: SOURCE_IMPORT_FOLDER_TARGET.BUILT_IN,
+      targetFolder: SOURCE_IMPORT_TARGET.READING,
+      total: 24,
+      fresh: 24,
+      otherFolder: 3,
+      progressDiffers: 5,
+    },
+    {
+      id: 'planned',
+      name: 'В планах',
+      target: SOURCE_IMPORT_FOLDER_TARGET.BUILT_IN,
+      targetFolder: SOURCE_IMPORT_TARGET.PLANNED,
+      total: 41,
+      fresh: 41,
+      otherFolder: 4,
+      progressDiffers: 0,
+    },
+    {
+      id: 'favorites',
+      name: 'Любимые',
+      target: SOURCE_IMPORT_FOLDER_TARGET.BUILT_IN,
+      targetFolder: SOURCE_IMPORT_TARGET.FAVORITE,
+      total: 9,
+      fresh: 9,
+      otherFolder: 0,
+      progressDiffers: 0,
+    },
+    {
+      id: 'on_hold',
+      name: 'Отложено',
+      target: SOURCE_IMPORT_FOLDER_TARGET.BUILT_IN,
+      targetFolder: SOURCE_IMPORT_TARGET.ON_HOLD,
+      total: 4,
+      fresh: 4,
+      otherFolder: 0,
+      progressDiffers: 0,
+    },
+    {
+      id: 'later',
+      name: 'Отложено на потом, когда выйдет продолжение',
+      target: SOURCE_IMPORT_FOLDER_TARGET.CREATED,
+      targetFolder: {
+        builtIn: null,
+        name: 'Отложено на потом, когда выйдет продолжение',
+        icon: BOOKMARK_FOLDER_ICON.BOOKMARK,
+        color: BOOKMARK_FOLDER_COLOR.GRAY,
+      },
+      total: 13,
+      fresh: 13,
+      otherFolder: 0,
+      progressDiffers: 0,
+    },
+    {
+      id: 'extra',
+      name: 'Хентай',
+      target: SOURCE_IMPORT_FOLDER_TARGET.OVER_LIMIT,
+      targetFolder: SOURCE_IMPORT_TARGET.PLANNED,
+      total: 6,
+      fresh: 6,
+      otherFolder: 0,
+      progressDiffers: 0,
+    },
+  ],
+};
+
+/**
+ * Повторный импорт: часть уже в закладках, папка без нового выключена, а папка, где на сайте
+ * дочитали дальше, — выбирается ради отметок.
+ */
+export const REPEAT_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
+  sourceId: 'readmanga_ru',
+  folders: SOURCE_IMPORT_PREVIEW.folders.map((folder, index) => ({
+    ...folder,
+    fresh: index === 0 ? 9 : index === 1 || index === 2 ? 0 : folder.fresh,
+    otherFolder: 0,
+    progressDiffers: index === 2 ? 2 : 0,
+  })),
+};
+
+/** Повторный импорт, где всё уже в закладках. */
+export const NOTHING_NEW_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
+  sourceId: 'readmanga_ru',
+  folders: SOURCE_IMPORT_PREVIEW.folders.map((folder) => ({
+    ...folder,
+    fresh: 0,
+    otherFolder: 0,
+    progressDiffers: 0,
+  })),
+};
+
+/** Все тайтлы уже импортированы, один из них лежит у пользователя в другой папке. */
+export const OTHER_FOLDER_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
+  ...NOTHING_NEW_SOURCE_IMPORT_PREVIEW,
+  folders: NOTHING_NEW_SOURCE_IMPORT_PREVIEW.folders.map((folder, index) => ({
+    ...folder,
+    fresh: index === 0 ? 1 : 0,
+    otherFolder: index === 0 ? 1 : 0,
+  })),
+};
+
+/** Длинный список папок: прокрутка внутри модалки, кнопки остаются снаружи. */
+export const MANY_FOLDERS_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
+  ...SOURCE_IMPORT_PREVIEW,
+  folders: Array.from({ length: 3 }, (_, index) =>
+    SOURCE_IMPORT_PREVIEW.folders.map((folder) => ({
+      ...folder,
+      id: `${folder.id}-${index}`,
+      name: `${folder.name} (${index + 1})`,
+    })),
+  ).flat(),
+};
+
+/** На сайте закладок нет. */
+export const EMPTY_SOURCE_IMPORT_PREVIEW: SourceImportPreview = {
+  sourceId: 'readmanga_ru',
+  folders: [],
+};
+
+export const SOURCE_IMPORT_RESULT: SourceImportResult = {
+  sourceId: 'readmanga_ru',
+  bookmarksAdded: 87,
+  bookmarksAsSource: 5,
+  bookmarksMoved: 7,
+  titlesToPlanned: 6,
+  foldersCreated: 1,
+  foldersMatched: 0,
+  foldersOverLimit: 1,
+  pendingProgress: 112,
 };

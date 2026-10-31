@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useUserSettings from '@/shared/hooks/useUserSettings';
 import useUpdateUserSettings from '@/shared/hooks/useUpdateUserSettings';
-import { readSettings, setSettingsSyncHandler, writeSettings } from '@/shared/lib/settings';
+import { applyUserSettings } from '@/shared/lib/applyUserSettings';
+import { readSettings, setSettingsSyncHandler } from '@/shared/lib/settings';
 
 /**
  * Источник настроек всегда localStorage — тема должна примениться ещё до первой отрисовки (см.
@@ -54,17 +55,7 @@ function UserSettingsSync() {
       return;
     }
 
-    if (serverSettings.colorScheme && serverSettings.colorScheme !== colorScheme) {
-      setColorScheme(serverSettings.colorScheme);
-    }
-    if (serverSettings.language && serverSettings.language !== i18n.language) {
-      i18n.changeLanguage(serverSettings.language);
-    }
-    writeSettings({
-      viewMode: serverSettings.viewMode,
-      exclusiveFilterConfirmDismissed: serverSettings.exclusiveFilterConfirmDismissed,
-      collapsedSearchSources: serverSettings.collapsedSearchSources,
-    });
+    applyUserSettings(serverSettings, { colorScheme, setColorScheme, i18n });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, serverSettings]);
 

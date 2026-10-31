@@ -133,8 +133,24 @@ export class AdultContentHiddenException extends ApiException {
 }
 
 export class SourceLoginFailedException extends ApiException {
+  constructor(messageKey: ErrorMessageKey = 'sourceRejectedLoginData') {
+    super(API_ERROR_CODE.SOURCE_LOGIN_FAILED, messageKey, HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class SourceLoginCodeRejectedException extends ApiException {
   constructor() {
-    super(API_ERROR_CODE.SOURCE_LOGIN_FAILED, 'sourceRejectedLoginData', HttpStatus.BAD_REQUEST);
+    super(API_ERROR_CODE.SOURCE_LOGIN_CODE_REJECTED, 'sourceRejectedCode', HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class SourceLoginExpiredException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.SOURCE_LOGIN_EXPIRED,
+      'loginExpiredEnterPasswordAgain',
+      HttpStatus.BAD_REQUEST,
+    );
   }
 }
 
@@ -367,6 +383,41 @@ export class BookmarkFolderConflictException extends ApiException {
       API_ERROR_CODE.BOOKMARK_FOLDER_CONFLICT,
       'bothTitlesInBookmarksInDifferentFolders',
       HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** Копия новее формата, который понимает сервер: в ней могут быть незнакомые поля. */
+export class BackupVersionUnsupportedException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.BACKUP_VERSION_UNSUPPORTED,
+      'backupFromNewerVersion',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+/** Вторая запись в библиотеку того же пользователя — восстановление или импорт, — пока первая не
+ *  записалась (две вкладки). */
+export class RestoreInProgressException extends ApiException {
+  constructor() {
+    super(
+      API_ERROR_CODE.RESTORE_IN_PROGRESS,
+      'importOrRestoreAlreadyInProgress',
+      HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** Парсер источника не умеет читать закладки. */
+export class SourceImportUnsupportedException extends ApiException {
+  constructor(sourceId: string) {
+    super(
+      API_ERROR_CODE.BAD_REQUEST,
+      'sourceDoesNotSupportBookmarksImport',
+      HttpStatus.BAD_REQUEST,
+      { sourceId, params: sourceNameParams(sourceId) },
     );
   }
 }

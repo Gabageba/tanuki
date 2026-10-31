@@ -1,13 +1,18 @@
 import { CookieJar } from 'tough-cookie';
 import { describe, expect, it } from 'vitest';
 import {
+  BUILT_IN_BOOKMARK_FOLDER,
   CONTENT_RATING,
   FILTER_TYPE,
+  SOURCE_AUTH_FAMILY,
   TITLE_STATE,
   TITLE_TYPE,
   SORT_ORDER,
 } from '@tanuki/contracts';
 import { createMangaBuffParser, MANGABUFF_FILTER_GROUP } from '../src/sources/mangabuff';
+import { loginMangaBuff } from '../src/sources/mangabuff/auth';
+import { runWithSourceAccounts, type SourceAccountSession } from '../src/core/source-accounts';
+import { SourceAuthRequiredError, SourceBlockedError, SourceUnavailableError } from '../src/errors';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
@@ -362,5 +367,240 @@ describe('MangaBuff getHome', () => {
     }
     // Строки списков приходят с обложкой x70 — в карточку берём x180.
     expect(sections[2]!.items[0]!.coverUrl).toContain('/x180/');
+  });
+});
+
+describe('MangaBuff getBookmarks', () => {
+  const USER_ID = 28145;
+  const pageWithUser = (userId: number) =>
+    `<html><head><meta name="csrf-token" content="csrf-abc"></head><body><script>
+      window.isAuth = ${userId > 0 ? 1 : 0};
+      window.user_id = ${userId};
+    </script></body></html>`;
+
+  const row = (slug: string, title: string, position: string | null) => `
+    <div class="bookmark__manga" data-manga-id="1">
+      <div class="bookmark__manga-container">
+        <a href="https://${DOMAIN}/manga/${slug}" class="bookmark__manga-image" style="background-image: url('/x70/img/manga/posters/${slug}.jpg?1782880593')"></a>
+        <label class="bookmark__edit"><input type="checkbox" class="bookmark__edit-checkbox"></label>
+      </div>
+      <div class="bookmark__manga-info">
+        <a href="https://${DOMAIN}/manga/${slug}" class="bookmark__manga-name">${title}</a>
+        <div class="bookmark__manga-chapter">1 том, 34 глава </div>
+        ${position ? `<a href="/manga/${slug}/${position}" class="bookmark__manga-chapter">Прочитано до 11</a>` : ''}
+      </div>
+      <div class="bookmark__manga-right"><div class="bookmark__manga-date">21 час назад</div></div>
+    </div>`;
+
+  const menuItem = (id: number, name: string, count: number) => `
+    <a href="https://${DOMAIN}/users/${USER_ID}/bookmarks?folder_id=${id}" class="side-menu__item " data-folder-id="${id}">
+      <div class="side-menu__name"><i class="icon icon-reading"></i>${name}</div>
+      <div class="side-menu__count">${count}</div>
+    </a>`;
+
+  const pagination = (folderId: number, pages: number[]) => `
+    <ul class="pagination">${pages
+      .map(
+        (page) =>
+          `<li class="pagination__button"><a href="https://${DOMAIN}/users/${USER_ID}/bookmarks?folder_id=${folderId}&amp;page=${page}">${page}</a></li>`,
+      )
+      .join('')}</ul>`;
+
+  // Разметка — как у живой `/users/{id}/bookmarks` (проверено 2026-10-29).
+  const bookmarksPage = (rows: string[], extra = '') => `<html><body><div class="bookmark">
+    <div class="side-menu">
+      <a href="https://${DOMAIN}/users/${USER_ID}/bookmarks" class="side-menu__item side-menu__item--active">
+        <div class="side-menu__name"><i class="icon icon-all-list"></i>Весь список</div>
+        <div class="side-menu__count">4</div>
+      </a>
+      ${menuItem(1, 'Читаю', 3)}
+      ${menuItem(2, 'Буду читать', 0)}
+      ${menuItem(7600, 'Мило', 1)}
+      <a href="https://${DOMAIN}/users/${USER_ID}/favourites" class="side-menu__item side-menu__item--favourite">
+        <div class="side-menu__name"><i class="icon icon-heart"></i>Избранное</div>
+      </a>
+    </div>
+    <div class="bookmark__right">${rows.join('')}${extra}</div>
+  </div></body></html>`;
+
+  const setUp = (visitorId: number) => {
+    const http = new FakeHttpClient();
+    const bookmarksUrl = `https://${DOMAIN}/users/${USER_ID}/bookmarks`;
+    http.register(
+      (url) => url === `https://${DOMAIN}/`,
+      () => ({
+        status: 200,
+        // После входа главная уже называет аккаунт.
+        body: pageWithUser(
+          http.requests.some((r) => r.url.endsWith('/login') && r.body) ? USER_ID : visitorId,
+        ),
+      }),
+    );
+    http.register((url, body) => url === `https://${DOMAIN}/login` && !body, {
+      status: 200,
+      body: pageWithUser(0),
+    });
+    http.register((url) => url === `https://${DOMAIN}/login`, { status: 200, body: '{}' });
+    http.register((url) => url === `${bookmarksUrl}?folder_id=1`, {
+      status: 200,
+      body: bookmarksPage(
+        [row('one', 'Первый', '1/11'), row('two', 'Второй', null)],
+        pagination(1, [1, 2]),
+      ),
+    });
+    http.register((url) => url === `${bookmarksUrl}?folder_id=1&page=2`, {
+      status: 200,
+      body: bookmarksPage([row('three', 'Третий', '4/16.2')], pagination(1, [2, 1, 2])),
+    });
+    http.register((url) => url === `${bookmarksUrl}?folder_id=7600`, {
+      status: 200,
+      body: bookmarksPage([row('four', 'Четвёртый', null)]),
+    });
+    http.register((url) => url === bookmarksUrl, { status: 200, body: bookmarksPage([]) });
+    return http;
+  };
+
+  const asUser = <T>(fn: () => Promise<T>, session: SourceAccountSession = {}) =>
+    runWithSourceAccounts(
+      { [SOURCE_AUTH_FAMILY.MANGABUFF]: { jar: new CookieJar(), ...session } },
+      fn,
+    );
+
+  it('folders 1–4 are built-in, the rest own; rows read across pages, position from «Прочитано до»', async () => {
+    const http = setUp(USER_ID);
+    const parser = createMangaBuffParser(makeContext(http));
+
+    const folders = await asUser(() => parser.getBookmarks!());
+
+    expect(folders.map(({ id, builtIn, name }) => ({ id, builtIn, name }))).toEqual([
+      { id: '1', builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: 'Читаю' },
+      { id: '2', builtIn: BUILT_IN_BOOKMARK_FOLDER.PLANNED, name: 'Буду читать' },
+      { id: '7600', builtIn: null, name: 'Мило' },
+    ]);
+    const [reading, planned, own] = folders;
+    expect(reading!.items[0]).toMatchObject({
+      url: '/manga/one',
+      title: 'Первый',
+      coverUrl: `https://${DOMAIN}/x180/img/manga/posters/one.jpg?1782880593`,
+      // «1 том, 34 глава» — последняя глава тайтла, а не место чтения.
+      lastChapterNumber: 11,
+      lastChapterVolume: 1,
+    });
+    expect(
+      reading!.items.map(({ url, lastChapterNumber, lastChapterVolume }) => ({
+        url,
+        lastChapterNumber,
+        lastChapterVolume,
+      })),
+    ).toEqual([
+      { url: '/manga/one', lastChapterNumber: 11, lastChapterVolume: 1 },
+      { url: '/manga/two', lastChapterNumber: null, lastChapterVolume: null },
+      { url: '/manga/three', lastChapterNumber: 16.2, lastChapterVolume: 4 },
+    ]);
+    expect(planned!.items).toEqual([]);
+    expect(own!.items.map(({ title }) => title)).toEqual(['Четвёртый']);
+    // Пустую папку не открывают, на «Избранное» не ходят, вход не нужен.
+    expect(http.requests.some(({ url }) => url.includes('folder_id=2'))).toBe(false);
+    expect(http.requests.some(({ url }) => url.includes('favourites'))).toBe(false);
+    expect(http.requests.some(({ url }) => url.endsWith('/login'))).toBe(false);
+  });
+
+  it('an expired session with a stored password logs in again', async () => {
+    const http = setUp(0);
+    const parser = createMangaBuffParser(makeContext(http));
+
+    const folders = await asUser(() => parser.getBookmarks!(), {
+      credentials: { username: 'reader@example.com', password: 'secret' },
+    });
+
+    expect(folders).toHaveLength(3);
+    const login = http.requests.find(({ url, body }) => url.endsWith('/login') && body);
+    expect(new URLSearchParams(login!.body).get('email')).toBe('reader@example.com');
+  });
+
+  it('an expired session without a password — auth required', async () => {
+    const parser = createMangaBuffParser(makeContext(setUp(0)));
+
+    await expect(asUser(() => parser.getBookmarks!())).rejects.toBeInstanceOf(
+      SourceAuthRequiredError,
+    );
+  });
+
+  it('without the user’s own account — auth required, no request', async () => {
+    const http = setUp(USER_ID);
+    const parser = createMangaBuffParser(makeContext(http));
+
+    await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
+    expect(http.requests).toHaveLength(0);
+  });
+});
+
+describe('MangaBuff login', () => {
+  const LOGGER = { info: () => {}, warn: () => {}, error: () => {} };
+  const CREDENTIALS = { username: 'reader@example.com', password: 'p&ss word' };
+  const LOGIN_PAGE = '<html><head><meta name="csrf-token" content="csrf-abc"></head></html>';
+
+  const setUp = (loginResponse: { status: number; body: string }, userId: number) => {
+    const http = new FakeHttpClient();
+    http.register((url, body) => url === `https://${DOMAIN}/login` && !body, {
+      status: 200,
+      body: LOGIN_PAGE,
+    });
+    http.register((url) => url === `https://${DOMAIN}/login`, loginResponse);
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: `<script>window.user_id = ${userId};</script>`,
+    });
+    return http;
+  };
+
+  it('posts the AJAX login with the page’s CSRF token and returns the id from `/`', async () => {
+    const http = setUp({ status: 200, body: '{}' }, 42);
+
+    expect(await loginMangaBuff(http, DOMAIN, CREDENTIALS, LOGGER)).toBe(42);
+    // Сначала страница входа — токен Laravel сверяет с cookie сессии, что она ставит.
+    expect(http.requests.map(({ url }) => url)).toEqual([
+      `https://${DOMAIN}/login`,
+      `https://${DOMAIN}/login`,
+      `https://${DOMAIN}/`,
+    ]);
+    const post = http.requests[1]!;
+    expect(post.headers['X-CSRF-TOKEN']).toBe('csrf-abc');
+    const body = new URLSearchParams(post.body);
+    expect(body.get('email')).toBe('reader@example.com');
+    expect(body.get('password')).toBe('p&ss word');
+  });
+
+  it('a rejected password (422) — null, `/` is not even opened', async () => {
+    const http = setUp(
+      { status: 422, body: '{"message":"Неверный логин или пароль","errors":{}}' },
+      0,
+    );
+
+    expect(await loginMangaBuff(http, DOMAIN, CREDENTIALS, LOGGER)).toBeNull();
+    expect(http.requests.some(({ url }) => url === `https://${DOMAIN}/`)).toBe(false);
+  });
+
+  it('an accepted answer that leaves a guest — null', async () => {
+    const http = setUp({ status: 200, body: '{}' }, 0);
+
+    expect(await loginMangaBuff(http, DOMAIN, CREDENTIALS, LOGGER)).toBeNull();
+  });
+
+  it('the site asking for a captcha is a block, not a rejected password', async () => {
+    const http = setUp({ status: 428, body: '{"captcha_required":true}' }, 0);
+
+    await expect(loginMangaBuff(http, DOMAIN, CREDENTIALS, LOGGER)).rejects.toBeInstanceOf(
+      SourceBlockedError,
+    );
+  });
+
+  it('a site that is down is not a rejected password either', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `https://${DOMAIN}/login`, { status: 503, body: '' });
+
+    await expect(loginMangaBuff(http, DOMAIN, CREDENTIALS, LOGGER)).rejects.toBeInstanceOf(
+      SourceUnavailableError,
+    );
   });
 });
