@@ -1,41 +1,16 @@
-import {
-  ActionIcon,
-  Center,
-  Group,
-  Paper,
-  Text,
-  Tooltip,
-  useMantineColorScheme,
-} from '@mantine/core';
+import { Center, Group, Paper, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router';
-import { COLOR_SCHEME, type ColorScheme } from '@tanuki/contracts';
 import LogoHorizontal from '../Layout/Header/LogoHorizontal';
 import StatusIndicator from '@/shared/ui/StatusIndicator';
 import { STATUS_OK_COLOR } from '@/shared/lib/palette';
-import { getColorSchemeIcon, getColorSchemeLabel } from '@/shared/lib/colorScheme';
+import ColorSchemeToggle from '@/shared/ui/ColorSchemeToggle';
 import useSourcesCount from './hooks/useSourcesCount';
 import styles from './AuthLayout.module.scss';
-
-const getNextColorScheme = (colorScheme: ColorScheme): ColorScheme => {
-  switch (colorScheme) {
-    case COLOR_SCHEME.LIGHT:
-      return COLOR_SCHEME.DARK;
-    case COLOR_SCHEME.DARK:
-      return COLOR_SCHEME.AUTO;
-    case COLOR_SCHEME.AUTO:
-      return COLOR_SCHEME.LIGHT;
-  }
-};
 
 function AuthLayout() {
   const { t } = useTranslation();
   const { data: sourcesCount } = useSourcesCount();
-  const { colorScheme, setColorScheme } = useMantineColorScheme();
-
-  const handleColorSchemeToggle = () => {
-    setColorScheme(getNextColorScheme(colorScheme));
-  };
 
   return (
     <Center className={styles.root} mih="100vh" px="xl" py="lg">
@@ -59,11 +34,7 @@ function AuthLayout() {
             gap={8}
             color={STATUS_OK_COLOR}
           />
-          <Tooltip label={getColorSchemeLabel(colorScheme, t)}>
-            <ActionIcon variant="default" size="lg" onClick={handleColorSchemeToggle}>
-              {getColorSchemeIcon(colorScheme)}
-            </ActionIcon>
-          </Tooltip>
+          <ColorSchemeToggle />
         </Group>
       </Group>
 

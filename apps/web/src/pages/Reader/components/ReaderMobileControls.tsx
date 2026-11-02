@@ -1,4 +1,5 @@
 import { Paper } from '@mantine/core';
+import type useReaderFullscreen from '../hooks/useReaderFullscreen';
 import { CHAPTER_NUMBERING } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
 import ReaderControls from './ReaderControls';
@@ -17,6 +18,8 @@ type Props = {
   prevChapterId: string | null;
   nextChapterId: string | null;
   page: number;
+  pageEnd: number;
+  fullscreen: ReturnType<typeof useReaderFullscreen>;
   pagesLength: number | null;
   visible: boolean;
   /** Загрузка главы из ленты — от неё соседние главы. */
@@ -29,6 +32,8 @@ function ReaderMobileControls({
   prevChapterId,
   nextChapterId,
   page,
+  pageEnd,
+  fullscreen,
   pagesLength,
   visible,
   feedQuery,
@@ -63,9 +68,11 @@ function ReaderMobileControls({
       style={{ marginInline: 'auto' }}
     >
       {isSkeleton ? (
-        <ReaderControlsSkeleton />
+        <ReaderControlsSkeleton fullscreen={fullscreen} />
       ) : (
         <ReaderControls
+          pageEnd={pageEnd}
+          fullscreen={fullscreen}
           page={page}
           pagesLength={pagesLength}
           prevChapterId={prevChapterId}

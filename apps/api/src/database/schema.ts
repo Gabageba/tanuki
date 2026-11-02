@@ -25,6 +25,8 @@ import type {
   Language,
   ReaderReadingMode,
   ReaderPageFit,
+  ReaderDirection,
+  ReaderPageLayout,
   ColorScheme,
   ViewMode,
   BuiltInBookmarkFolder,
@@ -38,6 +40,7 @@ import type {
   SourceImportProgressStatus,
 } from '@tanuki/contracts';
 import type { EmailTokenPurpose } from '../auth/models';
+import { DEFAULT_READER_SETTINGS } from '@tanuki/contracts';
 
 /**
  * Ручные правки связей между тайтлами на разных источниках: что человек подтвердил, а что
@@ -243,6 +246,17 @@ export const readerSettings = pgTable('reader_settings', {
   chapterGap: integer('chapter_gap').notNull(),
   autoNextChapter: boolean('auto_next_chapter').notNull(),
   hidePanelsOnScroll: boolean('hide_panels_on_scroll').notNull(),
+  direction: text('direction')
+    .$type<ReaderDirection>()
+    .notNull()
+    .default(DEFAULT_READER_SETTINGS.direction),
+  pageLayout: text('page_layout')
+    .$type<ReaderPageLayout>()
+    .notNull()
+    .default(DEFAULT_READER_SETTINGS.pageLayout),
+  brightness: integer('brightness').notNull().default(DEFAULT_READER_SETTINGS.brightness),
+  prefetchPages: integer('prefetch_pages').notNull().default(DEFAULT_READER_SETTINGS.prefetchPages),
+  keepScreenOn: boolean('keep_screen_on').notNull().default(DEFAULT_READER_SETTINGS.keepScreenOn),
 
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

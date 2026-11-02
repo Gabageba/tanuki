@@ -1,18 +1,18 @@
-import { ActionIcon, ScrollArea, Stack } from '@mantine/core';
+import { ActionIcon, ScrollArea, Stack, Text } from '@mantine/core';
 import {
-  ArrowsHorizontalIcon,
-  ArrowsOutLineHorizontalIcon,
-  ArrowsOutLineVerticalIcon,
-  ArrowsVerticalIcon,
   FadersHorizontalIcon,
   EyeClosedIcon,
   SkipForwardIcon,
+  EyeIcon,
 } from '@phosphor-icons/react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_READER_SETTINGS,
+  READER_BRIGHTNESS,
+  READER_PREFETCH,
+  type ReaderDirection,
+  type ReaderPageLayout,
   READER_CHAPTER_GAP,
   READER_CONTAINER_WIDTH,
   READER_PAGE_FIT,
@@ -23,9 +23,13 @@ import {
   type ReaderReadingMode,
   type ReaderSettings,
 } from '@tanuki/contracts';
-import useReaderSettings, {
-  READER_SETTINGS_QUERY_KEY,
-} from '@/entities/reader/hooks/useReaderSettings';
+import {
+  getReadingModeChoices,
+  getPageFitChoices,
+  getDirectionChoices,
+  getPageLayoutChoices,
+} from '@/entities/reader/settings';
+import useReaderSettings from '@/entities/reader/hooks/useReaderSettings';
 import ResponsiveDrawer from '@/shared/ui/ResponsiveDrawer';
 import { DRAWER_POSITION, SHEET_HEIGHT } from '@/shared/ui/ResponsiveDrawer/models';
 import useUpdateReaderSettings from '@/entities/reader/hooks/useUpdateReaderSettings';
@@ -39,7 +43,6 @@ import ReaderTapZonesOverlay from './ReaderTapZonesOverlay';
 
 function ReaderSettingsButton() {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const [isDrawerOpened, setIsDrawerOpened] = useState(false);
   const { data } = useReaderSettings();
   const updateSettings = useUpdateReaderSettings();
@@ -61,37 +64,10 @@ function ReaderSettingsButton() {
   // уходит только по onChangeEnd). Пишем черновое значение прямо в кэш запроса: он и так общий
   // источник данных для ReaderPages, поэтому лишний контекст/проброс пропсов не нужен.
   const setDraftSettings = (patch: Partial<ReaderSettings>) =>
-    queryClient.setQueryData(READER_SETTINGS_QUERY_KEY, { ...settings, ...patch });
+    updateSettings.setDraft({ ...settings, ...patch });
 
-  const readingModeItems = [
-    {
-      id: READER_READING_MODE.VERTICAL,
-      title: t('vertical'),
-      description: t('pagesStackedContinuousScroll'),
-      icon: <ArrowsVerticalIcon />,
-    },
-    {
-      id: READER_READING_MODE.HORIZONTAL,
-      title: t('horizontal'),
-      description: t('clickOrArrowsSwitchPage'),
-      icon: <ArrowsHorizontalIcon />,
-    },
-  ];
-
-  const pageFitItems = [
-    {
-      id: READER_PAGE_FIT.FIT_WIDTH,
-      title: t('fitWidth'),
-      description: t('pageFillsContainerWidth'),
-      icon: <ArrowsOutLineHorizontalIcon />,
-    },
-    {
-      id: READER_PAGE_FIT.FIT_HEIGHT,
-      title: t('fitHeight'),
-      description: t('heightFitsScreenFully'),
-      icon: <ArrowsOutLineVerticalIcon />,
-    },
-  ];
+  const readingModeItems = getReadingModeChoices(t);
+  const pageFitItems = getPageFitChoices(t);
 
   const containerWidthPresets = [
     { id: 'narrow', label: t('narrow'), value: READER_CONTAINER_WIDTH.NARROW },
@@ -123,6 +99,7 @@ function ReaderSettingsButton() {
         variant="subtle"
         color="gray"
         size="lg"
+        aria-label={t('readerSettings')}
         onClick={() => {
           wasTapZoneTouched.current = false;
           setIsDrawerOpened(true);
@@ -138,7 +115,7 @@ function ReaderSettingsButton() {
         title={t('readerSettings')}
       >
         <ScrollArea type="auto" offsetScrollbars="y" flex={1} mih={0}>
-          <Stack gap="lg">
+          <Stack gap="lg" data-reader-overlay>
             <ReaderSetting label={t('readingMode')}>
               <ReaderSettingRadioGroup
                 value={settings.readingMode}
@@ -163,6 +140,31 @@ function ReaderSettingsButton() {
               />
             </ReaderSetting>
 
+            {settings.readingMode === READER_READING_MODE.HORIZONTAL && (
+              <Stack gap="lg">
+                <Text fw={600}>{t('pageByPageMode')}</Text>
+                <ReaderSetting label={t('readingDirection')}>
+                  <ReaderSettingRadioGroup
+                    value={settings.direction}
+                    items={getDirectionChoices(t)}
+                    onChange={(value) => {
+                      wasTapZoneTouched.current = true;
+                      updateSettings.mutate({ ...settings, direction: value as ReaderDirection });
+                    }}
+                  />
+                </ReaderSetting>
+                <ReaderSetting label={t('pages')}>
+                  <ReaderSettingRadioGroup
+                    value={settings.pageLayout}
+                    items={getPageLayoutChoices(t)}
+                    onChange={(value) =>
+                      updateSettings.mutate({ ...settings, pageLayout: value as ReaderPageLayout })
+                    }
+                  />
+                </ReaderSetting>
+              </Stack>
+            )}
+
             {/* «Страница целиком» подгоняет страницу по высоте экрана, ширину контейнера при этом
               не смотрит — настраивать нечего. */}
             {settings.pageFit === READER_PAGE_FIT.FIT_WIDTH && (
@@ -182,7 +184,7 @@ function ReaderSettingsButton() {
 
             {settings.readingMode === READER_READING_MODE.HORIZONTAL && (
               <ReaderSliderSetting
-                label={t('clickArea')}
+                label={t('clickZone')}
                 unit="%"
                 value={settings.tapZoneWidth}
                 min={READER_TAP_ZONE_WIDTH.MIN}
@@ -226,6 +228,31 @@ function ReaderSettingsButton() {
               </>
             )}
 
+            <ReaderSliderSetting
+              label={t('brightness')}
+              unit="%"
+              value={settings.brightness}
+              min={READER_BRIGHTNESS.MIN}
+              max={READER_BRIGHTNESS.MAX}
+              presets={[READER_BRIGHTNESS.MIN, READER_BRIGHTNESS.MEDIUM, READER_BRIGHTNESS.MAX].map(
+                (value) => ({ id: String(value), label: `${value}%`, value }),
+              )}
+              onChange={(brightness) => setDraftSettings({ brightness })}
+              onChangeEnd={(brightness) => updateSettings.mutate({ ...settings, brightness })}
+            />
+            <ReaderSliderSetting
+              label={t('pagePrefetch')}
+              unit=""
+              value={settings.prefetchPages}
+              min={READER_PREFETCH.MIN}
+              max={READER_PREFETCH.MAX}
+              presets={[READER_PREFETCH.MIN, READER_PREFETCH.DEFAULT, READER_PREFETCH.MAX].map(
+                (value) => ({ id: String(value), label: String(value), value }),
+              )}
+              onChange={(prefetchPages) => setDraftSettings({ prefetchPages })}
+              onChangeEnd={(prefetchPages) => updateSettings.mutate({ ...settings, prefetchPages })}
+            />
+
             <ReaderSetting label={t('behavior')}>
               <ReaderSettingSwitch
                 title={t('openNextChapterImmediately')}
@@ -244,6 +271,13 @@ function ReaderSettingsButton() {
                 onChange={(hidePanelsOnScroll) =>
                   updateSettings.mutate({ ...settings, hidePanelsOnScroll })
                 }
+              />
+              <ReaderSettingSwitch
+                title={t('keepScreenOn')}
+                description={t('screenStaysOnWhileReadingIfSupported')}
+                icon={<EyeIcon />}
+                checked={settings.keepScreenOn}
+                onChange={(keepScreenOn) => updateSettings.mutate({ ...settings, keepScreenOn })}
               />
             </ReaderSetting>
           </Stack>

@@ -132,11 +132,16 @@ const svg = (body: string) =>
  * перекрывает их через `parameters.msw`. Порядок важен: точные пути — раньше путей с параметром.
  */
 export const DEFAULT_HANDLERS = [
+  http.get('/offline/:userId/:titleId/:chapterId/:pageIndex', ({ params }) =>
+    svg(renderPageSvg(String(params['chapterId']), Number(params['pageIndex']))),
+  ),
   http.get(apiPath('/img'), ({ request }) => {
     const params = new URL(request.url).searchParams;
     const chapter = params.get('chapter');
     return chapter
-      ? svg(renderPageSvg(chapter, Number(params.get('page'))))
+      ? svg(
+          renderPageSvg(chapter, Number(params.get('page')), params.has('short') ? 900 : undefined),
+        )
       : svg(renderCoverSvg(params.get('cover') ?? ''));
   }),
 

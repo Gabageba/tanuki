@@ -68,6 +68,7 @@ function ReaderSliderRow({
       }
     >
       <Slider
+        aria-label={title}
         min={range.MIN}
         max={range.MAX}
         value={current}
@@ -77,7 +78,11 @@ function ReaderSliderRow({
         disabled={disabled}
       />
       {preview}
-      <Radio.Group value={activePreset ? String(activePreset.value) : ''} onChange={applyPreset}>
+      <Radio.Group
+        aria-label={title}
+        value={activePreset ? String(activePreset.value) : ''}
+        onChange={applyPreset}
+      >
         <SimpleGrid cols={3} spacing={8}>
           {presets.map((preset) => (
             <Radio.Card
@@ -90,7 +95,9 @@ function ReaderSliderRow({
             >
               <Flex gap="xs" align="center" justify={{ base: 'center', xs: 'flex-start' }}>
                 <Radio.Indicator variant="outline" size="xs" visibleFrom="xs" />
-                <Text fz="sm">{preset.label}</Text>
+                <Text fz="sm" ff={/^\d/.test(preset.label) ? 'monospace' : undefined}>
+                  {preset.label}
+                </Text>
               </Flex>
             </Radio.Card>
           ))}

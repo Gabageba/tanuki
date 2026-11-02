@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import type { ReaderFeedChapter, ReaderPosition } from '../models';
+import { getSpreadStart, getVisiblePageEnd } from '../navigation';
 
 type Params = {
   /** false в вертикальном режиме: хук висит всегда (список страниц общий на оба режима), но
@@ -17,6 +18,7 @@ type Params = {
   autoNextChapter: boolean;
   /** Главу не открыть: без сети и не скачана. В неё не листаем — показываем экран конца главы. */
   isChapterUnavailable: (chapterId: string) => boolean;
+  pageStep: number;
 };
 
 /**
@@ -34,11 +36,17 @@ function useHorizontalReaderNavigation({
   prependChapter,
   autoNextChapter,
   isChapterUnavailable,
+  pageStep,
 }: Params) {
   const navigate = useNavigate();
   const chapterIndex = chapters.findIndex((chapter) => chapter.chapterId === position.chapterId);
   const chapter = chapters[chapterIndex];
-  const isLastPage = Boolean(chapter && position.pageIndex === chapter.pages.length - 1);
+  const isLastPage = Boolean(
+    chapter &&
+    chapter.pages.length > 0 &&
+    getVisiblePageEnd(position.pageIndex, chapter.pages.length, pageStep) ===
+      chapter.pages.length - 1,
+  );
 
   // Экран конца главы — не позиция: в позицию он не пишется, иначе сохранённый прогресс, счётчик
   // страниц и отметка о прочтении получили бы несуществующую страницу. Помним только главу, в
@@ -55,10 +63,13 @@ function useHorizontalReaderNavigation({
   );
 
   const goNext = useCallback(() => {
-    if (!chapter) return;
+    if (!enabled || !chapter || chapter.pages.length === 0) return;
 
-    if (position.pageIndex < chapter.pages.length - 1) {
-      setPosition({ chapterId: chapter.chapterId, pageIndex: position.pageIndex + 1 });
+    if (!isLastPage) {
+      setPosition({
+        chapterId: chapter.chapterId,
+        pageIndex: getSpreadStart(position.pageIndex, pageStep) + pageStep,
+      });
       return;
     }
 
@@ -91,13 +102,16 @@ function useHorizontalReaderNavigation({
     autoNextChapter,
     isChapterEndShown,
     isChapterUnavailable,
+    enabled,
+    pageStep,
+    isLastPage,
   ]);
 
   // Назад за начало главы — это всегда конец прошлой: на её первую страницу читатель попадал бы
   // только чтобы тут же пролистать её насквозь. Загруженную главу листаем сразу, остальное берёт
   // на себя лента — она же знает, что номер последней страницы появится только после загрузки.
   const goPrev = useCallback(() => {
-    if (!chapter) return;
+    if (!enabled || !chapter) return;
 
     if (isChapterEndShown) {
       setEndScreenChapterId(null);
@@ -105,13 +119,19 @@ function useHorizontalReaderNavigation({
     }
 
     if (position.pageIndex > 0) {
-      setPosition({ chapterId: chapter.chapterId, pageIndex: position.pageIndex - 1 });
+      setPosition({
+        chapterId: chapter.chapterId,
+        pageIndex: Math.max(0, getSpreadStart(position.pageIndex, pageStep) - pageStep),
+      });
       return;
     }
 
     const prevInFeed = chapters[chapterIndex - 1];
     if (prevInFeed && prevInFeed.pages.length > 0) {
-      setPosition({ chapterId: prevInFeed.chapterId, pageIndex: prevInFeed.pages.length - 1 });
+      setPosition({
+        chapterId: prevInFeed.chapterId,
+        pageIndex: getSpreadStart(prevInFeed.pages.length - 1, pageStep),
+      });
       return;
     }
 
@@ -124,20 +144,11 @@ function useHorizontalReaderNavigation({
     setPosition,
     prependChapter,
     isChapterEndShown,
+    enabled,
+    pageStep,
   ]);
 
-  useEffect(() => {
-    if (!enabled) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowRight') goNext();
-      if (event.key === 'ArrowLeft') goPrev();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enabled, goNext, goPrev]);
-
-  return { goNext, goPrev, isChapterEndShown };
+  return { goNext, goPrev, isChapterEndShown, resetEndScreen: () => setEndScreenChapterId(null) };
 }
 
 export default useHorizontalReaderNavigation;

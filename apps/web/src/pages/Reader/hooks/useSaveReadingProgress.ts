@@ -17,7 +17,7 @@ const SAVE_DELAY_MS = 2000;
 
 type Params = {
   titleId: string;
-  position: ReaderPosition;
+  position: ReaderPosition | null;
 };
 
 /**
@@ -66,10 +66,12 @@ function useSaveReadingProgress({ titleId, position }: Params) {
       .catch(() => undefined);
   }, [takePending, userId, titleId, queryClient]);
 
-  const { chapterId, pageIndex } = position;
+  const chapterId = position?.chapterId;
+  const pageIndex = position?.pageIndex;
   const chapter = chaptersData?.items.find((item) => item.id === chapterId);
 
   useEffect(() => {
+    if (chapterId === undefined || pageIndex === undefined) return;
     pending.current = { chapterId, pageIndex };
 
     // Главы из другой ветки в этом списке нет — тогда отметку обновит ответ сервера.

@@ -70,7 +70,10 @@ for (const story of STORIES) {
         await openStory(page, story.id, colorScheme);
       }
 
-      await expect(page).toHaveScreenshot([story.id, `${colorScheme}.png`], { fullPage: true });
+      // Long reader feeds exceed Chromium's screenshot height limit; inspect their viewport.
+      // reader.spec.ts separately checks scrolling and the mounted image window.
+      const fullPage = await page.evaluate(() => document.documentElement.scrollHeight < 30_000);
+      await expect(page).toHaveScreenshot([story.id, `${colorScheme}.png`], { fullPage });
     });
   }
 }

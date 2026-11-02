@@ -1,20 +1,24 @@
 import { Box, Select, Switch } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import {
-  ArrowsHorizontalIcon,
   ArrowsOutLineHorizontalIcon,
-  ArrowsOutLineVerticalIcon,
-  ArrowsVerticalIcon,
   BookOpenIcon,
   EyeClosedIcon,
   HandTapIcon,
-  MagnifyingGlassPlusIcon,
   RowsIcon,
   SkipForwardIcon,
   SplitVerticalIcon,
+  ArrowsLeftRightIcon,
+  SunIcon,
+  ImageIcon,
+  EyeIcon,
 } from '@phosphor-icons/react';
 import {
   READER_CHAPTER_GAP,
+  READER_BRIGHTNESS,
+  READER_PREFETCH,
+  type ReaderDirection,
+  type ReaderPageLayout,
   READER_CONTAINER_WIDTH,
   READER_PAGE_FIT,
   READER_PAGE_GAP,
@@ -27,7 +31,13 @@ import {
 import useUpdateReaderSettings from '@/entities/reader/hooks/useUpdateReaderSettings';
 import ReaderTapZonePreview from '@/entities/reader/ReaderTapZonePreview';
 import GroupedList from '@/shared/ui/GroupedList';
-import { getReaderPresets } from './lib';
+import { getReaderPresets, getReaderSelectOptions } from './lib';
+import {
+  getReadingModeChoices,
+  getPageFitChoices,
+  getDirectionChoices,
+  getPageLayoutChoices,
+} from '@/entities/reader/settings';
 import ReaderSliderRow from './ReaderSliderRow';
 import styles from './SettingsReader.module.scss';
 
@@ -46,36 +56,9 @@ function SettingsReaderForm({ settings }: Props) {
   const isHorizontal = settings.readingMode === READER_READING_MODE.HORIZONTAL;
   const isFitWidth = settings.pageFit === READER_PAGE_FIT.FIT_WIDTH;
 
-  const readingModeOptions = [
-    {
-      value: READER_READING_MODE.VERTICAL,
-      label: t('vertical'),
-      description: t('pagesInStripTurnedByScrolling'),
-      icon: <ArrowsVerticalIcon />,
-    },
-    {
-      value: READER_READING_MODE.HORIZONTAL,
-      label: t('horizontal'),
-      description: t('onePageAtTimeTurnedByClickOrArrows'),
-      icon: <ArrowsHorizontalIcon />,
-    },
-  ];
+  const readingModeOptions = getReaderSelectOptions(getReadingModeChoices(t));
   const readingMode = readingModeOptions.find(({ value }) => value === settings.readingMode);
-
-  const pageFitOptions = [
-    {
-      value: READER_PAGE_FIT.FIT_WIDTH,
-      label: t('byWidth'),
-      description: t('pageFullContainerWidthHeightFollows'),
-      icon: <ArrowsOutLineHorizontalIcon />,
-    },
-    {
-      value: READER_PAGE_FIT.FIT_HEIGHT,
-      label: t('whole'),
-      description: t('heightFitsScreenFully'),
-      icon: <ArrowsOutLineVerticalIcon />,
-    },
-  ];
+  const pageFitOptions = getReaderSelectOptions(getPageFitChoices(t));
   const pageFit = pageFitOptions.find(({ value }) => value === settings.pageFit);
 
   return (
@@ -87,77 +70,136 @@ function SettingsReaderForm({ settings }: Props) {
           description={readingMode?.description}
           action={
             <Select
+              aria-label={t('readingMode')}
               data={readingModeOptions}
               value={settings.readingMode}
               onChange={(value) => value && update({ readingMode: value as ReaderReadingMode })}
-              leftSection={readingMode?.icon}
+              leftSection={<BookOpenIcon />}
               allowDeselect={false}
             />
           }
         />
         <GroupedList.Row
-          icon={<MagnifyingGlassPlusIcon />}
+          icon={<ImageIcon />}
           title={t('pageScale')}
           description={pageFit?.description}
           action={
             <Select
+              aria-label={t('pageScale')}
               data={pageFitOptions}
               value={settings.pageFit}
               onChange={(value) => value && update({ pageFit: value as ReaderPageFit })}
-              leftSection={pageFit?.icon}
+              leftSection={<ImageIcon />}
               allowDeselect={false}
             />
           }
         />
+        {isFitWidth && (
+          <ReaderSliderRow
+            icon={<ArrowsOutLineHorizontalIcon />}
+            title={t('containerWidth')}
+            description={isFitWidth ? t('pageStripWidthOnWideScreen') : t('onlyWithByWidthScale')}
+            unit="px"
+            value={settings.containerWidth}
+            range={READER_CONTAINER_WIDTH}
+            presets={getReaderPresets(READER_CONTAINER_WIDTH, t)}
+            onChange={(containerWidth) => update({ containerWidth })}
+            disabled={false}
+          />
+        )}
         <ReaderSliderRow
-          icon={<ArrowsOutLineHorizontalIcon />}
-          title={t('containerWidth')}
-          description={isFitWidth ? t('pageStripWidthOnWideScreen') : t('onlyWithByWidthScale')}
-          unit="px"
-          value={settings.containerWidth}
-          range={READER_CONTAINER_WIDTH}
-          presets={getReaderPresets(READER_CONTAINER_WIDTH, t)}
-          onChange={(containerWidth) => update({ containerWidth })}
-          disabled={!isFitWidth}
+          icon={<SunIcon />}
+          title={t('brightness')}
+          description={t('darkeningPagesInReader')}
+          unit="%"
+          value={settings.brightness}
+          range={READER_BRIGHTNESS}
+          presets={[READER_BRIGHTNESS.MIN, READER_BRIGHTNESS.MEDIUM, READER_BRIGHTNESS.MAX].map(
+            (value) => ({ label: `${value}%`, value }),
+          )}
+          onChange={(brightness) => update({ brightness })}
+          disabled={false}
         />
       </GroupedList>
 
-      <Box className={styles.spacing}>
+      {isHorizontal && (
+        <Box className={styles.mainColumn}>
+          <GroupedList label={t('pageByPageMode')}>
+            <GroupedList.Row
+              icon={<ArrowsLeftRightIcon />}
+              title={t('readingDirection')}
+              description={t('pageOrderAndTurningDirection')}
+              action={
+                <Select
+                  aria-label={t('readingDirection')}
+                  leftSection={<ArrowsLeftRightIcon />}
+                  data={getReaderSelectOptions(getDirectionChoices(t))}
+                  value={settings.direction}
+                  allowDeselect={false}
+                  onChange={(value) => value && update({ direction: value as ReaderDirection })}
+                />
+              }
+            />
+            <GroupedList.Row
+              icon={<BookOpenIcon />}
+              title={t('pages')}
+              description={t('onePageOrPairOnScreen')}
+              action={
+                <Select
+                  aria-label={t('pages')}
+                  leftSection={<BookOpenIcon />}
+                  data={getReaderSelectOptions(getPageLayoutChoices(t))}
+                  value={settings.pageLayout}
+                  allowDeselect={false}
+                  onChange={(value) => value && update({ pageLayout: value as ReaderPageLayout })}
+                />
+              }
+            />
+          </GroupedList>
+        </Box>
+      )}
+      <Box className={styles.mainColumn}>
         <GroupedList label={t('gapsAndClickZone')}>
-          <ReaderSliderRow
-            icon={<HandTapIcon />}
-            title={t('clickArea')}
-            description={isHorizontal ? t('screenEdgesClickTurnsPage') : t('onlyInHorizontalMode')}
-            unit="%"
-            value={settings.tapZoneWidth}
-            range={READER_TAP_ZONE_WIDTH}
-            presets={getReaderPresets(READER_TAP_ZONE_WIDTH, t)}
-            preview={<ReaderTapZonePreview tapZoneWidth={settings.tapZoneWidth} />}
-            onChange={(tapZoneWidth) => update({ tapZoneWidth })}
-            disabled={!isHorizontal}
-          />
-          <ReaderSliderRow
-            icon={<RowsIcon />}
-            title={t('gapBetweenPages')}
-            description={isHorizontal ? t('onlyInVerticalMode') : t('spaceBetweenPagesInStrip')}
-            unit="px"
-            value={settings.pageGap}
-            range={READER_PAGE_GAP}
-            presets={getReaderPresets(READER_PAGE_GAP, t)}
-            onChange={(pageGap) => update({ pageGap })}
-            disabled={isHorizontal}
-          />
-          <ReaderSliderRow
-            icon={<SplitVerticalIcon />}
-            title={t('gapBetweenChapters')}
-            description={isHorizontal ? t('onlyInVerticalMode') : t('breakInStripWhereChapterEnds')}
-            unit="px"
-            value={settings.chapterGap}
-            range={READER_CHAPTER_GAP}
-            presets={getReaderPresets(READER_CHAPTER_GAP, t)}
-            onChange={(chapterGap) => update({ chapterGap })}
-            disabled={isHorizontal}
-          />
+          {isHorizontal && (
+            <ReaderSliderRow
+              icon={<HandTapIcon />}
+              title={t('clickZone')}
+              description={t('screenEdgesClickTurnsPage')}
+              unit="%"
+              value={settings.tapZoneWidth}
+              range={READER_TAP_ZONE_WIDTH}
+              presets={getReaderPresets(READER_TAP_ZONE_WIDTH, t)}
+              preview={<ReaderTapZonePreview tapZoneWidth={settings.tapZoneWidth} />}
+              onChange={(tapZoneWidth) => update({ tapZoneWidth })}
+              disabled={false}
+            />
+          )}
+          {!isHorizontal && (
+            <ReaderSliderRow
+              icon={<RowsIcon />}
+              title={t('gapBetweenPages')}
+              description={t('spaceBetweenPagesInStrip')}
+              unit="px"
+              value={settings.pageGap}
+              range={READER_PAGE_GAP}
+              presets={getReaderPresets(READER_PAGE_GAP, t)}
+              onChange={(pageGap) => update({ pageGap })}
+              disabled={false}
+            />
+          )}
+          {!isHorizontal && (
+            <ReaderSliderRow
+              icon={<SplitVerticalIcon />}
+              title={t('gapBetweenChapters')}
+              description={t('breakInStripWhereChapterEnds')}
+              unit="px"
+              value={settings.chapterGap}
+              range={READER_CHAPTER_GAP}
+              presets={getReaderPresets(READER_CHAPTER_GAP, t)}
+              onChange={(chapterGap) => update({ chapterGap })}
+              disabled={false}
+            />
+          )}
         </GroupedList>
       </Box>
 
@@ -166,13 +208,10 @@ function SettingsReaderForm({ settings }: Props) {
           <GroupedList.Row
             icon={<SkipForwardIcon />}
             title={t('openNextChapterImmediately')}
-            description={
-              settings.autoNextChapter
-                ? t('finishedChapterContinuesWithNext')
-                : t('screenWithNextChapterAtEnd')
-            }
+            description={t('readingContinuesAfterLastPage')}
             action={
               <Switch
+                aria-label={t('openNextChapterImmediately')}
                 checked={settings.autoNextChapter}
                 onChange={(event) => update({ autoNextChapter: event.currentTarget.checked })}
               />
@@ -181,15 +220,37 @@ function SettingsReaderForm({ settings }: Props) {
           <GroupedList.Row
             icon={<EyeClosedIcon />}
             title={t('hidePanelsOnScroll')}
-            description={
-              settings.hidePanelsOnScroll
-                ? t('headerAndChapterBarSlideAwayWhileReading')
-                : t('onlyPageTapHidesAndShowsPanels')
-            }
+            description={t('headerAndChapterBarSlideAwayWhileReading')}
             action={
               <Switch
+                aria-label={t('hidePanelsOnScroll')}
                 checked={settings.hidePanelsOnScroll}
                 onChange={(event) => update({ hidePanelsOnScroll: event.currentTarget.checked })}
+              />
+            }
+          />
+          <ReaderSliderRow
+            icon={<ImageIcon />}
+            title={t('pagePrefetch')}
+            description={t('numberOfNextPagesLoadedInAdvance')}
+            unit=""
+            value={settings.prefetchPages}
+            range={READER_PREFETCH}
+            presets={[READER_PREFETCH.MIN, READER_PREFETCH.DEFAULT, READER_PREFETCH.MAX].map(
+              (value) => ({ label: String(value), value }),
+            )}
+            onChange={(prefetchPages) => update({ prefetchPages })}
+            disabled={false}
+          />
+          <GroupedList.Row
+            icon={<EyeIcon />}
+            title={t('keepScreenOn')}
+            description={t('screenStaysOnWhileReadingIfSupported')}
+            action={
+              <Switch
+                aria-label={t('keepScreenOn')}
+                checked={settings.keepScreenOn}
+                onChange={(event) => update({ keepScreenOn: event.currentTarget.checked })}
               />
             }
           />

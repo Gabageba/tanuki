@@ -2,9 +2,6 @@
 export type ReaderRange = {
   MIN: number;
   MAX: number;
-  NARROW: number;
-  MEDIUM: number;
-  WIDE: number;
 };
 
 export type ReaderPreset = {

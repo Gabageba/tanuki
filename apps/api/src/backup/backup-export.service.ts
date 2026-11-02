@@ -104,6 +104,11 @@ export class BackupExportService {
                 chapterGap: reader.chapterGap,
                 autoNextChapter: reader.autoNextChapter,
                 hidePanelsOnScroll: reader.hidePanelsOnScroll,
+                direction: reader.direction,
+                pageLayout: reader.pageLayout,
+                brightness: reader.brightness,
+                prefetchPages: reader.prefetchPages,
+                keepScreenOn: reader.keepScreenOn,
               }
             : null,
           disabledSources: disabled.map(({ sourceId }) => sourceId),

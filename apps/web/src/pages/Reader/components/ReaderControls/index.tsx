@@ -2,6 +2,7 @@ import type { MantineBreakpoint } from '@mantine/core';
 import { Divider, Group } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
+import type useReaderFullscreen from '../../hooks/useReaderFullscreen';
 import BookmarkMenuButton from '@/features/bookmark/BookmarkMenuButton';
 import { XXS_QUERY } from '@/shared/lib/breakpoints';
 import ReaderNavigateButton from '../ReaderNavigateButton';
@@ -9,6 +10,8 @@ import ReaderChapterName from '../ReaderChapterName';
 import type { Chapter, ChapterNumbering } from '@tanuki/contracts';
 import ReaderPagesCount from '../ReaderPagesCount';
 import ReaderSettingsButton from '../ReaderSettingsButton';
+import ReaderFullscreenButton from '../ReaderFullscreenButton';
+import ColorSchemeToggle from '@/shared/ui/ColorSchemeToggle';
 import styles from '../../ReaderPage.module.scss';
 
 type Props = {
@@ -16,6 +19,8 @@ type Props = {
   prevChapterId: string | null;
   nextChapterId: string | null;
   page: number;
+  pageEnd: number;
+  fullscreen: ReturnType<typeof useReaderFullscreen>;
   pagesLength: number | null;
   chapters: Chapter[];
   numbering: ChapterNumbering;
@@ -26,6 +31,8 @@ type Props = {
 
 function ReaderControls({
   page,
+  pageEnd,
+  fullscreen,
   pagesLength,
   titleId,
   prevChapterId,
@@ -69,9 +76,16 @@ function ReaderControls({
         </>
       )}
       <Group gap={innerGap} wrap="nowrap" style={{ flexShrink: 0 }}>
-        <ReaderPagesCount page={page} pagesLength={pagesLength} visibleFrom="md" />
+        <ReaderPagesCount
+          pageEnd={pageEnd}
+          page={page}
+          pagesLength={pagesLength}
+          visibleFrom="md"
+        />
         <BookmarkMenuButton titleId={titleId} />
         <ReaderSettingsButton />
+        <ColorSchemeToggle variant="subtle" color="gray" visibleFrom="md" />
+        <ReaderFullscreenButton fullscreen={fullscreen} />
       </Group>
     </Group>
   );

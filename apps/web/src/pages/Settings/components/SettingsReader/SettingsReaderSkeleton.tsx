@@ -5,7 +5,7 @@ import GroupedListRowSkeleton from '@/shared/ui/GroupedList/GroupedListRowSkelet
 import ReaderSliderRowSkeleton from './ReaderSliderRowSkeleton';
 import styles from './SettingsReader.module.scss';
 
-/** Загрузка вкладки «Читалка»: те же три блока в той же сетке, строки — заглушками. */
+/** Пока режим неизвестен, резервируем раскладку настроек вертикального чтения. */
 function SettingsReaderSkeleton() {
   const { t } = useTranslation();
 
@@ -15,18 +15,23 @@ function SettingsReaderSkeleton() {
         <GroupedListRowSkeleton />
         <GroupedListRowSkeleton />
         <ReaderSliderRowSkeleton />
+        <ReaderSliderRowSkeleton />
       </GroupedList>
 
-      <Box className={styles.spacing}>
+      <Box className={styles.mainColumn}>
         <GroupedList label={t('gapsAndClickZone')}>
-          <ReaderSliderRowSkeleton />
           <ReaderSliderRowSkeleton />
           <ReaderSliderRowSkeleton />
         </GroupedList>
       </Box>
 
       <Box className={styles.behavior}>
-        <GroupedList label={t('behavior')} loading skeletonRows={2} />
+        <GroupedList label={t('behavior')}>
+          <GroupedListRowSkeleton />
+          <GroupedListRowSkeleton />
+          <ReaderSliderRowSkeleton />
+          <GroupedListRowSkeleton />
+        </GroupedList>
       </Box>
     </Box>
   );

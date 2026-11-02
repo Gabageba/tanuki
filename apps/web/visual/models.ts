@@ -46,3 +46,12 @@ export type StorybookWindow = Window & {
     };
   };
 };
+
+export type ReaderScreenProbe = {
+  wakeRequests: number;
+  releases: number;
+  fullscreenRequests: number;
+  fullscreen: boolean;
+  reject: boolean;
+};
+export type ReaderTestWindow = Window & { readerScreen: ReaderScreenProbe };

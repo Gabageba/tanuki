@@ -1,4 +1,5 @@
-import type { Page } from '@tanuki/contracts';
+import type { Page, PagesResponse } from '@tanuki/contracts';
+import type { LoadingQuery } from '@/shared/ui/QueryBlock/models';
 
 /**
  * Место, на котором читатель остановился. Состояние одно на оба режима: вертикальный пишет его
@@ -12,6 +13,7 @@ export type ReaderPosition = {
 /** Глава в ленте — ответ /pages, разложенный так, чтобы компонентам не приходилось разбираться в
  *  состоянии запроса. */
 export type ReaderFeedChapter = {
+  query: LoadingQuery<PagesResponse>;
   chapterId: string;
   pages: Page[];
   prevChapterId: string | null;
