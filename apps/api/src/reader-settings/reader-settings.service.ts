@@ -28,6 +28,11 @@ export class ReaderSettingsService {
         chapterGap: row.chapterGap,
         autoNextChapter: row.autoNextChapter,
         hidePanelsOnScroll: row.hidePanelsOnScroll,
+        direction: row.direction,
+        pageLayout: row.pageLayout,
+        brightness: row.brightness,
+        prefetchPages: row.prefetchPages,
+        keepScreenOn: row.keepScreenOn,
       };
     }, DEFAULT_READER_SETTINGS);
   }

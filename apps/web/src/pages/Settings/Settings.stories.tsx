@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { READER_READING_MODE } from '@tanuki/contracts';
+import { getReaderSettingsHandler } from '@/shared/storybook/reader';
 import { ROUTE_PATHS, SETTINGS_TAB_SEARCH_PARAM, SETTINGS_TABS } from '@/shared/lib/routes';
 import { DOWNLOADS_SEED } from '@/shared/storybook/downloads';
 import { ERROR_HANDLERS, LOADING_HANDLERS } from '@/shared/storybook/handlers';
@@ -92,5 +94,14 @@ export const DownloadsTab: Story = {
       url: `${ROUTE.url}?${SETTINGS_TAB_SEARCH_PARAM}=${SETTINGS_TABS.DOWNLOADS}`,
     },
     offlineDb: DOWNLOADS_SEED,
+  },
+};
+
+export const ReaderPaged: Story = {
+  ...ReaderTab,
+  name: 'Читалка — постраничный режим',
+  parameters: {
+    ...ReaderTab.parameters,
+    msw: [getReaderSettingsHandler({ readingMode: READER_READING_MODE.HORIZONTAL })],
   },
 };

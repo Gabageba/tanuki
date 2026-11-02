@@ -24,7 +24,11 @@ function ReaderSettingSwitch({ title, description, icon, checked, onChange }: Pr
             {description}
           </Text>
         </Stack>
-        <Switch checked={checked} onChange={(event) => onChange(event.currentTarget.checked)} />
+        <Switch
+          aria-label={title}
+          checked={checked}
+          onChange={(event) => onChange(event.currentTarget.checked)}
+        />
       </Group>
     </Paper>
   );

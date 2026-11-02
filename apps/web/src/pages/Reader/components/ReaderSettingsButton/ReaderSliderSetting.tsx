@@ -67,6 +67,7 @@ function ReaderSliderSetting({
       }
     >
       <Slider
+        aria-label={label}
         min={min}
         max={max}
         value={current}
@@ -75,13 +76,15 @@ function ReaderSliderSetting({
         label={null}
       />
       {preview}
-      <Radio.Group value={activePresetId} onChange={applyPreset}>
+      <Radio.Group aria-label={label} value={activePresetId} onChange={applyPreset}>
         <SimpleGrid cols={3} spacing={8}>
           {presets.map((preset) => (
             <Radio.Card key={preset.id} value={preset.id} variant="tile" px="xs" py={6}>
               <Flex gap="xs" align="center">
                 <Radio.Indicator variant="outline" size="xs" />
-                <Text>{preset.label}</Text>
+                <Text fz="sm" ff={/^\d/.test(preset.label) ? 'monospace' : undefined}>
+                  {preset.label}
+                </Text>
               </Flex>
             </Radio.Card>
           ))}

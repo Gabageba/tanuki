@@ -31,9 +31,14 @@ export const renderCoverSvg = (name: string) => {
 </svg>`;
 };
 
-export const renderPageSvg = (chapterId: string, index: number) => {
+export const renderPageSvg = (
+  chapterId: string,
+  index: number,
+  pageHeight: number = PAGE_SIZE.height,
+) => {
   const hue = getHue(chapterId);
-  const { width, height } = PAGE_SIZE;
+  const { width } = PAGE_SIZE;
+  const height = pageHeight;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <rect width="100%" height="100%" fill="hsl(${hue} 10% 92%)"/>
   <rect x="40" y="40" width="${width - 80}" height="${height * 0.45}" fill="none" stroke="#222" stroke-width="6"/>

@@ -6,6 +6,7 @@ import { COLOR_SCHEME, LANGUAGE, type ColorScheme, type Language } from '@tanuki
 import { DEFAULT_HANDLERS } from '@/shared/storybook/handlers';
 import { STORY_FOOTER } from '@/shared/storybook/models';
 import { seedOfflineDb } from '@/shared/storybook/offlineDb';
+import { CURRENT_USER } from '@/shared/storybook/fixtures';
 import StoryProviders from './StoryProviders';
 
 type Globals = {
@@ -72,6 +73,7 @@ const preview: Preview = {
           colorScheme={colorScheme}
           route={parameters.route}
           footer={parameters.footer ?? STORY_FOOTER.PANEL}
+          initialUser={parameters.offlineDb ? CURRENT_USER : undefined}
         >
           <Story />
         </StoryProviders>

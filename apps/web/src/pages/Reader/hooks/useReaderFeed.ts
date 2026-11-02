@@ -3,6 +3,7 @@ import { useQueries } from '@tanstack/react-query';
 import { useNetwork } from '@mantine/hooks';
 import { generatePath, useNavigate, useSearchParams } from 'react-router';
 import { READER_READING_MODE, type ReaderReadingMode } from '@tanuki/contracts';
+import { getSpreadStart } from '../navigation';
 import { READER_PAGE_SEARCH_PARAM, ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useTitleDownloads from '@/entities/download/hooks/useTitleDownloads';
@@ -24,6 +25,8 @@ type Params = {
   /** Настройка «Сразу открывать следующую главу». Выключена — лента следующую главу не
    *  подклеивает: в конце главы читатель видит экран с переходом и уходит на неё сам. */
   autoNextChapter: boolean;
+  pageStep: number;
+  prefetchPages: number;
 };
 
 /**
@@ -31,7 +34,14 @@ type Params = {
  * подклеивается снизу заранее. Поэтому и вертикальный скролл, и клик на последней странице в
  * горизонтальном режиме продолжают чтение без перезагрузки и скелетона.
  */
-function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Params) {
+function useReaderFeed({
+  titleId,
+  chapterId,
+  readingMode,
+  autoNextChapter,
+  pageStep,
+  prefetchPages,
+}: Params) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [chapterIds, setChapterIds] = useState([chapterId]);
@@ -56,7 +66,10 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
 
   const { data: user } = useCurrentUser();
   const results = useQueries({
-    queries: chapterIds.map((id) => getChapterPagesQueryOptions(titleId, id, user?.id)),
+    queries: chapterIds.map((id) => ({
+      ...getChapterPagesQueryOptions(titleId, id, user?.id),
+      enabled: Boolean(user),
+    })),
   });
 
   // Без сети открывается только скачанное: не скачанную следующую главу лента не подклеивает, а в
@@ -69,6 +82,7 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
   );
 
   const chapters: ReaderFeedChapter[] = chapterIds.map((id, index) => ({
+    query: results[index]!,
     chapterId: id,
     pages: results[index]?.data?.items ?? [],
     prevChapterId: results[index]?.data?.prevChapterId ?? null,
@@ -116,7 +130,10 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
     // который читатель и шёл. Ветка именно else: переход, случившийся за время загрузки, увёл
     // чтение в другую главу, и возвращать его в хвост этой уже некуда.
     setTailChapterId(null);
-    setPosition({ chapterId: tailChapter.chapterId, pageIndex: tailChapter.pages.length - 1 });
+    setPosition({
+      chapterId: tailChapter.chapterId,
+      pageIndex: getSpreadStart(tailChapter.pages.length - 1, pageStep),
+    });
   }
 
   // Следующую главу тянем не сразу, а когда до конца ленты осталось несколько страниц: иначе
@@ -127,7 +144,9 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
     lastChapter &&
     lastChapter.chapterId === position.chapterId &&
     lastChapter.pages.length > 0 &&
-    position.pageIndex >= lastChapter.pages.length - CHAPTER_PRELOAD_REMAINING_PAGES,
+    position.pageIndex >=
+      lastChapter.pages.length -
+        Math.max(CHAPTER_PRELOAD_REMAINING_PAGES, prefetchPages + 1, pageStep),
   );
   const chapterIdToAppend = (isNearFeedEnd && lastChapter?.nextChapterId) || null;
   if (
@@ -144,7 +163,14 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
   // Тогда встаём на последнюю, а не на пустое место за концом главы.
   const activePagesLength = activeChapter?.pages.length ?? 0;
   if (activePagesLength > 0 && position.pageIndex >= activePagesLength) {
-    setPosition({ chapterId: position.chapterId, pageIndex: activePagesLength - 1 });
+    const clampedPosition = {
+      chapterId: position.chapterId,
+      pageIndex: getSpreadStart(activePagesLength - 1, pageStep),
+    };
+    setPosition(clampedPosition);
+    if (readingMode === READER_READING_MODE.VERTICAL) setScrollTarget(clampedPosition);
+  } else if (pageStep > 1 && position.pageIndex !== getSpreadStart(position.pageIndex, pageStep)) {
+    setPosition({ ...position, pageIndex: getSpreadStart(position.pageIndex, pageStep) });
   }
 
   useEffect(() => {
@@ -191,6 +217,10 @@ function useReaderFeed({ titleId, chapterId, readingMode, autoNextChapter }: Par
     activeChapter,
     position,
     setPosition,
+    goToPosition: (target: ReaderPosition) => {
+      setPosition(target);
+      if (readingMode === READER_READING_MODE.VERTICAL) setScrollTarget(target);
+    },
     prependChapter,
     registerPage,
     isChapterUnavailable,

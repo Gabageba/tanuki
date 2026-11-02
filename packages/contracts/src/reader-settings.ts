@@ -15,6 +15,17 @@ export const READER_PAGE_FIT = {
 export type ReaderPageFit = EnumLiteralsOf<typeof READER_PAGE_FIT>;
 export const ReaderPageFitSchema = z.enum(READER_PAGE_FIT);
 
+export const READER_DIRECTION = { LTR: 'ltr', RTL: 'rtl' } as const;
+export type ReaderDirection = EnumLiteralsOf<typeof READER_DIRECTION>;
+export const ReaderDirectionSchema = z.enum(READER_DIRECTION);
+
+export const READER_PAGE_LAYOUT = { SINGLE: 'single', SPREAD: 'spread' } as const;
+export type ReaderPageLayout = EnumLiteralsOf<typeof READER_PAGE_LAYOUT>;
+export const ReaderPageLayoutSchema = z.enum(READER_PAGE_LAYOUT);
+
+export const READER_BRIGHTNESS = { MIN: 20, MAX: 100, DEFAULT: 100, MEDIUM: 60 } as const;
+export const READER_PREFETCH = { MIN: 0, MAX: 10, DEFAULT: 3 } as const;
+
 /** Bounds and quick-pick presets for the container width slider — shared so the API's validation
  *  and the drawer's slider/presets can't drift apart. */
 export const READER_CONTAINER_WIDTH = {
@@ -39,8 +50,8 @@ export const READER_TAP_ZONE_WIDTH = {
   WIDE: 40,
 } as const;
 
-/** Отступ между страницами в вертикальном режиме, в пикселях. В горизонтальном режиме видна ровно
- *  одна страница за раз, так что отступ между ними никогда не показывается — настройки для него
+/** Отступ между страницами в вертикальном режиме, в пикселях. В постраничном режиме страница или
+ *  разворот заполняет экран, так что отступ вертикальной ленты не показывается — настройки для него
  *  там нет. */
 export const READER_PAGE_GAP = {
   MIN: 0,
@@ -74,6 +85,22 @@ export const ReaderSettingsSchema = z.object({
   /** Шапка и панель глав уезжают при прокрутке вниз. Выключено — их прячет и возвращает только
    *  тап по странице. */
   hidePanelsOnScroll: z.boolean(),
+  // Defaults preserve version 1 backups made before these settings existed.
+  direction: ReaderDirectionSchema.default(READER_DIRECTION.LTR),
+  pageLayout: ReaderPageLayoutSchema.default(READER_PAGE_LAYOUT.SINGLE),
+  brightness: z
+    .number()
+    .int()
+    .min(READER_BRIGHTNESS.MIN)
+    .max(READER_BRIGHTNESS.MAX)
+    .default(READER_BRIGHTNESS.DEFAULT),
+  prefetchPages: z
+    .number()
+    .int()
+    .min(READER_PREFETCH.MIN)
+    .max(READER_PREFETCH.MAX)
+    .default(READER_PREFETCH.DEFAULT),
+  keepScreenOn: z.boolean().default(false),
 });
 export type ReaderSettings = z.infer<typeof ReaderSettingsSchema>;
 
@@ -88,6 +115,11 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   chapterGap: READER_CHAPTER_GAP.MEDIUM,
   autoNextChapter: true,
   hidePanelsOnScroll: true,
+  direction: READER_DIRECTION.LTR,
+  pageLayout: READER_PAGE_LAYOUT.SINGLE,
+  brightness: READER_BRIGHTNESS.DEFAULT,
+  prefetchPages: READER_PREFETCH.DEFAULT,
+  keepScreenOn: false,
 };
 
 export const UpdateReaderSettingsRequestSchema = ReaderSettingsSchema;

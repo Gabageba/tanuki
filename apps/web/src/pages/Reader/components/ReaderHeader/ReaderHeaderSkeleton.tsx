@@ -1,9 +1,13 @@
 import { AppShell, Group, Progress, Skeleton, Stack } from '@mantine/core';
 import TextSkeleton from '@/shared/ui/TextSkeleton';
+import ColorSchemeToggle from '@/shared/ui/ColorSchemeToggle';
 import { TITLE_NAME_MIN_WIDTH } from '../../lib';
 import ReaderControlsSkeleton from '../ReaderControls/ReaderControlsSkeleton';
+import type useReaderFullscreen from '../../hooks/useReaderFullscreen';
 
-function ReaderHeaderSkeleton() {
+type Props = { fullscreen: ReturnType<typeof useReaderFullscreen> };
+
+function ReaderHeaderSkeleton({ fullscreen }: Props) {
   return (
     <AppShell.Header withBorder={false}>
       <Group px="md" h="100%" gap="md" wrap="nowrap">
@@ -15,7 +19,8 @@ function ReaderHeaderSkeleton() {
           </Stack>
         </Group>
         <TextSkeleton fz={12} w={50} hiddenFrom="md" />
-        <ReaderControlsSkeleton visibleFrom="md" />
+        <ColorSchemeToggle variant="subtle" color="gray" hiddenFrom="md" />
+        <ReaderControlsSkeleton fullscreen={fullscreen} visibleFrom="md" />
       </Group>
       <Progress value={0} size={2} radius={0} pos="absolute" bottom={0} left={0} right={0} />
     </AppShell.Header>

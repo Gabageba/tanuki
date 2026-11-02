@@ -1,12 +1,14 @@
 import { AppShell, Group, Progress, Stack, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { generatePath } from 'react-router';
+import type useReaderFullscreen from '../../hooks/useReaderFullscreen';
 import { CHAPTER_NUMBERING } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
 import useTitleDetails from '@/entities/title/hooks/useTitleDetails';
 import useSource from '@/entities/source/hooks/useSource';
 import MidDotGroup from '@/shared/ui/MidDotGroup';
 import GoBackButton from '@/shared/ui/GoBackButton';
+import ColorSchemeToggle from '@/shared/ui/ColorSchemeToggle';
 import { ROUTE_PATHS, TITLE_TAB_SEARCH_PARAM, TITLE_TABS } from '@/shared/lib/routes';
 import ReaderControls from '../ReaderControls';
 import ReaderPagesCount from '../ReaderPagesCount';
@@ -24,6 +26,8 @@ type Props = {
   prevChapterId: string | null;
   nextChapterId: string | null;
   page: number;
+  pageEnd: number;
+  fullscreen: ReturnType<typeof useReaderFullscreen>;
   pagesLength: number | null;
   /** Загрузка главы из ленты — от неё соседние главы. */
   feedQuery: LoadingQuery;
@@ -35,6 +39,8 @@ function ReaderHeader({
   prevChapterId,
   nextChapterId,
   page,
+  pageEnd,
+  fullscreen,
   pagesLength,
   feedQuery,
 }: Props) {
@@ -59,12 +65,12 @@ function ReaderHeader({
   });
 
   if (isSkeleton) {
-    return <ReaderHeaderSkeleton />;
+    return <ReaderHeaderSkeleton fullscreen={fullscreen} />;
   }
 
   const chapters = chaptersData?.items ?? [];
   const currentChapterIndex = chapters.findIndex((chapter) => chapter.id === chapterId);
-  const chapterProgress = pagesLength ? (page / pagesLength) * 100 : 0;
+  const chapterProgress = pagesLength ? (pageEnd / pagesLength) * 100 : 0;
 
   // Вместо нижней границы шапки — полоса прогресса по текущей главе: трек занимает место бордера,
   // а заполнение растёт по мере чтения.
@@ -106,8 +112,11 @@ function ReaderHeader({
             />
           </Stack>
         </Group>
-        <ReaderPagesCount page={page} pagesLength={pagesLength} hiddenFrom="md" />
+        <ReaderPagesCount pageEnd={pageEnd} page={page} pagesLength={pagesLength} hiddenFrom="md" />
+        <ColorSchemeToggle variant="subtle" color="gray" hiddenFrom="md" />
         <ReaderControls
+          pageEnd={pageEnd}
+          fullscreen={fullscreen}
           page={page}
           pagesLength={pagesLength}
           prevChapterId={prevChapterId}

@@ -239,6 +239,20 @@
       "when": 1793382048929,
       "tag": "0033_source_import_progress_page",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793597795545,
+      "tag": "0034_reader_improvements",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793601246156,
+      "tag": "0035_reader_theme_background",
+      "breakpoints": true
     }
   ]
 }

@@ -28,25 +28,23 @@
 - [x] **Импорт из источника** — модалка, сервер и фоновая достройка отметок
       ([plans/source-import.md](plans/source-import.md)).
       [`ImportFromSourceModal/`](../apps/web/src/features/source-import/ImportFromSourceModal)
-- [ ] **Импорт из источника: разбор закладок сайтов** — `getBookmarks` готов в LibSocial
-      (MangaLib, HentaiLib), Desu, MangaBuff, сети inuko, ReManga, TomiloLib, WaManga, Senkuro, Senkognito и всех источниках Grouple
-      (включая AllHentai); Nude-Moon ждёт образцов ответов с вошедшим аккаунтом. ReManga, TomiloLib, WaManga, Senkuro и Senkognito проверены
-      фикстурами и публичным клиентом; полный импорт личной библиотеки ещё нужно проверить вживую. Пока метода нет, источник в модалке не выбирается («Импорт отсюда пока
-      не поддерживается»).
-      У Senkuro/Senkognito общий токен и доступ к закладкам обоих API проверены вживую;
-      полный импорт библиотеки ещё не запускался.
-- [ ] **Вход в Senkuro/Senkognito через браузер без переноса cookie** — нужен зарегистрированный
-      OAuth-клиент Tanuki с разрешённым callback: клиент Senkuro ответил `redirect_uri mismatch`
-      на тестовый локальный адрес после входа ([plans/source-import.md](plans/source-import.md)).
+- [x] **Импорт из источника: разбор закладок сайтов** — `getBookmarks` реализован для LibSocial
+      (MangaLib, HentaiLib), Desu, MangaBuff, сети inuko, ReManga, TomiloLib, WaManga,
+      Senkuro, Senkognito, источников Grouple (включая AllHentai), HentaiChan, Nude-Moon,
+      MultPorn и MultPorn Hentai. Подробности проверок — в
+      [плане импорта](plans/source-import.md).
+- [ ] **Проверить полный импорт личной библиотеки вживую** для ReManga, TomiloLib, WaManga,
+      Senkuro, Senkognito, HentaiChan, Nude-Moon, MultPorn и MultPorn Hentai. Разбор ответов и
+      отдельные этапы уже проверялись; запись полной библиотеки в Tanuki ещё не подтверждена.
+- [x] **Вход в Senkuro/Senkognito через браузер без переноса cookie** — решили не делать;
+      используется перенос `access_token` ([plans/source-import.md](plans/source-import.md)).
 - [x] **«Удалить скачанные главы»** — всегда `disabled`, а `onClick` открывает модалку очистки
       кеша браузера. Связать с экраном загрузок офлайна.
       [`ProfileData/index.tsx:79`](../apps/web/src/pages/Profile/components/ProfileData/index.tsx#L79)
 
-## Главная ([plans/home-page.md](plans/home-page.md))
+## Подборки ([plans/home-page.md](plans/home-page.md))
 
-- [ ] **Коллекции сайтов** на главной — подборки MangaLib, Inkstory, Grouple отдельным видом
-      карточек (обложка подборки, название, число тайтлов), со ссылкой на сайт или своей
-      страницей. В первую версию главной не вошли: там только списки тайтлов.
+- [x] **Коллекции сайтов** на странице подборок — сделаны.
 - [ ] **Подборки Манга-тян и Хентай-тян** — при реализации Манга-тян отвечал 502 на всех
       зеркалах, а у Хентай-тяна на `/` лента релизов без блоков; `homeSections` у движка chan
       пустые. Проверить главную Манга-тян, когда сайт поднимется.
@@ -67,16 +65,13 @@
 
 ## Читалка ([05](05-frontend.md#читалка))
 
-- [ ] Постраничный режим **RTL** (P0) — горизонтальный режим сейчас только LTR.
-- [ ] **Виртуализация** — в DOM окно ±3 страницы вместо всей главы.
-- [ ] **Prefetch** следующих N страниц и первых страниц следующей главы.
-- [ ] Жесты: **pinch-zoom**, **double-tap zoom**, **свайп** между страницами.
-- [ ] Клавиатура: `Space`/`Shift+Space`, `Home`/`End`, `F` — фуллскрин, `M` — сменить режим (сейчас
-      только `←`/`→` в горизонтальном режиме).
-- [ ] **Wake lock** — экран не гаснет посреди главы.
-- [ ] **Фуллскрин**.
-- [ ] Настройки: **яркость**, **цвет фона** (чёрный / серый / бумага), **глубина предзагрузки**.
-- [ ] **Разворот** на две страницы для планшетов (P2).
+Возможности реализованы 2026-11-02: RTL, разворот на всех ширинах, виртуальное окно изображений,
+предзагрузка 0–10, pinch/double-tap/свайп, клавиатура, Wake Lock, fullscreen и яркость; фон следует за темой приложения.
+Подробности и проверки — [план](plans/reader-improvements.md).
+
+- [ ] Приёмка на среднем Android с главой от 200 страниц: измерить fps, память, сеть и проверить
+      жесты, возврат к позиции и офлайн на устройстве. Автоматические сценарии Chromium с SVG
+      подтверждают функциональность, но не заменяют замер на реальных изображениях и устройстве.
 
 ## PWA и офлайн ([06](06-pwa-offline.md))
 
@@ -124,10 +119,11 @@
 ## Релиз ([08 Фаза 6](08-roadmap.md#фаза-6--полировка-и-релиз), [09](09-legal.md))
 
 - [ ] **Self-host**: Dockerfile для `apps/api` и `apps/web`, `docker compose up` поднимает весь
-      инстанс, инструкция в README.
+      инстанс, инструкция в README. Существующий Compose поднимает только инфраструктуру для
+      разработки: PostgreSQL, Valkey и Mailpit.
 - [ ] `robots.txt` с `Disallow: /` и `<meta name="robots" content="noindex">`.
 - [ ] Мониторинг: Sentry (self-hosted), счётчик `PARSER_FAILED` по источникам.
-- [ ] E2E на Playwright по ключевым сценариям.
+- [ ] E2E на Playwright по ключевым сценариям. Визуальные проверки Storybook на Playwright уже есть.
 - [ ] a11y-аудит: клавиатура, фокус, контраст, `prefers-reduced-motion`.
 - [ ] Перф-аудит на среднем Android: LCP, размер бандла, fps скролла.
 

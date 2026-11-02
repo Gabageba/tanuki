@@ -6,6 +6,7 @@ import OfflineEmptyState from '../../OfflineEmptyState';
 import useSkeletonTiming from '../../QueryBlock/hooks/useSkeletonTiming';
 import { PageLayoutStatusContext } from '../context';
 import type { PageLayoutBaseQuery } from '../models';
+import type { LoadingQuery } from '../../QueryBlock/models';
 
 type Props = {
   children: ReactNode;
@@ -17,6 +18,10 @@ type Props = {
   skeleton?: ReactNode;
   /** Пояснение «Нет сети», когда основной запрос без сети не нашёлся в кеше. */
   offlineDescription?: string;
+  /** Standalone frames such as the reader supply their query directly. */
+  query?: LoadingQuery;
+  fluid?: boolean;
+  offline?: ReactNode;
 };
 
 /** Страница без запроса: показывать нечего ждать. */
@@ -32,13 +37,24 @@ const NO_QUERY: PageLayoutBaseQuery = {
 
 /** Каркас страницы: заголовок и содержимое. Когда показать `skeleton`, решает тот же механизм,
  *  что и у `QueryBlock`; без сети и без данных — «Нет соединения», упал без данных — экран ошибки. */
-function Content({ children, title, actions, goBack, skeleton, offlineDescription }: Props) {
-  const query = useContext(PageLayoutStatusContext) ?? NO_QUERY;
+function Content({
+  children,
+  title,
+  actions,
+  goBack,
+  skeleton,
+  offlineDescription,
+  query: ownQuery,
+  fluid = false,
+  offline,
+}: Props) {
+  const pageQuery = useContext(PageLayoutStatusContext);
+  const query = ownQuery ?? pageQuery ?? NO_QUERY;
   const { ref, isSkeleton, isOffline, isFailed } = useSkeletonTiming<HTMLDivElement>(query);
 
   let content = children;
   if (isOffline) {
-    content = <OfflineEmptyState description={offlineDescription} />;
+    content = offline ?? <OfflineEmptyState description={offlineDescription} />;
   } else if (isFailed && query.error) {
     // Упавший перезапрос при показанных данных их не прячет — о нём сообщит уведомление.
     content = <QueryError error={query.error} onRetry={query.refetch} />;
@@ -47,7 +63,7 @@ function Content({ children, title, actions, goBack, skeleton, offlineDescriptio
   }
 
   return (
-    <Container py="md" size="xl">
+    <Container py={fluid ? 0 : 'md'} px={fluid ? 0 : undefined} size={fluid ? '100%' : 'xl'}>
       {(title || actions || !!goBack) && (
         <Flex
           justify={title ? 'space-between' : 'flex-end'}

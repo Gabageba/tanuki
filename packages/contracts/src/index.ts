@@ -270,6 +270,14 @@ export {
 } from './match';
 export {
   READER_READING_MODE,
+  READER_DIRECTION,
+  ReaderDirectionSchema,
+  type ReaderDirection,
+  READER_PAGE_LAYOUT,
+  ReaderPageLayoutSchema,
+  type ReaderPageLayout,
+  READER_BRIGHTNESS,
+  READER_PREFETCH,
   ReaderReadingModeSchema,
   type ReaderReadingMode,
   READER_PAGE_FIT,

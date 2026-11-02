@@ -31,6 +31,7 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
   const pendingKey = useRef<string | null>(null);
   /** Снимает удержание страницы, к которой прокрутили последней (см. pinPage). */
   const unpin = useRef<(() => void) | null>(null);
+  const pinnedKey = useRef<string | null>(null);
   /** Пока страница удерживается, лента прокручивается сама — это не движение читателя. */
   const [isPinned, setIsPinned] = useState(false);
 
@@ -44,17 +45,28 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
    */
   const pinPage = useCallback((element: HTMLElement) => {
     unpin.current?.();
+    const pinnedAt = performance.now();
+    const position = getReaderPagePosition(element);
+    const key = position && getReaderPageKey(position);
+    pinnedKey.current = key;
     scrollToReaderPage(element);
 
-    const resizeObserver = new ResizeObserver(() => scrollToReaderPage(element));
+    const resizeObserver = new ResizeObserver(() => {
+      const current = key ? elements.current.get(key) : undefined;
+      if (current?.isConnected) scrollToReaderPage(current);
+    });
     resizeObserver.observe(document.body);
 
-    const release = () => {
+    const release = (event?: Event) => {
+      // The Home/End or mode-change key can still be bubbling when layout restores the page.
+      // Only a subsequent user event should release that newly restored position.
+      if (event && event.timeStamp <= pinnedAt) return;
       resizeObserver.disconnect();
       PIN_RELEASE_EVENTS.forEach((type) => window.removeEventListener(type, release));
       window.removeEventListener('pointerdown', handlePointerDown);
       if (unpin.current === release) {
         unpin.current = null;
+        pinnedKey.current = null;
         setIsPinned(false);
       }
     };
@@ -108,7 +120,7 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
       elements.current.set(key, element);
       // Прокрутка идёт в том же коммите, что и регистрация, — раньше, чем наблюдатель успеет
       // сообщить о первой странице под центром экрана и перезаписать ей восстановленную позицию.
-      if (pendingKey.current === key) {
+      if (pendingKey.current === key || pinnedKey.current === key) {
         pendingKey.current = null;
         pinPage(element);
       }

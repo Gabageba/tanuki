@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef } from 'react';
 import type { ReaderSettings } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { READER_SETTINGS_QUERY_KEY } from './useReaderSettings';
@@ -10,8 +11,10 @@ import { READER_SETTINGS_QUERY_KEY } from './useReaderSettings';
  */
 function useUpdateReaderSettings() {
   const queryClient = useQueryClient();
+  const draftBase = useRef<ReaderSettings | undefined>(undefined);
 
-  return useMutation({
+  const mutation = useMutation({
+    scope: { id: 'reader-settings' },
     mutationFn: (settings: ReaderSettings) =>
       apiFetch<ReaderSettings>('/reader-settings', {
         method: 'PUT',
@@ -22,16 +25,27 @@ function useUpdateReaderSettings() {
       // Иначе уже летящий GET (например, refetch по возврату фокуса) приземлится поверх
       // только что выбранного значения и вернёт настройку на прежнюю.
       await queryClient.cancelQueries({ queryKey: READER_SETTINGS_QUERY_KEY });
-      const previous = queryClient.getQueryData<ReaderSettings>(READER_SETTINGS_QUERY_KEY);
-      queryClient.setQueryData(READER_SETTINGS_QUERY_KEY, settings);
-      return { previous };
+      const previous =
+        draftBase.current ?? queryClient.getQueryData<ReaderSettings>(READER_SETTINGS_QUERY_KEY);
+      draftBase.current = undefined;
+      const optimistic = queryClient.setQueryData(READER_SETTINGS_QUERY_KEY, settings);
+      return { previous, optimistic };
     },
     onError: (_error, _settings, context) => {
-      if (context?.previous) {
+      if (
+        context?.previous &&
+        queryClient.getQueryData(READER_SETTINGS_QUERY_KEY) === context.optimistic
+      ) {
         queryClient.setQueryData(READER_SETTINGS_QUERY_KEY, context.previous);
       }
     },
   });
+
+  const setDraft = (settings: ReaderSettings) => {
+    draftBase.current ??= queryClient.getQueryData<ReaderSettings>(READER_SETTINGS_QUERY_KEY);
+    queryClient.setQueryData(READER_SETTINGS_QUERY_KEY, settings);
+  };
+  return { ...mutation, setDraft };
 }
 
 export default useUpdateReaderSettings;
