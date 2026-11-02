@@ -17,6 +17,7 @@ import Notifications from './Notifications';
 import OfflineDownloads from './OfflineDownloads';
 import ReadingMarks from './ReadingMarks';
 import ReadingSettings from './ReadingSettings';
+import ReaderImprovements from './ReaderImprovements';
 import SelectionsTabs from './SelectionsTabs';
 import SortKeys from './SortKeys';
 import SourceImport from './SourceImport';
@@ -41,6 +42,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'reader-improvements',
+    Component: ReaderImprovements,
+    title: 'Возможности читалки',
+    description:
+      'Настройки направления, разворота, фона и поведения; панель читалки и выравнивание страниц разворота.',
+    createdAt: '2026-11-01',
+    decision: 'R2 + S1 + P1 + D1',
+  },
   {
     slug: 'source-import',
     Component: SourceImport,
