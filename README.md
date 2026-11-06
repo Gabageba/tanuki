@@ -43,7 +43,23 @@ pnpm db:migrate               # схема БД
 pnpm dev                      # turbo запускает web + api параллельно
 ```
 
+Для просмотра прототипов достаточно фронтенда, без Docker, API и входа:
+
+```bash
+pnpm dev:playground           # собирает contracts и открывает /playground в браузере
+```
+
+Песочница доступна по `http://localhost:5173/playground` только в dev-режиме; страницы и её
+отдельный каркас не включаются в production-сборку.
+
 Web Push включается парой VAPID-ключей в `apps/api/.env` (`npx web-push generate-vapid-keys`, см.
 `.env.example`); без них лента уведомлений работает, а push скрыт.
 
 Миграции применяются явной командой, а не при старте приложения.
+
+Если порты заняты другим проектом, скопируйте корневой `.env.example` в `.env` и задайте
+свободные `POSTGRES_PORT` и `VALKEY_PORT` (например, `5433` и `6380`). В `apps/api/.env`
+укажите эти же порты в `DATABASE_URL` и `REDIS_URL` (см. `apps/api/.env.example`).
+Если занят и порт API `3000`, измените `PORT` в `apps/api/.env` и задайте адрес API
+в `API_PROXY_TARGET` файла `apps/web/.env` (см. `apps/web/.env.example`). Затем запустите
+`pnpm start`; уже работающие dev-серверы после изменения `.env` нужно перезапустить.
