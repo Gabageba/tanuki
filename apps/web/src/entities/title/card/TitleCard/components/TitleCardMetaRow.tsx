@@ -8,7 +8,7 @@ function TitleCardMetaRow({ meta, actions }: Props) {
   return (
     <Group data-card-meta className={styles.metaRow} gap={6} wrap="nowrap" align="center">
       <Box data-card-meta-content className={styles.meta} miw={0} flex="1 1 auto">
-        {meta}
+        {meta === 0 ? null : meta}
       </Box>
       <Group
         className={styles.actions}

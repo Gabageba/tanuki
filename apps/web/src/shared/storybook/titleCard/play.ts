@@ -1,5 +1,6 @@
 import { expect, waitFor, within } from 'storybook/test';
 import { I18N } from '@/shared/lib/i18n';
+import { TITLE_TAG_HEIGHT } from '@/entities/title/markers/models';
 
 /** Проверяем структуру ссылки и совпадение обложек, не привязываясь к мокам доменных DTO. */
 export const checkTitleCardPair = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
@@ -89,4 +90,25 @@ export const checkBookmarkCardPair = async (context: { canvasElement: HTMLElemen
     within(context.canvasElement).getByRole('img', { name: I18N.t('hasNewChapters') }),
   ).toBeInTheDocument();
   await expect(name.parentElement!.querySelector('[role="img"]')).toBeNull();
+};
+
+/** 18+ не создаёт мета-строку и остаётся у правого края названия, включая узкие карточки. */
+export const checkAdultTitleCardPair = async (context: { canvasElement: HTMLElement }) => {
+  await checkTitleCardPair(context);
+  const card = context.canvasElement.querySelector('[data-title-card]:not([inert])')!;
+  const tag = card.querySelector<HTMLElement>('[data-card-adult-tag]')!;
+  const name = card.querySelector('[data-card-name]')!;
+  const row = card.querySelector('[data-card-name-row]')!;
+  await expect(tag).toHaveTextContent('18+');
+  await expect(row).toContainElement(tag);
+  await expect(card.querySelector('[data-card-meta] [data-card-adult-tag]')).toBeNull();
+  await waitFor(async () => {
+    const tagBounds = tag.getBoundingClientRect();
+    await expect(tagBounds.height).toBe(TITLE_TAG_HEIGHT);
+    await expect(tagBounds.left).toBeGreaterThanOrEqual(name.getBoundingClientRect().right);
+    await expect(tagBounds.right).toBeCloseTo(row.getBoundingClientRect().right, 0);
+    const firstLineCenter =
+      name.getBoundingClientRect().top + Number.parseFloat(getComputedStyle(name).lineHeight) / 2;
+    await expect(tagBounds.top + tagBounds.height / 2).toBeCloseTo(firstLineCenter, 0);
+  });
 };
