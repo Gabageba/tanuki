@@ -54,6 +54,7 @@ const router = createBrowserRouter([
     // Упавший рендер любой страницы — свой экран вместо дефолтного экрана react-router.
     errorElement: <RouteError />,
     children: [
+      ...PLAYGROUND_ROUTES,
       {
         element: <RequireAuth />,
         children: [
@@ -100,7 +101,6 @@ const router = createBrowserRouter([
                 path: ROUTE_PATHS.DOWNLOADS,
                 element: <Downloads />,
               },
-              ...PLAYGROUND_ROUTES,
               {
                 element: <RequireStaff />,
                 children: [

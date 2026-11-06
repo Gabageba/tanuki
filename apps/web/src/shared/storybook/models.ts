@@ -7,6 +7,8 @@ export const STORY_LAYOUT = {
   APP: 'app',
   /** Экраны входа и регистрации (`app/AuthLayout`). */
   AUTH: 'auth',
+  /** Отдельный каркас песочницы без входа и навигации приложения. */
+  PLAYGROUND: 'playground',
   /** Без каркаса — читалка. */
   NONE: 'none',
 } as const;

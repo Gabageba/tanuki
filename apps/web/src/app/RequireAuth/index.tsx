@@ -4,6 +4,7 @@ import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import FullScreenLoader from '@/shared/ui/FullScreenLoader';
 import OfflineSync from './OfflineSync';
+import UserSettingsSync from '@/app/Providers/UserSettingsSync';
 
 function RequireAuth() {
   const { data: user, isPending } = useCurrentUser();
@@ -18,6 +19,7 @@ function RequireAuth() {
 
   return (
     <>
+      <UserSettingsSync />
       <NotificationsStream />
       <OfflineSync />
       <Outlet />

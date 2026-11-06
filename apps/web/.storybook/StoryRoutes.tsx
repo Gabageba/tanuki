@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Outlet, Route, Routes } from 'react-router';
 import AuthLayout from '@/app/AuthLayout';
 import Layout from '@/app/Layout';
+import PlaygroundLayout from '@/pages/Playground/PlaygroundLayout';
 import { STORY_LAYOUT, type StoryLayout, type StoryRoute } from '@/shared/storybook/models';
 
 type Props = {
@@ -15,6 +16,12 @@ const getLayoutElement = (layout: StoryLayout) => {
       return <Layout />;
     case STORY_LAYOUT.AUTH:
       return <AuthLayout />;
+    case STORY_LAYOUT.PLAYGROUND:
+      return (
+        <PlaygroundLayout>
+          <Outlet />
+        </PlaygroundLayout>
+      );
     case STORY_LAYOUT.NONE:
       return <Outlet />;
   }
