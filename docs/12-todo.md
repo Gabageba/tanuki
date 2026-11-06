@@ -33,7 +33,7 @@
       Senkuro, Senkognito, источников Grouple (включая AllHentai), HentaiChan, Nude-Moon,
       MultPorn и MultPorn Hentai. Подробности проверок — в
       [плане импорта](plans/source-import.md).
-- [ ] **Проверить полный импорт личной библиотеки вживую** для ReManga, TomiloLib, WaManga,
+- [x] **Проверить полный импорт личной библиотеки вживую** для ReManga, TomiloLib, WaManga,
       Senkuro, Senkognito, HentaiChan, Nude-Moon, MultPorn и MultPorn Hentai. Разбор ответов и
       отдельные этапы уже проверялись; запись полной библиотеки в Tanuki ещё не подтверждена.
 - [x] **Вход в Senkuro/Senkognito через браузер без переноса cookie** — решили не делать;
