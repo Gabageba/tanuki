@@ -2,7 +2,7 @@ import { Box, Group, Stack, Text } from '@mantine/core';
 import { catalogEntryFor, VIEW_MODE } from '@tanuki/contracts';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
-import TitleCardImage from '@/entities/title/TitleCardImage';
+import MockTitleCardImage from './MockTitleCardImage';
 import TitleMetaItems from '@/entities/title/TitleMetaItems';
 import type { ContinueItem } from '../models';
 import ContinueActionsMenu from './ContinueActionsMenu';
@@ -27,7 +27,7 @@ function ContinueWideCard({ item, coverWidth = 72, onRemove }: Props) {
       <NavigateToTitleCard titleId={item.title.id} viewMode={VIEW_MODE.GRID} flex={1} miw={0}>
         <Group gap="sm" wrap="nowrap" align="flex-start">
           <Box w={coverWidth} flex="none">
-            <TitleCardImage title={item.title} showBadges={isLarge} />
+            <MockTitleCardImage title={item.title} showBadges={isLarge} />
           </Box>
           <Stack gap={isLarge ? 8 : 4} miw={0} py={2}>
             <Text

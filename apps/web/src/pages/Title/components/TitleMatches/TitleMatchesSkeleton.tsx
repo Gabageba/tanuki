@@ -1,6 +1,6 @@
 import { Box, Group, Scroller, Skeleton, Stack } from '@mantine/core';
 import { isStaffRole } from '@tanuki/contracts';
-import TitleCardSkeleton from '@/entities/title/card/TitleCardSkeleton';
+import SourceTitleCardSkeleton from '@/entities/source/components/SourceTitleCard/SourceTitleCardSkeleton';
 import { VIEW_MODE } from '@/shared/lib/viewMode';
 import TextSkeleton from '@/shared/ui/TextSkeleton';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
@@ -33,7 +33,7 @@ function TitleMatchesSkeleton() {
             <Group wrap="nowrap" h="100%" align="stretch" gap="xs">
               {Array.from({ length: 6 }).map((_, index) => (
                 <Box key={index} w={170}>
-                  <TitleCardSkeleton viewMode={VIEW_MODE.GRID} />
+                  <SourceTitleCardSkeleton viewMode={VIEW_MODE.GRID} />
                 </Box>
               ))}
             </Group>

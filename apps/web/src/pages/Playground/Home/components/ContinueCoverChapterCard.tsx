@@ -1,7 +1,7 @@
 import { Box, Stack, Text } from '@mantine/core';
 import { VIEW_MODE } from '@tanuki/contracts';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
-import TitleCardImage from '@/entities/title/TitleCardImage';
+import MockTitleCardImage from './MockTitleCardImage';
 import type { ContinueItem } from '../models';
 import ContinueChapter from './ContinueChapter';
 import ContinueMetaLine from './ContinueMetaLine';
@@ -19,7 +19,7 @@ function ContinueCoverChapterCard({ item, onRemove }: Props) {
       <NavigateToTitleCard titleId={item.title.id} viewMode={VIEW_MODE.GRID}>
         <Stack gap={8}>
           <Box pos="relative" bdrs="md" style={{ overflow: 'hidden' }}>
-            <TitleCardImage title={item.title} showBadges showSource />
+            <MockTitleCardImage title={item.title} showBadges showSource />
             {/* Затемнение всегда тёмное, в обеих схемах: плашка лежит на картинке, а не на фоне. */}
             <Box
               pos="absolute"

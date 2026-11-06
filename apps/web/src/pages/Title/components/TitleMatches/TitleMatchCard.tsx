@@ -3,7 +3,7 @@ import { AspectRatio, Box, Button, Center, Overlay, Stack } from '@mantine/core'
 import { useClickOutside } from '@mantine/hooks';
 import { ThumbsDownIcon, ThumbsUpIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import TitleCard from '@/entities/title/card/TitleCard';
+import SourceTitleCard from '@/entities/source/components/SourceTitleCard/SourceTitleCard';
 import { TITLE_LINK_VERDICT, type TitleLinkVerdict, type TitleMatch } from '@tanuki/contracts';
 import useLongPress from '@/shared/hooks/useLongPress';
 import type useSetTitleLink from '../../hooks/useSetTitleLink';
@@ -54,7 +54,7 @@ function TitleMatchCard({ match, mutateTitleLink, isTitleLinkPending, isStaff }:
           </Overlay>
         )}
       </AspectRatio>
-      <TitleCard title={match.title} showSource />
+      <SourceTitleCard title={match.title} showSource />
     </Box>
   );
 }

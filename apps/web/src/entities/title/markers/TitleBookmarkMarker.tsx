@@ -4,16 +4,16 @@ import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
 import { COVER_BADGE_COLOR } from './models';
 
 type Props = {
-  folder: ResolvedBookmarkFolder;
+  folder?: ResolvedBookmarkFolder | null;
   compact?: boolean;
 };
 
 /**
- * Метка «в закладках» (K4a): квадрат на тёмной подложке рейтинга с залитой иконкой папки светлым
- * оттенком её цвета, в левом нижнем углу обложки, напротив рейтинга, — в одном углу во всех
- * контекстах. Подложка, а не цвет папки, отделяет метку от обложки — она не сливается с картинкой.
+ * Метка папки на тёмной подложке в левом нижнем углу обложки (K4a).
  */
 function TitleBookmarkMarker({ folder, compact = false }: Props) {
+  if (!folder) return null;
+
   const size = compact ? 22 : 26;
 
   return (
@@ -27,6 +27,8 @@ function TitleBookmarkMarker({ folder, compact = false }: Props) {
       bg={COVER_BADGE_COLOR}
       style={{ zIndex: 1 }}
       title={folder.name}
+      role="img"
+      aria-label={folder.name}
     >
       <FolderGlyph
         folder={folder}

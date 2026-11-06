@@ -1,7 +1,7 @@
 import { Stack, Text } from '@mantine/core';
 import { VIEW_MODE } from '@tanuki/contracts';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
-import TitleCardImage from '@/entities/title/TitleCardImage';
+import MockTitleCardImage from './MockTitleCardImage';
 import type { ContinueItem } from '../models';
 import ContinueMetaLine from './ContinueMetaLine';
 import styles from '@/entities/title/Title.module.scss';
@@ -18,7 +18,7 @@ function ContinueNarrowCard({ item, onRemove }: Props) {
     <Stack gap={4}>
       <NavigateToTitleCard titleId={item.title.id} viewMode={VIEW_MODE.GRID}>
         <Stack gap={8}>
-          <TitleCardImage title={item.title} showBadges showSource />
+          <MockTitleCardImage title={item.title} showBadges showSource />
           <Text className={styles.title} lineClamp={2} lh="tight">
             {item.title.name}
           </Text>

@@ -655,7 +655,6 @@
   "trackUpdates": "Следить за обновлениями",
   "checkNewChaptersAndMarkCard": "Проверять новые главы и отмечать карточку точкой",
   "folderActions": "Действия с папкой",
-  "bookmarkActions": "Действия с закладкой",
   "moveToFolder": "Перенести в папку",
   "move": "Перенести",
   "willMoveToSelectedFolder": "«{{name}}» переедет в выбранную папку.",

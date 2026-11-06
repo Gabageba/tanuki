@@ -2,7 +2,7 @@ import type { Title } from '@tanuki/contracts';
 import useTitleBookmarkFolders from '@/entities/bookmark/hooks/useTitleBookmarkFolders';
 import type { ViewMode } from '@/shared/lib/viewMode';
 import ViewModeGrid from '@/shared/ui/ViewModeGrid';
-import TitleCard from './TitleCard';
+import SourceTitleCard from '@/entities/source/components/SourceTitleCard/SourceTitleCard';
 
 type Props = {
   titles: Title[];
@@ -16,7 +16,7 @@ function TitleCardsGrid({ titles, viewMode }: Props) {
   return (
     <ViewModeGrid viewMode={viewMode}>
       {titles.map((title) => (
-        <TitleCard
+        <SourceTitleCard
           key={title.id}
           title={title}
           viewMode={viewMode}

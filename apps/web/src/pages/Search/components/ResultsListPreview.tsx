@@ -4,7 +4,7 @@ import { CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { VIEW_MODE, type Title } from '@tanuki/contracts';
 import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
-import TitleCard from '@/entities/title/card/TitleCard';
+import SourceTitleCard from '@/entities/source/components/SourceTitleCard/SourceTitleCard';
 import { LIST_PREVIEW_COUNT } from '../models';
 
 type Props = {
@@ -22,7 +22,7 @@ function ResultsListPreview({ items, getBookmarkFolder }: Props) {
     <Stack gap="xs">
       <Stack gap="sm">
         {(isExpanded ? items : items.slice(0, LIST_PREVIEW_COUNT)).map((title) => (
-          <TitleCard
+          <SourceTitleCard
             key={title.id}
             title={title}
             viewMode={VIEW_MODE.LIST}

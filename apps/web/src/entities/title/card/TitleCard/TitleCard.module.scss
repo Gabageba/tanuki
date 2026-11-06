@@ -1,0 +1,96 @@
+.card {
+  &[data-view-mode='grid']:has(.link:hover, .link:focus-visible) {
+    color: var(--mantine-primary-color-filled);
+  }
+
+  &[data-view-mode='list'] {
+    &:has(.link:hover) {
+      background-color: var(--tanuki-color-hover) !important;
+    }
+
+    &:has(.link:focus-visible) {
+      border-color: var(--mantine-primary-color-filled);
+    }
+  }
+
+  &:has(.link:hover, .link:focus-visible) .image {
+    transform: scale(1.05);
+  }
+}
+
+.link {
+  // React Router Link не принимает Mantine style props.
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.cover {
+  // WebKit иначе теряет скругление увеличенной картинки.
+  isolation: isolate;
+}
+
+.image {
+  // Углы изображения обрезает рамка общей обложки.
+  border-radius: 0;
+  transition: transform 0.2s ease;
+}
+
+.actions {
+  z-index: 2;
+}
+
+.meta,
+.actions,
+.footer {
+  &:empty {
+    display: none;
+  }
+}
+
+.metaRow {
+  // Учитывает и переданный компонент, который сам вернул null.
+  &:has(> .meta:empty):has(> .actions:empty) {
+    display: none;
+  }
+}
+
+.heading {
+  // Без метаданных действия делят строку с названием, в том числе когда слот вернул null.
+  &:has(> .metaRow > .meta:empty):has(> .metaRow > .actions:not(:empty)) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    align-items: start;
+    column-gap: 6px;
+
+    > .metaRow {
+      display: contents;
+
+      > .actions {
+        grid-column: 2;
+        grid-row: 1;
+
+        // Центр кнопки и её скелетона совпадает с центром первой строки названия.
+        transform: translateY(calc((1lh - 100%) / 2));
+      }
+    }
+
+    > .metaRow ~ * {
+      grid-column: 1 / -1;
+    }
+
+    > .metaRow + * {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  }
+}
+
+.title {
+  text-wrap: balance;
+}

@@ -2,7 +2,7 @@ import { Box, Group, Stack } from '@mantine/core';
 import { CaretDownIcon } from '@phosphor-icons/react';
 import { VIEW_MODE, type ViewMode } from '@tanuki/contracts';
 import SourceTitleSkeleton from '@/entities/source/components/SourceTitle/SourceTitleSkeleton';
-import TitleCardSkeleton from '@/entities/title/card/TitleCardSkeleton';
+import SourceTitleCardSkeleton from '@/entities/source/components/SourceTitleCard/SourceTitleCardSkeleton';
 import TextSkeleton from '@/shared/ui/TextSkeleton';
 import { LIST_PREVIEW_COUNT } from '../models';
 
@@ -27,14 +27,14 @@ function SourceResultsSkeleton({ viewMode }: Props) {
       {viewMode === VIEW_MODE.LIST ? (
         <Stack gap="sm">
           {Array.from({ length: LIST_PREVIEW_COUNT }, (_, index) => (
-            <TitleCardSkeleton key={index} viewMode={VIEW_MODE.LIST} />
+            <SourceTitleCardSkeleton key={index} viewMode={VIEW_MODE.LIST} />
           ))}
         </Stack>
       ) : (
         <Group gap="md" wrap="nowrap" align="flex-start" style={{ overflow: 'hidden' }}>
           {Array.from({ length: SCROLLER_CARDS }, (_, index) => (
             <Box key={index} w={{ base: 128, sm: 168 }} flex="none">
-              <TitleCardSkeleton viewMode={VIEW_MODE.GRID} />
+              <SourceTitleCardSkeleton viewMode={VIEW_MODE.GRID} />
             </Box>
           ))}
         </Group>

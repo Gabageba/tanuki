@@ -1,5 +1,6 @@
 import { Group, SimpleGrid, Skeleton, Stack } from '@mantine/core';
-import TitleGridCardSkeleton from '@/entities/title/card/TitleGridCard/TitleGridCardSkeleton';
+import { VIEW_MODE } from '@tanuki/contracts';
+import SourceTitleCardSkeleton from '@/entities/source/components/SourceTitleCard/SourceTitleCardSkeleton';
 
 type Props = {
   cols: number;
@@ -20,7 +21,7 @@ function BookmarksSkeleton({ cols }: Props) {
       </Group>
       <SimpleGrid cols={cols} spacing="md">
         {Array.from({ length: cols }, (_, index) => (
-          <TitleGridCardSkeleton key={index} />
+          <SourceTitleCardSkeleton key={index} viewMode={VIEW_MODE.GRID} />
         ))}
       </SimpleGrid>
     </Stack>

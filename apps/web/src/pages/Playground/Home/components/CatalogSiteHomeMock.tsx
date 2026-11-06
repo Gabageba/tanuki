@@ -2,7 +2,7 @@ import { useContext, useMemo } from 'react';
 import { Box, Divider, Group, SimpleGrid, Stack, Tabs } from '@mantine/core';
 import { BooksIcon, HouseLineIcon } from '@phosphor-icons/react';
 import SourceTitle from '@/entities/source/components/SourceTitle';
-import TitleCard from '@/entities/title/card/TitleCard';
+import SourceTitleCard from '@/entities/source/components/SourceTitleCard/SourceTitleCard';
 import GoBackButton from '@/shared/ui/GoBackButton';
 import { PHONE_FRAME_CONTEXT } from '../../Bookmarks/models';
 import { HOME_REMANGA } from '../mocks';
@@ -28,7 +28,7 @@ function CatalogSiteHomeMock() {
         content: (
           <SimpleGrid cols={isPhone ? 2 : 6} spacing="md">
             {(HOME_REMANGA.blocks[0]?.items ?? []).map((title) => (
-              <TitleCard key={title.id} title={title} />
+              <SourceTitleCard key={title.id} title={title} />
             ))}
           </SimpleGrid>
         ),
