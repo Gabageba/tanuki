@@ -6,6 +6,7 @@ import BookmarkUpdates from './BookmarkUpdates';
 import AdultContent from './AdultContent';
 import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
+import CoverlessTitleCard from './CoverlessTitleCard';
 import FolderRow from './FolderRow';
 import HeaderBackground from './HeaderBackground';
 import Home from './Home';
@@ -44,6 +45,14 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'coverless-title-card',
+    Component: CoverlessTitleCard,
+    title: 'Карточка тайтла без обложки',
+    description:
+      '«Популярные» Nude-Moon: плотность карточки, метка папки, 18+, теги и лайки; месяц и сортировка, колонки и состояния без места под обложку.',
+    createdAt: '2026-11-06',
+  },
   {
     slug: 'bookmark-updates',
     Component: BookmarkUpdates,

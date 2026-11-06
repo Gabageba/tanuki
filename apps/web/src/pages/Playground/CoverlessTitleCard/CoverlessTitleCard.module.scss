@@ -1,0 +1,21 @@
+.name {
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.measurement {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.card {
+  &:hover {
+    background-color: var(--tanuki-color-hover) !important;
+  }
+
+  &:focus-visible {
+    border-color: var(--mantine-primary-color-filled);
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 2px;
+  }
+}
