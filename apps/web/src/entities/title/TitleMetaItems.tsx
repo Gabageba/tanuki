@@ -16,6 +16,8 @@ function TitleMetaItems({ items, gap }: Props) {
         c: 'dimmed',
         fz: 12,
         lh: 'tight',
+        display: 'inline-flex',
+        style: { verticalAlign: 'top' },
       }}
       items={items}
     />

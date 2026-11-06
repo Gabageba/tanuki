@@ -1,6 +1,6 @@
-import { Badge, Text } from '@mantine/core';
-import { HeartIcon, StarFourIcon } from '@phosphor-icons/react';
+import { Badge } from '@mantine/core';
 import { isEmpty } from '@/shared/lib/isEmpty';
+import TitleScoreMeta from '../TitleScoreMeta';
 import type { TitleScoreData } from '../models';
 import { COVER_BADGE_COLOR } from './models';
 
@@ -24,22 +24,12 @@ function TitleScoreBadge({ title }: Props) {
       style={{ zIndex: 1 }}
       color={COVER_BADGE_COLOR}
       size="lg"
-      fw={400}
-      leftSection={
-        isRatingEmpty ? (
-          <HeartIcon weight="fill" color="var(--mantine-color-terracotta-text)" />
-        ) : (
-          <StarFourIcon weight="fill" color="var(--mantine-color-terracotta-text)" />
-        )
-      }
       fz={14}
       px={8}
       radius="md"
       variant="filled"
     >
-      <Text c="white" fw={600} ff="monospace">
-        {isRatingEmpty ? title.likes : title.rating}
-      </Text>
+      <TitleScoreMeta title={title} color="white" />
     </Badge>
   );
 }

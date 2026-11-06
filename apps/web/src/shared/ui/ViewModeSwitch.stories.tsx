@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { Box, Stack } from '@mantine/core';
 import { VIEW_MODE, type ViewMode } from '@tanuki/contracts';
-import TitleCard from '@/entities/title/card/TitleCard';
+import SourceTitleCard from '@/entities/source/components/SourceTitleCard/SourceTitleCard';
 import { TITLES } from '@/shared/storybook/titles';
 import ViewModeGrid from './ViewModeGrid';
 import ViewModeSwitch from './ViewModeSwitch';
@@ -26,7 +26,7 @@ export const Default: Story = {
         </Box>
         <ViewModeGrid viewMode={viewMode}>
           {TITLES.slice(0, 8).map((title) => (
-            <TitleCard key={title.id} title={title} viewMode={viewMode} />
+            <SourceTitleCard key={title.id} title={title} viewMode={viewMode} />
           ))}
         </ViewModeGrid>
       </Stack>

@@ -10,6 +10,14 @@
   declaration.
 - No `index.ts` barrels that only import a component and re-export it. Import components straight
   from their own file.
+- Prefer composition for feature-specific interactive content: pass a component through a
+  `ReactNode` slot and keep its state, mutations and modals together. A configuration array fits
+  uniform items; don't replace a working component with a UI constructor of action types,
+  descriptors and renderers unless it makes the actual consumers simpler.
+- When passing an existing compatible data object to a component, spread it and override only
+  changed or derived fields (`{ ...bookmark, id: bookmark.titleId, hasNewChapters: ... }`). Put
+  overrides after the spread. Don't copy unchanged fields one by one; keep explicit mapping when
+  fields need to be filtered or the source model is incompatible.
 - Mantine first. Layout and text are built from Mantine components (`Box`, `Stack`, `Group`,
   `Flex`, `Center`, `Text`, `Title`, …) and their style props (`pos`, `w`, `mt`, `ff`, `fw`, `ta`,
   …), not from raw `div`/`span`/`p` plus a CSS module. Before writing a custom component, check
@@ -30,7 +38,15 @@
   the modal — the confirm action included — keeps its icon.
 - No `renderXxx()` helpers inside a component that switch between whole branches of markup
   (skeleton / empty / list). Such a branch is its own component in its own file
-  (`renderList()` → `UsersList`).
+  (`renderList()` → `UsersList`). This does not apply to selecting already supplied `ReactNode`
+  props: a local selector that returns `grid` or `list` builds no markup and stays in the component.
+- Choose between enum variants with an exhaustive `switch` and direct `return`s, without a
+  `default` — even when there are only two variants today. Don't assign the result to a `let`,
+  collapse the enum into a ternary, or add `useMemo` just to obtain a `const`. For a component's
+  supplied slots, use a local arrow function (`const getCard = () => { switch (…) { … } }`) and
+  call it in JSX. Don't extract a separate component or module helper just to select a slot.
+  Shared wrappers and context providers appear once around the selected result, not in every
+  `case`.
 - A component that shows nothing for empty data decides that itself. The check "is there anything
   to show" (`items.length > 0`, `filters.length === 0`) lives inside the component, which returns
   `null`; the parent renders it unconditionally (`<UnappliedFiltersNote filters={filters} />`), not
@@ -148,6 +164,9 @@
   codebase doesn't own — a field mirrored verbatim from a source site's own JSON API response, or a
   value typed against a third-party library (e.g. `COLOR_SCHEME` against Mantine's
   `MantineColorScheme`) — where the value must stay exactly what that external contract expects.
+- React contexts created with `createContext` are an exception to UPPERCASE names: use PascalCase
+  with a `Context` suffix — `TitleCardLayoutContext`, never `TITLE_CARD_LAYOUT_CONTEXT`. Keep the
+  same name in imports, providers and `useContext` calls.
 - No lookup tables mapping an enum to labels, icons, colors and the like
   (`Record<ColorScheme, string>`). Write an arrow function with an exhaustive `switch` instead — no
   `default` branch, so TypeScript points at the missing case when a value is added to the enum:
@@ -252,12 +271,16 @@
   component's own `hooks` folder.
 - Hooks are written as a `function` declaration and exported via `export default` too (after the
   declaration, same as components).
+- `useMemo` needs a reason: an expensive computation, a consumer that needs a stable reference,
+  or a UI pattern that explicitly requires it (such as `TABS`). Don't memoize trivial object
+  creation or a simple choice of rendered content by default.
 
 ## Functions
 
 - Only components and hooks use `function` + `export default`. Every other function — helpers,
-  formatters, guards, mappers, request builders — is an arrow function assigned to a const and
-  exported as a **named** export (no `export default`).
+  formatters, guards, mappers, request builders — is an arrow function assigned to a const.
+  Module-level helpers use **named** exports (no `export default`); local helpers inside a
+  component stay local.
 
   ```ts
   // component / hook

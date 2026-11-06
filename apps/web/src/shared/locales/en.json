@@ -617,7 +617,6 @@
   "trackUpdates": "Track updates",
   "checkNewChaptersAndMarkCard": "Check for new chapters and mark the card with a dot",
   "folderActions": "Folder actions",
-  "bookmarkActions": "Bookmark actions",
   "moveToFolder": "Move to folder",
   "move": "Move",
   "willMoveToSelectedFolder": "“{{name}}” will move to the selected folder.",

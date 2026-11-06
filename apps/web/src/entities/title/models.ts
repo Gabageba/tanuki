@@ -29,9 +29,6 @@ export type LinkedReadingMark = ReadingMark & {
   progress: LinkedReadingProgress;
 };
 
-/** Размытие скрытой обложки 18+ в px — в каталоге и в закладках. */
-export const HIDDEN_COVER_BLUR = 20;
-
 /** Поля, которых хватает обложке, — их есть и у `Title`, и у закладки, и у «Продолжить чтение». */
 export type TitleCoverData = Pick<Title, 'coverUrl' | 'name' | 'sourceId' | 'contentRating'>;
 

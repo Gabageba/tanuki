@@ -3,6 +3,3 @@ export const RESTORE_TOAST_MS = 6000;
 
 /** Наклон обложек веера на плитке «Подборки» — по одной на каждую из трёх. */
 export const FAN_ROTATIONS = [-8, 0, 8];
-
-/** Ширина обложки строки «Новых глав» — у строки и её скелетона. */
-export const NEW_CHAPTER_COVER_WIDTH = 84;

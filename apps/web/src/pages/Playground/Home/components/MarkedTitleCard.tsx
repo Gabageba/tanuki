@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Badge, Box, Stack, Text } from '@mantine/core';
 import { VIEW_MODE, type Title } from '@tanuki/contracts';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
-import TitleCardImage from '@/entities/title/TitleCardImage';
+import MockTitleCardImage from './MockTitleCardImage';
 import TitleMetaItems from '@/entities/title/TitleMetaItems';
 import styles from '@/entities/title/Title.module.scss';
 
@@ -20,7 +20,7 @@ function MarkedTitleCard({ title, badge, meta = [] }: Props) {
     <NavigateToTitleCard titleId={title.id} viewMode={VIEW_MODE.GRID}>
       <Stack gap={8}>
         <Box pos="relative">
-          <TitleCardImage title={title} showSource />
+          <MockTitleCardImage title={title} showSource />
           {badge && (
             <Badge pos="absolute" bottom={6} right={6} variant="filled" ff="monospace">
               {badge}

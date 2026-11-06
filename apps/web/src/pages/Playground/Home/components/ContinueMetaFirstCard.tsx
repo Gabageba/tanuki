@@ -1,7 +1,7 @@
 import { AspectRatio, Box, Group, Stack, Text } from '@mantine/core';
 import { VIEW_MODE } from '@tanuki/contracts';
 import NavigateToTitleCard from '@/entities/title/NavigateToTitleCard';
-import TitleCardImage from '@/entities/title/TitleCardImage';
+import MockTitleCardImage from './MockTitleCardImage';
 import TitleMetaItems from '@/entities/title/TitleMetaItems';
 import type { ContinueItem } from '../models';
 import ContinueActionsMenu from './ContinueActionsMenu';
@@ -21,7 +21,7 @@ function ContinueMetaFirstCard({ item, onRemove }: Props) {
     <Box pos="relative">
       <NavigateToTitleCard titleId={item.title.id} viewMode={VIEW_MODE.GRID}>
         <Stack gap={8}>
-          <TitleCardImage title={item.title} showBadges showSource />
+          <MockTitleCardImage title={item.title} showBadges showSource />
           <Stack gap={4}>
             <Box pr={28} mih={22} display="flex" style={{ alignItems: 'center' }}>
               <TitleMetaItems

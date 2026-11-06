@@ -1,0 +1,9 @@
+.stripe {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.tintedCard[data-view-mode='list'][data-has-new='true']:has(a:hover) {
+  // Сохраняем сигнал обновления поверх обычного hover-фона списка TitleCard.
+  background-color: var(--mantine-primary-color-light-hover) !important;
+}

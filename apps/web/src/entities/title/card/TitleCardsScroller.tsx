@@ -1,7 +1,7 @@
 import { Box, Group, Scroller } from '@mantine/core';
 import type { Title } from '@tanuki/contracts';
 import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
-import TitleCard from './TitleCard';
+import SourceTitleCard from '@/entities/source/components/SourceTitleCard/SourceTitleCard';
 
 type Props = {
   items: Title[];
@@ -16,7 +16,7 @@ function TitleCardsScroller({ items, getBookmarkFolder }: Props) {
       <Group gap="md" wrap="nowrap" align="flex-start">
         {items.map((title) => (
           <Box key={title.id} w={{ base: 128, sm: 168 }} flex="none">
-            <TitleCard title={title} bookmarkFolder={getBookmarkFolder(title.id)} />
+            <SourceTitleCard title={title} bookmarkFolder={getBookmarkFolder(title.id)} />
           </Box>
         ))}
       </Group>

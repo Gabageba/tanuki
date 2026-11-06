@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { EmptyState, Stack } from '@mantine/core';
 import { SparkleIcon } from '@phosphor-icons/react';
 import type { Source } from '@tanuki/contracts';
-import TitleCard from '@/entities/title/card/TitleCard';
-import TitleCardSkeleton from '@/entities/title/card/TitleCardSkeleton';
+import SourceTitleCard from '@/entities/source/components/SourceTitleCard/SourceTitleCard';
+import SourceTitleCardSkeleton from '@/entities/source/components/SourceTitleCard/SourceTitleCardSkeleton';
 import type { ViewMode } from '@/shared/lib/viewMode';
 import useMockFeed from '../hooks/useMockFeed';
 import type { BlockEnd, FeedState, MockBlock, NextPageError } from '../models';
@@ -52,7 +52,7 @@ function BlockFeed({
     return (
       <BlockGrid viewMode={viewMode}>
         {Array.from({ length: SKELETON_CARDS }, (_, index) => (
-          <TitleCardSkeleton key={index} viewMode={viewMode} />
+          <SourceTitleCardSkeleton key={index} viewMode={viewMode} />
         ))}
       </BlockGrid>
     );
@@ -72,7 +72,7 @@ function BlockFeed({
     <Stack gap={0}>
       <BlockGrid viewMode={viewMode}>
         {feed.items.map((title) => (
-          <TitleCard key={title.id} title={title} viewMode={viewMode} />
+          <SourceTitleCard key={title.id} title={title} viewMode={viewMode} />
         ))}
       </BlockGrid>
       <BlockFooter

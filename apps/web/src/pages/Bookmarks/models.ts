@@ -28,6 +28,3 @@ export const INITIAL_BOOKMARKS_PARAMS: BookmarksParams = {
   sort: BOOKMARK_SORT.UPDATED,
   direction: getDefaultBookmarkSortDirection(BOOKMARK_SORT.UPDATED),
 };
-
-/** Место справа от названия под точку: точка 8px и зазор 6px — она влезает и за полной строкой. */
-export const NEW_DOT_SPACE = 14;

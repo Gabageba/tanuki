@@ -3,6 +3,7 @@ import TitleCardsGridSkeleton from '@/entities/title/card/TitleCardsGridSkeleton
 import { getStoredViewMode, VIEW_MODE } from '@/shared/lib/viewMode';
 import TabsSkeleton from '@/shared/ui/TabsSkeleton';
 import BookmarksToolbarSkeleton from './BookmarksToolbarSkeleton';
+import BookmarkCardSkeleton from './BookmarkCardSkeleton';
 
 /** Ширины названий папок — разные, чтобы полоса не выглядела штампом. */
 const FOLDER_NAME_WIDTHS = [76, 100, 84, 108, 68];
@@ -15,6 +16,8 @@ const ACTION_ICON_SIZE = 28;
  * сортировки и сетка карточек — всё скелетоном в раскладке загруженной страницы.
  */
 function BookmarksSkeleton() {
+  const viewMode = getStoredViewMode() ?? VIEW_MODE.GRID;
+
   return (
     <Stack gap="md">
       <TabsSkeleton
@@ -24,7 +27,10 @@ function BookmarksSkeleton() {
         ))}
       />
       <BookmarksToolbarSkeleton />
-      <TitleCardsGridSkeleton viewMode={getStoredViewMode() ?? VIEW_MODE.GRID} />
+      <TitleCardsGridSkeleton
+        viewMode={viewMode}
+        skeleton={<BookmarkCardSkeleton viewMode={viewMode} />}
+      />
     </Stack>
   );
 }

@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import AccountGroups from './AccountGroups';
 import AccountMenu from './AccountMenu';
 import Bookmarks from './Bookmarks';
+import BookmarkUpdates from './BookmarkUpdates';
 import AdultContent from './AdultContent';
 import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
@@ -25,6 +26,7 @@ import SourcesHealthTable from './SourcesHealthTable';
 import SourcesSetup from './SourcesSetup';
 import ThemePicker from './ThemePicker';
 import TitleSearch from './TitleSearch';
+import TitleBookmarkMarkers from './TitleBookmarkMarkers';
 import UsersAdmin from './UsersAdmin';
 
 export type PlaygroundTask = {
@@ -42,6 +44,24 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'bookmark-updates',
+    Component: BookmarkUpdates,
+    title: 'Новые главы в закладках',
+    description:
+      'Выбран N18: оранжевая мета при новых главах. Прежняя точка, боковые линии и остальные макеты сохранены для сравнения.',
+    createdAt: '2026-11-05',
+    decision: 'N18',
+  },
+  {
+    slug: 'title-bookmark-markers',
+    Component: TitleBookmarkMarkers,
+    title: 'Маркеры папки в списке',
+    description:
+      'Где показать папку тайтла в обычной и компактной карточке: справа от названия, перед ним, флажком на обложке или плашкой в нижней строке.',
+    createdAt: '2026-11-04',
+    decision: 'K4a — прежняя метка на обложке',
+  },
   {
     slug: 'reader-improvements',
     Component: ReaderImprovements,

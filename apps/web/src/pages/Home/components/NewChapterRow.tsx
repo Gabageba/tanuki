@@ -1,16 +1,13 @@
 import { Box, Group, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import type { BookmarkItem } from '@tanuki/contracts';
+import { VIEW_MODE, type BookmarkItem } from '@tanuki/contracts';
 import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
 import SourceIcon from '@/entities/source/components/SourceIcon';
 import { getCatalogSourceTitle, getLabelByTitleType } from '@/entities/source/lib';
-import TitleCardName from '@/entities/title/card/TitleCardName';
-import TitleListCard from '@/entities/title/card/TitleListCard';
-import TitleBookmarkMarker from '@/entities/title/markers/TitleBookmarkMarker';
-import TitleCover from '@/entities/title/TitleCover';
+import TitleCard from '@/entities/title/card/TitleCard/TitleCard';
+import { TITLE_CARD_LIST_SIZE } from '@/entities/title/card/TitleCard/models';
 import TitleMetaItems from '@/entities/title/TitleMetaItems';
 import useDateFormat from '@/shared/hooks/useDateFormat';
-import { NEW_CHAPTER_COVER_WIDTH } from '../models';
 
 type Props = {
   bookmark: BookmarkItem;
@@ -26,21 +23,20 @@ function NewChapterRow({ bookmark, folder }: Props) {
   const sourceTitle = getCatalogSourceTitle(bookmark.sourceId);
 
   return (
-    <TitleListCard
-      titleId={bookmark.titleId}
-      contentRating={bookmark.contentRating}
-      cover={
-        <TitleCover cover={bookmark} hiddenIconSize={24} w={NEW_CHAPTER_COVER_WIDTH} flex="none">
-          {folder && <TitleBookmarkMarker folder={folder} compact />}
-        </TitleCover>
-      }
+    <TitleCard
+      data={{
+        ...bookmark,
+        id: bookmark.titleId,
+        bookmarkFolder: folder,
+      }}
+      viewMode={VIEW_MODE.LIST}
+      listSize={TITLE_CARD_LIST_SIZE.COMPACT}
       meta={
         <Group gap={6} wrap="nowrap" miw={0}>
-          <SourceIcon id={bookmark.sourceId} title={sourceTitle} size={14} />
+          <SourceIcon id={bookmark.sourceId} title={sourceTitle} size={14} radius="sm" />
           <TitleMetaItems gap={4} items={[sourceTitle, getLabelByTitleType(bookmark.type, t)]} />
         </Group>
       }
-      name={<TitleCardName name={bookmark.name} fz="sm" />}
       footer={
         <Group gap={8} wrap="nowrap">
           <Text fz="sm" fw={600} ff="monospace" c="var(--mantine-primary-color-filled)" lh="tight">

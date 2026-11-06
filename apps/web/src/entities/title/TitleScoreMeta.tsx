@@ -1,13 +1,14 @@
-import { Group, Text } from '@mantine/core';
+import { Group, Text, type MantineColor } from '@mantine/core';
 import { HeartIcon, StarFourIcon } from '@phosphor-icons/react';
 import { isEmpty } from '@/shared/lib/isEmpty';
-import type { Title } from '@tanuki/contracts';
+import type { TitleScoreData } from './models';
 
 type Props = {
-  title: Title;
+  title: TitleScoreData;
+  color?: MantineColor;
 };
 
-function TitleScoreMeta({ title }: Props) {
+function TitleScoreMeta({ title, color = 'var(--mantine-color-text)' }: Props) {
   const isRatingEmpty = isEmpty(title.rating);
   const isLikesEmpty = isEmpty(title.likes);
 
@@ -16,9 +17,13 @@ function TitleScoreMeta({ title }: Props) {
   }
 
   return (
-    <Group gap={4}>
-      {isRatingEmpty ? <HeartIcon weight="fill" /> : <StarFourIcon weight="fill" />}
-      <Text span ff="monospace" lh="tight">
+    <Group component="span" gap={4} wrap="nowrap" flex="none" c={color}>
+      {isRatingEmpty ? (
+        <HeartIcon weight="fill" color="var(--mantine-color-terracotta-text)" />
+      ) : (
+        <StarFourIcon weight="fill" color="var(--mantine-color-terracotta-text)" />
+      )}
+      <Text span ff="monospace" lh="tight" fw={600}>
         {isRatingEmpty ? title.likes : title.rating}
       </Text>
     </Group>

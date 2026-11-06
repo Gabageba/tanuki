@@ -1,11 +1,10 @@
+import { EyeSlashIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import type { ContinueReadingItem } from '@tanuki/contracts';
-import TitleGridCard from '@/entities/title/card/TitleGridCard';
-import TitleCardName from '@/entities/title/card/TitleCardName';
-import TitleCardImage from '@/entities/title/TitleCardImage';
+import TitleCard from '@/entities/title/card/TitleCard/TitleCard';
 import TitleMetaItems from '@/entities/title/TitleMetaItems';
 import useDateFormat from '@/shared/hooks/useDateFormat';
 import ContinueChapter from './ContinueChapter';
-import ContinueReadingActionsMenu from './ContinueReadingActionsMenu';
 
 type Props = {
   item: ContinueReadingItem;
@@ -15,12 +14,13 @@ type Props = {
 /** Карточка C1a — та же, что в каталоге: обложка с лентой источника, «Гл. 12 · 2 дня назад»,
  *  название; «⋯» на высоте мета-строки. */
 function ContinueReadingCard({ item, onRemove }: Props) {
+  const { t } = useTranslation();
   const { formatRelative } = useDateFormat();
 
   return (
-    <TitleGridCard
-      titleId={item.title.id}
-      cover={<TitleCardImage title={item.title} showBadges showSource />}
+    <TitleCard
+      data={item.title}
+      showSource
       meta={
         <TitleMetaItems
           gap={4}
@@ -30,8 +30,15 @@ function ContinueReadingCard({ item, onRemove }: Props) {
           ]}
         />
       }
-      name={<TitleCardName name={item.title.name} />}
-      actions={<ContinueReadingActionsMenu onRemove={onRemove} />}
+      actions={[
+        {
+          id: 'removeFromContinueReading',
+          children: t('removeFromContinueReading'),
+          leftSection: <EyeSlashIcon />,
+          color: 'red',
+          onClick: onRemove,
+        },
+      ]}
     />
   );
 }

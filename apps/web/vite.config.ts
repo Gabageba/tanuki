@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath } from 'node:url';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     // Воркер держит push, precache app shell, кеш по таблице docs/06-pwa-offline.md и скачивание
@@ -53,7 +53,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:3000',
+      '/api': loadEnv(mode, process.cwd(), '').API_PROXY_TARGET || 'http://localhost:3000',
     },
   },
-});
+}));

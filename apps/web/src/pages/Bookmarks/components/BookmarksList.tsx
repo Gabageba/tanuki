@@ -8,6 +8,7 @@ import useBookmarks from '../hooks/useBookmarks';
 import { getBookmarkItems } from '../lib';
 import type { BookmarksListParams } from '../models';
 import BookmarkCard from './BookmarkCard';
+import BookmarkCardSkeleton from './BookmarkCardSkeleton';
 import FolderEmpty from './FolderEmpty';
 import SearchEmpty from './SearchEmpty';
 
@@ -29,7 +30,12 @@ function BookmarksList({ params, viewMode, onResetQuery }: Props) {
   return (
     <QueryBlock
       query={query}
-      skeleton={<TitleCardsGridSkeleton viewMode={viewMode} />}
+      skeleton={
+        <TitleCardsGridSkeleton
+          viewMode={viewMode}
+          skeleton={<BookmarkCardSkeleton viewMode={viewMode} />}
+        />
+      }
       empty={empty}
       isEmpty={({ pages }) => pages.every(({ items }) => items.length === 0)}
     >

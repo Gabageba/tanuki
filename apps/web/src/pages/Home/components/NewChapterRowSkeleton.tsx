@@ -1,25 +1,23 @@
-import { Card, Group, Skeleton, Stack } from '@mantine/core';
+import { Group, Skeleton } from '@mantine/core';
+import { VIEW_MODE } from '@tanuki/contracts';
 import TextSkeleton from '@/shared/ui/TextSkeleton';
-import { NEW_CHAPTER_COVER_WIDTH } from '../models';
+import TitleCardSkeleton from '@/entities/title/card/TitleCard/TitleCardSkeleton';
+import { TITLE_CARD_LIST_SIZE } from '@/entities/title/card/TitleCard/models';
 
 /** Повторяет `NewChapterRow`: карточку списка с обложкой, источником, названием и счётчиком. */
 function NewChapterRowSkeleton() {
   return (
-    <Card withBorder p={0}>
-      <Group align="stretch" wrap="nowrap" gap={0}>
-        <Skeleton w={NEW_CHAPTER_COVER_WIDTH} style={{ aspectRatio: '3 / 4' }} flex="none" />
-        <Stack p="sm" flex={1} miw={0} gap={8}>
-          <Stack gap={8} flex={1}>
-            <Group gap={6} wrap="nowrap">
-              <Skeleton circle h={14} />
-              <TextSkeleton fz="xs" lh="tight" w="40%" />
-            </Group>
-            <TextSkeleton fz="sm" lh="tight" w="80%" />
-          </Stack>
-          <TextSkeleton fz="sm" lh="tight" w={56} />
-        </Stack>
-      </Group>
-    </Card>
+    <TitleCardSkeleton
+      viewMode={VIEW_MODE.LIST}
+      listSize={TITLE_CARD_LIST_SIZE.COMPACT}
+      meta={
+        <Group gap={6} wrap="nowrap">
+          <Skeleton w={14} h={14} radius="sm" />
+          <TextSkeleton fz="xs" lh="tight" w="40%" />
+        </Group>
+      }
+      footer={<TextSkeleton fz="sm" lh="tight" w={56} />}
+    />
   );
 }
 

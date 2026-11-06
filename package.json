@@ -11,6 +11,7 @@
     "db:migrate": "pnpm --filter @tanuki/api db:migrate",
     "dev": "turbo run dev",
     "dev:mobile": "turbo run dev --filter=@tanuki/api & turbo run dev:host --filter=@tanuki/web; wait",
+    "dev:playground": "pnpm build:contracts && pnpm --filter @tanuki/web dev --open /playground",
     "docker": "docker compose up -d --force-recreate --wait",
     "lint": "turbo run lint && pnpm run lint:styles && pnpm run lint:format && pnpm run lint:i18n",
     "lint:format": "prettier --check .",
