@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Box, SimpleGrid } from '@mantine/core';
 import { expect, waitFor } from 'storybook/test';
 import { MOBILE_GLOBALS } from '@/shared/storybook/models';
-import { CONTENT_RATING, VIEW_MODE } from '@tanuki/contracts';
+import { CONTENT_RATING, TITLE_TYPE, VIEW_MODE } from '@tanuki/contracts';
 import { FAVORITE_FOLDER } from '@/shared/storybook/fixtures';
 import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
 import { POPULAR_TITLES, TITLES } from '@/shared/storybook/titles';
@@ -174,6 +174,26 @@ export const CoverlessMobile: Story = {
   ...Coverless,
   name: 'Без обложки на телефоне',
   globals: MOBILE_GLOBALS,
+};
+
+export const CoverlessTypeOnly: Story = {
+  name: 'Nude-Moon: только тип в мета-строке',
+  render: () => (
+    <Box p="md" maw={440}>
+      <SourceTitleCard
+        title={{
+          ...POPULAR_TITLES[0]!,
+          type: TITLE_TYPE.MANGA,
+          year: null,
+          chaptersCount: null,
+          pages: null,
+          releaseState: null,
+        }}
+        viewMode={VIEW_MODE.COVERLESS}
+        bookmarkFolder={FAVORITE_FOLDER}
+      />
+    </Box>
+  ),
 };
 
 export const CoverlessWithSkeleton: Story = {

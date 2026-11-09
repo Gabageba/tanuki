@@ -15,13 +15,13 @@ function TitleCardCoverlessSkeleton({ meta, withDescription, footer, actions }: 
         <Stack className={styles.heading} gap={8}>
           <TitleCardMetaRow
             meta={meta}
-            actions={actions}
-            markers={
+            actions={
               <>
-                <Skeleton h={TITLE_TAG_HEIGHT} w={TITLE_TAG_HEIGHT} />
                 <Skeleton h={TITLE_TAG_HEIGHT} w={34} />
+                {actions}
               </>
             }
+            markers={<Skeleton h={TITLE_TAG_HEIGHT} w={TITLE_TAG_HEIGHT} />}
           />
           <TextSkeleton lh="tight" lines={2} />
         </Stack>

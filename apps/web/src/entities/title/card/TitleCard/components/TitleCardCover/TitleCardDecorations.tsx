@@ -11,15 +11,13 @@ function TitleCardDecorations({ data, showSource }: Props) {
   const { viewMode } = useTitleCardLayout();
   const isGrid = viewMode === VIEW_MODE.GRID;
 
+  if (!isGrid) return null;
+
   return (
     <>
-      {isGrid && (
-        <>
-          {showSource && <TitleSourceRibbon sourceId={data.sourceId as SourceId} />}
-          <TitleScoreBadge title={data} />
-        </>
-      )}
-      <TitleBookmarkMarker folder={data.bookmarkFolder} compact={!isGrid} />
+      {showSource && <TitleSourceRibbon sourceId={data.sourceId as SourceId} />}
+      <TitleScoreBadge title={data} />
+      <TitleBookmarkMarker folder={data.bookmarkFolder} />
     </>
   );
 }
