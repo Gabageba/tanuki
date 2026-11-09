@@ -94,6 +94,7 @@ export class SelectionsService {
 
     const params = {
       page: query.page,
+      order: section.sortOrders?.find((order) => order === query.order) ?? section.sortOrders?.[0],
       variant: (section.variants.find(({ id }) => id === query.variant) ?? section.variants[0])?.id,
     };
     try {

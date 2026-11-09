@@ -9,6 +9,7 @@ function SourceTitleMetaSkeleton() {
       case VIEW_MODE.GRID:
         return '70%';
       case VIEW_MODE.LIST:
+      case VIEW_MODE.COVERLESS:
         return '40%';
     }
   };

@@ -1,7 +1,8 @@
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { SORT_DIRECTION, type SortDirection, type SortOrder } from '@tanuki/contracts';
-import { getSortOrderLabel, resolveOrder } from '../../utils/sortOrder';
+import { resolveOrder } from '../../utils/sortOrder';
+import { getSortOrderLabel } from '@/entities/source/sortOrder';
 import PageLayout from '@/shared/ui/PageLayout';
 import SortCombobox from '@/shared/ui/SortCombobox';
 import type { CatalogParams } from '../../models';

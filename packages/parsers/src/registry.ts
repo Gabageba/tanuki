@@ -388,6 +388,9 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       ...parser,
       info: {
         ...parser.info,
+        get homeSections() {
+          return parser.info.homeSections;
+        },
         isBroken: descriptor.info.isBroken,
         // Same reasoning: derived from the parser itself, so no engine has to remember the flag.
         isBookmarksImportSupported: parser.getBookmarks !== undefined,

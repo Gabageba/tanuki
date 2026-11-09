@@ -218,7 +218,7 @@ export const ListWithoutSlots: Story = {
 };
 
 export const AdultList: Story = {
-  name: 'Список 120: 18+ справа от названия',
+  name: 'Список 120: 18+ в мета-строке',
   args: { viewMode: VIEW_MODE.LIST, detailed: true, hidden: true },
   play: checkAdultTitleCardPair,
 };
@@ -239,7 +239,7 @@ export const AdultNoSlots: Story = {
   args: { viewMode: VIEW_MODE.LIST, withMeta: false, hidden: true },
   play: async (context) => {
     await checkAdultTitleCardPair(context);
-    await expect(context.canvasElement.querySelector('[data-card-meta]')).not.toBeVisible();
+    await expect(context.canvasElement.querySelector('[data-card-meta-content]')).not.toBeVisible();
   },
 };
 
@@ -268,5 +268,17 @@ export const AdultListMobile: Story = {
   name: 'На телефоне: 18+ в подробной карточке',
   args: { viewMode: VIEW_MODE.LIST, detailed: true, hidden: true },
   globals: MOBILE_GLOBALS,
+  play: checkAdultTitleCardPair,
+};
+
+export const AdultGrid: Story = {
+  name: 'Плитка: 18+ в мета-строке',
+  args: { hidden: true },
+  play: checkAdultTitleCardPair,
+};
+
+export const AdultGridNoSlots: Story = {
+  name: 'Плитка: 18+ у названия без метаданных',
+  args: { hidden: true, withMeta: false },
   play: checkAdultTitleCardPair,
 };

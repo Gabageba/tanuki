@@ -297,9 +297,6 @@ export {
   COLOR_SCHEME,
   ColorSchemeSchema,
   type ColorScheme,
-  VIEW_MODE,
-  ViewModeSchema,
-  type ViewMode,
   UserSettingsSchema,
   type UserSettings,
   UpdateUserSettingsRequestSchema,
@@ -509,3 +506,5 @@ export {
   SourceImportResultSchema,
   type SourceImportResult,
 } from './source-import';
+
+export { VIEW_MODE, ViewModeSchema, type ViewMode } from './view-mode';

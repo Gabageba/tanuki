@@ -3,6 +3,9 @@ import {
   CONTENT_RATING,
   DEFAULT_BRANCH_ID,
   HOME_SECTION_KIND,
+  VIEW_MODE,
+  SORT_ORDER,
+  type HomeSectionInfo,
   MATCH_CONFIDENCE,
   READING_MARK_CONFIDENCE,
   SEARCH_GROUP_STATUS,
@@ -331,27 +334,83 @@ export const SEARCH_HISTORY_RESPONSE: SearchHistoryResponse = {
 };
 
 /** Источники с главной сайта: у них есть подборки. */
-export const SELECTIONS_SOURCE_IDS = ['readmanga_ru', 'mintmanga'];
+export const SELECTIONS_SOURCE_IDS = ['readmanga_ru', 'mintmanga', 'nudemoon'];
 
-export const HOME_SECTIONS = [
-  { id: 'new', title: 'Горячие новинки', kind: HOME_SECTION_KIND.NEW, variants: [] },
+export const HOME_SECTIONS: HomeSectionInfo[] = [
+  {
+    id: 'new',
+    title: 'Горячие новинки',
+    kind: HOME_SECTION_KIND.NEW,
+    variants: [],
+    viewMode: null,
+    sortOrders: [],
+  },
   {
     id: 'trending',
     title: 'Сейчас читают',
     kind: HOME_SECTION_KIND.TRENDING,
+    viewMode: null,
+    sortOrders: [],
     variants: [
       { id: 'day', title: 'За день' },
       { id: 'week', title: 'За неделю' },
     ],
   },
-  { id: 'top', title: 'Топ', kind: HOME_SECTION_KIND.TOP, variants: [] },
+  {
+    id: 'top',
+    title: 'Топ',
+    kind: HOME_SECTION_KIND.TOP,
+    variants: [],
+    viewMode: null,
+    sortOrders: [],
+  },
 ];
 
 export const getSelectionsResponse = (sourceId: string): SelectionsResponse => ({
   sourceId,
   status: SEARCH_GROUP_STATUS.OK,
-  sections: HOME_SECTIONS.map((section, index) => ({
-    ...section,
-    items: TITLES.slice(index * 4, index * 4 + 12),
-  })),
+  sections: (sourceId === 'nudemoon' ? NUDEMOON_HOME_SECTIONS : HOME_SECTIONS).map(
+    (section, index) => ({
+      ...section,
+      items:
+        sourceId === 'nudemoon' && section.id === 'popular'
+          ? POPULAR_TITLES
+          : TITLES.slice(index * 4, index * 4 + 12),
+    }),
+  ),
 });
+
+export const NUDEMOON_HOME_SECTIONS: HomeSectionInfo[] = [
+  {
+    id: 'newTranslations',
+    title: 'Новые переводы',
+    kind: HOME_SECTION_KIND.NEW,
+    viewMode: null,
+    sortOrders: [],
+    variants: [],
+  },
+  {
+    id: 'popular',
+    title: 'Популярные',
+    kind: HOME_SECTION_KIND.POPULAR,
+    viewMode: VIEW_MODE.COVERLESS,
+    sortOrders: [SORT_ORDER.LIKES, SORT_ORDER.VIEWS],
+    variants: [
+      { id: '2026-11', title: 'Ноябрь 2026' },
+      { id: '2026-10', title: 'Октябрь 2026' },
+      { id: '2026-09', title: 'Сентябрь 2026' },
+    ],
+  },
+];
+
+export const POPULAR_TITLES: Title[] = TITLES.slice(0, 12).map((title, index) => ({
+  ...title,
+  id: `nudemoon:${index + 1}`,
+  sourceId: 'nudemoon',
+  coverUrl: '',
+  largeCoverUrl: null,
+  rating: null,
+  likes: index === 0 ? 0 : 240 - index * 12,
+  views: 20_000 - index * 100,
+  contentRating: CONTENT_RATING.ADULT,
+}));

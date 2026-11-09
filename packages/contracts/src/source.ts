@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { EnumLiteralsOf } from './utils';
+import { ViewModeSchema } from './view-mode';
 
 /**
  * Вид контента источника — он же ключ группировки в SourcesResponse. Значения объявлены здесь
@@ -280,6 +281,9 @@ export const HomeSectionInfoSchema = z.object({
   kind: HomeSectionKindSchema,
   /** Переключатель внутри блока на сайте; пустой — переключателя нет. Первый — по умолчанию. */
   variants: z.array(HomeSectionVariantSchema),
+  /** null — использовать сохранённый вид пользователя. */
+  viewMode: ViewModeSchema.nullable().default(null),
+  sortOrders: z.array(SortOrderSchema).default([]),
 });
 export type HomeSectionInfo = z.infer<typeof HomeSectionInfoSchema>;
 

@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { VIEW_MODE } from '@tanuki/contracts';
 import TitleCardCover from '../TitleCardCover/TitleCardCover';
 import TitleCardMetaRow from '../TitleCardMetaRow';
-import TitleCardNameRow from './TitleCardNameRow';
+import TitleCardName from '../TitleCardName/TitleCardName';
 import TitleCardDescription from './TitleCardDescription';
 import { getTitleCardPath } from '../../lib';
 import type { TitleCardViewContent } from '../../models';
@@ -27,8 +27,8 @@ function TitleCardList({ data, meta, actions, footer }: Props) {
         <TitleCardCover data={data} />
         <Stack p="sm" flex={1} miw={0} gap={8}>
           <Stack className={styles.heading} gap={8} flex={1}>
-            <TitleCardMetaRow meta={meta} actions={actions} />
-            <TitleCardNameRow data={data} />
+            <TitleCardMetaRow meta={meta} actions={actions} contentRating={data.contentRating} />
+            <TitleCardName data={data} />
             <TitleCardDescription description={data.description} />
           </Stack>
           <Box data-card-footer className={styles.footer}>

@@ -1,3 +1,4 @@
+import TitleCardCoverlessSkeleton from './components/TitleCardCoverless/TitleCardCoverlessSkeleton';
 import TitleCardGridSkeleton from './components/TitleCardGrid/TitleCardGridSkeleton';
 import TitleCardLayout from './components/TitleCardLayout';
 import TitleCardListSkeleton from './components/TitleCardList/TitleCardListSkeleton';
@@ -11,6 +12,7 @@ function TitleCardSkeleton({ viewMode, listSize, withActions = false, ...restPro
 
   return (
     <TitleCardLayout
+      coverless={<TitleCardCoverlessSkeleton {...restProps} actions={actions} />}
       viewMode={viewMode}
       listSize={listSize}
       grid={<TitleCardGridSkeleton {...restProps} actions={actions} />}

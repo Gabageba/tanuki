@@ -1,5 +1,9 @@
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
-import { SEARCH_GROUP_STATUS, type SelectionsSectionResponse } from '@tanuki/contracts';
+import {
+  SEARCH_GROUP_STATUS,
+  type SortOrder,
+  type SelectionsSectionResponse,
+} from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { SILENT_NEXT_PAGE_ERROR_META } from '@/shared/api/errorMeta';
 import { getSelectionsSectionQueryKey, SelectionsNextPageError } from '../models';
@@ -9,6 +13,7 @@ type Params = {
   sectionId: string;
   /** id варианта — только у блока с вариантами. */
   variant: string | undefined;
+  order?: SortOrder;
   /** Закрытый и нездоровый источник не запрашивается — причину страница знает и так. */
   enabled: boolean;
 };
@@ -19,12 +24,13 @@ type Params = {
  * ошибка запроса: её показывает строка подгрузки (F1), поэтому без уведомления; сбой первой
  * порции — через глобальное уведомление.
  */
-function useSelectionsSection({ sourceId, sectionId, variant, enabled }: Params) {
+function useSelectionsSection({ sourceId, sectionId, variant, order, enabled }: Params) {
   return useInfiniteQuery({
-    queryKey: getSelectionsSectionQueryKey(sourceId, sectionId, variant),
+    queryKey: getSelectionsSectionQueryKey(sourceId, sectionId, variant, order),
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams({ page: String(pageParam) });
       if (variant) params.set('variant', variant);
+      if (order) params.set('order', order);
       const response = await apiFetch<SelectionsSectionResponse>(
         `/selections/${sourceId}/${sectionId}?${params.toString()}`,
       );

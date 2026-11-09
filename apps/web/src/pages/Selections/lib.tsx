@@ -48,3 +48,6 @@ export const resolveSelectionsSection = (
 export const getSectionTitles = (pages: SelectionsSectionResponse[]): Title[] => [
   ...new Map(pages.flatMap(({ items }) => items).map((title) => [title.id, title])).values(),
 ];
+
+export const resolveSectionOrder = (section: HomeSectionInfo, requested: string | null) =>
+  section.sortOrders.find((order) => order === requested) ?? section.sortOrders[0];

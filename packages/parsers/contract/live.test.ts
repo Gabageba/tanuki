@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { VIEW_MODE } from '@tanuki/contracts';
 import { createRegistry } from '../src/registry';
 import { runSourceContract } from '../src/core/source-contract';
 import { SOURCE_ID, type SourceId } from '../src/sources/catalog';
@@ -145,11 +146,13 @@ describe.each(HOME_SOURCE_IDS)('contract home: %s', (sourceId) => {
 
     expect(sections.map(({ id }) => id)).toEqual(parser.info.homeSections.map(({ id }) => id));
     for (const section of sections) {
-      expect(section.items.length, section.id).toBeGreaterThan(0);
-      expect(
-        section.items.some((item) => Boolean(item.coverUrl)),
-        `${section.id}: covers`,
-      ).toBe(true);
+      if (section.viewMode !== VIEW_MODE.COVERLESS) {
+        expect(section.items.length, section.id).toBeGreaterThan(0);
+        expect(
+          section.items.some((item) => Boolean(item.coverUrl)),
+          `${section.id}: covers`,
+        ).toBe(true);
+      }
       for (const item of section.items) {
         expect(item.title, section.id).toBeTruthy();
         expect(item.url, section.id).toBeTruthy();

@@ -1,4 +1,5 @@
 import { delay, http, HttpResponse } from 'msw';
+import { POPULAR_TITLES } from './titles';
 import {
   API_ERROR_CODE,
   DEFAULT_READER_SETTINGS,
@@ -232,12 +233,17 @@ export const DEFAULT_HANDLERS = [
   // Поиск и подборки
   http.get(apiPath('/search'), () => searchStream(SEARCH_GROUPS)),
   http.get(apiPath('/search/history'), () => HttpResponse.json(SEARCH_HISTORY_RESPONSE)),
-  http.get(apiPath('/selections/:sourceId/:sectionId'), ({ params }) =>
+  http.get(apiPath('/selections/:sourceId/:sectionId'), ({ params, request }) =>
     HttpResponse.json({
       sourceId: String(params.sourceId),
       sectionId: String(params.sectionId),
       status: SEARCH_GROUP_STATUS.OK,
-      items: TITLES,
+      items:
+        params.sourceId === 'nudemoon' && params.sectionId === 'popular'
+          ? new URL(request.url).searchParams.get('order') === 'views'
+            ? [...POPULAR_TITLES].reverse()
+            : POPULAR_TITLES
+          : TITLES,
       hasNextPage: false,
     } satisfies SelectionsSectionResponse),
   ),

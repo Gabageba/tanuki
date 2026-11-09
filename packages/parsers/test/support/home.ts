@@ -1,3 +1,4 @@
+import { VIEW_MODE } from '@tanuki/contracts';
 import type { Parser } from '../../src/core/parser';
 
 /**
@@ -12,9 +13,13 @@ export const checkHome = async (parser: Parser, nonEmpty?: string[]) => {
   const ids = sections.map(({ id }) => id).join();
   const described = parser.info.homeSections.map(({ id }) => id).join();
   if (ids !== described) problems.push(`sections ${ids} instead of ${described}`);
-  for (const { id, items } of sections) {
+  for (const { id, items, viewMode } of sections) {
     if ((!nonEmpty || nonEmpty.includes(id)) && items.length === 0) problems.push(`${id}: empty`);
-    if (items.length > 0 && !items.some((item) => Boolean(item.coverUrl))) {
+    if (
+      viewMode !== VIEW_MODE.COVERLESS &&
+      items.length > 0 &&
+      !items.some((item) => Boolean(item.coverUrl))
+    ) {
       problems.push(`${id}: no covers`);
     }
     for (const item of items) {

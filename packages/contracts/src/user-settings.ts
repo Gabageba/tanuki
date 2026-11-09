@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { EnumLiteralsOf } from './utils';
 import { LanguageSchema } from './language';
 import { NotificationCategorySchema } from './notification';
+import { ViewModeSchema } from './view-mode';
 
 export const COLOR_SCHEME = {
   LIGHT: 'light',
@@ -10,13 +11,6 @@ export const COLOR_SCHEME = {
 } as const;
 export type ColorScheme = EnumLiteralsOf<typeof COLOR_SCHEME>;
 export const ColorSchemeSchema = z.enum(COLOR_SCHEME);
-
-export const VIEW_MODE = {
-  GRID: 'grid',
-  LIST: 'list',
-} as const;
-export type ViewMode = EnumLiteralsOf<typeof VIEW_MODE>;
-export const ViewModeSchema = z.enum(VIEW_MODE);
 
 /** Зону проверяет сам Intl: он знает ровно те IANA-зоны, с которыми потом и будет считать. */
 export const isValidTimeZone = (timeZone: string) => {

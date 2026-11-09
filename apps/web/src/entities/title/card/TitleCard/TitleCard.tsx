@@ -1,3 +1,4 @@
+import TitleCardCoverless from './components/TitleCardCoverless/TitleCardCoverless';
 import TitleCardGrid from './components/TitleCardGrid/TitleCardGrid';
 import TitleCardLayout from './components/TitleCardLayout';
 import TitleCardList from './components/TitleCardList/TitleCardList';
@@ -11,6 +12,7 @@ function TitleCard({ viewMode, listSize, actions = [], ...restProps }: Props) {
 
   return (
     <TitleCardLayout
+      coverless={<TitleCardCoverless {...restProps} actions={actionsMenu} />}
       viewMode={viewMode}
       listSize={listSize}
       grid={<TitleCardGrid {...restProps} actions={actionsMenu} />}

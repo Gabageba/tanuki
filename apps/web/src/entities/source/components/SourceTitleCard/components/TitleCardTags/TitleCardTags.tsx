@@ -1,4 +1,6 @@
+import type { To } from 'react-router';
 import { Box, Group } from '@mantine/core';
+import TitleCardTagsOverflow from './TitleCardTagsOverflow';
 import type { Tag } from '@tanuki/contracts';
 import useVisibleTagsCount from './hooks/useVisibleTagsCount';
 import TitleCardTagsSkeleton from './TitleCardTagsSkeleton';
@@ -6,21 +8,22 @@ import TagBadge from '@/shared/ui/TagBadge';
 
 type Props = {
   tags: Tag[];
+  to: To;
 };
 
-function TitleCardTags({ tags }: Props) {
+function TitleCardTags({ tags, to }: Props) {
   const { containerRef, measureRef, visibleCount } = useVisibleTagsCount(tags);
 
   if (tags.length === 0) return <Box flex={1} />;
 
   const isReady = visibleCount !== null;
   const visibleTags = isReady ? tags.slice(0, visibleCount) : [];
-  const hiddenCount = tags.length - visibleTags.length;
 
   return (
     <>
       <Group
         ref={measureRef}
+        aria-hidden
         gap={6}
         wrap="nowrap"
         pos="absolute"
@@ -52,9 +55,7 @@ function TitleCardTags({ tags }: Props) {
               {tag.title}
             </TagBadge>
           ))}
-        {isReady && hiddenCount > 0 && (
-          <TagBadge ff="monospace" style={{ flexShrink: 0 }}>{`+${hiddenCount}`}</TagBadge>
-        )}
+        {isReady && <TitleCardTagsOverflow tags={tags.slice(visibleCount)} to={to} />}
       </Group>
     </>
   );
