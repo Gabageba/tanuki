@@ -10,6 +10,7 @@ import CoverlessTitleCard from './CoverlessTitleCard';
 import FolderRow from './FolderRow';
 import HeaderBackground from './HeaderBackground';
 import Home from './Home';
+import HomeNewChapters from './HomeNewChapters';
 import ImportSourcePicker from './ImportSourcePicker';
 import InvitesTable from './InvitesTable';
 import LibraryBackup from './LibraryBackup';
@@ -45,6 +46,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'home-new-chapters',
+    Component: HomeNewChapters,
+    title: 'Карточки новых глав на главной',
+    description:
+      'Выбраны A9 + M2: акцент только на «(+N)», источник текстом без логотипа. Итог и прежние варианты карточки сохранены.',
+    createdAt: '2026-11-10',
+    decision: 'A9 + M2',
+  },
   {
     slug: 'coverless-title-card',
     Component: CoverlessTitleCard,
