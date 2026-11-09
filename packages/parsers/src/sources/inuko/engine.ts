@@ -42,7 +42,7 @@ import type {
 import { RATING_UNKNOWN } from '../../types';
 import { generateUid } from '../../core/uid';
 import { toTitleCase } from '../../core/text/strings';
-import { ParseError, SourceAuthRequiredError } from '../../errors';
+import { NotFoundError, ParseError, SourceAuthRequiredError } from '../../errors';
 import { currentSourceAccount } from '../../core/source-accounts';
 import { UserAgents } from '../../core/http/user-agents';
 import { catalogEntryFor } from '../catalog';
@@ -54,6 +54,7 @@ import { nullIfEmpty } from '../../core/text/strings';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
 import { fetchInukoViewer, findInukoSessionDomain } from './auth';
 import type { InukoConfig } from './config';
+import { readInukoSsr } from './ssr';
 
 const PAGE_SIZE = 20;
 const FIRST_PAGE = 0;
@@ -176,6 +177,12 @@ type ChapterJson = {
   createdAt: string;
 };
 
+type ChaptersSsr = {
+  chapters: ChapterJson[];
+  branches: { id: string; publishers: { name: string }[] }[];
+  contentNotices: ContentNoticeJson[];
+};
+
 type PageJson = {
   id: string;
   image: string;
@@ -211,6 +218,7 @@ type ContentNoticeJson = {
 };
 
 type LabelJson = {
+  id: string;
   slug: string;
   name: string;
   kind: string;
@@ -509,6 +517,13 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
   const domain = ctx.domain;
   let cachedDecryptionKey: { key: string; fetchedAt: number } | null = null;
 
+  const fetchSsr = async (path: string) => {
+    const res = await ctx.http.get(`https://${domain}${path}`, {
+      'User-Agent': UserAgents.CHROME_DESKTOP,
+    });
+    return readInukoSsr(res.text(), SOURCE_ID);
+  };
+
   const apiUrl = (path: string): URL => {
     const url = new URL(`https://${API_HOST}${path}`);
     url.searchParams.set('serviceName', config.serviceName);
@@ -764,7 +779,42 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
       url.searchParams.set('sort', getSortKey(order, direction));
     }
     applyFilterParams(url, filters);
-    const items = await ctx.http.getJson<MangaJson[]>(url.toString());
+    let items: MangaJson[];
+    try {
+      items = await ctx.http.getJson<MangaJson[]>(url.toString());
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error;
+      // The public API retired books/chapters; the site's SSR still exposes the same data.
+      const catalogUrl = new URL(`https://${domain}/content`);
+      const [sort, orderBy] = getSortKey(order, direction).split(',');
+      catalogUrl.searchParams.set('sort', sort!);
+      catalogUrl.searchParams.set('orderBy', orderBy!);
+      catalogUrl.searchParams.set('page', String(page));
+      catalogUrl.searchParams.set('size', String(PAGE_SIZE));
+      if (query) catalogUrl.searchParams.set('search', query);
+      applyFilterParams(catalogUrl, filters);
+      for (const key of ['status', 'contentStatus', 'country', 'formats']) {
+        const values = catalogUrl.searchParams.getAll(key);
+        if (values.length) catalogUrl.searchParams.set(key, JSON.stringify(values));
+      }
+      const labelKeys = ['labelsInclude', 'labelsExclude'];
+      if (labelKeys.some((key) => catalogUrl.searchParams.has(key))) {
+        const labels = await ctx.http.getJson<LabelJson[]>(apiUrl('/v2/labels').toString());
+        for (const key of labelKeys) {
+          const values = catalogUrl.searchParams.getAll(key);
+          if (values.length) {
+            catalogUrl.searchParams.set(
+              key,
+              JSON.stringify(
+                values.map((slug) => labels.find((label) => label.slug === slug)?.id ?? slug),
+              ),
+            );
+          }
+        }
+      }
+      const read = await fetchSsr(`${catalogUrl.pathname}${catalogUrl.search}`);
+      items = read<MangaJson[]>('books');
+    }
     return items.map(toManga);
   };
 
@@ -785,6 +835,18 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
     }
   };
 
+  const toChapter = (jo: ChapterJson, branch: string | null, url = jo.id): RawChapter => ({
+    id: generateUid(SOURCE_ID, jo.id),
+    title: jo.name ?? null,
+    number: jo.number ?? null,
+    volume: jo.volume ?? null,
+    url,
+    scanlator: branch,
+    uploadDate: parseIsoDate(jo.createdAt),
+    branch,
+    source: SOURCE_ID,
+  });
+
   const getChapters = async (mangaId: string): Promise<RawChapter[]> => {
     const url = apiUrl('/v2/chapters');
     url.searchParams.set('bookId', mangaId);
@@ -800,17 +862,7 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
       // Ветка у сайтов inuko и есть команда перевода — остальные источники с ветками (grouple,
       // libsocial, remanga) отдают то же имя и в scanlator, поэтому оно дублируется и здесь.
       const branch = await branchPromise;
-      chapters.push({
-        id: generateUid(SOURCE_ID, jo.id),
-        title: jo.name ?? null,
-        number: jo.number ?? null,
-        volume: jo.volume ?? null,
-        url: jo.id,
-        scanlator: branch,
-        uploadDate: parseIsoDate(jo.createdAt),
-        branch,
-        source: SOURCE_ID,
-      });
+      chapters.push(toChapter(jo, branch));
     }
     return chapters.reverse();
   };
@@ -832,11 +884,40 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
       .filter((n): n is string => !!n);
   };
 
+  const fetchDetails = async (mangaId: string) => {
+    try {
+      const [chapters, book] = await Promise.all([
+        getChapters(mangaId),
+        ctx.http.getJson<MangaJson>(apiUrl(`/v2/books/${mangaId}`).toString()),
+      ]);
+      const restriction =
+        chapters.length === 0 && (book.chaptersCount ?? 0) > 0 && (await hasContentNotice(mangaId))
+          ? TITLE_RESTRICTION.LEGAL
+          : null;
+      return { book, chapters, restriction };
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error;
+      const read = await fetchSsr(`/content/${encodeURIComponent(mangaId)}/chapters`);
+      const book = read<MangaJson>('book');
+      const items = read<ChaptersSsr['chapters']>('chapters');
+      const branches = read<ChaptersSsr['branches']>('branches');
+      const notices = read<ChaptersSsr['contentNotices']>('contentNotices');
+      const chapters = items.map((chapter): RawChapter => {
+        const branch =
+          branches.find(({ id }) => id === chapter.branchId)?.publishers[0]?.name ?? null;
+        // Include the book in the stored URL: the reader must also work in a fresh parser.
+        return toChapter(chapter, branch, `${book.id}/${chapter.id}`);
+      });
+      return {
+        book,
+        chapters,
+        restriction: chapters.length === 0 && notices.length > 0 ? TITLE_RESTRICTION.LEGAL : null,
+      };
+    }
+  };
+
   const getDetails = async (mangaId: string): Promise<RawTitle> => {
-    const [chapters, jo] = await Promise.all([
-      getChapters(mangaId),
-      ctx.http.getJson<MangaJson>(apiUrl(`/v2/books/${mangaId}`).toString()),
-    ]);
+    const { book: jo, chapters, restriction } = await fetchDetails(mangaId);
     const authors = namesByRelationType(jo.relations, 'AUTHOR');
     const artists = namesByRelationType(jo.relations, 'ARTIST');
     const publishers = namesByRelationType(jo.relations, 'PUBLISHER');
@@ -846,11 +927,6 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
     const translators = Array.from(
       new Set(chapters.map((c) => c.branch).filter((b): b is string => !!b)),
     );
-    const restriction =
-      chapters.length === 0 && (jo.chaptersCount ?? 0) > 0 && (await hasContentNotice(mangaId))
-        ? TITLE_RESTRICTION.LEGAL
-        : null;
-
     return {
       ...mapMangaCommon(jo),
       tags: (jo.labels ?? []).map(toTag),
@@ -866,9 +942,15 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
   };
 
   const getPages = async (chapterId: string): Promise<RawPage[]> => {
-    const json = await ctx.http.getJson<{ pages: PageJson[] }>(
-      apiUrl(`/v2/chapters/${chapterId}`).toString(),
-    );
+    const parts = chapterId.split('/');
+    const json =
+      parts.length === 2
+        ? (await fetchSsr(`/content/${parts.map(encodeURIComponent).join('/')}`))<{
+            pages: PageJson[];
+          }>('initialChapter')
+        : await ctx.http.getJson<{ pages: PageJson[] }>(
+            apiUrl(`/v2/chapters/${chapterId}`).toString(),
+          );
     return json.pages.map((jo) => ({
       id: generateUid(SOURCE_ID, jo.id),
       url: jo.image,

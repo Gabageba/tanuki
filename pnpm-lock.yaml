@@ -359,6 +359,9 @@ importers:
       '@tanuki/contracts':
         specifier: workspace:*
         version: link:../contracts
+      acorn:
+        specifier: ^8.18.0
+        version: 8.18.0
       cheerio:
         specifier: ^1.1.2
         version: 1.2.0
