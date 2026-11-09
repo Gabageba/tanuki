@@ -53,9 +53,10 @@
 
 ## Тексты
 
-- [ ] **Условия использования** и **Политика конфиденциальности** — сейчас «Текст документа скоро
-      появится». [`Terms`](../apps/web/src/pages/Terms/index.tsx#L13),
-      [`PrivacyPolicy`](../apps/web/src/pages/PrivacyPolicy/index.tsx#L13)
+- [x] **Условия использования** и **Политика обработки данных** — тексты на русском и английском,
+      контакты администратора, данные аккаунта и источников, cookie, офлайн-копии и порядок удаления.
+      [`Terms`](../apps/web/src/pages/Terms/index.tsx),
+      [`PrivacyPolicy`](../apps/web/src/pages/PrivacyPolicy/index.tsx)
 
 ## Источники
 
