@@ -46,37 +46,33 @@ function TitleCardExampleMeta({ skeleton, detailed, empty }: Props) {
   return (
     <Group gap={6} miw={0}>
       {!detailed && (skeleton ? <Skeleton w={20} h={20} /> : <BookOpenIcon size={20} />)}
-      {skeleton ? (
-        detailed ? (
-          <TextSkeleton fz="xs" lh="tight" flex={1} />
-        ) : (
-          <Group gap={isList ? 6 : 4} wrap="nowrap">
-            {items}
-          </Group>
-        )
+      {!detailed && skeleton ? (
+        <Group gap={isList ? 6 : 4} wrap="nowrap">
+          {items}
+        </Group>
       ) : (
-        <MidDotGroup
-          items={items}
-          gap={isList ? 6 : 4}
-          separatorProps={{ c: 'dimmed', fz: 'xs', lh: 'tight' }}
-          text={{
-            c: 'dimmed',
-            fz: 'xs',
-            lh: 'tight',
-            display: 'inline-flex',
-            style: { verticalAlign: 'top' },
-          }}
-        />
+        <Skeleton visible={skeleton} w="fit-content" maw="100%" radius="sm">
+          <MidDotGroup
+            items={items}
+            gap={isList ? 6 : 4}
+            separatorProps={{ c: 'dimmed', fz: 'xs', lh: 'tight' }}
+            text={{
+              c: 'dimmed',
+              fz: 'xs',
+              lh: 'tight',
+              display: 'inline-flex',
+              style: { verticalAlign: 'top' },
+            }}
+          />
+        </Skeleton>
       )}
-      {isList &&
-        detailed &&
-        (skeleton ? (
-          <Skeleton w={52} h={20} />
-        ) : (
+      {isList && detailed && (
+        <Skeleton visible={skeleton} w="fit-content" radius="sm">
           <Badge variant="muted" color="green">
             {t('ongoing')}
           </Badge>
-        ))}
+        </Skeleton>
+      )}
     </Group>
   );
 }

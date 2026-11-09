@@ -18,6 +18,7 @@ import type {
   FilterGroupSettings,
   FilterType,
   HomeSectionKind,
+  ViewMode,
   HomeSectionVariant,
   TitleRestriction,
   TitleState,
@@ -195,6 +196,8 @@ export type RawHomeSectionInfo = {
   /** Переключатель внутри блока на сайте (период, страна) — getHomeSection принимает `variant`.
    *  Первый — по умолчанию: его же отдаёт getHome. */
   variants?: HomeSectionVariant[];
+  viewMode?: ViewMode;
+  sortOrders?: SortOrder[];
 };
 
 /** Какую порцию блока просить у getHomeSection: `page` с 1, `variant` — id из `variants` блока;
@@ -202,6 +205,7 @@ export type RawHomeSectionInfo = {
 export type RawHomeSectionParams = {
   page: number;
   variant?: string;
+  order?: SortOrder;
 };
 
 /** Порция блока главной: `hasNextPage` — сайт отдаёт блок порциями и следующая есть. */

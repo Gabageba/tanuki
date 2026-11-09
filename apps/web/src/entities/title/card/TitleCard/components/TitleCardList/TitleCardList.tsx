@@ -2,7 +2,6 @@ import { Box, Card, Group, Stack } from '@mantine/core';
 import { Link } from 'react-router';
 import { VIEW_MODE } from '@tanuki/contracts';
 import TitleCardCover from '../TitleCardCover/TitleCardCover';
-import TitleCardMeta from '../TitleCardMeta';
 import TitleCardMetaRow from '../TitleCardMetaRow';
 import TitleCardName from '../TitleCardName/TitleCardName';
 import TitleCardDescription from './TitleCardDescription';
@@ -28,10 +27,7 @@ function TitleCardList({ data, meta, actions, footer }: Props) {
         <TitleCardCover data={data} />
         <Stack p="sm" flex={1} miw={0} gap={8}>
           <Stack className={styles.heading} gap={8} flex={1}>
-            <TitleCardMetaRow
-              meta={<TitleCardMeta contentRating={data.contentRating}>{meta}</TitleCardMeta>}
-              actions={actions}
-            />
+            <TitleCardMetaRow meta={meta} actions={actions} contentRating={data.contentRating} />
             <TitleCardName data={data} />
             <TitleCardDescription description={data.description} />
           </Stack>

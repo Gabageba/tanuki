@@ -1,5 +1,4 @@
 import { VIEW_MODE, type SourceId } from '@tanuki/contracts';
-import TitleAdultBadge from '@/entities/title/markers/TitleAdultBadge';
 import TitleBookmarkMarker from '@/entities/title/markers/TitleBookmarkMarker';
 import TitleScoreBadge from '@/entities/title/markers/TitleScoreBadge';
 import TitleSourceRibbon from '@/entities/title/markers/TitleSourceRibbon';
@@ -17,7 +16,6 @@ function TitleCardDecorations({ data, showSource }: Props) {
       {isGrid && (
         <>
           {showSource && <TitleSourceRibbon sourceId={data.sourceId as SourceId} />}
-          <TitleAdultBadge contentRating={data.contentRating} />
           <TitleScoreBadge title={data} />
         </>
       )}

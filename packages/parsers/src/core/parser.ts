@@ -65,7 +65,7 @@ export type ParserContext = {
 
 export type Parser = {
   readonly id: string;
-  /** Static metadata — no network, no lazy init. Mirrors the registry descriptor's `info`. */
+  /** Metadata without network or lazy init; calendar periods may be computed on access. */
   readonly info: RawSourceInfo;
   /** chapters MUST be null on every returned item. */
   getList(params: ListParams): Promise<RawTitle[]>;

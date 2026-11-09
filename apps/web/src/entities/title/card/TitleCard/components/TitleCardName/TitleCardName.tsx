@@ -7,9 +7,9 @@ import { isTitleCardUnavailable } from '../../lib';
 import { TITLE_CARD_NEW_DOT_SPACE, type TitleCardData } from '../../models';
 import styles from '../../TitleCard.module.scss';
 
-type Props = { data: TitleCardData };
+type Props = { data: TitleCardData; lines?: number };
 
-function TitleCardName({ data }: Props) {
+function TitleCardName({ data, lines }: Props) {
   const { viewMode } = useTitleCardLayout();
   const isUnavailable = isTitleCardUnavailable(data);
   const hasNew = Boolean(data.hasNewChapters && !isUnavailable);
@@ -19,9 +19,10 @@ function TitleCardName({ data }: Props) {
     <Box pos="relative" pr={data.hasNewChapters === undefined ? 0 : TITLE_CARD_NEW_DOT_SPACE}>
       <Text
         ref={ref}
+        title={data.name}
         data-card-name
         className={styles.title}
-        lineClamp={viewMode === VIEW_MODE.LIST && data.description ? 1 : 2}
+        lineClamp={lines ?? (viewMode === VIEW_MODE.LIST && data.description ? 1 : 2)}
         lh="tight"
         c={isUnavailable ? 'dimmed' : undefined}
       >

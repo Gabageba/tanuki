@@ -116,7 +116,7 @@ GET /sources
               statusReason: 'broken'|'probeFailed'|'requestFailures'|'recovered'|null,
               statusChangedAt: string|null, checkedAt: string|null,
               failedProbeStreak: number, lastError: string|null,
-              homeSections: { id, title }[] }
+              homeSections: { id, title, kind, variants, viewMode, sortOrders }[] }
 
 POST /sources/probe             → SourcesResponse # прогнать проверку по всем
 POST /sources/:sourceId/probe   → Source          # прогнать проверку по одному
@@ -141,7 +141,7 @@ POST /sources/:sourceId/probe   → Source          # прогнать пров�
 никак не использовал, а мультипоиск отбирает источники по этим флагам сам, внутри API.
 
 `homeSections` — блоки главной сайта для подборок, в порядке сайта, с названиями как у сайта
-(`{ id: "hotNew", title: "Горячие новинки" }`). Описаны статически в парсере — вкладка настроек и
+(`{ id: "hotNew", title: "Горячие новинки" }`). Описаны в парсере без сетевых запросов; месяцы Nude-Moon вычисляются на момент чтения — вкладка настроек и
 скелетон страницы подборок показывают их без запроса к сайту. Пустой массив — у источника нет
 главной (или он `isBroken`).
 
@@ -389,10 +389,10 @@ ContinueReadingItem = {
 ```
 GET /selections/:sourceId → { sourceId, status, sections: HomeSection[] }
     status: "ok" | "timeout" | "error" | "locked" | "unavailable"   — как у группы поиска
-    HomeSection = { id, title, kind, variants: { id, title }[], items: Title[] }
+    HomeSection = { id, title, kind, variants: { id, title }[], viewMode, sortOrders, items: Title[] }
     kind: "new" | "trending" | "popular" | "top" | "updates"         — иконка вкладки на фронте
 
-GET /selections/:sourceId/:sectionId?page=1&variant=<id из variants>
+GET /selections/:sourceId/:sectionId?page=1&variant=<id из variants>&order=<SortOrder>
     → { sourceId, sectionId, status, items: Title[], hasNextPage }
 ```
 
@@ -404,7 +404,7 @@ stale-while-revalidate до 6 часов. Не ответивший источн
 показывает тост. `locked` — источник закрыт без аккаунта (парсер не вызывается), `unavailable` —
 `degraded`/`down` (тоже без запроса), `timeout` — главная не пришла за 15 с (запрос доживает в
 фоне и прогревает кеш). Блок, которого не нашлось на странице, приходит пустым. Неизвестный или
-скрытый источник — 404 `sourceNotFound`. Описание блоков (`kind`, `variants`) берётся из
+скрытый источник — 404 `sourceNotFound`. Описание блоков (`kind`, `variants`, `viewMode`, `sortOrders`) берётся из
 `Source.homeSections`, а не из кеша главной.
 
 Порция одного блока — для вкладки страницы «Подборки». Блок, который сайт отдаёт порциями,
@@ -413,8 +413,19 @@ stale-while-revalidate до 6 часов. Не ответивший источн
 на сайте (период «Сейчас читают» MangaLib, страна «Топа тайтлов» Реманги): подписи — как у сайта,
 без перевода, как и `title`; пустой — переключателя нет. `variant` учитывается только у блока с
 вариантами: чужой или пропущенный — первый вариант, у блока без вариантов игнорируется. Кеш —
-`CACHE_TTL.selections` на `(источник, блок, вариант, страница)`. Статусы и таймаут — как у всей главной; неизвестный блок
+`CACHE_TTL.selections` на `(источник, блок, вариант, порядок, страница)`. Статусы и таймаут — как у всей главной; неизвестный блок
 — 404 `sectionNotFound`.
+
+`viewMode` задаёт раскладку всего блока: `null` сохраняет выбор пользователя, `coverless` у
+«Популярных» Nude-Moon. `sortOrders` использует общий `SORT_ORDER`; у блока без сортировок
+порядок игнорируется, неподдерживаемый допустимый порядок заменяется первым поддерживаемым.
+Неизвестное значение вне `SortOrderSchema` — ошибка валидации запроса.
+Для Nude-Moon варианты — текущий и два предыдущих месяца UTC (`YYYY-MM`), сортировки —
+`likes` и `views`. Например: `/selections/nudemoon/popular?page=1&variant=2026-11&order=likes`.
+Месяц отдаётся целиком без продолжения. Обложки `null` нормализуются как обычно в пустую строку.
+Кеш метаданных (`sources`, версия v7) и агрегированной выдачи (`selections`, v3) включает
+календарный месяц, кеш отдельной выдачи v3 — конкретный вариант и порядок. Это позволяет
+обновить периоды без перезапуска сервера и исключает старые структуры после деплоя.
 
 ### Прокси изображений
 

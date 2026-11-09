@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   HOME_SECTION_KIND,
+  VIEW_MODE,
+  SORT_ORDER,
   SEARCH_GROUP_STATUS,
   SOURCE_ACCESS,
   SOURCE_STATUS,
@@ -24,12 +26,16 @@ const source = (patch: Partial<Source> = {}) =>
         id: 'hotNew',
         title: 'Горячие новинки',
         kind: HOME_SECTION_KIND.NEW,
+        viewMode: null,
+        sortOrders: [],
         variants: [],
       },
       {
         id: 'readingNow',
         title: 'Сейчас читают',
         kind: HOME_SECTION_KIND.TRENDING,
+        viewMode: null,
+        sortOrders: [],
         variants: [
           { id: 'day', title: 'За день' },
           { id: 'month', title: 'За месяц' },
@@ -227,5 +233,45 @@ describe('SelectionsService.getSection', () => {
     const service = createService([source()], vi.fn());
 
     await expect(service.getSection('user', 'remanga', 'nope', { page: 1 })).rejects.toThrow();
+  });
+});
+
+describe('SelectionsService section orders', () => {
+  it('normalizes unknown order and month and passes supported orders to the parser', async () => {
+    const getHomeSection = vi
+      .fn()
+      .mockResolvedValue({ data: { page: { items: [], hasNextPage: false } }, stale: false });
+    const service = createService(
+      [
+        source({
+          homeSections: [
+            {
+              id: 'popular',
+              title: 'Популярные',
+              kind: HOME_SECTION_KIND.POPULAR,
+              viewMode: VIEW_MODE.COVERLESS,
+              sortOrders: [SORT_ORDER.LIKES, SORT_ORDER.VIEWS],
+              variants: [{ id: '2026-11', title: 'Ноябрь 2026' }],
+            },
+          ],
+        }),
+      ],
+      vi.fn(),
+      getHomeSection,
+    );
+    await service.getSection('user', 'remanga', 'popular', {
+      page: 1,
+      variant: 'old',
+      order: SORT_ORDER.RATING,
+    });
+    await service.getSection('user', 'remanga', 'popular', {
+      page: 1,
+      variant: '2026-11',
+      order: SORT_ORDER.VIEWS,
+    });
+    expect(getHomeSection.mock.calls.map(([, , params]) => params)).toEqual([
+      { page: 1, variant: '2026-11', order: SORT_ORDER.LIKES },
+      { page: 1, variant: '2026-11', order: SORT_ORDER.VIEWS },
+    ]);
   });
 });

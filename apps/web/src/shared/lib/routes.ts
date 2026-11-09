@@ -85,6 +85,7 @@ export const SELECTIONS_SOURCE_SEARCH_PARAM = 'source';
  *  страницы тайтла открывал ту же вкладку. */
 export const SELECTIONS_SECTION_SEARCH_PARAM = 'section';
 export const SELECTIONS_VARIANT_SEARCH_PARAM = 'variant';
+export const SELECTIONS_ORDER_SEARCH_PARAM = 'order';
 
 /** Открытая папка на /bookmarks — в адресе, чтобы на неё можно было сослаться из профиля. */
 export const BOOKMARKS_FOLDER_SEARCH_PARAM = 'folder';

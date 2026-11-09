@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { Stack } from '@mantine/core';
-import { SEARCH_GROUP_STATUS, type Source, type UserSettings } from '@tanuki/contracts';
+import {
+  SEARCH_GROUP_STATUS,
+  type Source,
+  type SortOrder,
+  type UserSettings,
+} from '@tanuki/contracts';
 import { getEnabledSections, getSkippedSelectionsStatus } from '@/features/selections/lib';
 import {
   getStoredViewMode,
@@ -9,7 +14,7 @@ import {
   type ViewMode,
 } from '@/shared/lib/viewMode';
 import useSelectionsSection from '../hooks/useSelectionsSection';
-import { resolveSectionVariant, resolveSelectionsSection } from '../lib';
+import { resolveSectionOrder, resolveSectionVariant, resolveSelectionsSection } from '../lib';
 import SectionFeed from './SectionFeed';
 import SectionPanel from './SectionPanel';
 import SectionTabs from './SectionTabs';
@@ -20,6 +25,8 @@ type Props = {
   settings: UserSettings | undefined;
   requestedSectionId: string | null;
   requestedVariant: string | null;
+  requestedOrder: string | null;
+  onOrderChange: (order: SortOrder) => void;
   onSectionChange: (sectionId: string) => void;
   onVariantChange: (variant: string) => void;
 };
@@ -35,6 +42,8 @@ function SelectionsSource({
   settings,
   requestedSectionId,
   requestedVariant,
+  requestedOrder,
+  onOrderChange,
   onSectionChange,
   onVariantChange,
 }: Props) {
@@ -42,11 +51,13 @@ function SelectionsSource({
   const sections = getEnabledSections(source, settings);
   const section = resolveSelectionsSection(sections, requestedSectionId);
   const variant = section && resolveSectionVariant(section, requestedVariant);
+  const order = section && resolveSectionOrder(section, requestedOrder);
   const skipped = getSkippedSelectionsStatus(source);
   const query = useSelectionsSection({
     sourceId: source.id,
     sectionId: section?.id ?? '',
     variant: variant?.id,
+    order,
     enabled: !skipped && Boolean(section),
   });
   const status = query.data?.pages[0]?.status;
@@ -69,14 +80,18 @@ function SelectionsSource({
     );
   }
 
+  const sectionViewMode = section.viewMode ?? viewMode;
+
   return (
     <Stack gap="lg">
       <SectionTabs sections={sections} activeId={section.id} onChange={onSectionChange} />
       <SectionPanel
         section={section}
+        order={order}
+        onOrderChange={onOrderChange}
         variant={variant?.id ?? ''}
         onVariantChange={onVariantChange}
-        viewMode={viewMode}
+        viewMode={sectionViewMode}
         onViewModeChange={handleViewModeChange}
       />
       {status && status !== SEARCH_GROUP_STATUS.OK ? (
@@ -87,7 +102,7 @@ function SelectionsSource({
           onRetry={query.refetch}
         />
       ) : (
-        <SectionFeed key={section.id} query={query} viewMode={viewMode} />
+        <SectionFeed key={section.id} query={query} viewMode={sectionViewMode} />
       )}
     </Stack>
   );

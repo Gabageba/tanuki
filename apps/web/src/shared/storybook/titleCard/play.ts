@@ -1,5 +1,6 @@
 import { expect, waitFor, within } from 'storybook/test';
 import { I18N } from '@/shared/lib/i18n';
+import { TITLE_TAG_HEIGHT } from '@/entities/title/markers/models';
 
 /** Проверяем структуру ссылки и совпадение обложек, не привязываясь к мокам доменных DTO. */
 export const checkTitleCardPair = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
@@ -8,7 +9,8 @@ export const checkTitleCardPair = async ({ canvasElement }: { canvasElement: HTM
   const [ready, skeleton] = Array.from(cards);
   if (!ready || !skeleton) throw new Error('Не найдена пара карточка / скелетон');
 
-  await expect(ready.querySelectorAll('a')).toHaveLength(1);
+  await expect(ready.querySelectorAll(':scope > a')).toHaveLength(1);
+  await expect(ready.querySelector('a a')).toBeNull();
   await expect(ready.querySelector('a button')).toBeNull();
   await expect(skeleton).toHaveAttribute('inert');
   await expect(skeleton.querySelectorAll('a, button, input')).toHaveLength(0);
@@ -89,4 +91,31 @@ export const checkBookmarkCardPair = async (context: { canvasElement: HTMLElemen
     within(context.canvasElement).getByRole('img', { name: I18N.t('hasNewChapters') }),
   ).toBeInTheDocument();
   await expect(name.parentElement!.querySelector('[role="img"]')).toBeNull();
+};
+
+/** 18+ находится в мета-строке, а без метаданных — у первой строки названия. */
+export const checkAdultTitleCardPair = async (context: { canvasElement: HTMLElement }) => {
+  await checkTitleCardPair(context);
+  const card = context.canvasElement.querySelector('[data-title-card]:not([inert])')!;
+  const tag = card.querySelector<HTMLElement>('[data-card-adult-tag]')!;
+  const name = card.querySelector('[data-card-name]')!;
+  const row = card.querySelector('[data-card-meta]')!;
+  const meta = card.querySelector('[data-card-meta-content]')!;
+  await expect(tag).toHaveTextContent('18+');
+  await expect(row).toContainElement(tag);
+  await expect(card.querySelectorAll('[data-card-adult-tag]')).toHaveLength(1);
+  await expect(card.querySelector('[data-card-cover] [data-card-adult-tag]')).toBeNull();
+  await waitFor(async () => {
+    const tagBounds = tag.getBoundingClientRect();
+    await expect(tagBounds.height).toBe(TITLE_TAG_HEIGHT);
+    if (meta.getBoundingClientRect().height > 0) {
+      await expect(tagBounds.bottom).toBeLessThanOrEqual(name.getBoundingClientRect().top);
+      await expect(meta.getBoundingClientRect().right).toBeLessThanOrEqual(tagBounds.left);
+    } else {
+      await expect(tagBounds.left).toBeGreaterThanOrEqual(name.getBoundingClientRect().right);
+      const firstLineCenter =
+        name.getBoundingClientRect().top + Number.parseFloat(getComputedStyle(name).lineHeight) / 2;
+      await expect(tagBounds.top + tagBounds.height / 2).toBeCloseTo(firstLineCenter, 0);
+    }
+  });
 };

@@ -36,7 +36,7 @@ import {
 } from '@tanuki/contracts';
 import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
 import { getCoverUrl } from './images';
-import { HOME_SECTIONS, SELECTIONS_SOURCE_IDS } from './titles';
+import { HOME_SECTIONS, NUDEMOON_HOME_SECTIONS, SELECTIONS_SOURCE_IDS } from './titles';
 
 /** Данные историй Storybook: один зритель-админ и его окружение. Даты — фиксированные, чтобы
  *  истории не менялись день ото дня. */
@@ -104,7 +104,12 @@ const createSource = (id: (typeof SOURCE_IDS)[number], position: number): Source
     position,
     isEnabled: true,
     access: isLocked ? SOURCE_ACCESS.LOCKED : SOURCE_ACCESS.AVAILABLE,
-    homeSections: SELECTIONS_SOURCE_IDS.includes(id) ? HOME_SECTIONS : [],
+    homeSections:
+      id === 'nudemoon'
+        ? NUDEMOON_HOME_SECTIONS
+        : SELECTIONS_SOURCE_IDS.includes(id)
+          ? HOME_SECTIONS
+          : [],
   };
 };
 

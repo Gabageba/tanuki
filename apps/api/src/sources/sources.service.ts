@@ -192,11 +192,13 @@ export class SourcesService {
       // Сломанный источник не парсится в принципе — в подборках ему делать нечего.
       homeSections: raw.isBroken
         ? []
-        : raw.homeSections.map(({ id, title, kind, variants }) => ({
+        : raw.homeSections.map(({ id, title, kind, variants, viewMode, sortOrders }) => ({
             id,
             title,
             kind,
             variants: variants ?? [],
+            viewMode: viewMode ?? null,
+            sortOrders: sortOrders ?? [],
           })),
       ...loginOf(raw.id),
     };

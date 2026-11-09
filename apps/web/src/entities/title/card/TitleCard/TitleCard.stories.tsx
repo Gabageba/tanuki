@@ -4,7 +4,11 @@ import { VIEW_MODE } from '@tanuki/contracts';
 import { I18N } from '@/shared/lib/i18n';
 import { MOBILE_GLOBALS } from '@/shared/storybook/models';
 import TitleCardExamplePair from '@/shared/storybook/titleCard/TitleCardExamplePair';
-import { checkActionsOnlyPair, checkTitleCardPair } from '@/shared/storybook/titleCard/play';
+import {
+  checkActionsOnlyPair,
+  checkAdultTitleCardPair,
+  checkTitleCardPair,
+} from '@/shared/storybook/titleCard/play';
 import { clickFirstButton } from '@/shared/storybook/play';
 import { EXAMPLE_ACTION_TO, EXAMPLE_MOVE_ACTION } from '@/shared/storybook/titleCard/models';
 import { TITLE_CARD_LIST_SIZE } from './models';
@@ -211,4 +215,70 @@ export const DisabledAction: Story = {
 export const ListWithoutSlots: Story = {
   name: 'Список без слотов',
   args: { viewMode: VIEW_MODE.LIST, withMeta: false },
+};
+
+export const AdultList: Story = {
+  name: 'Список 120: 18+ в мета-строке',
+  args: { viewMode: VIEW_MODE.LIST, detailed: true, hidden: true },
+  play: checkAdultTitleCardPair,
+};
+
+export const AdultCompact: Story = {
+  name: 'Список 84: 18+ и меню',
+  args: {
+    viewMode: VIEW_MODE.LIST,
+    listSize: TITLE_CARD_LIST_SIZE.COMPACT,
+    withActions: true,
+    hidden: true,
+  },
+  play: checkAdultTitleCardPair,
+};
+
+export const AdultNoSlots: Story = {
+  name: '18+ без метаданных',
+  args: { viewMode: VIEW_MODE.LIST, withMeta: false, hidden: true },
+  play: async (context) => {
+    await checkAdultTitleCardPair(context);
+    await expect(context.canvasElement.querySelector('[data-card-meta-content]')).not.toBeVisible();
+  },
+};
+
+export const AdultActionsOnly: Story = {
+  name: '18+ и меню без метаданных',
+  args: { viewMode: VIEW_MODE.LIST, withMeta: false, withActions: true, hidden: true },
+  play: async (context) => {
+    await checkAdultTitleCardPair(context);
+    await checkActionsOnlyPair(context);
+  },
+};
+
+export const AdultMobile: Story = {
+  name: 'На телефоне: 18+ в компактной карточке',
+  args: {
+    viewMode: VIEW_MODE.LIST,
+    listSize: TITLE_CARD_LIST_SIZE.COMPACT,
+    withActions: true,
+    hidden: true,
+  },
+  globals: MOBILE_GLOBALS,
+  play: checkAdultTitleCardPair,
+};
+
+export const AdultListMobile: Story = {
+  name: 'На телефоне: 18+ в подробной карточке',
+  args: { viewMode: VIEW_MODE.LIST, detailed: true, hidden: true },
+  globals: MOBILE_GLOBALS,
+  play: checkAdultTitleCardPair,
+};
+
+export const AdultGrid: Story = {
+  name: 'Плитка: 18+ в мета-строке',
+  args: { hidden: true },
+  play: checkAdultTitleCardPair,
+};
+
+export const AdultGridNoSlots: Story = {
+  name: 'Плитка: 18+ у названия без метаданных',
+  args: { hidden: true, withMeta: false },
+  play: checkAdultTitleCardPair,
 };

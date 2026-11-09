@@ -76,12 +76,13 @@ export class ParsersClientService {
   // /sources само по себе не бьёт по внешним сайтам (статические метаданные реестра),
   // поэтому идёт напрямую в кеш, без breaker/rate-limiter — как и раньше.
   async getSources(): Promise<CachedResult<{ items: RawSourceInfo[] }>> {
+    // v8 — единый viewMode вместо отдельного варианта карточки; месяц обновляет варианты.
     // v6 — у блоков `homeSections` появились `variants` вместо `isPeriodSupported` (v5 — `kind`
     // и `isPeriodSupported`, v4 — сами `homeSections`, до них — `isSearchWithFiltersSupported` и
     // `domain`); без смены ключа записи, залитые до деплоя, ещё сутки (staleSeconds) отдавались
     // бы без полей.
     const result = await this.cache.getOrSet(
-      cacheKey('sources', 'all', 'v6'),
+      cacheKey('sources', 'all', 'v8', new Date().toISOString().slice(0, 7)),
       CACHE_TTL.sources,
       () => Promise.resolve({ items: this.parsers.listSources() }),
     );
@@ -173,7 +174,7 @@ export class ParsersClientService {
   /** Блоки главной сайта — один ответ на источник, общий для всех: какие блоки показывать,
    *  решают настройки на фронте. */
   async getHome(sourceId: string): Promise<CachedResult<{ sections: RawHomeSection[] }>> {
-    const key = cacheKey('selections', 'v2', sourceId);
+    const key = cacheKey('selections', 'v6', sourceId, new Date().toISOString().slice(0, 7));
     return this.fetchCached(key, CACHE_TTL.selections, sourceId, async (parser) => ({
       sections: (await parser.getHome?.()) ?? [],
     }));
@@ -190,10 +191,11 @@ export class ParsersClientService {
   ): Promise<CachedResult<{ page: RawHomeSectionPage | null }>> {
     const key = cacheKey(
       'selections',
-      'v2',
+      'v6', // Home metadata now uses the shared viewMode contract.
       sourceId,
       sectionId,
       params.variant ?? '',
+      params.order ?? '',
       params.page,
     );
     return this.fetchCached(key, CACHE_TTL.selections, sourceId, async (parser) => ({

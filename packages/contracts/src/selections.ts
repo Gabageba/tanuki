@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SearchGroupStatusSchema } from './search';
-import { HomeSectionInfoSchema } from './source';
+import { SortOrderSchema, HomeSectionInfoSchema } from './source';
 import { TitleSchema } from './title';
 
 /** Блок главной сайта с тайтлами. Пустой блок (на странице не нашёлся) фронт не рисует. */
@@ -29,6 +29,7 @@ export type SelectionsResponse = z.infer<typeof SelectionsResponseSchema>;
 export const SelectionsSectionQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   variant: z.string().optional(),
+  order: SortOrderSchema.optional(),
 });
 export type SelectionsSectionQuery = z.infer<typeof SelectionsSectionQuerySchema>;
 

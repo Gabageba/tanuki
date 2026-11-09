@@ -2,7 +2,6 @@ import { Card, Stack } from '@mantine/core';
 import { Link } from 'react-router';
 import { VIEW_MODE } from '@tanuki/contracts';
 import TitleCardCover from '../TitleCardCover/TitleCardCover';
-import TitleCardMeta from '../TitleCardMeta';
 import TitleCardMetaRow from '../TitleCardMetaRow';
 import TitleCardName from '../TitleCardName/TitleCardName';
 import { getTitleCardPath } from '../../lib';
@@ -27,10 +26,7 @@ function TitleCardGrid({ data, showSource, meta, actions }: Props) {
       <Stack gap={8}>
         <TitleCardCover data={data} showSource={showSource} />
         <Stack className={styles.heading} gap={4}>
-          <TitleCardMetaRow
-            meta={<TitleCardMeta contentRating={data.contentRating}>{meta}</TitleCardMeta>}
-            actions={actions}
-          />
+          <TitleCardMetaRow meta={meta} contentRating={data.contentRating} actions={actions} />
           <TitleCardName data={data} />
         </Stack>
       </Stack>

@@ -35,7 +35,9 @@ function TitleCardListSkeleton({ meta, actions, footer, withDescription }: Props
         <Stack p="sm" flex={1} miw={0} gap={8}>
           <Stack className={styles.heading} gap={8} flex={1}>
             <TitleCardMetaRow meta={meta} actions={actions} />
-            <TextSkeleton lh="tight" lines={withDescription ? 1 : 2} />
+            <Group data-card-name-row gap={8} wrap="nowrap" align="flex-start" fz="sm" lh="tight">
+              <TextSkeleton lh="tight" lines={withDescription ? 1 : 2} flex={1} />
+            </Group>
             {withDescription && <TextSkeleton lh="tight" lines={4} />}
           </Stack>
           <Box data-card-footer className={styles.footer}>

@@ -358,12 +358,54 @@ describe('Nude-Moon getHome', () => {
     });
     const parser = createNudeMoonParser(makeContext(http));
 
-    const { sections, problems } = await checkHome(parser);
+    http.register((url) => url.includes('/top?'), {
+      status: 200,
+      body: readFixture('nudemoon-top.html'),
+    });
+    const { sections, problems } = await checkHome(parser, ['newTranslations']);
 
     expect(problems).toEqual([]);
 
     // Три плитки, и строка комментария (тот же тайтл, другая вёрстка) не добавила дубля.
     expect(sections[0]!.items).toHaveLength(3);
     expect(sections[0]!.items[0]!.url).toMatch(/^\/\d+--.+\.html$/);
+    expect(sections[0]!.items[0]).toMatchObject({
+      type: TITLE_TYPE.MANGA,
+      authors: ['Anetani Kiki'],
+      translators: ['Vahr'],
+      series: ['The Idolmaster'],
+      likes: 113,
+      views: 9000,
+    });
+    expect(sections[0]!.items[0]!.tags.length).toBeGreaterThan(0);
+    expect(sections[0]!.items[0]!.description).not.toBeNull();
+    expect(sections[0]!.items[1]).toMatchObject({
+      type: TITLE_TYPE.MANGA,
+      description: 'Второй сезон',
+      authors: ['Minato Yuu'],
+      likes: 46,
+    });
+    // Credits are not a description when its optional section is absent.
+    expect(sections[0]!.items[2]!.description).toBeNull();
+  });
+
+  it.each([
+    { tag: 'комикс', type: TITLE_TYPE.COMICS },
+    { tag: 'манхва', type: TITLE_TYPE.MANHWA },
+  ])('reads the $tag format from new translation previews', async ({ tag, type }) => {
+    const http = new FakeHttpClient();
+    const html = readFixture('nudemoon-home.html').replace(
+      /<font class="tiny">[\s\S]*?<\/font>/,
+      `<font class="tiny">${tag}   цветная</font>`,
+    );
+    http.register((url) => url === `https://${DOMAIN}/`, { status: 200, body: html });
+    const parser = createNudeMoonParser(makeContext(http));
+    const page = await parser.getHomeSection!('newTranslations', { page: 1 });
+    expect(page!.items[0]).toMatchObject({ type });
+    expect(page!.items[0]!.tags.map(({ title }) => title)).toEqual([
+      tag[0]!.toUpperCase() + tag.slice(1),
+      'Цветная',
+    ]);
+    expect(http.requests).toHaveLength(1);
   });
 });

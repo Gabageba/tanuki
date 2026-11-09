@@ -1,9 +1,16 @@
 .card {
+  &[data-view-mode='coverless'] {
+    .title {
+      overflow-wrap: anywhere;
+    }
+  }
+
   &[data-view-mode='grid']:has(.link:hover, .link:focus-visible) {
     color: var(--mantine-primary-color-filled);
   }
 
-  &[data-view-mode='list'] {
+  &[data-view-mode='list'],
+  &[data-view-mode='coverless'] {
     &:has(.link:hover) {
       background-color: var(--tanuki-color-hover) !important;
     }
