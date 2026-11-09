@@ -52,6 +52,7 @@ export const PLAYGROUND_TASKS: PlaygroundTask[] = [
     description:
       '«Популярные» Nude-Moon: плотность карточки, метка папки, 18+, теги и лайки; месяц и сортировка, колонки и состояния без места под обложку.',
     createdAt: '2026-11-06',
+    decision: 'C2 + T1a + M9 + P2 + L2',
   },
   {
     slug: 'bookmark-updates',
