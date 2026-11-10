@@ -29,6 +29,7 @@ import { AdultContentService } from '../adult-content/adult-content.service';
 import { TitleSnapshotsService } from '../library/title-snapshots.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { RawChapter } from '../parsers-client/parsers-client.types';
+import { NotFoundApiException } from '../common/errors';
 
 const PAGE_SIZE = 30;
 
@@ -124,10 +125,30 @@ export class CatalogService {
           });
           return [pages, details] as const;
         })
-      : await Promise.all([
-          this.parsersClient.getPages(sourceId, chapterRef.url),
-          this.parsersClient.getDetails(sourceId, titleRef.url),
-        ]);
+      : await (async () => {
+          const [pages, details] = await Promise.all([
+            this.parsersClient.getPages(sourceId, chapterRef.url).catch((error: unknown) => {
+              if (!(error instanceof NotFoundApiException)) throw error;
+              return error;
+            }),
+            this.parsersClient.getDetails(sourceId, titleRef.url),
+          ]);
+          if (!(pages instanceof NotFoundApiException)) return [pages, details] as const;
+
+          // Stored links and cached details can both contain a retired chapter URL.
+          // Refresh details before giving up, and use them for sibling links too.
+          const cachedChapter = details.data.chapters?.find((item) => item.id === chapterRef.id);
+          const currentDetails =
+            !cachedChapter || cachedChapter.url === chapterRef.url
+              ? await this.parsersClient.getDetails(sourceId, titleRef.url, { force: true })
+              : details;
+          const chapter = currentDetails.data.chapters?.find((item) => item.id === chapterRef.id);
+          if (!chapter || chapter.url === chapterRef.url) throw pages;
+          return [
+            await this.parsersClient.getPages(sourceId, chapter.url),
+            currentDetails,
+          ] as const;
+        })();
     const details = detailsResult.data;
     await this.adultContent.assertTitleVisible(sourceId, details.contentRating);
 

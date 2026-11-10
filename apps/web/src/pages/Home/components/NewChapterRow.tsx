@@ -1,8 +1,7 @@
-import { Box, Group, Text } from '@mantine/core';
-import { useTranslation } from 'react-i18next';
+import { Box } from '@mantine/core';
+import { Trans, useTranslation } from 'react-i18next';
 import { VIEW_MODE, type BookmarkItem } from '@tanuki/contracts';
 import type { ResolvedBookmarkFolder } from '@/entities/bookmark/models';
-import SourceIcon from '@/entities/source/components/SourceIcon';
 import { getCatalogSourceTitle, getLabelByTitleType } from '@/entities/source/lib';
 import TitleCard from '@/entities/title/card/TitleCard/TitleCard';
 import { TITLE_CARD_LIST_SIZE } from '@/entities/title/card/TitleCard/models';
@@ -11,12 +10,12 @@ import useDateFormat from '@/shared/hooks/useDateFormat';
 
 type Props = {
   bookmark: BookmarkItem;
-  /** Папка закладки — метка на обложке; null — папки ещё не загрузились. */
+  /** Папка закладки — метка перед источником; null — папки ещё не загрузились. */
   folder: ResolvedBookmarkFolder | null;
 };
 
-/** Строка «Новых глав» — карточка списка, как в каталоге: обложка с меткой папки, источник и тип,
- *  название, а внизу «+3 гл.» акцентом, номер последней главы и когда она вышла. Ведёт на тайтл. */
+/** A9 + M2: папка, источник текстом и тип над названием; внизу «Гл. 131 (+2) · дата»,
+ *  где цветом выделено только количество новых глав. Ведёт на тайтл. */
 function NewChapterRow({ bookmark, folder }: Props) {
   const { t } = useTranslation();
   const { formatRelative } = useDateFormat();
@@ -31,29 +30,39 @@ function NewChapterRow({ bookmark, folder }: Props) {
       }}
       viewMode={VIEW_MODE.LIST}
       listSize={TITLE_CARD_LIST_SIZE.COMPACT}
-      meta={
-        <Group gap={6} wrap="nowrap" miw={0}>
-          <SourceIcon id={bookmark.sourceId} title={sourceTitle} size={14} radius="sm" />
-          <TitleMetaItems gap={4} items={[sourceTitle, getLabelByTitleType(bookmark.type, t)]} />
-        </Group>
-      }
+      meta={<TitleMetaItems gap={4} items={[sourceTitle, getLabelByTitleType(bookmark.type, t)]} />}
       footer={
-        <Group gap={8} wrap="nowrap">
-          <Text fz="sm" fw={600} ff="monospace" c="var(--mantine-primary-color-filled)" lh="tight">
-            {t('plusCountChaptersAbbrev', { count: bookmark.newChaptersCount })}
-          </Text>
-          <TitleMetaItems
-            gap={4}
-            items={[
-              bookmark.latestChapterNumber !== null && (
-                <Box key="chapter" component="span" ff="monospace" lh="tight">
-                  {t('chapterNumberAbbrev', { number: bookmark.latestChapterNumber })}
+        <TitleMetaItems
+          gap={4}
+          items={[
+            <Box
+              key="chapter"
+              component="span"
+              ff="monospace"
+              lh="tight"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {bookmark.latestChapterNumber !== null ? (
+                <Trans
+                  t={t}
+                  i18nKey="chapterNumberWithNewChaptersAbbrev"
+                  values={{
+                    number: bookmark.latestChapterNumber,
+                    count: bookmark.newChaptersCount,
+                  }}
+                  components={{
+                    newChapters: <Box component="span" c="var(--mantine-color-anchor)" />,
+                  }}
+                />
+              ) : (
+                <Box component="span" c="var(--mantine-color-anchor)">
+                  {t('plusCountChaptersAbbrev', { count: bookmark.newChaptersCount })}
                 </Box>
-              ),
-              bookmark.latestNewAt && formatRelative(bookmark.latestNewAt),
-            ]}
-          />
-        </Group>
+              )}
+            </Box>,
+            bookmark.latestNewAt && formatRelative(bookmark.latestNewAt),
+          ]}
+        />
       }
     />
   );

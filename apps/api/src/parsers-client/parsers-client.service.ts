@@ -56,6 +56,8 @@ const withoutPaidChapters = (title: RawTitle): RawTitle => {
 };
 
 const PAGE_SIZE = 30;
+// Не переиспользуем старые ответы подборок без типа тайтла.
+const SELECTIONS_CACHE_VERSION = 'v7';
 
 export type CachedResult<T> = {
   data: T;
@@ -174,7 +176,12 @@ export class ParsersClientService {
   /** Блоки главной сайта — один ответ на источник, общий для всех: какие блоки показывать,
    *  решают настройки на фронте. */
   async getHome(sourceId: string): Promise<CachedResult<{ sections: RawHomeSection[] }>> {
-    const key = cacheKey('selections', 'v6', sourceId, new Date().toISOString().slice(0, 7));
+    const key = cacheKey(
+      'selections',
+      SELECTIONS_CACHE_VERSION,
+      sourceId,
+      new Date().toISOString().slice(0, 7),
+    );
     return this.fetchCached(key, CACHE_TTL.selections, sourceId, async (parser) => ({
       sections: (await parser.getHome?.()) ?? [],
     }));
@@ -191,7 +198,7 @@ export class ParsersClientService {
   ): Promise<CachedResult<{ page: RawHomeSectionPage | null }>> {
     const key = cacheKey(
       'selections',
-      'v6', // Home metadata now uses the shared viewMode contract.
+      SELECTIONS_CACHE_VERSION,
       sourceId,
       sectionId,
       params.variant ?? '',
@@ -215,7 +222,11 @@ export class ParsersClientService {
    * купивший. В общий кеш такие главы не попадают, а человеку с аккаунтом детали такого тайтла
    * всегда достаются живым запросом — со всеми его покупками.
    */
-  async getDetails(sourceId: string, url: string): Promise<CachedResult<RawTitle>> {
+  async getDetails(
+    sourceId: string,
+    url: string,
+    options?: { force?: boolean },
+  ): Promise<CachedResult<RawTitle>> {
     const key = cacheKey('details', sourceId, url);
     const scope = await this.sourceAccess.resolveScope(sourceId);
     const fetch = (parser: Parser) => parser.getDetails(url);
@@ -224,7 +235,7 @@ export class ParsersClientService {
       key,
       CACHE_TTL.details,
       () => this.guardedFetch(sourceId, fetch, scope),
-      { toShared: withoutPaidChapters },
+      { ...options, toShared: withoutPaidChapters },
     );
     if (!hasSourceAccount(scope) || !result.fromCache || !result.value.hasPaidChapters) {
       return { data: result.value, stale: result.stale };

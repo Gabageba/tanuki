@@ -272,13 +272,13 @@ export const AdultListMobile: Story = {
 };
 
 export const AdultGrid: Story = {
-  name: 'Плитка: 18+ в мета-строке',
+  name: 'Плитка: 18+ на обложке',
   args: { hidden: true },
   play: checkAdultTitleCardPair,
 };
 
 export const AdultGridNoSlots: Story = {
-  name: 'Плитка: 18+ у названия без метаданных',
+  name: 'Плитка: 18+ на обложке без метаданных',
   args: { hidden: true, withMeta: false },
   play: checkAdultTitleCardPair,
 };

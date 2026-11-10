@@ -19,7 +19,9 @@ import {
   parseInukoViewer,
 } from '../src/sources/inuko/auth';
 import { runWithSourceAccounts } from '../src/core/source-accounts';
-import { SourceAuthRequiredError } from '../src/errors';
+import { ParseError, SourceAuthRequiredError } from '../src/errors';
+import { readInukoSsr } from '../src/sources/inuko/ssr';
+import { generateUid } from '../src/core/uid';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
 import { FakeHttpClient } from './support/fake-http';
@@ -36,6 +38,8 @@ const PUREMANGA_SERVICE_NAME = 'puremanga.me';
 const INKSTORY_CONFIG = INUKO_CONFIGS.find(({ id }) => id === SOURCE_ID.INKSTORY)!;
 const PUREMANGA_CONFIG = INUKO_CONFIGS.find(({ id }) => id === SOURCE_ID.PUREMANGA)!;
 const MANGA_ID = 'aaaa-bbbb-1111';
+const SSR_MANGA_ID = 'd74979c4-40a1-4eb2-afb8-0b741f517319';
+const SSR_CHAPTER_ID = '863f51fc-95c8-4167-9974-7bf1ebea6c58';
 
 const LIST_MANGA_JSON = {
   id: MANGA_ID,
@@ -171,6 +175,102 @@ const setUpFixtures = (): FakeHttpClient => {
   });
   return http;
 };
+
+describe('Inuko retired reading API', () => {
+  const makeSsrHttp = (domain: string) => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.startsWith(`https://${API_HOST}/v2/books`), {
+      status: 404,
+      body: 'Not Found',
+    });
+    http.register((url) => url.includes('/v2/chapters?'), { status: 404, body: 'Not Found' });
+    http.register((url) => url.startsWith(`https://${domain}/content/`), {
+      status: 200,
+      body: readFixture('inuko-reading.html'),
+    });
+    return http;
+  };
+
+  it.each([
+    [INKSTORY_CONFIG, DOMAIN],
+    [PUREMANGA_CONFIG, PUREMANGA_DOMAIN],
+  ])('reads chapters and pages after the API returns 404: %s', async (config, domain) => {
+    const http = makeSsrHttp(domain);
+    const parser = createInukoParser(config, makeContext(http, domain));
+    const details = await parser.getDetails(SSR_MANGA_ID);
+    expect(details.title).toBe('Невестка злодея - могущественный человек');
+    expect(details.chapters).toHaveLength(2);
+    expect(details.chapters![0]).toMatchObject({
+      url: `${SSR_MANGA_ID}/${SSR_CHAPTER_ID}`,
+      number: 120,
+      volume: 3,
+      branch: 'Novate',
+      source: config.id,
+    });
+    expect(details.chapters![0]!.id).toBe(generateUid(config.id, SSR_CHAPTER_ID));
+    expect(details.restriction).toBeNull();
+    // No in-memory book/chapter cache: persisted URLs must work after a restart too.
+    const freshParser = createInukoParser(config, makeContext(http, domain));
+    const pages = await freshParser.getPages(details.chapters![0]!.url);
+    expect(pages).toHaveLength(2);
+    expect(pages[0]!.url).toMatch(/^https:\/\/static\.inuko\.me\/chapters\//);
+    expect(pages[0]!.source).toBe(config.id);
+  });
+
+  it('keeps catalog pagination, sorting, search and include/exclude filters in SSR requests', async () => {
+    const http = makeSsrHttp(DOMAIN);
+    http.register((url) => url.startsWith(`https://${DOMAIN}/content?`), {
+      status: 200,
+      body: `<script>($R=>$R[0]={books:$R[1]=${LIST_JSON}})($R["tsr"])</script>`,
+    });
+    http.register((url) => url.includes('/v2/labels'), {
+      status: 200,
+      body: LABELS_JSON,
+      contentType: 'application/json',
+    });
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
+    const items = await parser.getList({
+      offset: 20,
+      limit: 20,
+      query: 'Ван-Пис',
+      order: SORT_ORDER.RATING,
+      direction: SORT_DIRECTION.ASC,
+      filters: [
+        { groupId: INUKO_FILTER_GROUP.STATUS, key: 'ONGOING' },
+        { groupId: INUKO_FILTER_GROUP.STATUS, key: 'DONE' },
+        { groupId: INUKO_FILTER_GROUP.GENRE, key: 'vampires' },
+        { groupId: INUKO_FILTER_GROUP.GENRE, key: 'harem', exclude: true },
+        { groupId: INUKO_FILTER_GROUP.YEAR, range: { min: 2020 } },
+      ],
+    });
+    expect(items[0]!.title).toBe('Ван-Пис');
+    const request = http.requests.find(({ url }) => url.startsWith(`https://${DOMAIN}/content?`))!;
+    const params = new URL(request.url).searchParams;
+    expect(params.get('page')).toBe('1');
+    expect(params.get('size')).toBe('20');
+    expect(params.get('search')).toBe('Ван-Пис');
+    expect(params.get('sort')).toBe('averageRating');
+    expect(params.get('orderBy')).toBe('asc');
+    expect(JSON.parse(params.get('status')!)).toEqual(['ONGOING', 'DONE']);
+    expect(JSON.parse(params.get('labelsInclude')!)).toEqual(['l-1']);
+    expect(JSON.parse(params.get('labelsExclude')!)).toEqual(['l-2']);
+    expect(params.get('yearMin')).toBe('2020');
+  });
+
+  it('resolves shared SSR references without executing scripts', () => {
+    const read = readInukoSsr(
+      '<script>($R=>$R[0]={book:$R[1]={id:"book",hidden:!1},copy:$R[1]})($R["tsr"])</script>',
+      SOURCE_ID.INKSTORY,
+    );
+    expect(read('copy')).toEqual({ id: 'book', hidden: false });
+    const unsafe = readInukoSsr(
+      '<script>($R=>$R[0]={book:process.exit(1)})($R["tsr"])</script>',
+      SOURCE_ID.INKSTORY,
+    );
+    expect(() => unsafe('book')).toThrow(ParseError);
+    expect(() => read('missing')).toThrow(ParseError);
+  });
+});
 
 describe('Inkstory parser conformance', () => {
   const http = setUpFixtures();

@@ -1,8 +1,10 @@
+import { useId } from 'react';
 import { Box, Card, Group, Stack } from '@mantine/core';
 import { Link } from 'react-router';
 import { VIEW_MODE } from '@tanuki/contracts';
 import TitleCardCover from '../TitleCardCover/TitleCardCover';
 import TitleCardMetaRow from '../TitleCardMetaRow';
+import TitleCardFolderTag from '../TitleCardFolderTag';
 import TitleCardName from '../TitleCardName/TitleCardName';
 import TitleCardDescription from './TitleCardDescription';
 import { getTitleCardPath } from '../../lib';
@@ -12,6 +14,8 @@ import styles from '../../TitleCard.module.scss';
 type Props = TitleCardViewContent;
 
 function TitleCardList({ data, meta, actions, footer }: Props) {
+  const folderId = useId();
+
   return (
     <Card
       data-title-card
@@ -22,12 +26,28 @@ function TitleCardList({ data, meta, actions, footer }: Props) {
       c="inherit"
       withBorder
     >
-      <Link to={getTitleCardPath(data.id)} aria-label={data.name} className={styles.link} />
+      <Link
+        to={getTitleCardPath(data.id)}
+        aria-label={data.name}
+        aria-describedby={data.bookmarkFolder ? folderId : undefined}
+        className={styles.link}
+      />
       <Group align="stretch" wrap="nowrap" gap={0}>
         <TitleCardCover data={data} />
         <Stack p="sm" flex={1} miw={0} gap={8}>
           <Stack className={styles.heading} gap={8} flex={1}>
-            <TitleCardMetaRow meta={meta} actions={actions} contentRating={data.contentRating} />
+            <TitleCardMetaRow
+              meta={meta}
+              actions={actions}
+              contentRating={data.contentRating}
+              markers={
+                <TitleCardFolderTag
+                  folder={data.bookmarkFolder}
+                  to={getTitleCardPath(data.id)}
+                  id={folderId}
+                />
+              }
+            />
             <TitleCardName data={data} />
             <TitleCardDescription description={data.description} />
           </Stack>

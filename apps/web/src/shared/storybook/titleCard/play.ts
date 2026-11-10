@@ -1,4 +1,5 @@
 import { expect, waitFor, within } from 'storybook/test';
+import { VIEW_MODE } from '@tanuki/contracts';
 import { I18N } from '@/shared/lib/i18n';
 import { TITLE_TAG_HEIGHT } from '@/entities/title/markers/models';
 
@@ -93,7 +94,7 @@ export const checkBookmarkCardPair = async (context: { canvasElement: HTMLElemen
   await expect(name.parentElement!.querySelector('[role="img"]')).toBeNull();
 };
 
-/** 18+ находится в мета-строке, а без метаданных — у первой строки названия. */
+/** В плитке 18+ на обложке, в горизонтальных видах — в мета-строке или у названия. */
 export const checkAdultTitleCardPair = async (context: { canvasElement: HTMLElement }) => {
   await checkTitleCardPair(context);
   const card = context.canvasElement.querySelector('[data-title-card]:not([inert])')!;
@@ -102,8 +103,21 @@ export const checkAdultTitleCardPair = async (context: { canvasElement: HTMLElem
   const row = card.querySelector('[data-card-meta]')!;
   const meta = card.querySelector('[data-card-meta-content]')!;
   await expect(tag).toHaveTextContent('18+');
-  await expect(row).toContainElement(tag);
   await expect(card.querySelectorAll('[data-card-adult-tag]')).toHaveLength(1);
+  if (card.getAttribute('data-view-mode') === VIEW_MODE.GRID) {
+    const cover = card.querySelector('[data-card-cover]')!;
+    await expect(cover).toContainElement(tag);
+    await expect(row).not.toContainElement(tag);
+    await waitFor(async () => {
+      const bounds = cover.getBoundingClientRect();
+      const tagBounds = tag.getBoundingClientRect();
+      await expect(tagBounds.height).toBe(26);
+      await expect(tagBounds.top).toBeCloseTo(bounds.top + 6, 0);
+      await expect(tagBounds.right).toBeCloseTo(bounds.right - 6, 0);
+    });
+    return;
+  }
+  await expect(row).toContainElement(tag);
   await expect(card.querySelector('[data-card-cover] [data-card-adult-tag]')).toBeNull();
   await waitFor(async () => {
     const tagBounds = tag.getBoundingClientRect();

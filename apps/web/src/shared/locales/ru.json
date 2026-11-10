@@ -109,6 +109,7 @@
   "volumeNumberAbbrev": "Т.\u00a0{{volume}}",
   "volumeChapterNumberAbbrev": "Т.\u00a0{{volume}} Гл.\u00a0{{number}}",
   "chapterNumberAbbrev": "Гл.\u00a0{{number}}",
+  "chapterNumberWithNewChaptersAbbrev": "Гл.\u00a0{{number}}\u00a0<newChapters>(+{{count}})</newChapters>",
   "untitled": "Без названия",
   "reading": "Читаю",
   "share": "Поделиться",

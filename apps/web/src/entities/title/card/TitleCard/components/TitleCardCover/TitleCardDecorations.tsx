@@ -1,4 +1,5 @@
 import { VIEW_MODE, type SourceId } from '@tanuki/contracts';
+import TitleAdultBadge from '@/entities/title/markers/TitleAdultBadge';
 import TitleBookmarkMarker from '@/entities/title/markers/TitleBookmarkMarker';
 import TitleScoreBadge from '@/entities/title/markers/TitleScoreBadge';
 import TitleSourceRibbon from '@/entities/title/markers/TitleSourceRibbon';
@@ -11,15 +12,14 @@ function TitleCardDecorations({ data, showSource }: Props) {
   const { viewMode } = useTitleCardLayout();
   const isGrid = viewMode === VIEW_MODE.GRID;
 
+  if (!isGrid) return null;
+
   return (
     <>
-      {isGrid && (
-        <>
-          {showSource && <TitleSourceRibbon sourceId={data.sourceId as SourceId} />}
-          <TitleScoreBadge title={data} />
-        </>
-      )}
-      <TitleBookmarkMarker folder={data.bookmarkFolder} compact={!isGrid} />
+      {showSource && <TitleSourceRibbon sourceId={data.sourceId as SourceId} />}
+      <TitleAdultBadge contentRating={data.contentRating} />
+      <TitleScoreBadge title={data} />
+      <TitleBookmarkMarker folder={data.bookmarkFolder} />
     </>
   );
 }

@@ -7,7 +7,7 @@ import TitleCardDescription from '../TitleCardList/TitleCardDescription';
 import TitleCardMetaRow from '../TitleCardMetaRow';
 import { getTitleCardPath } from '../../lib';
 import type { TitleCardViewContent } from '../../models';
-import TitleCardFolderTag from './TitleCardFolderTag';
+import TitleCardFolderTag from '../TitleCardFolderTag';
 import styles from '../../TitleCard.module.scss';
 
 type Props = TitleCardViewContent;

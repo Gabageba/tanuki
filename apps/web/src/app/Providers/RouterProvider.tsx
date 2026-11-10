@@ -9,6 +9,7 @@ import RequireAuth from '@/app/RequireAuth';
 import RequireStaff from '@/app/RequireStaff';
 import GuestOnly from '@/app/GuestOnly';
 import RouteError from '@/app/RouteError';
+import RouteLayout from '@/app/RouteLayout';
 import { MANAGEMENT_INVITES_PATH, ROUTE_PATHS } from '@/shared/lib/routes';
 import SearchPage from '@/pages/Search/SearchPage';
 import Home from '@/pages/Home';
@@ -51,6 +52,7 @@ const PLAYGROUND_ROUTES = import.meta.env.DEV
 
 const router = createBrowserRouter([
   {
+    element: <RouteLayout />,
     // Упавший рендер любой страницы — свой экран вместо дефолтного экрана react-router.
     errorElement: <RouteError />,
     children: [

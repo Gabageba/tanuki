@@ -14,6 +14,7 @@ function TitleAdultBadge({ contentRating, compact }: Props) {
 
   return (
     <Badge
+      data-card-adult-tag
       pos="absolute"
       top={compact ? 2 : 6}
       right={compact ? 2 : 6}

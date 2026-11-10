@@ -21,6 +21,9 @@ function TitleCardMetaRow({ meta, actions, markers, contentRating = CONTENT_RATI
       wrap="nowrap"
       align="center"
     >
+      <Box className={styles.markers} pos="relative" flex="none" fz="sm" lh="tight">
+        {markers}
+      </Box>
       <Box data-card-meta-content className={styles.meta} miw={0} flex="1 1 auto">
         {meta === 0 ? null : meta}
       </Box>
@@ -34,7 +37,6 @@ function TitleCardMetaRow({ meta, actions, markers, contentRating = CONTENT_RATI
         fz="sm"
         lh="tight"
       >
-        {markers}
         <TitleAdultTag contentRating={contentRating} />
         {actions}
       </Group>
