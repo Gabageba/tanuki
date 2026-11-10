@@ -43,6 +43,48 @@ export const Mobile: Story = {
   globals: MOBILE_GLOBALS,
 };
 
+export const LongTitle: Story = {
+  name: 'Длинное название',
+  args: {
+    bookmark: {
+      ...BOOKMARK_CARD,
+      name: 'Провожающая в последний путь Фрирен: путешествие после конца великого приключения',
+      newChaptersCount: 35,
+    },
+  },
+};
+
+export const LongTitleMobile: Story = {
+  ...LongTitle,
+  name: 'Длинное название на телефоне 360 px',
+  globals: MOBILE_GLOBALS,
+  render: (args) => (
+    <Box p="md" w={360} maw="100%">
+      <NewChapterRow {...args} />
+    </Box>
+  ),
+};
+
+export const NoFolder: Story = {
+  name: 'Без папки',
+  args: { folder: null },
+};
+
+export const NoCover: Story = {
+  name: 'Без обложки',
+  args: { bookmark: { ...BOOKMARK_CARD, coverUrl: '' } },
+};
+
+export const NoDate: Story = {
+  name: 'Без даты новой главы',
+  args: { bookmark: { ...BOOKMARK_CARD, latestNewAt: null } },
+};
+
+export const NoChapterNumber: Story = {
+  name: 'Без номера новой главы',
+  args: { bookmark: { ...BOOKMARK_CARD, latestChapterNumber: null, newChaptersCount: 1 } },
+};
+
 export const UnknownChapter: Story = {
   name: 'Номер и дата новой главы неизвестны',
   args: {

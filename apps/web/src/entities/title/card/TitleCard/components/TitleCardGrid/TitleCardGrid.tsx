@@ -26,7 +26,7 @@ function TitleCardGrid({ data, showSource, meta, actions }: Props) {
       <Stack gap={8}>
         <TitleCardCover data={data} showSource={showSource} />
         <Stack className={styles.heading} gap={4}>
-          <TitleCardMetaRow meta={meta} contentRating={data.contentRating} actions={actions} />
+          <TitleCardMetaRow meta={meta} actions={actions} />
           <TitleCardName data={data} />
         </Stack>
       </Stack>

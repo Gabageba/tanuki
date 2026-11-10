@@ -107,6 +107,7 @@
   "volumeNumberAbbrev": "Vol.\u00a0{{volume}}",
   "volumeChapterNumberAbbrev": "Vol.\u00a0{{volume}} Ch.\u00a0{{number}}",
   "chapterNumberAbbrev": "Ch.\u00a0{{number}}",
+  "chapterNumberWithNewChaptersAbbrev": "Ch.\u00a0{{number}}\u00a0<newChapters>(+{{count}})</newChapters>",
   "untitled": "Untitled",
   "reading": "Reading",
   "share": "Share",
