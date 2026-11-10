@@ -1,0 +1,118 @@
+.card {
+  isolation: isolate;
+  overflow-wrap: anywhere;
+
+  &[data-stripe]::before {
+    position: absolute;
+    inset-block: 10px;
+    inset-inline-start: 0;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--toast-tone);
+    content: '';
+  }
+
+  &:has(.eventTarget:hover) {
+    background: var(--mantine-color-default-hover);
+  }
+
+  &:has(.eventTarget:focus-visible) {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 3px;
+  }
+}
+
+.eventTarget {
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.interactive {
+  position: relative;
+  z-index: 2;
+}
+
+.enter {
+  animation: toast-enter 180ms ease-out;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    animation: none;
+  }
+}
+
+.viewport {
+  isolation: isolate;
+  overflow: clip;
+}
+
+.overlayHost {
+  position: fixed;
+  z-index: calc(var(--mantine-z-index-modal) + 2);
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+// В C2 содержимое прежних flex-обёрток участвует в общей сетке заголовка.
+.row[data-header] {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 28px;
+  align-items: center;
+  row-gap: 4px;
+
+  &[data-has-hint] {
+    grid-template-columns: 32px minmax(0, 1fr) auto 28px;
+  }
+
+  .body,
+  .textStack {
+    display: contents;
+  }
+
+  .icon {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .title {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .description {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .actions {
+    grid-row: 3;
+    grid-column: 2;
+    margin-top: 8px;
+  }
+
+  .hint {
+    grid-row: 1;
+    grid-column: 3;
+  }
+
+  .dismiss {
+    grid-row: 1;
+    grid-column: -2;
+  }
+}
