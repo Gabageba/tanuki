@@ -5,7 +5,6 @@ import {
   QueryClient,
   QueryClientProvider as InternalQueryClientProvider,
 } from '@tanstack/react-query';
-import { notifications } from '@mantine/notifications';
 import type { ReactNode } from 'react';
 import { API_ERROR_CODE, type CurrentUser } from '@tanuki/contracts';
 import {
@@ -20,8 +19,12 @@ import { CURRENT_USER_QUERY_KEY } from '@/entities/user/hooks/useCurrentUser';
 import { dropBrowserPushSubscription } from '@/entities/notification/push';
 import { writeLastUser } from '@/entities/user/lastUser';
 import { API_CACHE_NAME } from '@/shared/lib/serviceWorkerConstants';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { getReadErrorKey, shouldSilenceToastError, showToastError } from '@/shared/api/toastErrors';
 
 const CURRENT_USER_HASH = hashKey(CURRENT_USER_QUERY_KEY);
+const MUTATION_OWNERS = new WeakMap<object, number>();
 
 const isSessionExpired = (error: unknown) =>
   error instanceof ApiRequestError && error.code === API_ERROR_CODE.UNAUTHORIZED;
@@ -39,20 +42,12 @@ const logOutExpiredSession = () => {
   queryClient.setQueryData(CURRENT_USER_QUERY_KEY, null);
   queryClient.removeQueries({ predicate: (query) => query.queryHash !== CURRENT_USER_HASH });
   void dropBrowserPushSubscription().catch(() => undefined);
-  notifications.show({ color: 'red', message: I18N.t('sessionExpiredLogInAgain') });
+  Toasts.show({ tone: FEEDBACK_TONE.DANGER, title: I18N.t('sessionExpiredLogInAgain') });
 };
 
 /** Без сети о недоступном говорит полоса «Нет сети» и пустые состояния — тост на каждый запрос
  *  лишний. */
 const isOfflineError = (error: unknown) => isNetworkError(error) && !navigator.onLine;
-
-/** Текст ошибки API уже переведён сервером; всё прочее — сбой на фронте, его текст не для людей. */
-const showErrorNotification = (error: unknown, title = I18N.t('error')) =>
-  notifications.show({
-    color: 'red',
-    title,
-    message: error instanceof ApiRequestError ? error.message : I18N.t('somethingWentWrong'),
-  });
 
 /** 4xx не лечится повтором — ретраим только сбои сервера и сети, и только один раз. */
 const shouldRetry = (failureCount: number, error: unknown) =>
@@ -69,7 +64,9 @@ const queryClient: QueryClient = new QueryClient({
         logOutExpiredSession();
         return;
       }
-      const { silentError, silentNextPageError, errorTitle } = readErrorMeta(query.meta);
+      const { silentError, silentNextPageError, errorTitle, errorScope } = readErrorMeta(
+        query.meta,
+      );
       if (silentNextPageError && query.state.fetchMeta?.fetchMore?.direction === 'forward') {
         return;
       }
@@ -77,24 +74,29 @@ const queryClient: QueryClient = new QueryClient({
       // уведомление лишнее.
       if (
         silentError ||
-        isOfflineError(error) ||
+        shouldSilenceToastError(error) ||
         isSourceAccountRequiredError(error) ||
         isAdultContentHiddenError(error)
       ) {
         return;
       }
-      showErrorNotification(error, errorTitle);
+      showToastError(error, errorTitle, getReadErrorKey(error, query.queryHash, errorScope), true);
     },
   }),
   mutationCache: new MutationCache({
+    onMutate: (_variables, mutation) => {
+      MUTATION_OWNERS.set(mutation, Toasts.getOwnerVersion());
+    },
     onError: (error, _variables, _onMutateResult, mutation) => {
+      if (MUTATION_OWNERS.get(mutation) !== Toasts.getOwnerVersion()) return;
       if (isSessionExpired(error)) {
         logOutExpiredSession();
         return;
       }
       const { silentError, errorTitle } = readErrorMeta(mutation.meta);
-      if (silentError || isOfflineError(error)) return;
-      showErrorNotification(error, errorTitle);
+      if (silentError || shouldSilenceToastError(error)) return;
+      // Каждая запись и попытка независимы, даже при одинаковом тексте ошибки.
+      showToastError(error, errorTitle, `mutation-${mutation.mutationId}`);
     },
   }),
   defaultOptions: {
@@ -119,6 +121,7 @@ queryClient.getQueryCache().subscribe((event) => {
   if (event.type !== 'updated' || event.query.queryHash !== CURRENT_USER_HASH) return;
   const user = event.query.state.data as CurrentUser | null | undefined;
   if (user === undefined) return;
+  Toasts.setOwner(user?.id ?? null);
   writeLastUser(user);
   if (user === null && 'caches' in window) void caches.delete(API_CACHE_NAME);
 });

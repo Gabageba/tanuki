@@ -1,5 +1,5 @@
 import { Box, NavLink, Stack, Text, ThemeIcon } from '@mantine/core';
-import { useScrollSpy } from '@mantine/hooks';
+import { useScrollSpy, useWindowScroll } from '@mantine/hooks';
 import { HEADER_HEIGHT } from '@/shared/lib/appShell';
 
 const OFFSET = HEADER_HEIGHT + 16;
@@ -23,8 +23,16 @@ type Props = {
  *  (по прокрутке) подсвечен, клик плавно прокручивает к нему. Прилипает под шапкой приложения; на
  *  узком экране скрыто. */
 function SectionNav({ groups }: Props) {
-  const { data, active } = useScrollSpy({ selector: '[id^="axis-"]', offset: OFFSET });
-  const activeId = data[active]?.id;
+  const { data } = useScrollSpy({ selector: '[id^="axis-"]', offset: OFFSET });
+  // Mantine выбирает ближайший заголовок — на длинном разделе это уже следующий.
+  // Обновляем выбор при каждой прокрутке, даже пока ближайший заголовок не меняется.
+  useWindowScroll();
+  const activeId =
+    data.reduce<string | undefined>(
+      (current, heading) =>
+        heading.getNode().getBoundingClientRect().top <= OFFSET + 1 ? heading.id : current,
+      undefined,
+    ) ?? data[0]?.id;
 
   const scrollTo = (letter: string) => {
     const element = document.getElementById(`axis-${letter}`);

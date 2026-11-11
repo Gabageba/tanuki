@@ -6,6 +6,8 @@ import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
 import MobileMenuRow from './MobileMenuRow';
 import MobileMenuDivider from './MobileMenuDivider';
+import PwaMenuItems from '../../components/PwaMenuItems';
+import { ACCOUNT_MENU_SECTION } from '../../models';
 import {
   getAccountMenuItemIcon,
   getAccountMenuItemLabel,
@@ -57,6 +59,9 @@ function MobileMenuSections({ onNavigate }: Props) {
                 {getAccountMenuItemLabel(item, t)}
               </MobileMenuRow>
             ))}
+            {section === ACCOUNT_MENU_SECTION.ACCOUNT && (
+              <PwaMenuItems mobile onAction={onNavigate} />
+            )}
           </Box>
         ))}
       </ScrollArea>

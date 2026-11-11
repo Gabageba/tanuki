@@ -1,11 +1,16 @@
 import { useLayoutEffect, useRef } from 'react';
 import { NavigationType, Outlet, useLocation, useMatch, useNavigationType } from 'react-router';
+import PwaPrompts from '@/features/pwa/PwaPrompts';
+import { Toasts } from '@/shared/lib/toasts/store';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 
 function RouteLayout() {
   const { pathname } = useLocation();
   const navigationType = useNavigationType();
   const isReader = Boolean(useMatch(ROUTE_PATHS.READER));
+  useLayoutEffect(() => {
+    Toasts.setReader(isReader);
+  }, [isReader]);
   const previousPathname = useRef(pathname);
 
   useLayoutEffect(() => {
@@ -19,7 +24,12 @@ function RouteLayout() {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [pathname, navigationType, isReader]);
 
-  return <Outlet />;
+  return (
+    <>
+      <PwaPrompts />
+      <Outlet />
+    </>
+  );
 }
 
 export default RouteLayout;

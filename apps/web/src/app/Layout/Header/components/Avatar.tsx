@@ -6,6 +6,8 @@ import { PRIMARY_COLOR } from '@/shared/lib/palette';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
 import AccountHeading from '../../components/AccountHeading';
+import PwaMenuItems from '../../components/PwaMenuItems';
+import { ACCOUNT_MENU_SECTION } from '../../models';
 import {
   getAccountMenuItemIcon,
   getAccountMenuItemLabel,
@@ -53,6 +55,7 @@ function Avatar() {
                 {getAccountMenuItemLabel(item, t)}
               </Menu.Item>
             ))}
+            {section === ACCOUNT_MENU_SECTION.ACCOUNT && <PwaMenuItems />}
           </Box>
         ))}
         <Menu.Divider />

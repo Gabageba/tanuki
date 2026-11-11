@@ -15,19 +15,6 @@ export const UNREAD_COUNT_POLL_MS = 60_000;
 export const STREAM_RECONNECT_BASE_MS = 1_000;
 export const STREAM_RECONNECT_MAX_MS = 30_000;
 
-/** На экране не больше стольки тостов: приходит следующий — самый старый закрывается. */
-export const MAX_TOASTS = 3;
-
-/** Тон уведомления: безопасность — красный, источник лёг — золотой, ожил — зелёный. */
-export const NOTIFICATION_TONE = {
-  ACCENT: 'accent',
-  DANGER: 'danger',
-  WARNING: 'warning',
-  SUCCESS: 'success',
-  NEUTRAL: 'neutral',
-} as const;
-export type NotificationTone = EnumLiteralsOf<typeof NOTIFICATION_TONE>;
-
 /** Состояние push на этом устройстве — от него зависит тумблер в настройках. */
 export const PUSH_DEVICE_STATE = {
   UNSUPPORTED: 'unsupported',

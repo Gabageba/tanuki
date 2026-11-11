@@ -3,25 +3,37 @@ import { SKIP_WAITING_MESSAGE } from './serviceWorkerConstants';
 type Listener = () => void;
 
 let waitingWorker: ServiceWorker | null = null;
-const listeners = new Set<Listener>();
+const LISTENERS = new Set<Listener>();
+let updateRequested = false;
 
 const setWaitingWorker = (worker: ServiceWorker | null) => {
   waitingWorker = worker;
-  listeners.forEach((listener) => listener());
+  if (!worker) updateRequested = false;
+  LISTENERS.forEach((listener) => listener());
 };
 
 /** Новая версия воркера установилась и ждёт: приложение предлагает обновиться, а не обновляется
  *  само — перезагрузка посреди главы теряла бы позицию (registerType: 'prompt', docs/06). */
 export const subscribeToUpdate = (listener: Listener) => {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
+  LISTENERS.add(listener);
+  return () => {
+    LISTENERS.delete(listener);
+  };
 };
 
 export const isUpdateAvailable = () => waitingWorker !== null;
+export const getWaitingWorker = () => waitingWorker;
+export const isUpdateRequested = () => updateRequested;
 
-/** Применяет обновление: ожидающий воркер активируется, страница перезагружается на новую версию. */
+const setUpdateRequested = (value: boolean) => {
+  updateRequested = value;
+  LISTENERS.forEach((listener) => listener());
+};
+
+/** Ожидающий воркер сам завершает подготовку и активацию, даже если вкладка закроется. */
 export const applyUpdate = () => {
-  if (!waitingWorker) return;
+  if (!waitingWorker || updateRequested || waitingWorker.state !== 'installed') return;
+  setUpdateRequested(true);
   navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload(), {
     once: true,
   });
@@ -29,17 +41,25 @@ export const applyUpdate = () => {
 };
 
 const watchRegistration = (registration: ServiceWorkerRegistration) => {
+  const watchWorker = (worker: ServiceWorker) => {
+    const update = () => {
+      if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+        setWaitingWorker(worker);
+      } else if (waitingWorker === worker && worker.state !== 'installed') {
+        setWaitingWorker(null);
+      }
+    };
+    worker.addEventListener('statechange', update);
+    update();
+  };
   // Первая установка ничего не заменяет — ждать ей некого, предлагать нечего.
   if (registration.waiting && navigator.serviceWorker.controller) {
-    setWaitingWorker(registration.waiting);
+    watchWorker(registration.waiting);
   }
+  // Установка могла начаться до завершения register().
+  if (registration.installing) watchWorker(registration.installing);
   registration.addEventListener('updatefound', () => {
-    const installing = registration.installing;
-    installing?.addEventListener('statechange', () => {
-      if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-        setWaitingWorker(installing);
-      }
-    });
+    if (registration.installing) watchWorker(registration.installing);
   });
 };
 

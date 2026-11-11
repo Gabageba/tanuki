@@ -4,5 +4,8 @@
 /** Сообщение UI → воркер: применить ожидающее обновление. */
 export const SKIP_WAITING_MESSAGE = 'skipWaiting';
 
+/** Ожидающий → активный воркер: закончить текущую главу и не начинать следующую до обновления. */
+export const PREPARE_UPDATE_MESSAGE = 'prepareUpdate';
+
 /** Кеш ответов API для работы без сети. Привязан к сессии: при выходе его чистит страница. */
 export const API_CACHE_NAME = 'tanuki-api';

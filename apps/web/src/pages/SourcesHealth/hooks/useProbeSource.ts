@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
 import type { Source } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 
@@ -16,7 +17,11 @@ function useProbeSource({ sourceId, sourceTitle }: Params) {
     mutationFn: () => apiFetch<Source>(`/sources/${sourceId}/probe`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sources'] });
-      notifications.show({ color: 'green', title: t('checkFinished'), message: sourceTitle });
+      Toasts.show({
+        tone: FEEDBACK_TONE.SUCCESS,
+        title: t('checkFinished'),
+        description: sourceTitle,
+      });
     },
   });
 }

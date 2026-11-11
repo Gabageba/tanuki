@@ -1,7 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
 import { apiFetch } from '@/shared/api/client';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import EmailLinkScreen from '@/entities/user/EmailLinkScreen';
@@ -14,12 +15,12 @@ function RevertEmailChange() {
   const queryClient = useQueryClient();
 
   const handleSuccess = () => {
-    notifications.show({
-      color: 'green',
-      title: t('emailChangeCancelled'),
-      message: t('allDevicesSignedOut'),
-    });
     queryClient.setQueryData(CURRENT_USER_QUERY_KEY, null);
+    Toasts.show({
+      tone: FEEDBACK_TONE.SUCCESS,
+      title: t('emailChangeCancelled'),
+      description: t('allDevicesSignedOut'),
+    });
     navigate(ROUTE_PATHS.LOGIN, { replace: true });
   };
 

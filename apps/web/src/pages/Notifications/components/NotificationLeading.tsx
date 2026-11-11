@@ -1,10 +1,7 @@
 import { Image, ThemeIcon } from '@mantine/core';
+import { getToneColor } from '@/shared/lib/feedback';
 import { NOTIFICATION_TYPE, type NotificationItem } from '@tanuki/contracts';
-import {
-  getNotificationIcon,
-  getNotificationTone,
-  getToneColor,
-} from '@/entities/notification/lib';
+import { getNotificationIcon, getNotificationTone } from '@/entities/notification/lib';
 
 type Props = {
   item: NotificationItem;

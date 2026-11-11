@@ -1,6 +1,7 @@
 import { Text } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
 import { Trans, useTranslation } from 'react-i18next';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
 import { EMAIL_CHANGE_CODE_LENGTH } from '@tanuki/contracts';
 import ResendVerificationButton from '@/entities/user/ResendVerificationButton';
 import CodeConfirmationForm from '@/shared/ui/CodeConfirmationForm';
@@ -22,7 +23,7 @@ function EmailChangeCodeStep({ email, onResend, onConfirmed }: Props) {
       {
         // Callback наблюдателя не вызывается после ухода с шага кода.
         onSuccess: () => {
-          notifications.show({ color: 'green', message: t('emailChanged') });
+          Toasts.show({ tone: FEEDBACK_TONE.SUCCESS, title: t('emailChanged') });
           onConfirmed();
         },
       },

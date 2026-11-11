@@ -15,6 +15,7 @@ import {
   WarningCircleIcon,
   WrenchIcon,
 } from '@phosphor-icons/react';
+import { FEEDBACK_TONE, type FeedbackTone } from '@/shared/lib/feedback';
 import {
   catalogEntryFor,
   NOTIFICATION_CATEGORY,
@@ -27,24 +28,13 @@ import {
 } from '@tanuki/contracts';
 import { getSourceStatusReasonLabel } from '@/entities/source/lib';
 import {
-  PRIMARY_COLOR,
-  STATUS_DEGRADED_COLOR,
-  STATUS_DOWN_COLOR,
-  STATUS_OK_COLOR,
-} from '@/shared/lib/palette';
-import {
   getSourcesHealthPath,
   MANAGEMENT_INVITES_PATH,
   PROFILE_TAB_SEARCH_PARAM,
   PROFILE_TABS,
   ROUTE_PATHS,
 } from '@/shared/lib/routes';
-import {
-  NOTIFICATION_TONE,
-  PUSH_DEVICE_STATE,
-  type NotificationTone,
-  type PushDeviceState,
-} from './models';
+import { PUSH_DEVICE_STATE, type PushDeviceState } from './models';
 
 /** Название источника по id; id, которого нет в каталоге (запись старой версии), показывается как есть. */
 export const getSourceTitle = (sourceId: string) => {
@@ -55,53 +45,24 @@ export const getSourceTitle = (sourceId: string) => {
   }
 };
 
-export const getNotificationTone = (type: NotificationType): NotificationTone => {
+export const getNotificationTone = (type: NotificationType): FeedbackTone => {
   switch (type) {
     case NOTIFICATION_TYPE.NEW_CHAPTERS:
-      return NOTIFICATION_TONE.ACCENT;
+      return FEEDBACK_TONE.ACCENT;
     case NOTIFICATION_TYPE.EMAIL_CHANGED:
     case NOTIFICATION_TYPE.DELETION_REQUESTED:
     case NOTIFICATION_TYPE.NEW_DEVICE_LOGIN:
-      return NOTIFICATION_TONE.DANGER;
+      return FEEDBACK_TONE.DANGER;
     case NOTIFICATION_TYPE.SOURCE_DOWN:
     case NOTIFICATION_TYPE.PARSER_DOWN:
-      return NOTIFICATION_TONE.WARNING;
+      return FEEDBACK_TONE.WARNING;
     case NOTIFICATION_TYPE.SOURCE_RECOVERED:
     case NOTIFICATION_TYPE.PARSER_RECOVERED:
     case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
-      return NOTIFICATION_TONE.SUCCESS;
+      return FEEDBACK_TONE.SUCCESS;
     case NOTIFICATION_TYPE.INVITE_USED:
     case NOTIFICATION_TYPE.INVITE_EXPIRED:
-      return NOTIFICATION_TONE.NEUTRAL;
-  }
-};
-
-export const getToneColor = (tone: NotificationTone) => {
-  switch (tone) {
-    case NOTIFICATION_TONE.ACCENT:
-      return PRIMARY_COLOR;
-    case NOTIFICATION_TONE.DANGER:
-      return STATUS_DOWN_COLOR;
-    case NOTIFICATION_TONE.WARNING:
-      return STATUS_DEGRADED_COLOR;
-    case NOTIFICATION_TONE.SUCCESS:
-      return STATUS_OK_COLOR;
-    case NOTIFICATION_TONE.NEUTRAL:
-      return 'gray';
-  }
-};
-
-/** Как долго держится тост (мс): чем важнее событие, тем дольше. */
-export const getToneToastDuration = (tone: NotificationTone) => {
-  switch (tone) {
-    case NOTIFICATION_TONE.DANGER:
-      return 10_000;
-    case NOTIFICATION_TONE.WARNING:
-      return 8_000;
-    case NOTIFICATION_TONE.ACCENT:
-    case NOTIFICATION_TONE.SUCCESS:
-    case NOTIFICATION_TONE.NEUTRAL:
-      return 5_000;
+      return FEEDBACK_TONE.NEUTRAL;
   }
 };
 

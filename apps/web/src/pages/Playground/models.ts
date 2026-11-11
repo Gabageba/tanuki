@@ -8,6 +8,7 @@ import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
 import CoverlessTitleCard from './CoverlessTitleCard';
 import FolderRow from './FolderRow';
+import GlobalToasts from './GlobalToasts';
 import HeaderBackground from './HeaderBackground';
 import Home from './Home';
 import HomeNewChapters from './HomeNewChapters';
@@ -46,6 +47,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'global-toasts',
+    Component: GlobalToasts,
+    title: 'Общие тосты проекта',
+    description:
+      'Выбраны A1 + T5 + D5a + S2 + I1 + C1: заголовки 600, футер с кнопкой 30 px и центрирование простых сообщений. Все примеры и прежние варианты сохранены.',
+    createdAt: '2026-11-10',
+    decision: 'A1 + T5 + D5a + S2 + I1 + C1',
+  },
   {
     slug: 'home-new-chapters',
     Component: HomeNewChapters,

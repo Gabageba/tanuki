@@ -1,9 +1,10 @@
 import { ActionIcon, Avatar, Box, FileButton, Loader, Text, UnstyledButton } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
 import { CameraIcon, TrashIcon } from '@phosphor-icons/react';
 import { useRef, useState } from 'react';
 import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
 import { PRIMARY_COLOR } from '@/shared/lib/palette';
 import useUpdateAvatar from './hooks/useUpdateAvatar';
 import useDeleteAvatar from './hooks/useDeleteAvatar';
@@ -27,7 +28,7 @@ function ProfileAvatar({ src, name }: Props) {
 
   // Ошибки запросов показывает глобальный обработчик — здесь только сбой обрезки на клиенте.
   const showCropError = () =>
-    notifications.show({ color: 'red', title: t('error'), message: t('tryAgainLater') });
+    Toasts.show({ tone: FEEDBACK_TONE.DANGER, title: t('tryAgainLater') });
 
   const pick = (file: File | null) => {
     if (file) setPickedSrc(URL.createObjectURL(file));

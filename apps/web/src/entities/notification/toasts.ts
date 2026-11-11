@@ -1,61 +1,91 @@
-import { notifications } from '@mantine/notifications';
 import type { TFunction } from 'i18next';
-import type { NotificationItem } from '@tanuki/contracts';
+import {
+  NOTIFICATION_TYPE,
+  type NotificationCategory,
+  type NotificationItem,
+  type NotificationsPage,
+} from '@tanuki/contracts';
+import { apiFetch } from '@/shared/api/client';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { TOAST_KIND } from '@/shared/lib/toasts/models';
 import {
   getNotificationDetail,
   getNotificationIcon,
   getNotificationTitle,
   getNotificationTone,
-  getToneColor,
-  getToneToastDuration,
 } from './lib';
-import { MAX_TOASTS } from './models';
 
-/** Тосты, которые сейчас на экране, от старого к новому. */
-let visibleToastIds: string[] = [];
+type Params = { item: NotificationItem; t: TFunction; onOpen: () => void };
 
-type Params = {
-  item: NotificationItem;
-  t: TFunction;
-  /** Клик по тосту: перейти к цели (и считать уведомление прочитанным). */
-  onOpen: () => void;
+const isSecurity = (item: NotificationItem) => {
+  switch (item.type) {
+    case NOTIFICATION_TYPE.EMAIL_CHANGED:
+    case NOTIFICATION_TYPE.DELETION_REQUESTED:
+    case NOTIFICATION_TYPE.NEW_DEVICE_LOGIN:
+      return true;
+    case NOTIFICATION_TYPE.NEW_CHAPTERS:
+    case NOTIFICATION_TYPE.SOURCE_DOWN:
+    case NOTIFICATION_TYPE.PARSER_DOWN:
+    case NOTIFICATION_TYPE.SOURCE_RECOVERED:
+    case NOTIFICATION_TYPE.PARSER_RECOVERED:
+    case NOTIFICATION_TYPE.SOURCE_IMPORT_FINISHED:
+    case NOTIFICATION_TYPE.INVITE_USED:
+    case NOTIFICATION_TYPE.INVITE_EXPIRED:
+      return false;
+  }
 };
 
-/**
- * Тост о важном событии: тон и время жизни по тону, весь тост кликабелен. На экране не больше
- * `MAX_TOASTS` — когда приходит следующий, самый старый закрывается. Повторное событие той же
- * записи заменяет её тост, а не добавляет второй.
- */
 export const showNotificationToast = ({ item, t, onOpen }: Params) => {
-  const tone = getNotificationTone(item.type);
-  const id = `notification-${item.id}`;
-
-  if (visibleToastIds.includes(id)) {
-    notifications.hide(id);
-    visibleToastIds = visibleToastIds.filter((toastId) => toastId !== id);
-  }
-  while (visibleToastIds.length >= MAX_TOASTS) {
-    const oldest = visibleToastIds.shift();
-    if (oldest) notifications.hide(oldest);
-  }
-  visibleToastIds.push(id);
-
-  notifications.show({
-    id,
-    color: getToneColor(tone),
-    icon: getNotificationIcon(item.type, 18),
+  const security = isSecurity(item);
+  return Toasts.show({
+    id: `notification-${item.id}`,
+    key: `notification-${item.id}`,
+    group: item.category,
+    tone: getNotificationTone(item.type),
     title: getNotificationTitle(item, t),
-    message: getNotificationDetail(item, t),
-    autoClose: getToneToastDuration(tone),
-    style: { cursor: 'pointer' },
-    onClick: (event) => {
-      // Крестик закрывает тост и ни к чему не ведёт.
-      if (event.target instanceof Element && event.target.closest('button')) return;
-      notifications.hide(id);
-      onOpen();
-    },
-    onClose: () => {
-      visibleToastIds = visibleToastIds.filter((toastId) => toastId !== id);
-    },
+    description: getNotificationDetail(item, t),
+    icon: getNotificationIcon(item.type),
+    onOpen,
+    kind: security ? TOAST_KIND.SECURITY : TOAST_KIND.MESSAGE,
+    readerAllowed: security,
   });
+};
+
+export const removeNotificationToast = (id?: string) => {
+  if (id) Toasts.close(`notification-${id}`);
+  else Toasts.removeWhere((entry) => entry.id.startsWith('notification-'));
+};
+
+export const removeNotificationCategoryToasts = (categories: NotificationCategory[]) =>
+  Toasts.removeWhere(
+    (entry) =>
+      entry.id.startsWith('notification-') &&
+      (categories.length === 0 || categories.some((category) => entry.group === category)),
+  );
+
+/** Пакетное SSE-удаление не содержит id: сверяем только уже известные тосты с серверной лентой. */
+export const reconcileNotificationToasts = async () => {
+  const owner = Toasts.getOwnerVersion();
+  const pending = new Map(
+    Toasts.getSnapshot()
+      .filter((entry) => entry.id.startsWith('notification-'))
+      .map((entry) => [entry.id, entry.revision]),
+  );
+  if (!pending.size) return;
+  const actual = new Set<string>();
+  let loaded = 0;
+  let page = 1;
+  try {
+    for (;;) {
+      const data = await apiFetch<NotificationsPage>(`/notifications?page=${page}`);
+      data.items.forEach((item) => actual.add(`notification-${item.id}`));
+      loaded += data.items.length;
+      if (loaded >= data.total || data.items.length === 0) break;
+      page++;
+    }
+  } catch {
+    return;
+  }
+  if (owner !== Toasts.getOwnerVersion()) return;
+  Toasts.removeWhere((entry) => pending.get(entry.id) === entry.revision && !actual.has(entry.id));
 };
