@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { TitleSnapshotsModule } from '../library/title-snapshots.module';
 import { LibraryModule } from '../library/library.module';
 import { TitleLinksModule } from '../matches/title-links.module';
 import { BackupController } from './backup.controller';
@@ -8,7 +9,7 @@ import { BackupRestoreService } from './backup-restore.service';
 /** Резервная копия: выгрузка библиотеки и настроек файлом и восстановление из него. */
 // DatabaseModule, EnvModule и NotificationsModule не импортируются: помечены @Global().
 @Module({
-  imports: [LibraryModule, TitleLinksModule],
+  imports: [TitleSnapshotsModule, LibraryModule, TitleLinksModule],
   controllers: [BackupController],
   providers: [BackupExportService, BackupRestoreService],
 })

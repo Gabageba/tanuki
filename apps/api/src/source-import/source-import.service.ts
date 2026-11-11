@@ -14,6 +14,7 @@ import { bookmarks, readingProgress, sourceImportProgress } from '../database/sc
 import { BookmarkFoldersService } from '../library/bookmark-folders.service';
 import { listUntrackedMovedKeys, type FolderRef } from '../library/library-merge';
 import { chunk, LibraryMergeService, type Transaction } from '../library/library-merge.service';
+import { TITLE_SNAPSHOT_ORIGIN } from '../library/models';
 import { linkKeyOf, TitleLinksService } from '../matches/title-links.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
@@ -64,6 +65,7 @@ export class SourceImportService {
 
   async import(userId: string, request: SourceImportRequest): Promise<SourceImportResult> {
     const { sourceId, folderIds, folderPolicy, progressPolicy } = request;
+    const fetchedAt = new Date();
     const siteFolders = await this.parsersClient.getBookmarks(sourceId);
     // Встроенные папки — до транзакции: «В планах» нужна плану как запасная папка.
     await this.folders.list(userId);
@@ -96,6 +98,7 @@ export class SourceImportService {
           importPlan.bookmarkInserts,
           importPlan.groupMoves,
           resolve,
+          { origin: TITLE_SNAPSHOT_ORIGIN.SOURCE_BOOKMARK, fetchedAt },
         );
         await this.writePendingProgress(tx, userId, sourceId, importPlan, progressPolicy);
 

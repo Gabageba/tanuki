@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readingProgress, titleChapterSnapshots } from '../database/schema';
+import type { TitleSnapshotsService } from '../library/title-snapshots.service';
 import { READING_MARK_CONFIDENCE } from '@tanuki/contracts';
 import type { AdultContentService } from '../adult-content/adult-content.service';
 import { encodeChapterId, encodeTitleId } from '../common/opaque-id';
@@ -33,11 +35,6 @@ const row = (
   chapterTitle: null,
   branchId: 'default',
   pageIndex: 3,
-  titleId: null,
-  titleName: null,
-  coverUrl: null,
-  contentRating: null,
-  type: null,
   hiddenAt: null,
   updatedAt: new Date(updatedAt),
 });
@@ -152,6 +149,7 @@ describe('ReadingProgressService при недоступной базе', () => 
     adultContent,
     bookmarks,
     {} as SourcesService,
+    {} as TitleSnapshotsService,
   );
   const titleId = encodeTitleId({ id: 1, url: '/title' });
 
@@ -272,7 +270,7 @@ describe('ReadingProgressService.listRecent', () => {
   ) => {
     const chain = (result: unknown) => {
       const node: Record<string, unknown> = {};
-      for (const method of ['from', 'where', 'orderBy', 'limit', 'set']) {
+      for (const method of ['from', 'where', 'orderBy', 'limit', 'set', 'unionAll']) {
         node[method] = (value: unknown) => {
           if (method === 'set') updates.push(value);
           return node;
@@ -284,7 +282,22 @@ describe('ReadingProgressService.listRecent', () => {
     return {
       withFallback: <T>(operation: () => Promise<T>) => operation(),
       db: {
-        select: () => chain(rows),
+        select: () => ({
+          from: (table: unknown) =>
+            table === titleChapterSnapshots
+              ? chain(
+                  rows
+                    .filter((row) => 'titleId' in row)
+                    .map((row) => ({
+                      ...row,
+                      name: (row as unknown as { titleName: string }).titleName,
+                      isShared: true,
+                    })),
+                )
+              : table === readingProgress
+                ? chain(rows)
+                : chain([]),
+        }),
         update: () => chain(undefined),
         execute: () => Promise.resolve(latest),
       },
@@ -334,6 +347,7 @@ describe('ReadingProgressService.listRecent', () => {
       {} as AdultContentService,
       {} as BookmarksService,
       sources,
+      { record: async () => {} } as unknown as TitleSnapshotsService,
     );
 
     const { items } = await service.listRecent('user');
@@ -342,7 +356,7 @@ describe('ReadingProgressService.listRecent', () => {
     expect(items[0]!.title.coverUrl).toContain('/img');
     expect(items[0]!.chapter).toMatchObject({ number: 5, id: 'readmanga_ru:chapter' });
     expect(items[1]!.title.id).toMatch(/^readmanga_ru:/);
-    expect(updates).toEqual([expect.objectContaining({ titleName: 'Дописан' })]);
+    expect(updates).toEqual([]);
   });
 
   it('не показывает тайтлы, дочитанные до последней главы', async () => {
@@ -372,6 +386,7 @@ describe('ReadingProgressService.listRecent', () => {
       {} as AdultContentService,
       {} as BookmarksService,
       sources,
+      { record: async () => {} } as unknown as TitleSnapshotsService,
     );
 
     const { items } = await service.listRecent('user');

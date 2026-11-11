@@ -62,6 +62,8 @@ const SELECTIONS_CACHE_VERSION = 'v7';
 export type CachedResult<T> = {
   data: T;
   stale: boolean;
+  /** Внутреннее время запроса источника; cache hit сохраняет его. */
+  fetchedAt?: number;
 };
 
 @Injectable()
@@ -88,7 +90,7 @@ export class ParsersClientService {
       CACHE_TTL.sources,
       () => Promise.resolve({ items: this.parsers.listSources() }),
     );
-    return { data: result.value, stale: result.stale };
+    return { data: result.value, stale: result.stale, fetchedAt: result.fetchedAt };
   }
 
   /**
@@ -238,15 +240,16 @@ export class ParsersClientService {
       { ...options, toShared: withoutPaidChapters },
     );
     if (!hasSourceAccount(scope) || !result.fromCache || !result.value.hasPaidChapters) {
-      return { data: result.value, stale: result.stale };
+      return { data: result.value, stale: result.stale, fetchedAt: result.fetchedAt };
     }
 
     try {
-      return { data: await this.guardedFetch(sourceId, fetch, scope), stale: false };
+      const fetchedAt = Date.now();
+      return { data: await this.guardedFetch(sourceId, fetch, scope), stale: false, fetchedAt };
     } catch (error) {
       if (error instanceof SourceAccountRequiredException) throw error;
       // Источник не ответил — общая версия без покупок лучше, чем ошибка.
-      return { data: result.value, stale: true };
+      return { data: result.value, stale: true, fetchedAt: result.fetchedAt };
     }
   }
 
@@ -301,7 +304,7 @@ export class ParsersClientService {
       () => this.guardedFetch(sourceId, doFetch, scope),
       options,
     );
-    return { data: result.value, stale: result.stale };
+    return { data: result.value, stale: result.stale, fetchedAt: result.fetchedAt };
   }
 
   private async guardedFetch<T>(

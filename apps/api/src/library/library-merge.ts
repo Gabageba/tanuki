@@ -21,7 +21,8 @@ export type MergeBookmarkInsert = {
   row: Pick<
     BackupBookmark,
     'titleId' | 'name' | 'coverUrl' | 'contentRating' | 'type' | 'visitedAt' | 'createdAt'
-  >;
+  > &
+    Partial<Pick<BackupBookmark, 'updatedAt'>>;
   titleKey: string;
   sourceId: string;
   folder: FolderRef;

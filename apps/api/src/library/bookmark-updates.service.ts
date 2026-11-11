@@ -1,7 +1,7 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { CronExpression, SchedulerRegistry } from '@nestjs/schedule';
-import { asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { CronJob } from 'cron';
 import { SOURCE_STATUS } from '@tanuki/contracts';
 import { NotFoundApiException } from '../common/errors';
@@ -73,7 +73,7 @@ export const selectFillBatches = (
 };
 
 /** Давно не проверенные — первыми; ни разу не проверенные — самыми первыми. */
-export const orderByStaleness = (keys: string[], checkedAt: Map<string, Date>): string[] =>
+export const orderByStaleness = (keys: string[], checkedAt: Map<string, Date | null>): string[] =>
   [...keys].sort((a, b) => (checkedAt.get(a)?.getTime() ?? 0) - (checkedAt.get(b)?.getTime() ?? 0));
 
 /**
@@ -85,7 +85,7 @@ export const orderByStaleness = (keys: string[], checkedAt: Map<string, Date>): 
  * Раз в минуту закладки без снимка — из любой папки — получают первый снимок, не дожидаясь
  * прохода: иначе у только что импортированных карточек нет даже числа глав.
  *
- * Раз в сутки тот же сервис чистит снимки тайтлов, которых больше нет ни в одних закладках.
+ * Раз в сутки чистит снимки тайтлов без закладок и прогресса, включая скрытый.
  */
 @Injectable()
 export class BookmarkUpdatesService implements OnModuleInit {
@@ -178,7 +178,18 @@ export class BookmarkUpdatesService implements OnModuleInit {
         .selectDistinct({ titleKey: bookmarks.titleKey })
         .from(bookmarks)
         .leftJoin(titleChapterSnapshots, eq(titleChapterSnapshots.titleKey, bookmarks.titleKey))
-        .where(isNull(titleChapterSnapshots.titleKey));
+        .where(
+          or(
+            isNull(titleChapterSnapshots.titleKey),
+            and(
+              eq(titleChapterSnapshots.missing, false),
+              or(
+                isNull(titleChapterSnapshots.name),
+                eq(titleChapterSnapshots.chaptersInitialized, false),
+              ),
+            ),
+          ),
+        );
       if (rows.length === 0) return;
 
       const sources = await this.sources.listSources();
@@ -290,8 +301,9 @@ export class BookmarkUpdatesService implements OnModuleInit {
   private async checkOne(titleKey: string): Promise<boolean> {
     const { sourceId, url } = parseLinkKey(titleKey);
     try {
-      const { data } = await runAsService(() => this.parsersClient.getDetails(sourceId, url));
-      await this.snapshots.record(sourceId, url, data, { force: true });
+      const result = await runAsService(() => this.parsersClient.getDetails(sourceId, url));
+      if (result.stale) return false;
+      await this.snapshots.record(sourceId, url, result.data, { ...result, force: true });
       return true;
     } catch (error) {
       const message = (error as Error).message;

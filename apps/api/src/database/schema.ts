@@ -39,6 +39,7 @@ import type {
   RestoreProgressPolicy,
   SourceImportProgressStatus,
 } from '@tanuki/contracts';
+import type { TitleSnapshotOrigin } from '../library/models';
 import type { EmailTokenPurpose } from '../auth/models';
 import { DEFAULT_READER_SETTINGS } from '@tanuki/contracts';
 
@@ -395,17 +396,6 @@ export const readingProgress = pgTable(
     pageIndex: integer('page_index').notNull(),
 
     /**
-     * Снимок тайтла для «Продолжить чтение», как у закладок: карточка рисуется без похода к
-     * источнику. Пишет PUT /progress из закешированных деталей; у старых строк null — снимок
-     * досниматься при выдаче ленты.
-     */
-    titleId: text('title_id'),
-    titleName: text('title_name'),
-    /** Адрес обложки на источнике, без подписи прокси: подпись ставит чтение. */
-    coverUrl: text('cover_url'),
-    contentRating: text('content_rating').$type<ContentRating>(),
-    type: text('type').$type<TitleType>(),
-    /**
      * Когда тайтл убрали из «Продолжить чтение»; null — не убирали. Пишется во все строки
      * группы. Тайтл снова в ленте, как только updated_at станет позже — при следующем чтении.
      */
@@ -536,8 +526,6 @@ export const bookmarks = pgTable(
     /** linkKeyOf(sourceId, url) — тот же ключ, что в title_links и reading_progress. */
     titleKey: text('title_key').notNull(),
     sourceId: text('source_id').notNull(),
-    /** Полный Title.id — по нему карточка ведёт на тайтл. */
-    titleId: text('title_id').notNull(),
     /**
      * Без каскада: что делать с закладками удаляемой папки, решает сервис (перенос или удаление).
      * no action, а не restrict: проверка идёт в конце оператора, так что каскад от users удаляет
@@ -546,12 +534,6 @@ export const bookmarks = pgTable(
     folderId: uuid('folder_id')
       .notNull()
       .references(() => bookmarkFolders.id, { onDelete: 'no action' }),
-    /** Снимок на момент добавления — карточка рисуется и без живого источника. */
-    name: text('name').notNull(),
-    /** Адрес обложки на источнике, без подписи прокси: подпись живёт час, её ставит чтение. */
-    coverUrl: text('cover_url'),
-    contentRating: text('content_rating').$type<ContentRating>().notNull(),
-    type: text('type').$type<TitleType>(),
     /** Последний визит в группу — общий для неё: пишется во все её строки. */
     visitedAt: timestamp('visited_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -565,8 +547,8 @@ export const bookmarks = pgTable(
 );
 
 /**
- * Когда тайтл последний раз проверяли на новые главы — общая для всех пользователей: тайтл
- * запрашивается у источника один раз, сколько бы человек его ни сохранили.
+ * Метаданные тайтла на источнике и независимая проверка глав — общие для всех пользователей.
+ * Наличие метаданных не означает, что первый список глав уже получен.
  */
 export const titleChapterSnapshots = pgTable('title_chapter_snapshots', {
   /** linkKeyOf(sourceId, url). */
@@ -574,7 +556,14 @@ export const titleChapterSnapshots = pgTable('title_chapter_snapshots', {
   sourceId: text('source_id').notNull(),
   /** Полный Title.id — по нему крон и меню источников на карточке находят тайтл. */
   titleId: text('title_id').notNull(),
-  checkedAt: timestamp('checked_at', { withTimezone: true }).notNull().defaultNow(),
+  name: text('name'),
+  coverUrl: text('cover_url'),
+  contentRating: text('content_rating').$type<ContentRating>(),
+  type: text('type').$type<TitleType>(),
+  metadataOrigin: text('metadata_origin').$type<TitleSnapshotOrigin>(),
+  metadataFetchedAt: timestamp('metadata_fetched_at', { withTimezone: true }),
+  chaptersInitialized: boolean('chapters_initialized').notNull().default(false),
+  checkedAt: timestamp('checked_at', { withTimezone: true }),
   /** Текст последней ошибки проверки; null — последняя прошла. */
   lastError: text('last_error'),
   /** Источник ответил «не найдено» — тайтл пропал с него. */
@@ -582,6 +571,24 @@ export const titleChapterSnapshots = pgTable('title_chapter_snapshots', {
   /** Глав в самой длинной ветке при последней удачной проверке; null — неизвестно (есть платные). */
   chaptersCount: integer('chapters_count'),
 });
+
+/** Личный резерв из старых записей и файлов. Никогда не публикуется другим пользователям. */
+export const USER_TITLE_SNAPSHOT_FALLBACKS = pgTable(
+  'user_title_snapshot_fallbacks',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    titleKey: text('title_key').notNull(),
+    titleId: text('title_id'),
+    name: text('name'),
+    coverUrl: text('cover_url'),
+    contentRating: text('content_rating').$type<ContentRating>(),
+    type: text('type').$type<TitleType>(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.titleKey] })],
+);
 
 /**
  * Каждая глава, которую хоть раз видели у тайтла, и когда впервые. «Новые» для пользователя —

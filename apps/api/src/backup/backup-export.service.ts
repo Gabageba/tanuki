@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { asc, eq } from 'drizzle-orm';
-import { BACKUP_FORMAT, BACKUP_VERSION, type Backup } from '@tanuki/contracts';
+import { BACKUP_FORMAT, BACKUP_VERSION, CONTENT_RATING, type Backup } from '@tanuki/contracts';
 import { toServerDateTime } from '../common/dates';
 import { NotFoundApiException, StorageUnavailableException } from '../common/errors';
 import type { Env } from '../config/env';
@@ -17,6 +17,7 @@ import {
   userSettings,
   users,
 } from '../database/schema';
+import { resolveTitleSnapshots } from '../library/title-snapshot-storage';
 import { BookmarkFoldersService } from '../library/bookmark-folders.service';
 
 const toDateTime = (date: Date) => toServerDateTime(date.getTime());
@@ -70,6 +71,9 @@ export class BackupExportService {
       ]);
       if (!user) throw new NotFoundApiException();
 
+      const snapshots = await resolveTitleSnapshots(db, userId, [
+        ...new Set([...bookmarkRows, ...progress].map(({ titleKey }) => titleKey)),
+      ]);
       return {
         format: BACKUP_FORMAT,
         version: BACKUP_VERSION,
@@ -122,34 +126,51 @@ export class BackupExportService {
           trackUpdates: folder.trackUpdates,
           position: folder.position,
         })),
-        bookmarks: bookmarkRows.map((row) => ({
-          titleId: row.titleId,
-          folderKey: row.folderId,
-          name: row.name,
-          coverUrl: row.coverUrl,
-          contentRating: row.contentRating,
-          type: row.type,
-          visitedAt: toDateTime(row.visitedAt),
-          createdAt: toDateTime(row.createdAt),
-          updatedAt: toDateTime(row.updatedAt),
-        })),
-        progress: progress.map((row) => ({
-          titleKey: row.titleKey,
-          sourceId: row.sourceId,
-          chapterId: row.chapterId,
-          chapterVolume: row.chapterVolume,
-          chapterNumber: row.chapterNumber,
-          chapterTitle: row.chapterTitle,
-          branchId: row.branchId,
-          pageIndex: row.pageIndex,
-          titleId: row.titleId,
-          titleName: row.titleName,
-          coverUrl: row.coverUrl,
-          contentRating: row.contentRating,
-          type: row.type,
-          hiddenAt: row.hiddenAt ? toDateTime(row.hiddenAt) : null,
-          updatedAt: toDateTime(row.updatedAt),
-        })),
+        bookmarks: bookmarkRows.map((state) => {
+          const metadata = snapshots.get(state.titleKey);
+          if (!metadata?.titleId || !metadata.name)
+            throw new Error(`Missing bookmark metadata: ${state.titleKey}`);
+          const row = { ...state, ...metadata };
+          return {
+            titleId: metadata.titleId,
+            folderKey: row.folderId,
+            name: metadata.name,
+            coverUrl: row.coverUrl,
+            contentRating: row.contentRating ?? CONTENT_RATING.SAFE,
+            type: row.type,
+            visitedAt: toDateTime(row.visitedAt),
+            createdAt: toDateTime(row.createdAt),
+            updatedAt: toDateTime(row.updatedAt),
+          };
+        }),
+        progress: progress.map((state) => {
+          const metadata = snapshots.get(state.titleKey);
+          const row = {
+            ...state,
+            titleId: metadata?.titleId ?? null,
+            titleName: metadata?.name ?? null,
+            coverUrl: metadata?.coverUrl ?? null,
+            contentRating: metadata?.contentRating ?? null,
+            type: metadata?.type ?? null,
+          };
+          return {
+            titleKey: row.titleKey,
+            sourceId: row.sourceId,
+            chapterId: row.chapterId,
+            chapterVolume: row.chapterVolume,
+            chapterNumber: row.chapterNumber,
+            chapterTitle: row.chapterTitle,
+            branchId: row.branchId,
+            pageIndex: row.pageIndex,
+            titleId: row.titleId,
+            titleName: row.titleName,
+            coverUrl: row.coverUrl,
+            contentRating: row.contentRating,
+            type: row.type,
+            hiddenAt: row.hiddenAt ? toDateTime(row.hiddenAt) : null,
+            updatedAt: toDateTime(row.updatedAt),
+          };
+        }),
         chapterReads: reads.map((row) => ({
           chapterId: row.chapterId,
           sourceId: row.sourceId,

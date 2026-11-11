@@ -7,7 +7,7 @@ import {
   type BookmarkAvailability,
 } from '@tanuki/contracts';
 import {
-  buildBookmarkGroups,
+  buildBookmarkGroups as buildGroups,
   countBookmarkGroup,
   countSnapshotChapters,
   matchesBookmarkQuery,
@@ -57,6 +57,15 @@ const LINKED = new Map([
   ['b:/one', 'a:/one'],
   ['c:/two', 'c:/two'],
 ]);
+
+const buildBookmarkGroups = (
+  input: Omit<Parameters<typeof buildGroups>[0], 'metadata'> &
+    Partial<Pick<Parameters<typeof buildGroups>[0], 'metadata'>>,
+) =>
+  buildGroups({
+    ...input,
+    metadata: input.metadata ?? new Map(input.rows.map((row) => [row.titleKey, row])),
+  });
 
 describe('buildBookmarkGroups', () => {
   it('склеивает строки подтверждённых совпадений в одну закладку', () => {

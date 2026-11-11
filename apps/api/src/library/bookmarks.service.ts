@@ -45,7 +45,21 @@ import {
   sortBookmarkGroups,
   toFolderCopies,
 } from './bookmark-groups';
-import type { BookmarkRecord, BranchStat, CountedBookmarkGroup, SnapshotRecord } from './models';
+import type {
+  BookmarkRecord,
+  BookmarkState,
+  BranchStat,
+  CountedBookmarkGroup,
+  SnapshotRecord,
+} from './models';
+import {
+  attachBookmarkSnapshots,
+  hydrateBookmarks,
+  lockSnapshotKeys,
+  lockSnapshotLifecycle,
+  resolveTitleSnapshots,
+  writeTitleFallbacks,
+} from './title-snapshot-storage';
 import { TitleSnapshotsService } from './title-snapshots.service';
 
 /** Доступность источника для зрителя: скрытый настройкой 18+ в списке отсутствует вовсе. */
@@ -62,7 +76,7 @@ export const toBookmarkRow = (row: BookmarkRecord): BookmarkRow => ({
   folderId: row.folderId,
   name: row.name,
   coverUrl: row.coverUrl,
-  contentRating: row.contentRating,
+  contentRating: row.contentRating ?? CONTENT_RATING.SAFE,
   type: row.type,
   visitedAt: toServerDateTime(row.visitedAt.getTime()),
   createdAt: toServerDateTime(row.createdAt.getTime()),
@@ -177,28 +191,33 @@ export class BookmarksService {
     // Снимок названия и обложки берём у источника, а не со слов клиента. Детали почти всегда
     // в кеше — человек только что открыл страницу тайтла.
     const { sourceId, opaqueId } = splitCompositeId(titleId);
-    const { data: raw } = await this.parsersClient.getDetails(
-      sourceId,
-      decodeTitleId(opaqueId).url,
-    );
+    const url = decodeTitleId(opaqueId).url;
+    const result = await this.parsersClient.getDetails(sourceId, url);
+    const raw = result.data;
     await this.write(() =>
-      this.database.db
-        .insert(bookmarks)
-        .values({
-          userId,
-          titleKey,
-          sourceId,
-          titleId,
-          folderId,
-          name: raw.title,
-          coverUrl: raw.coverUrl,
-          contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
-          type: raw.type ?? null,
-        })
-        .onConflictDoUpdate({
-          target: [bookmarks.userId, bookmarks.titleKey],
-          set: { folderId, updatedAt: sql`now()` },
-        }),
+      this.database.db.transaction(async (tx) => {
+        await lockSnapshotKeys(tx, [titleKey]);
+        await tx
+          .insert(bookmarks)
+          .values({ userId, titleKey, sourceId, folderId })
+          .onConflictDoUpdate({
+            target: [bookmarks.userId, bookmarks.titleKey],
+            set: { folderId, updatedAt: sql`now()` },
+          });
+        await writeTitleFallbacks(tx, [
+          {
+            userId,
+            titleKey,
+            titleId,
+            name: raw.title,
+            coverUrl: raw.coverUrl,
+            contentRating: raw.contentRating,
+            type: raw.type ?? null,
+            updatedAt: new Date(),
+          },
+        ]);
+        await this.snapshots.record(sourceId, url, raw, { ...result, tx });
+      }),
     );
     return { folderId, conflict: null };
   }
@@ -207,10 +226,14 @@ export class BookmarksService {
   async removeForTitle(userId: string, titleId: string): Promise<BookmarkRow[]> {
     const groupKeys = await this.groupKeysOf(titleKeyOf(titleId));
     const removed = await this.write(() =>
-      this.database.db
-        .delete(bookmarks)
-        .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.titleKey, groupKeys)))
-        .returning(),
+      this.database.db.transaction(async (tx) => {
+        await lockSnapshotLifecycle(tx);
+        const deleted = await tx
+          .delete(bookmarks)
+          .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.titleKey, groupKeys)))
+          .returning();
+        return hydrateBookmarks(tx, userId, deleted);
+      }),
     );
     await this.notifications.removeNewChapters(userId, groupKeys);
     return removed.map(toBookmarkRow);
@@ -235,40 +258,56 @@ export class BookmarksService {
     };
     if (!rows.every(isValid)) throw new BadRequestApiException();
 
-    const values = await Promise.all(
+    const resolved = await Promise.all(
       rows.map(async (row) => {
         const { sourceId, opaqueId } = splitCompositeId(row.titleId);
-        const snapshot = await this.parsersClient
-          .getDetails(sourceId, decodeTitleId(opaqueId).url)
-          .then(({ data: raw }) => ({
-            name: raw.title,
-            coverUrl: raw.coverUrl,
-            contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
-            type: raw.type ?? null,
-          }))
+        const url = decodeTitleId(opaqueId).url;
+        const result = await this.parsersClient
+          .getDetails(sourceId, url)
           .catch((error: unknown) => {
             this.logger.warn(`restore without details for ${row.titleId}: ${String(error)}`);
-            return {
+            return null;
+          });
+        return { row, sourceId, url, result };
+      }),
+    );
+    await this.write(() =>
+      this.database.db.transaction(async (tx) => {
+        await lockSnapshotLifecycle(tx);
+        await lockSnapshotKeys(
+          tx,
+          resolved.map(({ row }) => row.titleKey),
+        );
+        for (const { row, sourceId, url, result } of resolved) {
+          const inserted = await tx
+            .insert(bookmarks)
+            .values({
+              userId,
+              titleKey: row.titleKey,
+              sourceId,
+              folderId: row.folderId,
+              visitedAt: new Date(row.visitedAt),
+              createdAt: new Date(row.createdAt),
+            })
+            .onConflictDoNothing()
+            .returning();
+          if (inserted.length === 0) continue;
+          await writeTitleFallbacks(tx, [
+            {
+              userId,
+              titleKey: row.titleKey,
+              titleId: row.titleId,
               name: row.name,
               coverUrl: null,
               contentRating: row.contentRating,
               type: row.type,
-            };
-          });
-        return {
-          userId,
-          titleKey: row.titleKey,
-          sourceId,
-          titleId: row.titleId,
-          folderId: row.folderId,
-          ...snapshot,
-          visitedAt: new Date(row.visitedAt),
-          createdAt: new Date(row.createdAt),
-        };
+              updatedAt: new Date(row.createdAt),
+            },
+          ]);
+          if (result) await this.snapshots.record(sourceId, url, result.data, { ...result, tx });
+        }
       }),
     );
-
-    await this.write(() => this.database.db.insert(bookmarks).values(values).onConflictDoNothing());
   }
 
   /** Метки «в закладках» на карточках: titleId → папка его группы. */
@@ -292,7 +331,7 @@ export class BookmarksService {
       ...new Set([...keyById.values(), ...rows.map(({ titleKey }) => titleKey)]),
     ]);
     const keyOf = (titleKey: string) => canonical.get(titleKey) ?? titleKey;
-    const rowsByGroup = new Map<string, BookmarkRecord[]>();
+    const rowsByGroup = new Map<string, BookmarkState[]>();
     for (const row of rows) {
       const key = keyOf(row.titleKey);
       rowsByGroup.set(key, [...(rowsByGroup.get(key) ?? []), row]);
@@ -320,8 +359,8 @@ export class BookmarksService {
     const { sourceId, opaqueId } = splitCompositeId(titleId);
     const url = decodeTitleId(opaqueId).url;
     try {
-      const { data } = await this.parsersClient.getDetails(sourceId, url);
-      await this.snapshots.record(sourceId, url, data, { force: true });
+      const result = await this.parsersClient.getDetails(sourceId, url);
+      await this.snapshots.record(sourceId, url, result.data, { ...result, force: true });
     } catch (error) {
       this.logger.warn(`Визит ${titleKey}: снимок не обновлён — ${(error as Error).message}`);
     }
@@ -400,7 +439,7 @@ export class BookmarksService {
   /** Все группы пользователя с посчитанными главами — основа списка и счётчиков. */
   private async loadGroups(userId: string) {
     const folders = await this.folders.list(userId);
-    const [rows, progress, sources] = await Promise.all([
+    const [storedRows, progress, sources] = await Promise.all([
       this.read(
         () => this.database.db.select().from(bookmarks).where(eq(bookmarks.userId, userId)),
         [],
@@ -422,19 +461,22 @@ export class BookmarksService {
       ),
       this.sources.listSources(userId),
     ]);
-    if (rows.length === 0) return { folders, groups: [] as CountedBookmarkGroup[] };
+    if (storedRows.length === 0) return { folders, groups: [] as CountedBookmarkGroup[] };
 
-    const keys = [...new Set([...rows, ...progress].map(({ titleKey }) => titleKey))];
-    const [canonical, snapshots] = await Promise.all([
+    const keys = [...new Set([...storedRows, ...progress].map(({ titleKey }) => titleKey))];
+    const [canonical, snapshots, metadata] = await Promise.all([
       this.links.listCanonicalKeys(keys),
       this.loadSnapshots(keys),
+      this.read(() => resolveTitleSnapshots(this.database.db, userId, keys, true), new Map()),
     ]);
+    const rows = attachBookmarkSnapshots(storedRows, metadata);
     const sourceById = new Map(sources.map((source) => [source.id, source]));
     const groups = buildBookmarkGroups({
       rows,
       progress,
       canonical,
       snapshots,
+      metadata,
       sourceAvailability: (sourceId) => toSourceAvailability(sourceById.get(sourceId)),
     });
 
@@ -474,7 +516,7 @@ export class BookmarksService {
             format: IMAGE_FORMAT.WEBP,
           })
         : '',
-      contentRating: snapshot.contentRating,
+      contentRating: snapshot.contentRating ?? CONTENT_RATING.SAFE,
       type: snapshot.type,
       folderId: group.folderId,
       progress: progress && {
@@ -597,7 +639,7 @@ export class BookmarksService {
     return [titleKey, ...(await this.links.listConfirmedGroup(titleKey))];
   }
 
-  private async listGroupRows(userId: string, keys: string[]): Promise<BookmarkRecord[]> {
+  private async listGroupRows(userId: string, keys: string[]): Promise<BookmarkState[]> {
     return this.read(
       () =>
         this.database.db

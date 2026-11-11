@@ -23,7 +23,7 @@ import {
   type MergeBookmarkInsert,
   type MergeFolder,
 } from '../library/library-merge';
-import type { BookmarkRecord } from '../library/models';
+import type { BookmarkState } from '../library/models';
 import { linkKeyOf } from '../matches/title-links.service';
 import type { RawBookmark, RawBookmarkFolder } from '../parsers-client/parsers-client.types';
 import type {
@@ -39,7 +39,7 @@ export type SourceImportPlanInput = {
   siteFolders: RawBookmarkFolder[];
   /** Папки пользователя по порядку вкладок, встроенные уже созданы. */
   folders: BookmarkFolderRecord[];
-  bookmarks: BookmarkRecord[];
+  bookmarks: BookmarkState[];
   progress: ImportProgressMark[];
   /** Канонический ключ группы для ключей пользователя и сайта (TitleLinksService). */
   canonical: ReadonlyMap<string, string>;
@@ -231,7 +231,7 @@ export const buildSourceImportPlan = (input: SourceImportPlanInput): SourceImpor
     }),
   );
 
-  const userGroups = new Map<string, BookmarkRecord[]>();
+  const userGroups = new Map<string, BookmarkState[]>();
   for (const row of input.bookmarks) {
     const key = keyOf(row.titleKey);
     userGroups.set(key, [...(userGroups.get(key) ?? []), row]);

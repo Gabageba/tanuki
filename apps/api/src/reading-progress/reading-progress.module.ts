@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { TitleSnapshotsModule } from '../library/title-snapshots.module';
 import { AdultContentModule } from '../adult-content/adult-content.module';
 import { LibraryModule } from '../library/library.module';
 import { TitleLinksModule } from '../matches/title-links.module';
@@ -13,6 +14,7 @@ import { ReadingProgressService } from './reading-progress.service';
 // DatabaseModule не импортируется: помечен @Global().
 @Module({
   imports: [
+    TitleSnapshotsModule,
     TitleLinksModule,
     ParsersClientModule,
     AdultContentModule,

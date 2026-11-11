@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { TitleSnapshotsService } from '../library/title-snapshots.service';
 import { RESTORE_FOLDER_POLICY, RESTORE_PROGRESS_POLICY } from '@tanuki/contracts';
 import { RestoreInProgressException, SourceAccountRequiredException } from '../common/errors';
 import type { DatabaseService } from '../database/database.service';
@@ -34,7 +35,7 @@ const createService = (getBookmarks: ParsersClientService['getBookmarks']) => {
     folders,
     {} as TitleLinksService,
     {} as NotificationsService,
-    new LibraryMergeService(),
+    new LibraryMergeService({} as TitleSnapshotsService),
     parsersClient,
   );
   return { service, reads };

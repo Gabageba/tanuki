@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { TitleSnapshotsService } from '../library/title-snapshots.service';
 import {
   BACKUP_FORMAT,
   BUILT_IN_BOOKMARK_FOLDER,
@@ -61,7 +62,7 @@ const createLockedService = () => {
     folders,
     {} as TitleLinksService,
     {} as NotificationsService,
-    new LibraryMergeService(),
+    new LibraryMergeService({} as TitleSnapshotsService),
   );
 };
 
@@ -229,7 +230,7 @@ describe('восстановление старых настроек читал�
       folders,
       links,
       {} as NotificationsService,
-      new LibraryMergeService(),
+      new LibraryMergeService({} as TitleSnapshotsService),
     );
     const legacy = Object.fromEntries(
       Object.entries(DEFAULT_READER_SETTINGS).filter(

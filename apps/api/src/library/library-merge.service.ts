@@ -7,6 +7,13 @@ import {
 } from '../common/errors';
 import type { Database } from '../database/database.service';
 import { bookmarkFolders, bookmarks } from '../database/schema';
+import {
+  lockSnapshotKeys,
+  lockSnapshotLifecycle,
+  writeTitleFallbacks,
+} from './title-snapshot-storage';
+import { TitleSnapshotsService } from './title-snapshots.service';
+import { TITLE_SNAPSHOT_ORIGIN, type TitleSnapshotOrigin } from './models';
 import type { FolderRef, GroupMove, MergeBookmarkInsert, MergeFolder } from './library-merge';
 
 export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
@@ -25,6 +32,7 @@ export const chunk = <T>(rows: T[]) =>
  */
 @Injectable()
 export class LibraryMergeService {
+  constructor(private readonly snapshots: TitleSnapshotsService) {}
   /**
    * Одна запись за раз: вторая параллельная (восстановление или импорт) отвечает 409, а не
    * перемешивается с первой. Замок живёт до конца транзакции.
@@ -34,6 +42,7 @@ export class LibraryMergeService {
       sql`SELECT pg_try_advisory_xact_lock(hashtextextended(${`library-merge:${userId}`}, 0)) AS locked`,
     );
     if (!lock?.locked) throw new RestoreInProgressException();
+    await lockSnapshotLifecycle(tx);
   }
 
   /** Новые свои папки — в конце, в порядке набора. Отдаёт id созданных по ключу чужой папки. */
@@ -71,26 +80,53 @@ export class LibraryMergeService {
     inserts: MergeBookmarkInsert[],
     moves: GroupMove[],
     resolve: (ref: FolderRef) => string,
+    provenance: { origin: TitleSnapshotOrigin; fetchedAt: Date } | null = null,
   ): Promise<void> {
+    await lockSnapshotLifecycle(tx);
+    await lockSnapshotKeys(
+      tx,
+      inserts.map(({ titleKey }) => titleKey),
+    );
     for (const rows of chunk(inserts)) {
-      await tx
+      const inserted = await tx
         .insert(bookmarks)
         .values(
           rows.map(({ row, titleKey, sourceId, folder }) => ({
             userId,
             titleKey,
             sourceId,
-            titleId: row.titleId,
             folderId: resolve(folder),
-            name: row.name,
-            coverUrl: row.coverUrl,
-            contentRating: row.contentRating,
-            type: row.type,
             visitedAt: new Date(row.visitedAt),
             createdAt: new Date(row.createdAt),
           })),
         )
-        .onConflictDoNothing();
+        .onConflictDoNothing()
+        .returning({ titleKey: bookmarks.titleKey });
+      const accepted = new Set(inserted.map(({ titleKey }) => titleKey));
+      const metadata = rows
+        .filter(({ titleKey }) => accepted.has(titleKey))
+        .map(({ row, titleKey, sourceId }) => ({
+          userId,
+          titleKey,
+          sourceId,
+          titleId: row.titleId,
+          name: row.name,
+          coverUrl: row.coverUrl,
+          contentRating: row.contentRating,
+          type: row.type,
+          updatedAt: new Date(row.updatedAt ?? row.createdAt),
+        }));
+      if (provenance) {
+        switch (provenance.origin) {
+          case TITLE_SNAPSHOT_ORIGIN.SOURCE_BOOKMARK:
+            await this.snapshots.recordSourceBookmarks(tx, metadata, provenance.fetchedAt);
+            break;
+          case TITLE_SNAPSHOT_ORIGIN.SOURCE_DETAILS:
+            throw new Error('Merge expects a bookmark list, not full details');
+        }
+      } else {
+        await writeTitleFallbacks(tx, metadata);
+      }
     }
     for (const { titleKeys, folder } of moves) {
       await tx
