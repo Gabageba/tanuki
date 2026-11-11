@@ -75,7 +75,9 @@ export class CatalogService {
 
   async getTitleDetails(sourceId: string, titleId: string): Promise<TitleDetailsResponse> {
     const ref = decodeTitleId(titleId);
-    const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
+    const result = await this.parsersClient.getDetails(sourceId, ref.url);
+    const { data: raw, stale } = result;
+    this.snapshots.recordQuietly(sourceId, ref.url, raw, result);
     await this.adultContent.assertTitleVisible(sourceId, raw.contentRating);
     return {
       title: normalizeTitle(this.env, sourceId, raw),
@@ -90,11 +92,12 @@ export class CatalogService {
     branch: string | undefined,
   ): Promise<ChaptersResponse> {
     const ref = decodeTitleId(titleId);
-    const { data: raw, stale } = await this.parsersClient.getDetails(sourceId, ref.url);
+    const result = await this.parsersClient.getDetails(sourceId, ref.url);
+    const { data: raw, stale } = result;
+    this.snapshots.recordQuietly(sourceId, ref.url, raw, result);
     await this.adultContent.assertTitleVisible(sourceId, raw.contentRating);
     // Дотяжка: открытая страница тайтла обновляет его снимок глав — новые главы закладок видны и
     // без крона. Пишется то, что уходит клиенту, так что кеш деталей этому не мешает.
-    this.snapshots.recordQuietly(sourceId, ref.url, raw);
     const chapters = raw.chapters ?? [];
     const targetBranch = branch === undefined ? pickDefaultBranch(chapters) : toBranchKey(branch);
     const filtered = chapters
@@ -150,6 +153,7 @@ export class CatalogService {
           ] as const;
         })();
     const details = detailsResult.data;
+    this.snapshots.recordQuietly(sourceId, titleRef.url, details, detailsResult);
     await this.adultContent.assertTitleVisible(sourceId, details.contentRating);
 
     const siblings = (details.chapters ?? [])

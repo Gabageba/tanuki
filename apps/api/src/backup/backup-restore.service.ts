@@ -22,6 +22,7 @@ import {
   searchHistory,
   userSettings,
 } from '../database/schema';
+import { lockSnapshotKeys, writeTitleFallbacks } from '../library/title-snapshot-storage';
 import { TitleLinksService } from '../matches/title-links.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BookmarkFoldersService } from '../library/bookmark-folders.service';
@@ -128,6 +129,10 @@ export class BackupRestoreService {
 
         const state = await this.loadState(tx, userId, backup);
         const restorePlan = buildRestorePlan({ ...state, backup, folderPolicy, progressPolicy });
+        await lockSnapshotKeys(tx, [
+          ...restorePlan.bookmarkInserts.map(({ titleKey }) => titleKey),
+          ...restorePlan.progressUpserts.map(({ titleKey }) => titleKey),
+        ]);
         const folderIds = await this.merge.writeFolders(
           tx,
           userId,
@@ -216,6 +221,19 @@ export class BackupRestoreService {
   }
 
   private async writeProgress(tx: Transaction, userId: string, plan: RestorePlan): Promise<void> {
+    await writeTitleFallbacks(
+      tx,
+      plan.progressUpserts.map((row) => ({
+        userId,
+        titleKey: row.titleKey,
+        titleId: row.titleId,
+        name: row.titleName,
+        coverUrl: row.coverUrl,
+        contentRating: row.contentRating,
+        type: row.type,
+        updatedAt: new Date(row.updatedAt),
+      })),
+    );
     for (const rows of chunk(plan.progressUpserts)) {
       await tx
         .insert(readingProgress)
@@ -230,11 +248,6 @@ export class BackupRestoreService {
             chapterTitle: row.chapterTitle,
             branchId: row.branchId,
             pageIndex: row.pageIndex,
-            titleId: row.titleId,
-            titleName: row.titleName,
-            coverUrl: row.coverUrl,
-            contentRating: row.contentRating,
-            type: row.type,
             hiddenAt: row.hiddenAt ? new Date(row.hiddenAt) : null,
             updatedAt: new Date(row.updatedAt),
           })),
@@ -249,11 +262,6 @@ export class BackupRestoreService {
             chapterTitle: sql`excluded.chapter_title`,
             branchId: sql`excluded.branch_id`,
             pageIndex: sql`excluded.page_index`,
-            titleId: sql`excluded.title_id`,
-            titleName: sql`excluded.title_name`,
-            coverUrl: sql`excluded.cover_url`,
-            contentRating: sql`excluded.content_rating`,
-            type: sql`excluded.type`,
             hiddenAt: sql`excluded.hidden_at`,
             updatedAt: sql`excluded.updated_at`,
           },

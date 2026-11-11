@@ -1,7 +1,27 @@
-import type { BookmarkAvailability } from '@tanuki/contracts';
+import type {
+  BookmarkAvailability,
+  ContentRating,
+  EnumLiteralsOf,
+  TitleType,
+} from '@tanuki/contracts';
 import type { bookmarks, readingProgress, titleChapterSnapshots } from '../database/schema';
 
-export type BookmarkRecord = typeof bookmarks.$inferSelect;
+export const TITLE_SNAPSHOT_ORIGIN = {
+  SOURCE_DETAILS: 'sourceDetails',
+  SOURCE_BOOKMARK: 'sourceBookmark',
+} as const;
+export type TitleSnapshotOrigin = EnumLiteralsOf<typeof TITLE_SNAPSHOT_ORIGIN>;
+
+export type TitleMetadata = {
+  titleId: string | null;
+  name: string | null;
+  coverUrl: string | null;
+  contentRating: ContentRating | null;
+  type: TitleType | null;
+};
+export type ResolvedTitleMetadata = TitleMetadata & { titleId: string; name: string };
+export type BookmarkState = typeof bookmarks.$inferSelect;
+export type BookmarkRecord = BookmarkState & ResolvedTitleMetadata;
 
 export type ProgressRecord = Pick<
   typeof readingProgress.$inferSelect,
@@ -33,8 +53,8 @@ export type BookmarkGroup = {
   folderId: string;
   /** Разные папки строк группы, свежая первой; одна папка — конфликта нет. */
   folderIds: string[];
-  /** Откуда взяты название, обложка, рейтинг и тип — строка цели или самая ранняя. */
-  snapshot: BookmarkRecord;
+  /** Целостные метаданные источника назначения: общий снимок, иначе личный резерв. */
+  snapshot: ResolvedTitleMetadata & { sourceId: string };
   target: BookmarkCandidate;
   /** Отметка чтения цели; null — на цели не читали. */
   progress: ProgressRecord | null;
@@ -109,3 +129,6 @@ export const SNAPSHOT_REFRESH_MIN_INTERVAL_MS = 5 * 60_000;
 
 /** Сколько строк глав вставлять за раз: Postgres ограничивает число параметров запроса. */
 export const SNAPSHOT_INSERT_CHUNK = 1000;
+
+/** Ограничение расхода shared-memory PostgreSQL на замки при большом импорте. */
+export const SNAPSHOT_LOCK_BUCKETS = 256;

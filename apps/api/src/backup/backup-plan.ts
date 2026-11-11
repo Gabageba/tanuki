@@ -13,7 +13,7 @@ import type { BookmarkFolderRecord } from '../library/bookmark-folders.service';
 import { resolveGroupFolder } from '../library/bookmark-groups';
 import { titleKeyOf } from '../library/bookmarks.service';
 import { isSameRef, planFolders } from '../library/library-merge';
-import type { BookmarkRecord } from '../library/models';
+import type { BookmarkState } from '../library/models';
 import type {
   BookmarkInsert,
   FolderRef,
@@ -29,7 +29,7 @@ export type RestorePlanInput = {
   knownSourceIds: ReadonlySet<string>;
   /** Папки пользователя, встроенные уже созданы. */
   folders: BookmarkFolderRecord[];
-  bookmarks: BookmarkRecord[];
+  bookmarks: BookmarkState[];
   progress: ProgressMark[];
   /** chapterId глав, что уже в статистике. */
   chapterReadIds: ReadonlySet<string>;
@@ -94,7 +94,7 @@ const resolveBookmarkKey = (row: BackupBookmark) => {
  */
 const planBookmarks = (input: RestorePlanInput, targetOf: (folderKey: string) => FolderTarget) => {
   const keyOf = (titleKey: string) => input.canonical.get(titleKey) ?? titleKey;
-  const userGroups = new Map<string, BookmarkRecord[]>();
+  const userGroups = new Map<string, BookmarkState[]>();
   for (const row of input.bookmarks) {
     const key = keyOf(row.titleKey);
     userGroups.set(key, [...(userGroups.get(key) ?? []), row]);

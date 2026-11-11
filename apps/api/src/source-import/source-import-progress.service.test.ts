@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { TitleSnapshotsService } from '../library/title-snapshots.service';
 import {
   DEFAULT_BRANCH_ID,
   RESTORE_PROGRESS_POLICY,
@@ -161,8 +162,7 @@ describe('toImportedProgress', () => {
         titleId: 'title-id',
         pageIndex,
       } as Parameters<typeof toImportedProgress>[0];
-      const title = { title: 'Релиз', coverUrl: null, contentRating: null } as RawTitle;
-      expect(toImportedProgress(row, title, chapter({ number: 2 }))).toMatchObject({
+      expect(toImportedProgress(row, chapter({ number: 2 }))).toMatchObject({
         chapterNumber: 2,
         pageIndex: pageIndex ?? 0,
         titleKey: row.titleKey,
@@ -216,7 +216,13 @@ describe('page progress completion', () => {
         .mockReturnValueOnce({ from: () => ({ groupBy: () => ({ having: async () => [] }) }) });
       const values = vi.fn().mockReturnValue({ onConflictDoUpdate: async () => {} });
       const set = vi.fn().mockReturnValue({ where: async () => {} });
-      const db = { select, insert: () => ({ values }), update: () => ({ set }) };
+      const db = {
+        select,
+        insert: () => ({ values }),
+        update: () => ({ set }),
+        execute: async () => [],
+        transaction: async <T>(run: (tx: unknown) => Promise<T>): Promise<T> => run(db),
+      };
       const database = {
         db,
         withFallback: (fn: () => Promise<unknown>) => fn(),
@@ -230,6 +236,7 @@ describe('page progress completion', () => {
         parsers,
         { listConfirmedGroup: async () => [] } as unknown as TitleLinksService,
         {} as NotificationsService,
+        { record: async () => {} } as unknown as TitleSnapshotsService,
       );
       await service.processDue();
       expect(parsers.getPages).toHaveBeenCalledWith(row.sourceId, '/c');

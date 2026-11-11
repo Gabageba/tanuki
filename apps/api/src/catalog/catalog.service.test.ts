@@ -50,7 +50,7 @@ const makeService = (error: Error, chapters: RawChapter[] = [CHAPTER]) => {
     { IMG_SIGN_SECRET: 'test-secret' } as Env,
     parsers as unknown as ParsersClientService,
     { assertTitleVisible: vi.fn().mockResolvedValue(undefined) } as unknown as AdultContentService,
-    {} as TitleSnapshotsService,
+    { recordQuietly: vi.fn() } as unknown as TitleSnapshotsService,
   );
   return { service, parsers };
 };

@@ -13,6 +13,8 @@ import type {
   BookmarkCandidate,
   BookmarkGroup,
   BookmarkRecord,
+  BookmarkState,
+  TitleMetadata,
   BranchStat,
   CountedBookmarkGroup,
   ProgressRecord,
@@ -22,14 +24,14 @@ import type {
 const byTimeDesc = (a: Date, b: Date) => b.getTime() - a.getTime();
 
 /** Строка, которую меняли последней: её папка побеждает, когда папки группы разошлись. */
-const freshestRow = (rows: BookmarkRecord[]) =>
+const freshestRow = (rows: BookmarkState[]) =>
   rows.reduce((best, row) => (row.updatedAt > best.updatedAt ? row : best));
 
 /**
  * Разные папки строк группы — свежая первой — и источники в каждой. Одна папка — конфликта нет:
  * функция вернёт один элемент.
  */
-export const toFolderCopies = (rows: BookmarkRecord[]): BookmarkFolderCopy[] => {
+export const toFolderCopies = (rows: BookmarkState[]): BookmarkFolderCopy[] => {
   const copies = new Map<string, { sourceIds: string[]; updatedAt: Date }>();
   for (const row of rows) {
     const copy = copies.get(row.folderId) ?? { sourceIds: [], updatedAt: row.updatedAt };
@@ -43,7 +45,7 @@ export const toFolderCopies = (rows: BookmarkRecord[]): BookmarkFolderCopy[] => 
 };
 
 /** Папка группы: у всех строк одна — она, разошлись — папка самой свежей строки. */
-export const resolveGroupFolder = (rows: BookmarkRecord[]) => freshestRow(rows).folderId;
+export const resolveGroupFolder = (rows: BookmarkState[]) => freshestRow(rows).folderId;
 
 /**
  * Доступность копии: сначала источник (выключен, скрыт настройкой 18+ или лежит), потом сам
@@ -63,6 +65,7 @@ type BuildGroupsInput = {
   /** Ключ тайтла → канонический ключ его группы; ключи без связей — сами себе группа. */
   canonical: Map<string, string>;
   snapshots: Map<string, SnapshotRecord>;
+  metadata: Map<string, TitleMetadata>;
   sourceAvailability: (sourceId: string) => BookmarkAvailability;
 };
 
@@ -84,6 +87,7 @@ export const buildBookmarkGroups = ({
   progress,
   canonical,
   snapshots,
+  metadata,
   sourceAvailability,
 }: BuildGroupsInput): BookmarkGroup[] => {
   const keyOf = (titleKey: string) => canonical.get(titleKey) ?? titleKey;
@@ -105,11 +109,11 @@ export const buildBookmarkGroups = ({
       byTimeDesc(a.updatedAt, b.updatedAt),
     );
     const rowsByAge = [...groupRows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    const rowByKey = new Map(groupRows.map((row) => [row.titleKey, row]));
 
     const toCandidate = (titleKey: string, sourceId: string): BookmarkCandidate | null => {
-      const titleId = rowByKey.get(titleKey)?.titleId ?? snapshots.get(titleKey)?.titleId;
-      if (!titleId) return null;
+      const snapshot = metadata.get(titleKey);
+      const titleId = snapshot?.titleId;
+      if (!titleId || !snapshot.name) return null;
       return {
         titleKey,
         sourceId,
@@ -131,7 +135,7 @@ export const buildBookmarkGroups = ({
       candidates.push(candidate);
     }
 
-    // Строки закладок всегда несут titleId, так что хотя бы один кандидат есть.
+    // Строки закладок разрешены из общего или личного снимка.
     const target =
       candidates.find(({ availability }) => availability === BOOKMARK_AVAILABILITY.AVAILABLE) ??
       candidates[0]!;
@@ -142,7 +146,12 @@ export const buildBookmarkGroups = ({
       rows: groupRows,
       folderId: resolveGroupFolder(groupRows),
       folderIds: toFolderCopies(groupRows).map(({ folderId }) => folderId),
-      snapshot: rowByKey.get(target.titleKey) ?? firstRow,
+      snapshot: {
+        ...metadata.get(target.titleKey)!,
+        titleId: target.titleId,
+        name: metadata.get(target.titleKey)!.name!,
+        sourceId: target.sourceId,
+      },
       target,
       progress: groupProgress.find(({ titleKey }) => titleKey === target.titleKey) ?? null,
       otherSources: candidates.filter(
@@ -259,7 +268,7 @@ export const sortBookmarkGroups = (
 export const matchesBookmarkQuery = (group: BookmarkGroup, query: string | undefined) => {
   const needle = query?.trim().toLocaleLowerCase();
   if (!needle) return true;
-  return group.rows.some((row) => row.name.toLocaleLowerCase().includes(needle));
+  return group.snapshot.name.toLocaleLowerCase().includes(needle);
 };
 
 /** Ветка главы в снимке — так же, как в reading_progress. */

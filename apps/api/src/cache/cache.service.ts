@@ -7,6 +7,7 @@ import type { CacheTtlSpec } from './cache.constants';
 type CacheEnvelope<T> = {
   value: T;
   storedAt: number;
+  fetchedAt?: number;
 };
 
 export type CacheResult<T> = {
@@ -14,6 +15,7 @@ export type CacheResult<T> = {
   stale: boolean;
   /** Значение взято из кеша, а не только что получено fetch'ем. */
   fromCache: boolean;
+  fetchedAt?: number;
 };
 
 export type GetOrSetOptions<T> = {
@@ -58,17 +60,28 @@ export class CacheService implements OnModuleDestroy {
     const envelope = await this.readEnvelope<T>(key);
 
     if (!options?.force && envelope && Date.now() - envelope.storedAt < ttl.freshSeconds * 1000) {
-      return { value: envelope.value, stale: false, fromCache: true };
+      return {
+        value: envelope.value,
+        stale: false,
+        fromCache: true,
+        fetchedAt: envelope.fetchedAt ?? envelope.storedAt,
+      };
     }
 
     try {
+      const fetchedAt = Date.now();
       const value = await fetch();
       const shared = options?.toShared ? options.toShared(value) : value;
-      await this.writeEnvelope(key, ttl, { value: shared, storedAt: Date.now() });
-      return { value, stale: false, fromCache: false };
+      await this.writeEnvelope(key, ttl, { value: shared, storedAt: Date.now(), fetchedAt });
+      return { value, stale: false, fromCache: false, fetchedAt };
     } catch (error) {
       if (envelope) {
-        return { value: envelope.value, stale: true, fromCache: true };
+        return {
+          value: envelope.value,
+          stale: true,
+          fromCache: true,
+          fetchedAt: envelope.fetchedAt ?? envelope.storedAt,
+        };
       }
       throw error;
     }

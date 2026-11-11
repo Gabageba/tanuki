@@ -2,6 +2,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { and, asc, eq, inArray, lte, sql } from 'drizzle-orm';
+import type { CachedResult } from '../parsers-client/parsers-client.service';
 import {
   DEFAULT_BRANCH_ID,
   NOTIFICATION_TYPE,
@@ -10,6 +11,8 @@ import {
 import { SourceAccountRequiredException } from '../common/errors';
 import { groupByBranch } from '../common/normalize';
 import { decodeTitleId, encodeChapterId, splitCompositeId } from '../common/opaque-id';
+import { TitleSnapshotsService } from '../library/title-snapshots.service';
+import { lockSnapshotLifecycle, writeTitleFallbacks } from '../library/title-snapshot-storage';
 import { DatabaseService } from '../database/database.service';
 import { readingProgress, sourceImportProgress } from '../database/schema';
 import { TitleLinksService } from '../matches/title-links.service';
@@ -62,7 +65,7 @@ export const findChapterByPosition = (chapters: RawChapter[], position: ChapterP
 };
 
 /** Отметка импорта: точная страница, если известна, иначе начало главы. */
-export const toImportedProgress = (row: ProgressRow, title: RawTitle, chapter: RawChapter) => ({
+export const toImportedProgress = (row: ProgressRow, chapter: RawChapter) => ({
   userId: row.userId,
   titleKey: row.titleKey,
   sourceId: row.sourceId,
@@ -72,11 +75,6 @@ export const toImportedProgress = (row: ProgressRow, title: RawTitle, chapter: R
   chapterTitle: chapter.title,
   branchId: chapter.branch ?? DEFAULT_BRANCH_ID,
   pageIndex: row.pageIndex ?? 0,
-  titleId: row.titleId,
-  titleName: title.title,
-  coverUrl: title.coverUrl,
-  contentRating: title.contentRating,
-  type: title.type ?? null,
   updatedAt: new Date(),
 });
 
@@ -124,6 +122,7 @@ export class SourceImportProgressService {
     private readonly parsersClient: ParsersClientService,
     private readonly links: TitleLinksService,
     private readonly notifications: NotificationsService,
+    private readonly snapshots: TitleSnapshotsService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -169,25 +168,26 @@ export class SourceImportProgressService {
   }
 
   private async processOne(row: ProgressRow, now: Date): Promise<void> {
-    let title: RawTitle;
+    let result: CachedResult<RawTitle>;
     try {
       const { url } = decodeTitleId(splitCompositeId(row.titleId).opaqueId);
-      title = await runAsViewer({ kind: VIEWER_KIND.USER, userId: row.userId }, async () => {
-        const { data } = await this.parsersClient.getDetails(row.sourceId, url);
-        return data;
+      result = await runAsViewer({ kind: VIEWER_KIND.USER, userId: row.userId }, async () => {
+        const result = await this.parsersClient.getDetails(row.sourceId, url);
+        await this.snapshots.record(row.sourceId, url, result.data, result);
+        return result;
       });
     } catch (error) {
       await this.markFailed(row, now, error);
       return;
     }
 
-    const chapter = findChapterByPosition(title.chapters ?? [], row);
+    const chapter = findChapterByPosition(result.data.chapters ?? [], row);
     if (!chapter) {
       await this.setStatus(row.id, { status: SOURCE_IMPORT_PROGRESS_STATUS.SKIPPED });
       return;
     }
     try {
-      await this.writeProgress(row, title, chapter);
+      await this.writeProgress(row, chapter, result);
     } catch (error) {
       await this.markFailed(row, now, error);
       return;
@@ -200,7 +200,11 @@ export class SourceImportProgressService {
    * человек мог дочитать дальше, пока строка ждала. Отметки нет ни на одном источнике группы —
    * пишется всегда.
    */
-  private async writeProgress(row: ProgressRow, title: RawTitle, chapter: RawChapter) {
+  private async writeProgress(
+    row: ProgressRow,
+    chapter: RawChapter,
+    result: CachedResult<RawTitle>,
+  ) {
     let pageIndex = row.pageIndex;
     if (pageIndex != null) {
       const { data } = await runAsViewer({ kind: VIEWER_KIND.USER, userId: row.userId }, () =>
@@ -229,16 +233,34 @@ export class SourceImportProgressService {
     );
     if (!winsSiteProgress(row.progressPolicy, position, mine)) return;
 
-    const values = toImportedProgress(position, title, chapter);
+    const values = toImportedProgress(position, chapter);
     // Ключ строки при конфликте не переписывается — только отметка и снимок.
     const { userId: _userId, titleKey: _titleKey, ...update } = values;
-    await this.database.db
-      .insert(readingProgress)
-      .values(values)
-      .onConflictDoUpdate({
-        target: [readingProgress.userId, readingProgress.titleKey],
-        set: { ...update, hiddenAt: null },
-      });
+    await this.database.db.transaction(async (tx) => {
+      await lockSnapshotLifecycle(tx);
+      const { url } = decodeTitleId(splitCompositeId(row.titleId).opaqueId);
+      if (result.stale)
+        await writeTitleFallbacks(tx, [
+          {
+            userId: row.userId,
+            titleKey: row.titleKey,
+            titleId: row.titleId,
+            name: result.data.title,
+            coverUrl: result.data.coverUrl,
+            contentRating: result.data.contentRating,
+            type: result.data.type ?? null,
+            updatedAt: new Date(),
+          },
+        ]);
+      await this.snapshots.record(row.sourceId, url, result.data, { ...result, tx });
+      await tx
+        .insert(readingProgress)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [readingProgress.userId, readingProgress.titleKey],
+          set: { ...update, hiddenAt: null },
+        });
+    });
   }
 
   private async markFailed(row: ProgressRow, now: Date, error: unknown): Promise<void> {

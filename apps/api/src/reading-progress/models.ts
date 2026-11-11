@@ -1,4 +1,4 @@
-import type { ReadingMarkConfidence } from '@tanuki/contracts';
+import type { ContentRating, ReadingMarkConfidence, TitleType } from '@tanuki/contracts';
 import type { readingProgress } from '../database/schema';
 import type { RawChapter } from '../parsers-client/parsers-client.types';
 
@@ -22,6 +22,13 @@ export type AlignedChapter = {
 export type ChapterSnapshot = Pick<RawChapter, 'volume' | 'number' | 'title'>;
 
 export type ReadingProgressRow = typeof readingProgress.$inferSelect;
+export type ReadingProgressWithSnapshot = ReadingProgressRow & {
+  titleId: string;
+  titleName: string;
+  coverUrl: string | null;
+  contentRating: ContentRating | null;
+  type: TitleType | null;
+};
 
 /**
  * Последняя глава ветки по снимку глав: том и номер самой поздней и наибольший номер в ветке —

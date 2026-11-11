@@ -20,6 +20,14 @@ import { NotFoundApiException, StorageUnavailableException } from '../common/err
 import { groupByBranch, normalizeChapter, titleIdOf } from '../common/normalize';
 import { decodeChapterId, decodeTitleId, splitCompositeId } from '../common/opaque-id';
 import { DatabaseService } from '../database/database.service';
+import { TitleSnapshotsService } from '../library/title-snapshots.service';
+import {
+  isResolvedMetadata,
+  lockSnapshotLifecycle,
+  resolveTitleSnapshots,
+  writeTitleFallbacks,
+} from '../library/title-snapshot-storage';
+import type { TitleMetadata } from '../library/models';
 import { BookmarksService } from '../library/bookmarks.service';
 import { readingProgress, titleChapterSnapshots, titleChaptersSeen } from '../database/schema';
 import { IMAGE_FORMAT } from '../img-proxy/models';
@@ -27,10 +35,10 @@ import { buildSignedImageUrl } from '../img-proxy/sign.util';
 import { SourcesService } from '../sources/sources.service';
 import { linkKeyOf, parseLinkKey, TitleLinksService } from '../matches/title-links.service';
 import { ParsersClientService } from '../parsers-client/parsers-client.service';
-import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.types';
+import type { RawChapter } from '../parsers-client/parsers-client.types';
 import { alignBySnapshot, alignChapter } from './chapter-alignment';
 import { isOnLastChapter, pickContinueReadingRows } from './continue-reading';
-import type { LatestChapter, ReadingProgressRow } from './models';
+import type { LatestChapter, ReadingProgressRow, ReadingProgressWithSnapshot } from './models';
 
 /**
  * Сколько строк прогресса смотрится ради «Продолжить чтение». С запасом против
@@ -45,15 +53,6 @@ const CONTINUE_READING_SCAN_LIMIT = 200;
  * этого срока новая глава не вернула бы тайтл в ленту никогда.
  */
 const LATEST_CHAPTER_MAX_AGE_MS = 24 * 60 * 60_000;
-
-/** Снимок тайтла для «Продолжить чтение» — из деталей, которые источник уже отдал. */
-const toTitleSnapshot = (titleId: string, raw: RawTitle) => ({
-  titleId,
-  titleName: raw.title,
-  coverUrl: raw.coverUrl,
-  contentRating: raw.contentRating ?? CONTENT_RATING.SAFE,
-  type: raw.type ?? null,
-});
 
 export const toReadingProgress = (row: ReadingProgressRow): ReadingProgress => ({
   sourceId: row.sourceId,
@@ -125,13 +124,14 @@ export const findTitleChapter = async (
   if (chapterSourceId !== sourceId) throw new NotFoundApiException('chapterNotFromThisTitle');
 
   const chapterRef = decodeChapterId(opaqueId);
-  const { data } = await parsersClient.getDetails(sourceId, titleRef.url);
+  const result = await parsersClient.getDetails(sourceId, titleRef.url);
+  const data = result.data;
   const chapter = (data.chapters ?? []).find(
     (item) => item.id === chapterRef.id && item.branch === chapterRef.branch,
   );
   if (!chapter) throw new NotFoundApiException('chapterNotFound');
 
-  return { titleRef, details: data, chapter };
+  return { titleRef, details: data, chapter, result };
 };
 
 @Injectable()
@@ -144,6 +144,7 @@ export class ReadingProgressService {
     private readonly adultContent: AdultContentService,
     private readonly bookmarks: BookmarksService,
     private readonly sources: SourcesService,
+    private readonly snapshots: TitleSnapshotsService,
   ) {}
 
   /**
@@ -233,7 +234,7 @@ export class ReadingProgressService {
     titleId: string,
     body: UpdateReadingProgressRequest,
   ): Promise<ReadingProgress> {
-    const { titleRef, details, chapter } = await findTitleChapter(
+    const { titleRef, details, chapter, result } = await findTitleChapter(
       this.parsersClient,
       sourceId,
       titleId,
@@ -241,8 +242,6 @@ export class ReadingProgressService {
     );
 
     const values = {
-      // Снимок обновляется вместе с отметкой: «Продолжить чтение» рисует карточку по нему.
-      ...toTitleSnapshot(`${sourceId}:${titleId}`, details),
       sourceId,
       chapterId: body.chapterId,
       chapterVolume: chapter.volume,
@@ -254,17 +253,36 @@ export class ReadingProgressService {
 
     // Как и в остальных записях, недоступная база — ошибка: иначе отметка молча потеряется, а
     // интерфейс покажет её сохранённой.
-    const row = await this.database.withFallback(async () => {
-      const [saved] = await this.database.db
-        .insert(readingProgress)
-        .values({ userId, titleKey: linkKeyOf(sourceId, titleRef.url), ...values })
-        .onConflictDoUpdate({
-          target: [readingProgress.userId, readingProgress.titleKey],
-          set: { ...values, updatedAt: sql`now()` },
-        })
-        .returning();
-      return saved ?? null;
-    }, null);
+    const row = await this.database.withFallback(
+      () =>
+        this.database.db.transaction(async (tx) => {
+          await lockSnapshotLifecycle(tx);
+          const titleKey = linkKeyOf(sourceId, titleRef.url);
+          await writeTitleFallbacks(tx, [
+            {
+              userId,
+              titleKey,
+              titleId: titleIdOf(sourceId, details),
+              name: details.title,
+              coverUrl: details.coverUrl,
+              contentRating: details.contentRating,
+              type: details.type ?? null,
+              updatedAt: new Date(),
+            },
+          ]);
+          await this.snapshots.record(sourceId, titleRef.url, details, { ...result, tx });
+          const [saved] = await tx
+            .insert(readingProgress)
+            .values({ userId, titleKey: linkKeyOf(sourceId, titleRef.url), ...values })
+            .onConflictDoUpdate({
+              target: [readingProgress.userId, readingProgress.titleKey],
+              set: { ...values, updatedAt: sql`now()` },
+            })
+            .returning();
+          return saved ?? null;
+        }),
+      null,
+    );
 
     if (!row) throw new StorageUnavailableException();
     // Чтение главы — визит в группу: пометка «обновился» на карточке закладки снимается. Отметка
@@ -304,11 +322,23 @@ export class ReadingProgressService {
     const latest = await this.listLatestChapters(visible);
     const picked = visible.filter((row) => !isOnLastChapter(row, latest.get(row.titleKey)));
 
+    const metadata = await this.database.withFallback(
+      () =>
+        resolveTitleSnapshots(
+          this.database.db,
+          userId,
+          picked.map(({ titleKey }) => titleKey),
+          true,
+        ),
+      new Map<string, TitleMetadata>(),
+    );
     const items: ContinueReadingItem[] = [];
     for (let start = 0; start < picked.length && items.length < CONTINUE_READING_LIMIT;) {
       const batch = picked.slice(start, start + CONTINUE_READING_LIMIT - items.length);
       start += batch.length;
-      const resolved = await Promise.all(batch.map((row) => this.withSnapshot(row)));
+      const resolved = await Promise.all(
+        batch.map((row) => this.withSnapshot(row, metadata.get(row.titleKey))),
+      );
       for (const row of resolved) {
         if (row) items.push(this.toContinueReadingItem(row));
       }
@@ -406,28 +436,34 @@ export class ReadingProgressService {
   }
 
   /** Строка со снимком тайтла; без снимка — дописывает его из деталей источника. */
-  private async withSnapshot(row: ReadingProgressRow): Promise<ReadingProgressRow | null> {
-    if (row.titleId && row.titleName) return row;
+  private async withSnapshot(
+    row: ReadingProgressRow,
+    metadata: TitleMetadata | undefined,
+  ): Promise<ReadingProgressWithSnapshot | null> {
+    if (isResolvedMetadata(metadata))
+      return { ...row, ...metadata, titleId: metadata.titleId, titleName: metadata.name };
     try {
       const { url } = parseLinkKey(row.titleKey);
-      const { data } = await this.parsersClient.getDetails(row.sourceId, url);
-      const snapshot = toTitleSnapshot(titleIdOf(row.sourceId, data), data);
-      // Не записался (база недоступна) — карточку всё равно отдаём, снимок допишется в следующий раз.
-      await this.database.withFallback(async () => {
-        await this.database.db
-          .update(readingProgress)
-          .set(snapshot)
-          .where(
-            and(eq(readingProgress.userId, row.userId), eq(readingProgress.titleKey, row.titleKey)),
-          );
-      }, undefined);
-      return { ...row, ...snapshot };
+      const result = await this.parsersClient.getDetails(row.sourceId, url);
+      const data = result.data;
+      await this.database.withFallback(
+        () => this.snapshots.record(row.sourceId, url, data, result),
+        undefined,
+      );
+      return {
+        ...row,
+        titleId: titleIdOf(row.sourceId, data),
+        titleName: data.title,
+        coverUrl: data.coverUrl,
+        contentRating: data.contentRating,
+        type: data.type ?? null,
+      };
     } catch {
       return null;
     }
   }
 
-  private toContinueReadingItem(row: ReadingProgressRow): ContinueReadingItem {
+  private toContinueReadingItem(row: ReadingProgressWithSnapshot): ContinueReadingItem {
     return {
       title: {
         id: row.titleId ?? '',

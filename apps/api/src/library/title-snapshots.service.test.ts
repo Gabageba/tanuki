@@ -5,7 +5,7 @@ import type { RawChapter, RawTitle } from '../parsers-client/parsers-client.type
 import { TitleSnapshotsService } from './title-snapshots.service';
 
 type SeenValue = { chapterId: string; branchId: string; baseline: boolean };
-type SnapshotValue = { chaptersCount?: number };
+type SnapshotValue = { chaptersCount?: number | null };
 
 /**
  * База, в которой снимок тайтла уже есть (checkedAt) или его нет (null). missing — строку оставил
@@ -18,12 +18,24 @@ const createService = (
   const seen: SeenValue[] = [];
   const snapshots: SnapshotValue[] = [];
   const db = {
+    transaction: async <T>(run: (tx: unknown) => Promise<T>): Promise<T> => run(db),
+    execute: async () => [],
+    delete: () => ({ where: async () => {} }),
+    update: () => ({
+      set: (value: SnapshotValue) => ({
+        where: async () => {
+          snapshots.push(value);
+        },
+      }),
+    }),
     select: () => ({
       from: (table: unknown) => ({
         where: () => ({
           limit: () => {
             if (table === titleChaptersSeen) return Promise.resolve(hasSeen ? [{}] : []);
-            return Promise.resolve(checkedAt ? [{ checkedAt, missing }] : []);
+            return Promise.resolve(
+              checkedAt ? [{ checkedAt, missing, chaptersInitialized: !missing || hasSeen }] : [],
+            );
           },
         }),
       }),
@@ -31,7 +43,7 @@ const createService = (
     insert: (table: unknown) => ({
       values: (values: SeenValue[] | SnapshotValue) => {
         if (table === titleChaptersSeen) seen.push(...(values as SeenValue[]));
-        else snapshots.push(values as SnapshotValue);
+
         return {
           onConflictDoUpdate: () => Promise.resolve(),
           onConflictDoNothing: () => Promise.resolve(),
@@ -58,7 +70,15 @@ const chapter = (id: number, overrides: Partial<RawChapter> = {}) =>
     ...overrides,
   }) as RawChapter;
 
-const title = (chapters: RawChapter[]) => ({ id: 1, url: '/title', chapters }) as RawTitle;
+const title = (chapters: RawChapter[]) =>
+  ({
+    id: 1,
+    url: '/title',
+    title: 'Тайтл',
+    coverUrl: null,
+    contentRating: null,
+    chapters,
+  }) as RawTitle;
 
 describe('TitleSnapshotsService.record', () => {
   it('запоминает число глав самой длинной ветки, а ответ без глав его не трогает', async () => {
@@ -72,7 +92,7 @@ describe('TitleSnapshotsService.record', () => {
     await service.record('remanga', '/title', title([]));
     await service.record('remanga', '/title', { id: 1, url: '/title' } as RawTitle);
 
-    expect(snapshots.map(({ chaptersCount }) => chaptersCount)).toEqual([2, 0, undefined]);
+    expect(snapshots.map(({ chaptersCount }) => chaptersCount)).toEqual([2, 0]);
   });
 
   it('у тайтла с платными главами число неизвестно — список зависит от зрителя', async () => {
@@ -134,7 +154,10 @@ describe('TitleSnapshotsService.record', () => {
     await recent.service.record('remanga', '/title', title([chapter(1)]));
     expect(recent.seen).toHaveLength(0);
 
-    await recent.service.record('remanga', '/title', title([chapter(1)]), { force: true });
+    await recent.service.record('remanga', '/title', title([chapter(1)]), {
+      force: true,
+      fetchedAt: Date.now() + 1,
+    });
     expect(recent.seen).toHaveLength(1);
   });
 });
