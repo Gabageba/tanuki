@@ -70,4 +70,5 @@ export type { LibSocialLoginResult, LibSocialPendingLogin } from './sources/libs
 export { CookieJar } from 'tough-cookie';
 
 export { decompress } from './core/http/decompress';
-export type { Timeouts } from './core/http/client';
+export { HttpClientImpl } from './core/http/client';
+export type { Timeouts, HttpClient, HttpClientOptions } from './core/http/client';

@@ -3,7 +3,12 @@ import { SOURCE_AUTH_FAMILY } from '@tanuki/contracts';
 import type { Parser, ParserContext, Credentials, GroupleCredentials, Logger } from './core/parser';
 import type { LibSocialTokenState, TokenStore } from './core/source-accounts';
 import type { RawSourceInfo } from './types';
-import { HttpClientImpl, type Timeouts } from './core/http/client';
+import {
+  HttpClientImpl,
+  type Timeouts,
+  type HttpClient,
+  type HttpClientOptions,
+} from './core/http/client';
 import { UserAgents } from './core/http/user-agents';
 import { jarFor } from './core/http/cookies';
 import { NotImplementedError, SourceTokenExpiredError, UnknownSourceError } from './errors';
@@ -338,6 +343,8 @@ export type RegistryOptions = {
   credentials: Credentials;
   logger: Logger;
   timeouts?: Partial<Timeouts>;
+  sourceIds?: readonly SourceId[];
+  createHttpClient?: (options: HttpClientOptions) => HttpClient;
 };
 
 /**
@@ -346,16 +353,19 @@ export type RegistryOptions = {
  * what makes state like Grouple's `cachedPagesServer` or Desu's tag cache worth having at all.
  */
 export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
+  const createHttpClient =
+    opts.createHttpClient ?? ((options: HttpClientOptions) => new HttpClientImpl(options));
+  const sourceIds = opts.sourceIds ?? SOURCE_IDS;
   const jars = new Map<string, CookieJar>();
   const parsers = new Map<string, Parser>();
   let initPromise: Promise<void> | null = null;
 
-  for (const id of SOURCE_IDS) {
+  for (const id of sourceIds) {
     const descriptor = SOURCES[id];
     const jar = jarFor(descriptor.cookieScope);
     jars.set(id, jar);
     const authFamily = SOURCE_CATALOG[id].authFamily;
-    const http = new HttpClientImpl({
+    const http = createHttpClient({
       sourceId: id,
       jar,
       authFamily,
@@ -369,7 +379,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       logger: opts.logger,
       credentials: opts.credentials,
       createHttpClient: (extraJar) =>
-        new HttpClientImpl({
+        createHttpClient({
           sourceId: id,
           jar: extraJar,
           defaultHeaders: descriptor.defaultHeaders,
@@ -403,7 +413,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
     // the static descriptor `info` built before any parser ran createXParser() — that copy still
     // carries the registry's placeholder `sortOrders: []` rather than each parser's real list).
     listSources() {
-      return SOURCE_IDS.map((id) => parsers.get(id)!.info);
+      return sourceIds.map((id) => parsers.get(id)!.info);
     },
     get(sourceId) {
       const parser = parsers.get(sourceId);
@@ -438,7 +448,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       if (family === SOURCE_AUTH_FAMILY.MULTPORN) {
         const sourceId = SOURCE_ID.MULTPORN;
         const jar = new CookieJar();
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId,
           jar,
           defaultHeaders: SOURCES[sourceId].defaultHeaders,
@@ -456,7 +466,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         const sourceId = SOURCE_ID.TOMILOLIB;
         const domain = SOURCES[sourceId].domains[0];
         const jar = new CookieJar();
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId,
           jar,
           defaultHeaders: SOURCES[sourceId].defaultHeaders,
@@ -475,7 +485,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         const sourceId = SOURCE_ID.WAMANGA;
         const domain = SOURCES[sourceId].domains[0];
         const jar = new CookieJar();
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId,
           jar,
           defaultHeaders: SOURCES[sourceId].defaultHeaders,
@@ -494,7 +504,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         const sourceId = SOURCE_ID.REMANGA;
         const domain = SOURCES[sourceId].domains[0];
         const jar = new CookieJar();
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId,
           jar,
           defaultHeaders: SOURCES[sourceId].defaultHeaders,
@@ -511,7 +521,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       }
       if (family === SOURCE_AUTH_FAMILY.NUDEMOON) {
         const jar = new CookieJar();
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId: SOURCE_ID.NUDEMOON,
           jar,
           defaultHeaders: SOURCES[SOURCE_ID.NUDEMOON].defaultHeaders,
@@ -527,7 +537,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
 
       if (family === SOURCE_AUTH_FAMILY.DESU) {
         const jar = new CookieJar();
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId: SOURCE_ID.DESUME,
           jar,
           defaultHeaders: SOURCES[SOURCE_ID.DESUME].defaultHeaders,
@@ -543,7 +553,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
 
       if (family === SOURCE_AUTH_FAMILY.MANGABUFF) {
         const jar = new CookieJar();
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId: SOURCE_ID.MANGABUFF,
           jar,
           defaultHeaders: SOURCES[SOURCE_ID.MANGABUFF].defaultHeaders,
@@ -564,7 +574,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       if (!cfg) throw new UnknownSourceError(memberId);
 
       const jar = new CookieJar();
-      const http = new HttpClientImpl({
+      const http = createHttpClient({
         sourceId: memberId,
         jar,
         defaultHeaders: SOURCES[memberId].defaultHeaders,
@@ -587,7 +597,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         const sourceId = SOURCE_ID.HENTAICHAN_CC;
         const domain = SOURCES[sourceId].domains[0];
         const jar = await createHentaichanCcSessionJar(domain, session);
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId,
           jar,
           defaultHeaders: SOURCES[sourceId].defaultHeaders,
@@ -610,7 +620,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         const sourceId = cfg.id;
         const domain = SOURCES[sourceId].domains[0];
         const jar = await createSenkuroSessionJar(token);
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId,
           jar,
           defaultHeaders: SOURCES[sourceId].defaultHeaders,
@@ -632,7 +642,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
         const sourceId = SOURCE_ID.REMANGA;
         const domain = SOURCES[sourceId].domains[0];
         const jar = await createRemangaSessionJar(domain, token);
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId,
           jar,
           defaultHeaders: SOURCES[sourceId].defaultHeaders,
@@ -658,7 +668,7 @@ export const createRegistry = (opts: RegistryOptions): ParsersRegistry => {
       for (const sourceId of memberIds) {
         const domain = SOURCES[sourceId].domains[0];
         const jar = await createInukoSessionJar(domain, session);
-        const http = new HttpClientImpl({
+        const http = createHttpClient({
           sourceId,
           jar,
           defaultHeaders: SOURCES[sourceId].defaultHeaders,

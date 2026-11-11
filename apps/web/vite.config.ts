@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => ({
       injectRegister: false,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['**/runtime-config.js', '**/*.map'],
         // Без сети нужен весь app shell; главный чанк больше лимита по умолчанию (2 МБ).
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
@@ -45,6 +46,7 @@ export default defineConfig(({ mode }) => ({
       },
     }),
   ],
+  build: { sourcemap: 'hidden' },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

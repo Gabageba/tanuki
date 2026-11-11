@@ -12,7 +12,7 @@
     "dev": "turbo run dev",
     "dev:mobile": "turbo run dev --filter=@tanuki/api & turbo run dev:host --filter=@tanuki/web; wait",
     "dev:playground": "pnpm build:contracts && pnpm --filter @tanuki/web dev --open /playground",
-    "docker": "docker compose up -d --force-recreate --wait",
+    "docker": "docker compose -f docker-compose.dev.yml up -d --force-recreate --wait",
     "lint": "turbo run lint && pnpm run lint:styles && pnpm run lint:format && pnpm run lint:i18n",
     "lint:format": "prettier --check .",
     "lint:i18n": "node scripts/check-i18n.mjs",
@@ -21,6 +21,8 @@
     "start": "pnpm run docker && turbo run dev",
     "storybook": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web storybook",
     "test": "turbo run test",
+    "test:e2e": "node tests/e2e/run.mjs",
+    "test:self-host": "node --test scripts/self-host/*.test.mjs",
     "test:visual": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web test:visual",
     "test:visual:update": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web test:visual:update",
     "typecheck": "turbo run typecheck"
@@ -40,6 +42,6 @@
   },
   "packageManager": "pnpm@11.18.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=24.0.0"
   }
 }

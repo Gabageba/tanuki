@@ -54,6 +54,8 @@ export default tseslint.config(
             '**/shared/storybook/**',
             // Визуальные тесты историй (Playwright) тоже не попадают в сборку.
             '**/visual/**',
+            '**/e2e/**',
+            '**/test/**',
           ],
         },
       ],

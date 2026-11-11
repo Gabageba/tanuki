@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { and, count, desc, eq, inArray, lt, notInArray, sql } from 'drizzle-orm';
+import { reportUnexpected } from '../observability/sentry';
 import {
   getNotificationCategory,
   getNotificationTypes,
@@ -166,6 +167,7 @@ export class NotificationsService {
       }
       return write;
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(`Уведомление ${input.type} не создано: ${(error as Error).message}`);
       return null;
     }
@@ -183,6 +185,7 @@ export class NotificationsService {
         this.hub.publish(userId, { type: NOTIFICATION_STREAM_EVENT.REMOVED, id });
       }
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(`Уведомления не убраны: ${(error as Error).message}`);
     }
   }
@@ -255,6 +258,7 @@ export class NotificationsService {
         await this.push.sendToUser(userId, (language) => buildPushMessage(record, language));
       }
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(`Новые главы ${userId} не сведены: ${(error as Error).message}`);
     }
   }

@@ -34,6 +34,8 @@ import { SourceAccessService, hasSourceAccount } from '../source-accounts/source
 import { VIEWER_KIND } from '../source-accounts/models';
 import { getViewer } from '../source-accounts/viewer-context';
 import { toApiException } from './parser-error.mapper';
+import { runWithParserContext } from '../observability/parser-context';
+import { PARSER_CALL_CONTEXT } from '../observability/models';
 import { PARSERS } from './parsers.provider';
 import type {
   RawBookmarkFolder,
@@ -106,7 +108,9 @@ export class ParsersClientService {
     await this.parsers.ready();
     try {
       const parser = this.parsers.get(sourceId);
-      await this.concurrencyLimiter.run(sourceId, () => runSourceContract(parser));
+      await this.concurrencyLimiter.run(sourceId, () =>
+        runWithParserContext(PARSER_CALL_CONTEXT.PROBE, () => runSourceContract(parser)),
+      );
       return null;
     } catch (error) {
       return (error as Error).message;

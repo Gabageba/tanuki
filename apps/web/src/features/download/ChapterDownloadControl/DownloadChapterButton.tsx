@@ -14,7 +14,12 @@ function DownloadChapterButton({ disabled, onDownload }: Props) {
 
   return (
     <Tooltip label={t('downloadChapter')}>
-      <ActionIcon variant="subtle" disabled={disabled} onClick={onDownload}>
+      <ActionIcon
+        aria-label={t('downloadChapter')}
+        variant="subtle"
+        disabled={disabled}
+        onClick={onDownload}
+      >
         <DownloadSimpleIcon />
       </ActionIcon>
     </Tooltip>

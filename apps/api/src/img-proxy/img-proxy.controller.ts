@@ -23,7 +23,7 @@ import { CACHE_TTL } from '../cache/cache.constants';
 import { cacheKey } from '../cache/cache-keys';
 import { IMAGE_FORMAT, type ImageFormat, type TransformedImage } from './models';
 import { verifySignedImageUrl } from './sign.util';
-import { createUpstreamAgent, isAllowedUpstreamUrl } from './upstream-guard';
+import { UPSTREAM_POLICY, type UpstreamPolicy } from './upstream-policy';
 
 const DEFAULT_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
@@ -44,12 +44,12 @@ export class ImgProxyController implements OnModuleDestroy {
   // per in-flight request for the same cover instead of sharing a single one.
   private readonly inFlight = new Map<string, Promise<TransformedImage>>();
   // Соединения только с публичными адресами — см. upstream-guard.ts.
-  private readonly upstreamAgent = createUpstreamAgent();
 
   constructor(
     @Inject(ENV) private readonly env: Env,
     @Inject(PARSERS) private readonly parsers: ParsersRegistry,
     private readonly cache: CacheService,
+    @Inject(UPSTREAM_POLICY) private readonly upstream: UpstreamPolicy,
   ) {}
 
   @ApiOperation({ summary: 'Проксирует и опционально ресайзит подписанный URL картинки' })
@@ -119,14 +119,14 @@ export class ImgProxyController implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.upstreamAgent.close();
+    await this.upstream.agent.close();
   }
 
   // Each parser knows its own Referer/User-Agent expectations (Grouple in particular needs
   // a specific UA on image requests) — falls back to the image's own origin for sources with
   // no special requirements, same as the old hardcoded-map default did.
   private async fetchUpstream(absoluteUrl: string, sourceId: string) {
-    if (!isAllowedUpstreamUrl(absoluteUrl)) throw new BadRequestApiException();
+    if (!this.upstream.isAllowedUrl(absoluteUrl)) throw new BadRequestApiException();
     const parserHeaders = this.parsers.imageHeaders(sourceId, absoluteUrl);
     const headers: Record<string, string> = {
       Referer: parserHeaders['Referer'] ?? `${new URL(absoluteUrl).origin}/`,
@@ -138,7 +138,7 @@ export class ImgProxyController implements OnModuleDestroy {
       upstream = await request(absoluteUrl, {
         method: 'GET',
         headers,
-        dispatcher: this.upstreamAgent,
+        dispatcher: this.upstream.agent,
       });
     } catch {
       throw new SourceUnavailableException(sourceId);

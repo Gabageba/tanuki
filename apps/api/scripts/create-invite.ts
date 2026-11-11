@@ -25,36 +25,42 @@ const main = async () => {
     process.env['DATABASE_URL'] ?? 'postgres://tanuki:tanuki@localhost:5432/tanuki';
   const appUrl = process.env['APP_URL'] ?? 'http://localhost:5173';
 
-  const client = postgres(databaseUrl, { max: 1 });
+  const client = postgres(databaseUrl, { max: 1, connect_timeout: 5 });
   const db = drizzle(client);
+  try {
+    await client`SELECT pg_advisory_lock(7361952402)`;
 
-  const [existingAdmin] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.role, USER_ROLE.ADMIN))
-    .limit(1);
-  if (existingAdmin) {
-    await client.end();
-    throw new Error('Админ уже существует — повторно создать его нельзя.');
+    const [existingAdmin] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, USER_ROLE.ADMIN))
+      .limit(1);
+    if (existingAdmin) {
+      throw new Error('Админ уже существует — повторно создать его нельзя.');
+    }
+
+    const code = randomBytes(20).toString('base64url');
+    const codeHash = createHash('sha256').update(code).digest('hex');
+
+    await db.insert(invites).values({
+      codeHash,
+      role: USER_ROLE.ADMIN,
+      createdBy: null,
+      expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+    });
+
+    console.log('Инвайт (admin) создан, действует 7 дней:');
+    console.log(`${appUrl}/register?invite=${code}`);
+  } finally {
+    await client.end({ timeout: 5 });
   }
-
-  const code = randomBytes(20).toString('base64url');
-  const codeHash = createHash('sha256').update(code).digest('hex');
-
-  await db.insert(invites).values({
-    codeHash,
-    role: USER_ROLE.ADMIN,
-    createdBy: null,
-    expiresAt: new Date(Date.now() + INVITE_TTL_MS),
-  });
-
-  await client.end();
-
-  console.log('Инвайт (admin) создан, действует 7 дней:');
-  console.log(`${appUrl}/register?invite=${code}`);
 };
 
 main().catch((error: unknown) => {
-  console.error(error);
+  console.error(
+    error instanceof Error && error.message.startsWith('Админ уже')
+      ? error.message
+      : 'Не удалось создать приглашение. Проверьте DATABASE_URL и миграции.',
+  );
   process.exit(1);
 });

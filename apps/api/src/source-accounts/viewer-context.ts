@@ -1,4 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { runWithParserContext } from '../observability/parser-context';
+import { PARSER_CALL_CONTEXT } from '../observability/models';
 import { VIEWER_KIND, type Viewer } from './models';
 
 const storage = new AsyncLocalStorage<Viewer>();
@@ -9,11 +11,14 @@ const storage = new AsyncLocalStorage<Viewer>();
  */
 export const getViewer = (): Viewer => storage.getStore() ?? { kind: VIEWER_KIND.SERVICE };
 
-export const runAsViewer = <T>(viewer: Viewer, fn: () => T): T => storage.run(viewer, fn);
+export const runAsViewer = <T>(viewer: Viewer, fn: () => T): T =>
+  runWithParserContext(PARSER_CALL_CONTEXT.REQUEST, () => storage.run(viewer, fn));
 
 /**
  * Работа, результат которой общий для всех (веер совпадений кешируется на всех), — идёт от
  * сервисной учётки, даже если её запустил запрос пользователя.
  */
 export const runAsService = <T>(fn: () => Promise<T>): Promise<T> =>
-  storage.run({ kind: VIEWER_KIND.SERVICE }, fn);
+  runWithParserContext(PARSER_CALL_CONTEXT.BACKGROUND, () =>
+    storage.run({ kind: VIEWER_KIND.SERVICE }, fn),
+  );

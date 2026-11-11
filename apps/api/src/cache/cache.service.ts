@@ -31,6 +31,7 @@ export type GetOrSetOptions<T> = {
 export class CacheService implements OnModuleDestroy {
   private readonly logger = new Logger(CacheService.name);
   private readonly redis: Redis;
+  private readinessQuery: Promise<void> | undefined;
 
   constructor(@Inject(ENV) env: Env) {
     this.redis = new Redis(env.REDIS_URL, {
@@ -125,6 +126,16 @@ export class CacheService implements OnModuleDestroy {
     if (hasKeys) {
       await pipeline.exec();
     }
+  }
+
+  async ping(): Promise<void> {
+    this.readinessQuery ??= this.redis
+      .ping()
+      .then(() => undefined)
+      .finally(() => {
+        this.readinessQuery = undefined;
+      });
+    await this.readinessQuery;
   }
 
   async onModuleDestroy(): Promise<void> {

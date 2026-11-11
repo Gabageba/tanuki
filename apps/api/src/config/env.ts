@@ -126,7 +126,15 @@ const EnvSchema = z.object({
   TRUST_PROXY: z
     .string()
     .default('false')
-    .transform((value) => value === 'true'),
+    .refine((value) => value !== 'true', {
+      message: 'TRUST_PROXY: укажите точные IP/CIDR прокси вместо true',
+    }),
+  METRICS_TOKEN: z
+    .string()
+    .refine((value) => value === '' || value.length >= 32)
+    .optional(),
+  SENTRY_API_DSN: z.string().optional(),
+  TANUKI_VERSION: z.string().default('development'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

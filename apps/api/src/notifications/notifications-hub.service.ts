@@ -51,8 +51,9 @@ export class NotificationsHubService {
 
       const subscription = merge(
         events.pipe(map((event): StreamMessage => ({ data: JSON.stringify(event) }))),
+        // Nest omits an empty data string, and EventSource ignores a frame without data.
         interval(STREAM_HEARTBEAT_MS).pipe(
-          map((): StreamMessage => ({ type: STREAM_HEARTBEAT_EVENT, data: '' })),
+          map((): StreamMessage => ({ type: STREAM_HEARTBEAT_EVENT, data: '{}' })),
         ),
       ).subscribe(subscriber);
 

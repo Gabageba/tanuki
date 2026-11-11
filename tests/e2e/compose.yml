@@ -1,0 +1,29 @@
+services:
+  fixture:
+    image: node:24.20.0-bookworm-slim
+    command: ['node', '/fixture.mjs']
+    volumes:
+      - ./fixture.mjs:/fixture.mjs:ro
+    ports:
+      - '127.0.0.1:14080:4080'
+  api:
+    image: tanuki-api:e2e
+    environment:
+      APP_URL: http://localhost:8080
+      SOURCE_PROBE_ENABLED: 'false'
+      BOOKMARK_UPDATES_ENABLED: 'false'
+      SENTRY_API_DSN: http://public@fixture:4080/1
+    depends_on:
+      fixture:
+        condition: service_started
+    ports:
+      - '127.0.0.1:19464:9464'
+      - '127.0.0.1:19465:9465'
+  migrate:
+    image: tanuki-api:local
+  web:
+    image: tanuki-web:local
+
+networks:
+  default:
+    internal: true

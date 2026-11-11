@@ -6,3 +6,9 @@ storybook-static
 apps/web/.storybook/public/mockServiceWorker.js
 .turbo
 pnpm-lock.yaml
+
+dist-cli
+dist-e2e
+apps/web/e2e/report
+apps/web/e2e/test-results
+tests/e2e/report

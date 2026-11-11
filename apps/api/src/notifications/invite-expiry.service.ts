@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { and, gt, isNotNull, isNull, lte } from 'drizzle-orm';
+import { reportUnexpected } from '../observability/sentry';
 import { NOTIFICATION_TYPE } from '@tanuki/contracts';
 import { DatabaseService } from '../database/database.service';
 import { invites } from '../database/schema';
@@ -52,6 +53,7 @@ export class InviteExpiryService {
         });
       }
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(`Истёкшие инвайты не обработаны: ${(error as Error).message}`);
     }
   }

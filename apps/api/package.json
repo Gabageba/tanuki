@@ -3,8 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "license": "GPL-3.0-only",
+  "files": [
+    "dist",
+    "dist-cli",
+    "drizzle"
+  ],
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && tsc -p tsconfig.cli.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dev": "nodemon --config nodemon.json",
@@ -23,6 +28,7 @@
     "@nestjs/schedule": "^12.0.1",
     "@nestjs/swagger": "^11.4.7",
     "@node-rs/argon2": "^2.2.1",
+    "@sentry/nestjs": "^10.78.0",
     "@tanuki/contracts": "workspace:*",
     "@tanuki/parsers": "workspace:*",
     "bowser": "^2.14.1",
@@ -43,6 +49,7 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
+    "@nestjs/testing": "^11.2.9",
     "@tanuki/eslint-config": "workspace:*",
     "@tanuki/tsconfig": "workspace:*",
     "@types/node": "^26.1.2",

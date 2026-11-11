@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "dist-cli" },
+  "include": [
+    "scripts/create-invite.ts",
+    "scripts/migrate.ts",
+    "scripts/preflight.ts",
+    "scripts/push-keys.ts"
+  ],
+  "exclude": ["**/*.test.ts"]
+}

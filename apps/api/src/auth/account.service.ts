@@ -1,6 +1,7 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, desc, eq, gt, inArray, isNull } from 'drizzle-orm';
+import { reportUnexpected } from '../observability/sentry';
 import {
   EMAIL_CHANGE_CODE_LENGTH,
   NOTIFICATION_TYPE,
@@ -159,6 +160,7 @@ export class AccountService {
         return { status: EMAIL_CODE_RESULT.APPLIED, user: updated };
       });
     } catch (error) {
+      reportUnexpected(error);
       if (error instanceof ApiException) throw error;
       if (getUniqueViolation(error) === 'users_email_lower_idx') throw new EmailTakenException();
       throw new StorageUnavailableException();
@@ -205,6 +207,7 @@ export class AccountService {
         return row.userId;
       });
     } catch (error) {
+      reportUnexpected(error);
       if (error instanceof ApiException) throw error;
       if (getUniqueViolation(error) === 'users_email_lower_idx') throw new EmailTakenException();
       throw new StorageUnavailableException();
@@ -292,6 +295,7 @@ export class AccountService {
         return updated;
       });
     } catch (error) {
+      reportUnexpected(error);
       if (error instanceof ApiException) throw error;
       throw new StorageUnavailableException();
     }
@@ -373,6 +377,7 @@ export class AccountService {
     try {
       await send();
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(`Не удалось отправить письмо ${what} на ${to}: ${(error as Error).message}`);
     }
   }

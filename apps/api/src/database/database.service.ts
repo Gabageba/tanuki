@@ -18,6 +18,7 @@ export class DatabaseService implements OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
   private readonly client: postgres.Sql;
   private lastFailureLogged = false;
+  private readinessQuery: Promise<void> | undefined;
 
   readonly db: Database;
 
@@ -49,6 +50,17 @@ export class DatabaseService implements OnModuleDestroy {
       }
       return fallback;
     }
+  }
+
+  async ping(): Promise<void> {
+    // Reuse an outstanding probe while its bounded HTTP request has timed out: health polling
+    // cannot accumulate unlimited SQL requests when a dependency stops responding.
+    this.readinessQuery ??= this.client`SELECT 1`
+      .then(() => undefined)
+      .finally(() => {
+        this.readinessQuery = undefined;
+      });
+    await this.readinessQuery;
   }
 
   async onModuleDestroy(): Promise<void> {

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Button } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { useRouteError } from 'react-router';
+import { reportWebError } from '@/shared/lib/observability/sentry';
 import PageLayout from '@/shared/ui/PageLayout';
 import StatusScreen from '@/shared/ui/StatusScreen';
 
@@ -11,6 +12,7 @@ function RouteError() {
   const error = useRouteError();
 
   useEffect(() => {
+    reportWebError(error);
     console.error(error);
   }, [error]);
 
