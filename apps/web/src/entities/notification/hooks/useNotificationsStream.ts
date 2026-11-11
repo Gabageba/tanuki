@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import {
   NOTIFICATION_STREAM_EVENT,
+  NOTIFICATION_STREAM_CONTROL_EVENT,
   NotificationStreamEventSchema,
+  NotificationStreamStopSchema,
   type NotificationItem,
 } from '@tanuki/contracts';
 import { getNotificationTargetPath, hasNotificationToast } from '../lib';
@@ -27,10 +29,12 @@ import useRemoveNotification from './useRemoveNotification';
 /**
  * Одно соединение SSE на вкладку, пока человек в приложении: на каждое событие обновляет бейдж и
  * ленту, а о важных (аккаунт, источники, администрирование) сообщает тостом — если вкладку видно,
- * иначе об этом уже сказал push. Без `EventSource` или пока поток не поднялся счётчик опрашивается
- * (см. `useUnreadNotificationsCount`); при каждом (пере)подключении всё перезапрашивается, чтобы
- * пропущенное не потерялось. Поток, закрытый ответом не 200 (502 на деплое), `EventSource` сам не
- * поднимает — переподключаемся с растущей паузой.
+ * иначе об этом уже сказал push. Без `EventSource`, пока поток не поднялся или после stop счётчик
+ * опрашивается там, где смонтирован колокольчик (в читалке его нет; лента не опрашивается).
+ * После повторного открытия данные перезапрашиваются, чтобы пропущенное не потерялось.
+ * Поток, закрытый ответом не 200 (502 на деплое), `EventSource` сам не
+ * поднимает — переподключаемся с растущей паузой. Управляющий stop запрещает оба механизма
+ * восстановления до конца этого эффекта (перезагрузка или новый вход).
  */
 function useNotificationsStream() {
   const { t } = useTranslation();
@@ -69,12 +73,19 @@ function useNotificationsStream() {
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let reconnectDelay = STREAM_RECONNECT_BASE_MS;
     let hasOpened = false;
+    let stopped = false;
+    let detachSource: (() => void) | undefined;
 
     const connect = () => {
+      if (stopped) return;
+      reconnectTimer = undefined;
+      detachSource?.();
       const current = new EventSource(NOTIFICATIONS_STREAM_URL);
       source = current;
+      const isCurrent = () => !stopped && source === current;
 
       current.onopen = () => {
+        if (!isCurrent()) return;
         setStreamConnected(true);
         reconnectDelay = STREAM_RECONNECT_BASE_MS;
         // Первое открытие идёт следом за обычными запросами страницы, догонять нечего.
@@ -82,13 +93,16 @@ function useNotificationsStream() {
         hasOpened = true;
       };
       current.onerror = () => {
+        if (!isCurrent()) return;
         setStreamConnected(false);
         // Обрыв сети `EventSource` переподключает сам, а после CLOSED — уже нет.
         if (current.readyState !== EventSource.CLOSED) return;
+        if (reconnectTimer !== undefined) return;
         reconnectTimer = setTimeout(connect, reconnectDelay);
         reconnectDelay = Math.min(reconnectDelay * 2, STREAM_RECONNECT_MAX_MS);
       };
       current.onmessage = (message: MessageEvent<string>) => {
+        if (!isCurrent()) return;
         let parsed: unknown;
         try {
           parsed = JSON.parse(message.data);
@@ -105,13 +119,39 @@ function useNotificationsStream() {
           else void reconcileNotificationToasts();
         } else toast(event.notification);
       };
+
+      const stop = (message: MessageEvent<string>) => {
+        if (!isCurrent()) return;
+        try {
+          if (!NotificationStreamStopSchema.safeParse(JSON.parse(message.data)).success) return;
+        } catch {
+          return;
+        }
+        // Сначала запрет: уже поставленные callbacks и таймер не должны оживить поток.
+        stopped = true;
+        clearTimeout(reconnectTimer);
+        detachSource?.();
+        detachSource = undefined;
+        source = undefined;
+        setStreamConnected(false);
+      };
+      current.addEventListener(NOTIFICATION_STREAM_CONTROL_EVENT.STOP, stop);
+      detachSource = () => {
+        current.onopen = null;
+        current.onerror = null;
+        current.onmessage = null;
+        current.removeEventListener(NOTIFICATION_STREAM_CONTROL_EVENT.STOP, stop);
+        current.close();
+      };
     };
 
     connect();
 
     return () => {
+      stopped = true;
       clearTimeout(reconnectTimer);
-      source?.close();
+      detachSource?.();
+      source = undefined;
       setStreamConnected(false);
     };
   }, []);
