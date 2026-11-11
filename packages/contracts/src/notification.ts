@@ -198,6 +198,24 @@ export const NotificationStreamEventSchema = z.discriminatedUnion('type', [
 ]);
 export type NotificationStreamEvent = z.infer<typeof NotificationStreamEventSchema>;
 
+/** Управление соединением SSE, отдельно от событий записей ленты. */
+export const NOTIFICATION_STREAM_CONTROL_EVENT = {
+  STOP: 'stop',
+} as const;
+export type NotificationStreamControlEvent = EnumLiteralsOf<
+  typeof NOTIFICATION_STREAM_CONTROL_EVENT
+>;
+
+export const NOTIFICATION_STREAM_STOP_REASON = {
+  CONNECTION_LIMIT: 'connectionLimit',
+} as const;
+export type NotificationStreamStopReason = EnumLiteralsOf<typeof NOTIFICATION_STREAM_STOP_REASON>;
+
+export const NotificationStreamStopSchema = z.object({
+  reason: z.literal(NOTIFICATION_STREAM_STOP_REASON.CONNECTION_LIMIT),
+});
+export type NotificationStreamStop = z.infer<typeof NotificationStreamStopSchema>;
+
 /** Push — опция инстанса: без VAPID-ключей `enabled` false, а `publicKey` пуст. */
 export const PushConfigSchema = z.object({
   enabled: z.boolean(),

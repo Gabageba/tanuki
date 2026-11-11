@@ -66,7 +66,9 @@ export class NotificationsController {
   @ApiOperation({
     summary:
       'Поток событий ленты (SSE): created / updated / removed; раз в 25 с — пульс `ping`. ' +
-      'Не более 5 потоков на пользователя',
+      'Не более 5 потоков на аккаунт в процессе API: старейший получает event: stop ' +
+      'с data: {"reason":"connectionLimit"} и завершается; клиент прекращает повторы до ' +
+      'перезагрузки или нового входа',
   })
   @Header('X-Accel-Buffering', 'no')
   @Header('Cache-Control', 'no-cache, no-transform')
