@@ -1,8 +1,9 @@
 import { Button, Checkbox, PasswordInput, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import { FloppyDiskIcon, KeyIcon } from '@phosphor-icons/react';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
 import { API_ERROR_CODE } from '@tanuki/contracts';
 import { ApiRequestError } from '@/shared/api/client';
 import { validatePassword, validateRequired } from '@/shared/lib/authValidation';
@@ -42,7 +43,7 @@ function ChangePasswordModal({ opened, onClose }: Props) {
   const handleSubmit = form.onSubmit((values) => {
     changePassword.mutate(values, {
       onSuccess: () => {
-        notifications.show({ color: 'green', message: t('passwordChanged') });
+        Toasts.show({ tone: FEEDBACK_TONE.SUCCESS, title: t('passwordChanged') });
         handleClose();
       },
       onError: (error) => {

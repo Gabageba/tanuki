@@ -9,6 +9,7 @@ export class ApiRequestError extends Error {
     message: string,
     public readonly code: ApiErrorCode,
     public readonly status: number,
+    public readonly requestPath?: string,
   ) {
     super(message);
   }
@@ -58,6 +59,7 @@ const apiRequest = async (path: string, init?: RequestInit): Promise<Response> =
       I18N.t('noConnectionToServer'),
       API_ERROR_CODE.INTERNAL,
       NETWORK_ERROR_STATUS,
+      path,
     );
   }
 
@@ -67,6 +69,7 @@ const apiRequest = async (path: string, init?: RequestInit): Promise<Response> =
       body?.error.message ?? I18N.t('somethingWentWrong'),
       body?.error.code ?? API_ERROR_CODE.INTERNAL,
       response.status,
+      path,
     );
   }
 

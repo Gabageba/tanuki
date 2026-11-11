@@ -9,14 +9,14 @@ import {
   WarningCircleIcon,
   WrenchIcon,
 } from '@phosphor-icons/react';
-import { NOTIFICATION_TONE } from '@/entities/notification/models';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
 import { TOAST_KIND, type ToastSample } from './models';
 
 export const COPIED: ToastSample = {
   id: 'copied',
   title: 'Ссылка скопирована',
   icon: <CopyIcon size={20} />,
-  tone: NOTIFICATION_TONE.SUCCESS,
+  tone: FEEDBACK_TONE.SUCCESS,
   kind: TOAST_KIND.MESSAGE,
   duration: 5000,
 };
@@ -25,7 +25,7 @@ export const ERROR: ToastSample = {
   title: 'Не удалось сохранить закладку',
   description: 'Нет соединения с сервером. Попробуйте позже.',
   icon: <WarningCircleIcon size={20} />,
-  tone: NOTIFICATION_TONE.DANGER,
+  tone: FEEDBACK_TONE.DANGER,
   kind: TOAST_KIND.MESSAGE,
   duration: 10000,
 };
@@ -34,7 +34,7 @@ export const WARNING: ToastSample = {
   title: 'Реманга недоступна',
   description: 'Тайтлы в закладках пока не обновляются.',
   icon: <WarningCircleIcon size={20} />,
-  tone: NOTIFICATION_TONE.WARNING,
+  tone: FEEDBACK_TONE.WARNING,
   kind: TOAST_KIND.EVENT,
   duration: 8000,
   background: true,
@@ -44,7 +44,7 @@ export const RECOVERED: ToastSample = {
   title: 'Реманга снова работает',
   description: 'Тайтлы в закладках снова обновляются.',
   icon: <CheckCircleIcon size={20} />,
-  tone: NOTIFICATION_TONE.SUCCESS,
+  tone: FEEDBACK_TONE.SUCCESS,
   kind: TOAST_KIND.EVENT,
   duration: 5000,
   background: true,
@@ -54,7 +54,7 @@ export const SECURITY: ToastSample = {
   title: 'Вход с нового устройства',
   description: 'Chrome · macOS · Новосибирск',
   icon: <DevicesIcon size={20} />,
-  tone: NOTIFICATION_TONE.DANGER,
+  tone: FEEDBACK_TONE.DANGER,
   kind: TOAST_KIND.EVENT,
   duration: 10000,
   security: true,
@@ -63,7 +63,7 @@ export const NEUTRAL: ToastSample = {
   id: 'invite-expired',
   title: 'Приглашение истекло без использования',
   icon: <CalendarXIcon size={20} />,
-  tone: NOTIFICATION_TONE.NEUTRAL,
+  tone: FEEDBACK_TONE.NEUTRAL,
   kind: TOAST_KIND.EVENT,
   duration: 5000,
   background: true,
@@ -72,7 +72,7 @@ export const RESTORE: ToastSample = {
   id: 'restore-bookmark',
   title: 'Убрано из закладок',
   icon: <BookmarkSimpleIcon size={20} />,
-  tone: NOTIFICATION_TONE.ACCENT,
+  tone: FEEDBACK_TONE.ACCENT,
   kind: TOAST_KIND.RESTORE,
   duration: 10000,
 };
@@ -86,7 +86,7 @@ export const UPDATE: ToastSample = {
   title: 'Доступно обновление',
   description: 'Приложение перезагрузится. Скачивание глав продолжится автоматически.',
   icon: <ArrowsClockwiseIcon size={20} />,
-  tone: NOTIFICATION_TONE.NEUTRAL,
+  tone: FEEDBACK_TONE.NEUTRAL,
   kind: TOAST_KIND.PWA,
   duration: null,
 };

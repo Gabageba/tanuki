@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { NotificationCategory } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { NOTIFICATIONS_QUERY_KEY, UNREAD_NOTIFICATIONS_COUNT_QUERY_KEY } from '../models';
+import { removeNotificationCategoryToasts } from '../toasts';
 
 /** Убирает всё, что видно с учётом категорий; пустой список — вообще всё. */
 function useRemoveAllNotifications() {
@@ -15,11 +16,13 @@ function useRemoveAllNotifications() {
       }
       return apiFetch(`/notifications?${params.toString()}`, { method: 'DELETE' });
     },
-    onSuccess: () =>
-      Promise.all([
+    onSuccess: (_data, categories) => {
+      removeNotificationCategoryToasts(categories);
+      return Promise.all([
         queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: UNREAD_NOTIFICATIONS_COUNT_QUERY_KEY }),
-      ]),
+      ]);
+    },
   });
 }
 

@@ -53,8 +53,15 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const running = new Map<string, Promise<void>>();
 /** Чью очередь качаем. Другой пользователь вошёл в том же браузере — чужая очередь встаёт. */
 let activeUserId: string | null = null;
+let updateRequested = false;
 /** Загрузка текущей главы — её обрывает отмена. */
 let current: { userId: string; chapterId: string; controller: AbortController } | null = null;
+
+/** Не прерываем главу при обновлении приложения и не начинаем следующую. */
+export const prepareForUpdate = async () => {
+  updateRequested = true;
+  await Promise.all(running.values());
+};
 
 export const abortChapterDownload = (userId: string, chapterId: string) => {
   if (current && current.userId === userId && current.chapterId === chapterId) {
@@ -210,11 +217,11 @@ const failChapter = (db: OfflineDb, chapterId: string, error: DownloadError) =>
 const runQueue = async (userId: string) => {
   const db = getOfflineDb(userId);
   for (;;) {
-    if (isOffline() || activeUserId !== userId) return;
+    if (updateRequested || isOffline() || activeUserId !== userId) return;
     const state = await db.queue.get(QUEUE_STATE_ID);
     if (state?.isPaused) return;
     const row = await getNextRow(db);
-    if (!row) return;
+    if (!row || updateRequested) return;
 
     const controller = new AbortController();
     current = { userId, chapterId: row.chapterId, controller };

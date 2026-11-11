@@ -1,0 +1,83 @@
+.portal {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  pointer-events: none;
+}
+
+.card {
+  isolation: isolate;
+  overflow-wrap: anywhere;
+  animation: toast-enter 180ms ease-out;
+
+  &::before {
+    position: absolute;
+    inset-block: 10px;
+    inset-inline-start: 0;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--toast-tone);
+    content: '';
+  }
+
+  &:has(.eventTarget:hover) {
+    background: var(--mantine-color-default-hover);
+  }
+
+  &:has(.eventTarget:focus-visible) {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 3px;
+  }
+}
+
+.eventTarget {
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.interactive {
+  z-index: 2;
+}
+
+.host {
+  z-index: calc(var(--mantine-z-index-modal) + 3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+    flex-shrink: 0;
+  }
+}
+
+.action {
+  :global(.mantine-Button-label) {
+    white-space: normal;
+  }
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}

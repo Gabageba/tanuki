@@ -1,12 +1,14 @@
+import { BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { TOAST_KIND } from '@/shared/lib/toasts/models';
 import type { ContinueReadingResponse } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import type { ErrorMeta } from '@/shared/api/errorMeta';
 import UndoToastMessage from '@/shared/ui/UndoToastMessage';
 import { CONTINUE_READING_QUERY_KEY } from '@/entities/title/models';
-import { RESTORE_TOAST_MS } from '../models';
 
 /**
  * Убирает тайтл из «Продолжить чтение» без модалки: карточка пропадает сразу, тост «Отменить»
@@ -29,29 +31,34 @@ function useHideFromContinueReading() {
     mutationFn: (titleId: string) =>
       apiFetch(`/titles/${titleId}/progress/hidden`, { method: 'PUT' }),
     onMutate: async (titleId) => {
+      const ownerVersion = Toasts.getOwnerVersion();
       await queryClient.cancelQueries({ queryKey });
+      if (ownerVersion !== Toasts.getOwnerVersion())
+        throw new DOMException('Session changed', 'AbortError');
       const previous = queryClient.getQueryData<ContinueReadingResponse>(queryKey);
       queryClient.setQueryData<ContinueReadingResponse>(
         queryKey,
         (current) =>
           current && { items: current.items.filter((item) => item.title.id !== titleId) },
       );
-      return { previous };
+      return { previous, ownerVersion };
     },
     onError: (_error, _titleId, context) => {
-      queryClient.setQueryData(queryKey, context?.previous);
+      if (context?.ownerVersion === Toasts.getOwnerVersion())
+        queryClient.setQueryData(queryKey, context.previous);
     },
-    onSuccess: (_data, titleId) => {
-      const toastId = notifications.show({
-        autoClose: RESTORE_TOAST_MS,
-        message: (
+    onSuccess: (_data, titleId, context) => {
+      if (context?.ownerVersion !== Toasts.getOwnerVersion()) return;
+      const toastId = Toasts.show({
+        kind: TOAST_KIND.UNDO,
+        tone: FEEDBACK_TONE.ACCENT,
+        icon: <BookmarkSimpleIcon size={20} />,
+        title: t('titleRemovedFromContinueReading'),
+        actions: (
           <UndoToastMessage
-            message={t('titleRemovedFromContinueReading')}
-            actionLabel={t('cancel')}
-            onAction={() => {
-              notifications.hide(toastId);
-              restore.mutate(titleId);
-            }}
+            actionsOnly
+            actionLabel={t('restoreTitle')}
+            onAction={() => Toasts.act(toastId, () => restore.mutate(titleId))}
           />
         ),
       });

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Affix, ActionIcon, Tooltip } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
 import { BroomIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { apiFetch, ApiRequestError } from '@/shared/api/client';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
+import { apiFetch } from '@/shared/api/client';
+import { showToastError } from '@/shared/api/toastErrors';
 
 function DevCacheResetButton() {
   const { t } = useTranslation();
@@ -13,15 +15,14 @@ function DevCacheResetButton() {
     setIsLoading(true);
     try {
       await apiFetch('/cache', { method: 'DELETE' });
-      notifications.show({
-        color: 'green',
+      Toasts.show({
+        tone: FEEDBACK_TONE.SUCCESS,
         title: t('cacheReset'),
-        message: t('redisCleared'),
+        description: t('redisCleared'),
       });
       window.location.reload();
     } catch (error) {
-      const message = error instanceof ApiRequestError ? error.message : t('failedToResetCache');
-      notifications.show({ color: 'red', title: t('error'), message });
+      showToastError(error, t('failedToResetCache'));
     } finally {
       setIsLoading(false);
     }

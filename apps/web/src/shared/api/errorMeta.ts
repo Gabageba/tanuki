@@ -10,6 +10,8 @@ export type ErrorMeta = {
   silentError?: boolean;
   silentNextPageError?: boolean;
   errorTitle?: string;
+  /** Источник для запросов, чей URL содержит только id тайтла. */
+  errorScope?: string;
 };
 
 export const SILENT_ERROR_META = { silentError: true } satisfies ErrorMeta;
@@ -20,4 +22,5 @@ export const readErrorMeta = (meta: Record<string, unknown> | undefined): ErrorM
   silentError: meta?.silentError === true,
   silentNextPageError: meta?.silentNextPageError === true,
   errorTitle: typeof meta?.errorTitle === 'string' ? meta.errorTitle : undefined,
+  errorScope: typeof meta?.errorScope === 'string' ? meta.errorScope : undefined,
 });

@@ -1,3 +1,4 @@
+import { Notifications } from '@mantine/notifications';
 import { useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CURRENT_USER_QUERY_KEY } from '@/entities/user/hooks/useCurrentUser';
@@ -26,7 +27,12 @@ function PlaygroundProviders({ children }: Props) {
     return client;
   });
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Notifications />
+      {children}
+    </QueryClientProvider>
+  );
 }
 
 export default PlaygroundProviders;

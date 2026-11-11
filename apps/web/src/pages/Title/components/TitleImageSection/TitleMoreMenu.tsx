@@ -1,9 +1,10 @@
 import { ActionIcon, Menu } from '@mantine/core';
-import { useClipboard } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import { DotsThreeIcon, ShareNetworkIcon } from '@phosphor-icons/react';
+import { CopyIcon, DotsThreeIcon, ShareNetworkIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { generatePath } from 'react-router';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
+import { showToastError } from '@/shared/api/toastErrors';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 
 type Props = {
@@ -17,7 +18,6 @@ const isShareAbort = (error: unknown) =>
 /** «…» тайтла: системный лист «Поделиться», а где его нет — ссылка в буфер обмена. */
 function TitleMoreMenu({ titleId, name }: Props) {
   const { t } = useTranslation();
-  const clipboard = useClipboard();
 
   const handleShare = async () => {
     const url = new URL(generatePath(ROUTE_PATHS.TITLE, { titleId }), window.location.origin).href;
@@ -32,8 +32,16 @@ function TitleMoreMenu({ titleId, name }: Props) {
       }
     }
 
-    clipboard.copy(url);
-    notifications.show({ message: t('linkCopied') });
+    try {
+      await navigator.clipboard.writeText(url);
+      Toasts.show({
+        tone: FEEDBACK_TONE.SUCCESS,
+        title: t('linkCopied'),
+        icon: <CopyIcon size={20} />,
+      });
+    } catch (error) {
+      showToastError(error);
+    }
   };
 
   return (

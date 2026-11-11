@@ -651,7 +651,6 @@
   "toBookmarks": "Add to bookmarks",
   "removeFromBookmarks": "Remove from bookmarks",
   "removedFromBookmarks": "Removed from bookmarks",
-  "restore": "Undo",
   "newFolder": "New folder",
   "manageFolders": "Manage folders",
   "rename": "Rename",
@@ -976,5 +975,14 @@
   "keepScreenOn": "Keep screen on",
   "screenStaysOnWhileReadingIfSupported": "The screen stays on while reading if the device supports it",
   "fullScreen": "Full screen",
-  "exitFullScreen": "Exit full screen"
+  "exitFullScreen": "Exit full screen",
+  "updateAvailable": "Update available",
+  "updateApp": "Update app",
+  "installTanuki": "Install Tanuki",
+  "installApp": "Install app",
+  "launchTanukiFromShortcut": "Launch Tanuki from a shortcut in its own window without browser tabs.",
+  "appReloadsDownloadsResume": "The app will reload. Chapter downloads will resume automatically.",
+  "restoreBookmark": "Restore bookmark",
+  "restoreTitle": "Restore title",
+  "openNotification": "Open notification"
 }

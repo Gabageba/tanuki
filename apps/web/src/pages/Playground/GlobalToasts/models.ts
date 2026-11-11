@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ButtonProps } from '@mantine/core';
 import type { EnumLiteralsOf } from '@tanuki/contracts';
-import type { NotificationTone } from '@/entities/notification/models';
+import type { FeedbackTone } from '@/shared/lib/feedback';
 import type { SectionNavGroup } from '../components/SectionNav';
 
 export const ACCENT_STYLE = { STRIPE: 'stripe', ICON: 'icon' } as const;
@@ -68,7 +68,7 @@ export type ToastSample = {
   title: string;
   description?: string;
   icon: ReactNode;
-  tone: NotificationTone;
+  tone: FeedbackTone;
   kind: ToastKind;
   duration: number | null;
   security?: boolean;

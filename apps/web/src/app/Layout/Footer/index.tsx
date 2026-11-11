@@ -59,7 +59,7 @@ function Footer() {
   };
 
   return (
-    <AppShell.Footer hiddenFrom="md" withBorder className={styles.footer}>
+    <AppShell.Footer data-toast-footer hiddenFrom="md" withBorder className={styles.footer}>
       <Group h="100%" px="xs" gap={4} onClick={closeAllDrawers}>
         <MobileNavigationButton
           onClick={() => navigateFromFooter(ROUTE_PATHS.HOME, isHomeActive)}

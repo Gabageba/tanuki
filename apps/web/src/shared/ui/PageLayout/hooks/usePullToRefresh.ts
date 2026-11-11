@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Toasts } from '@/shared/lib/toasts/store';
 
 const PULL_THRESHOLD = 60;
 const MAX_PULL = 120;
@@ -46,6 +47,7 @@ function usePullToRefresh(onRefresh: () => void) {
       const finalDistance = delta > 0 ? Math.min(delta / RESISTANCE, MAX_PULL) : 0;
       if (finalDistance >= PULL_THRESHOLD) {
         setIsRefreshing(true);
+        Toasts.clearSuppression();
         onRefreshRef.current();
         setTimeout(() => setIsRefreshing(false), 500);
       }

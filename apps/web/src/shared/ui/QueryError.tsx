@@ -13,6 +13,7 @@ import {
   NETWORK_ERROR_STATUS,
 } from '@/shared/api/client';
 import { ROUTE_PATHS, SOURCE_ACCOUNTS_PATH } from '@/shared/lib/routes';
+import { Toasts } from '@/shared/lib/toasts/store';
 import StatusScreen from './StatusScreen';
 
 type Props = {
@@ -109,7 +110,13 @@ function QueryError({ error, onRetry }: Props) {
           {t('back')}
         </Button>
         {onRetry && (
-          <Button leftSection={<ArrowClockwiseIcon />} onClick={() => onRetry()}>
+          <Button
+            leftSection={<ArrowClockwiseIcon />}
+            onClick={() => {
+              Toasts.clearSuppression();
+              onRetry();
+            }}
+          >
             {t('retry')}
           </Button>
         )}

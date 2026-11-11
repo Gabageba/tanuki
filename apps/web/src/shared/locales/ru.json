@@ -689,7 +689,6 @@
   "toBookmarks": "В закладки",
   "removeFromBookmarks": "Убрать из закладок",
   "removedFromBookmarks": "Убрано из закладок",
-  "restore": "Вернуть",
   "newFolder": "Новая папка",
   "manageFolders": "Управлять папками",
   "rename": "Переименовать",
@@ -1050,5 +1049,14 @@
   "keepScreenOn": "Не гасить экран",
   "screenStaysOnWhileReadingIfSupported": "Экран остаётся включённым во время чтения, если устройство это поддерживает",
   "fullScreen": "На весь экран",
-  "exitFullScreen": "Выйти из полноэкранного режима"
+  "exitFullScreen": "Выйти из полноэкранного режима",
+  "updateAvailable": "Доступно обновление",
+  "updateApp": "Обновить приложение",
+  "installTanuki": "Установить Tanuki",
+  "installApp": "Установить приложение",
+  "launchTanukiFromShortcut": "Запускайте Tanuki с ярлыка в отдельном окне без вкладок браузера.",
+  "appReloadsDownloadsResume": "Приложение перезагрузится. Скачивание глав продолжится автоматически.",
+  "restoreBookmark": "Вернуть закладку",
+  "restoreTitle": "Вернуть тайтл",
+  "openNotification": "Открыть уведомление"
 }

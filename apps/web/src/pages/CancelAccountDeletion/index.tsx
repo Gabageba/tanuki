@@ -1,7 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { Toasts } from '@/shared/lib/toasts/store';
+import { FEEDBACK_TONE } from '@/shared/lib/feedback';
 import type { CurrentUser } from '@tanuki/contracts';
 import { apiFetch } from '@/shared/api/client';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
@@ -25,7 +26,7 @@ function CancelAccountDeletion() {
         queryClient.setQueryData(CURRENT_USER_QUERY_KEY, user);
       }}
       onSuccess={() => {
-        notifications.show({ color: 'green', message: t('deletionCancelled') });
+        Toasts.show({ tone: FEEDBACK_TONE.SUCCESS, title: t('deletionCancelled') });
         navigate(ROUTE_PATHS.HOME, { replace: true });
       }}
     />

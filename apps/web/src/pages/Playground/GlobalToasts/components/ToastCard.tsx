@@ -12,7 +12,7 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import { ArrowUpRightIcon, XIcon } from '@phosphor-icons/react';
-import { getToneColor } from '@/entities/notification/lib';
+import { getToneColor } from '@/shared/lib/feedback';
 import {
   BASE_APPEARANCE,
   EVENT_HINT,

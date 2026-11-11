@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import { apiFetch } from '@/shared/api/client';
+import { recordCompletedChapter } from '@/shared/lib/appInstall/install';
 import type { ReaderPosition } from '../models';
 
 type Params = {
@@ -24,6 +25,7 @@ function useRecordChapterRead({ titleId, position, pagesLength }: Params) {
     if (!user || pagesLength === null || pageIndex !== pagesLength - 1) return;
     if (recorded.current.has(chapterId)) return;
     recorded.current.add(chapterId);
+    recordCompletedChapter(titleId, chapterId);
 
     // keepalive — чтобы запрос пережил закрытие вкладки сразу после последней страницы.
     apiFetch<void>(`/titles/${titleId}/chapter-reads`, {

@@ -5,6 +5,7 @@ import styles from './MobileMenu.module.scss';
 
 type Props = {
   leftSection: ReactNode;
+  rightSection?: ReactNode;
   children: ReactNode;
   /** Пункт-ссылка; без неё — кнопка с `onClick`. */
   to?: string;
@@ -15,7 +16,15 @@ type Props = {
 
 /** Пункт мобильного меню в размерах Menu.Item — 14px, поля 6.67 × 12px, иконка с зазором 10px:
  *  сам `Menu.Item` вне `Menu` не работает. */
-function MobileMenuRow({ leftSection, children, to, onClick, disabled, isDanger = false }: Props) {
+function MobileMenuRow({
+  leftSection,
+  rightSection,
+  children,
+  to,
+  onClick,
+  disabled,
+  isDanger = false,
+}: Props) {
   const rowProps = {
     className: styles.row,
     display: 'flex',
@@ -34,7 +43,8 @@ function MobileMenuRow({ leftSection, children, to, onClick, disabled, isDanger 
         <Box display="flex" me="xs">
           {leftSection}
         </Box>
-        {children}
+        <Box flex={1}>{children}</Box>
+        {rightSection}
       </>
     ),
   };

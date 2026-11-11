@@ -1,5 +1,5 @@
 import type { ButtonProps } from '@mantine/core';
-import { NOTIFICATION_TONE, type NotificationTone } from '@/entities/notification/models';
+import { FEEDBACK_TONE, type FeedbackTone } from '@/shared/lib/feedback';
 import {
   ACCENT_STYLE,
   ACTION_STYLE,
@@ -75,14 +75,14 @@ export const createDemoState = (): DemoState => ({
   focused: [],
 });
 
-export const getAnnouncementRole = (tone: NotificationTone) => {
+export const getAnnouncementRole = (tone: FeedbackTone) => {
   switch (tone) {
-    case NOTIFICATION_TONE.DANGER:
+    case FEEDBACK_TONE.DANGER:
       return 'alert';
-    case NOTIFICATION_TONE.WARNING:
-    case NOTIFICATION_TONE.SUCCESS:
-    case NOTIFICATION_TONE.ACCENT:
-    case NOTIFICATION_TONE.NEUTRAL:
+    case FEEDBACK_TONE.WARNING:
+    case FEEDBACK_TONE.SUCCESS:
+    case FEEDBACK_TONE.ACCENT:
+    case FEEDBACK_TONE.NEUTRAL:
       return 'status';
   }
 };

@@ -11,6 +11,10 @@
     "lint": "eslint .",
     "storybook": "storybook dev -p 6006 --no-open",
     "storybook:build": "storybook build -o storybook-static",
+    "test": "node --test test/*.test.mjs",
+    "test:pwa": "pnpm build && node --test test/pwa-worker.browser.mjs",
+    "test:toast-stories": "pnpm storybook:build && node --test test/toast-stories.browser.mjs",
+    "test:toasts": "node --test test/toasts.browser.mjs",
     "test:visual": "pnpm storybook:build && sh visual/docker.sh",
     "test:visual:update": "pnpm storybook:build && sh visual/docker.sh --update-snapshots",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.sw.json && tsc -p visual"

@@ -16,7 +16,12 @@ import {
   UNREAD_NOTIFICATIONS_COUNT_QUERY_KEY,
 } from '../models';
 import { setStreamConnected } from '../streamStatus';
-import { showNotificationToast } from '../toasts';
+import {
+  reconcileNotificationToasts,
+  removeNotificationToast,
+  showNotificationToast,
+} from '../toasts';
+import { Toasts } from '@/shared/lib/toasts/store';
 import useRemoveNotification from './useRemoveNotification';
 
 /**
@@ -41,7 +46,12 @@ function useNotificationsStream() {
   );
 
   const toast = useEffectEvent((item: NotificationItem) => {
-    if (document.visibilityState !== 'visible' || !hasNotificationToast(item.category)) return;
+    if (!hasNotificationToast(item.category)) return;
+    if (
+      document.visibilityState !== 'visible' &&
+      !Toasts.getSnapshot().some((entry) => entry.id === `notification-${item.id}`)
+    )
+      return;
     showNotificationToast({
       item,
       t,
@@ -90,7 +100,10 @@ function useNotificationsStream() {
 
         void refresh();
         const event = result.data;
-        if (event.type !== NOTIFICATION_STREAM_EVENT.REMOVED) toast(event.notification);
+        if (event.type === NOTIFICATION_STREAM_EVENT.REMOVED) {
+          if (event.id) removeNotificationToast(event.id);
+          else void reconcileNotificationToasts();
+        } else toast(event.notification);
       };
     };
 

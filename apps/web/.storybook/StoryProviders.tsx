@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppShell, Box } from '@mantine/core';
-import { Notifications } from '@mantine/notifications';
 import { MemoryRouter } from 'react-router';
+import AppToastHost from '@/app/Toasts/AppToastHost';
+import { Toasts } from '@/shared/lib/toasts/store';
 import type { ColorScheme, Language, CurrentUser } from '@tanuki/contracts';
 import { CURRENT_USER_QUERY_KEY } from '@/entities/user/hooks/useCurrentUser';
 import I18nProvider from '@/app/Providers/I18nProvider';
@@ -47,6 +48,12 @@ function StoryProviders({ language, colorScheme, route, footer, children, initia
   });
 
   useEffect(() => {
+    Toasts.reset();
+    Toasts.setReader(false);
+    return () => Toasts.reset();
+  }, []);
+
+  useEffect(() => {
     void I18N.changeLanguage(language);
   }, [language]);
 
@@ -55,7 +62,7 @@ function StoryProviders({ language, colorScheme, route, footer, children, initia
       <QueryClientProvider client={queryClient}>
         <MantineProvider>
           <ColorSchemeSync colorScheme={colorScheme} />
-          <Notifications />
+          <AppToastHost />
           <MemoryRouter initialEntries={route && [route.url]}>
             {route ? (
               <StoryRoutes route={route}>{children}</StoryRoutes>
