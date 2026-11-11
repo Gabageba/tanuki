@@ -710,3 +710,10 @@ AllHentai — особый случай: там 404 без сессии отда
 6. Если на главной сайта есть списки тайтлов — описать блоки в `info.homeSections` и реализовать
    `getHome` (см. [Главная сайта](#главная-сайта-gethome)), фикстура главной — в `test/fixtures/`.
 7. Убрать/добавить источник в `DISABLED_SOURCES` в `.env.example`, если он готов к использованию.
+
+## Self-host release
+
+На серверной границе `observeParser` учитывает каждый `parserFailed` до кеш-fallback. Labels: source_id, конечный список операций Parser и context=request/background/probe. Probe наблюдает отдельные методы, включая ошибки, которые полный прогон перехватил. Сервисные LibSocial-токены — bind mount `/data/libsocial-tokens`, входит в резервную копию инстанса.
+
+Установка, эксплуатация и диагностика: [README](../README.md#self-host).
+План и критерии: [self-host-release](plans/self-host-release.md).

@@ -241,10 +241,17 @@ lint (eslint + stylelint + prettier --check)
 typecheck (tsc --noEmit во всех пакетах)
 test (vitest run --coverage)
 build (turbo build)
-e2e (playwright, только на main и по метке)
+e2e (Playwright Chromium desktop/mobile, каждый PR и master)
 parsers-contract (раз в сутки: по запросу на каждый P0/P1-источник)
 ```
 
 `parsers-contract` вынесен из PR-пайплайна намеренно: он ходит в интернет и падает по
 причинам, не связанным с вашим кодом. Красный джоб от того, что у ReadManga профилактика,
 не должен блокировать мерж. Но узнать об этом раньше пользователей — должны.
+
+## Self-host release
+
+`pnpm docker`/`pnpm start` используют `docker-compose.dev.yml`; production Compose полный и требует конфигурацию. `pnpm test:e2e` использует отдельные временные volumes и настоящий API/БД/Valkey/Mailpit/Caddy, HTTP-фикстуры AComics, Chromium desktop/mobile. Запуск на каждом PR и master. Release workflow строит multiarch GHCR и draft bundle с digest/SHA256 и отдельными sourcemaps; native-smoke на amd64/arm64 проверяет анонимный pull и native-модули.
+
+Установка, эксплуатация и диагностика: [README](../README.md#self-host).
+План и критерии: [self-host-release](plans/self-host-release.md).

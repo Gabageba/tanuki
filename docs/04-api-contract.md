@@ -1066,3 +1066,10 @@ NotificationItem = { id, type, category, count, createdAt, updatedAt, payload } 
 
 `PARSER_FAILED` стоит логировать отдельным счётчиком с разбивкой по источникам — это
 ранний сигнал, что пора обновлять форк парсеров.
+
+## Self-host release
+
+`GET /api/v1/health` — прежний liveness. `GET /api/v1/health/ready` — публичная проверка PostgreSQL и Valkey с дедлайном 2 с, 200 `{status:"ok"}` либо 503 без деталей зависимости. `/metrics` — отдельный внутренний порт 9464, bearer METRICS_TOKEN, Prometheus counter `tanuki_parser_failures_total{source_id,operation,context}`; публичный web этот endpoint не проксирует.
+
+Установка, эксплуатация и диагностика: [README](../README.md#self-host).
+План и критерии: [self-host-release](plans/self-host-release.md).

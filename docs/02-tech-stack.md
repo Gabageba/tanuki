@@ -134,3 +134,10 @@ zod-схемой, бекенд валидирует ей ответы парсе
 
 Весь монорепо — единый pnpm-workspace, все задачи (`build`/`lint`/`typecheck`/`test`) идут через
 `turbo`. Отдельных внешних систем сборки больше нет.
+
+## Self-host release
+
+Self-host runtime — Node 24 (Dockerfile: 24.20.0), pnpm 11.18.0 только на этапе сборки. Это покрывает требования undici 8 и native sharp/argon2. В runtime API нет dev-зависимостей и браузера Playwright; web раздаёт Caddy на непривилегированных внутренних портах.
+
+Установка, эксплуатация и диагностика: [README](../README.md#self-host).
+План и критерии: [self-host-release](plans/self-host-release.md).
