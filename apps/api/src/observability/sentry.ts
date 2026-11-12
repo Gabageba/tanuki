@@ -1,7 +1,8 @@
-import * as Sentry from '@sentry/nestjs';
+import type * as Sentry from '@sentry/nestjs';
 import { API_ERROR_CODE, SOURCE_CATALOG } from '@tanuki/contracts';
 import { PARSER_OPERATION, PARSER_CALL_CONTEXT } from './models';
 import type { ParserCallContext, ParserOperation } from './models';
+import { SENTRY } from './sentry-sdk';
 
 const SOURCES = new Set<unknown>(Object.keys(SOURCE_CATALOG));
 const OPERATIONS = new Set<unknown>(Object.values(PARSER_OPERATION));
@@ -45,6 +46,7 @@ export const sanitizeEvent = (event: Sentry.ErrorEvent): Sentry.ErrorEvent => ({
 
 const REPORTED = new WeakSet<object>();
 export const reportUnexpected = (error: unknown) => {
+  if (!SENTRY) return;
   if (
     error &&
     typeof error === 'object' &&
@@ -56,7 +58,7 @@ export const reportUnexpected = (error: unknown) => {
     if (REPORTED.has(error)) return;
     REPORTED.add(error);
   }
-  Sentry.captureException(error);
+  SENTRY.captureException(error);
 };
 
 export const reportParserFailure = (
@@ -65,10 +67,12 @@ export const reportParserFailure = (
   context: ParserCallContext,
   originalError?: unknown,
 ) => {
+  if (!SENTRY) return;
+  const { captureException } = SENTRY;
   if (originalError && typeof originalError === 'object') REPORTED.add(originalError);
-  Sentry.withScope((scope) => {
+  SENTRY.withScope((scope) => {
     scope.setTags({ source_id: sourceId, operation, context, code: 'parserFailed' });
     scope.setFingerprint(['parserFailed', sourceId, operation, context]);
-    Sentry.captureException(new Error('Parser failed'));
+    captureException(new Error('Parser failed'));
   });
 };

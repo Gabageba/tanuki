@@ -44,6 +44,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const language = resolveLanguage(http.getRequest<FastifyRequest>().headers['accept-language']);
 
     if (exception instanceof ApiException) {
+      if (exception.retryAfter !== undefined) reply.header('Retry-After', exception.retryAfter);
       const body: ApiError = {
         error: {
           code: exception.code,

@@ -48,8 +48,11 @@ export const configureApplication = async (app: NestFastifyApplication) => {
     .setDescription('Все ошибки возвращаются в форме ApiErrorDto, независимо от эндпоинта.')
     .setVersion('1.0')
     .build();
-  const swaggerDocument = cleanupOpenApiDoc(
-    SwaggerModule.createDocument(app, swaggerConfig, { extraModels: [ApiErrorDto] }),
+  // Swagger caches the factory result on the first documentation request. Ordinary
+  // application traffic does not need to build and retain the full OpenAPI schema.
+  SwaggerModule.setup('api/docs', app, () =>
+    cleanupOpenApiDoc(
+      SwaggerModule.createDocument(app, swaggerConfig, { extraModels: [ApiErrorDto] }),
+    ),
   );
-  SwaggerModule.setup('api/docs', app, swaggerDocument);
 };

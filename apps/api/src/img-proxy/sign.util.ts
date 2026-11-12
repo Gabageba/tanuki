@@ -1,18 +1,22 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { InvalidSignatureException } from '../common/errors';
-import { IMAGE_FORMAT, type SignedImageOptions, type SignedImageParams } from './models';
+import {
+  IMAGE_FORMAT,
+  IMAGE_WIDTHS,
+  type SignedImageOptions,
+  type SignedImageParams,
+} from './models';
 
 const SIGNED_URL_TTL_SECONDS = 3600;
-const WIDTH_BUCKETS = [360, 480, 720, 1080, 1440] as const;
 
 const sign = (secret: string, u: string, sourceId: string, exp: number): string => {
   return createHmac('sha256', secret).update(`${u}.${sourceId}.${exp}`).digest('hex');
 };
 
 const roundWidth = (width: number): number => {
-  return WIDTH_BUCKETS.reduce<number>(
+  return IMAGE_WIDTHS.reduce<number>(
     (best, candidate) => (Math.abs(candidate - width) < Math.abs(best - width) ? candidate : best),
-    WIDTH_BUCKETS[0],
+    IMAGE_WIDTHS[0],
   );
 };
 

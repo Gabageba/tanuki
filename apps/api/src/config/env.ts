@@ -53,6 +53,13 @@ const EnvSchema = z.object({
     }),
   SOURCE_HTTP_TIMEOUT_MS: z.coerce.number().default(20_000),
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  // Отдельный кеш допускает вытеснение записей, не затрагивая счётчики защиты входа.
+  CACHE_REDIS_URL: z.string().optional(),
+  IMAGE_DOWNLOAD_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(8),
+  IMAGE_TRANSFORM_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(1),
+  IMAGE_DOWNLOAD_QUEUE_LIMIT: z.coerce.number().int().min(0).max(512).default(128),
+  IMAGE_TRANSFORM_QUEUE_LIMIT: z.coerce.number().int().min(0).max(128).default(32),
+  IMAGE_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(100).max(30_000).default(2_000),
   // Значения по умолчанию совпадают с docker-compose.yml, чтобы локальный запуск не требовал
   // настройки. База нужна только для ручных правок связей между тайтлами: без неё API
   // работает, но правки сохранить нельзя.
