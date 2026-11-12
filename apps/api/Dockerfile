@@ -18,6 +18,7 @@ RUN pnpm turbo run build --filter=@tanuki/api
 
 FROM build AS e2e
 RUN pnpm --filter @tanuki/api exec tsc -p tsconfig.e2e.json
+RUN cp -R apps/api/dist/mail/assets apps/api/dist-e2e/src/mail/assets
 WORKDIR /repo/apps/api
 CMD ["node", "dist-e2e/test/e2e-main.js"]
 

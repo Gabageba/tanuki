@@ -1,102 +1,124 @@
-import type { Language } from '@tanuki/contracts';
+import { LANGUAGE, type Language } from '@tanuki/contracts';
+import { buildEmailContent } from './layout';
+import { EMAIL_IMAGE, type EmailContent } from './models';
 
-type EmailContent = {
-  subject: string;
-  text: string;
-  html: string;
-};
-
-const escapeHtml = (value: string): string =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-
-const wrapHtml = (title: string, bodyHtml: string): string => `<!doctype html>
-<html>
-  <body style="font-family: sans-serif; background: #16151a; color: #e7e6ea; padding: 32px;">
-    <div style="max-width: 480px; margin: 0 auto;">
-      <h1 style="font-size: 20px;">${title}</h1>
-      ${bodyHtml}
-    </div>
-  </body>
-</html>`;
-
-const linkButton = (url: string, label: string): string =>
-  `<p><a href="${url}" style="display: inline-block; background: #6c5ce7; color: #fff; padding: 12px 20px; border-radius: 8px; text-decoration: none;">${label}</a></p>
-   <p style="color: #9a99a2; font-size: 13px;">${url}</p>`;
-
-export const verifyEmailContent = (language: Language, url: string): EmailContent => {
+export const verifyEmailContent = (
+  language: Language,
+  url: string,
+  appUrl: string,
+): EmailContent => {
   switch (language) {
-    case 'ru':
-      return {
-        subject: 'Подтвердите почту в Tanuki',
-        text: `Чтобы подтвердить почту, перейдите по ссылке: ${url}\n\nСсылка действует 24 часа.`,
-        html: wrapHtml(
-          'Подтвердите почту',
-          `<p>Перейдите по ссылке, чтобы подтвердить почту и завершить регистрацию.</p>${linkButton(url, 'Подтвердить почту')}<p style="color: #9a99a2; font-size: 13px;">Ссылка действует 24 часа. Если вы не регистрировались в Tanuki — просто проигнорируйте письмо.</p>`,
-        ),
-      };
-    case 'en':
-      return {
-        subject: 'Confirm your email for Tanuki',
-        text: `Confirm your email by following this link: ${url}\n\nThe link is valid for 24 hours.`,
-        html: wrapHtml(
-          'Confirm your email',
-          `<p>Follow the link to confirm your email and finish registration.</p>${linkButton(url, 'Confirm email')}<p style="color: #9a99a2; font-size: 13px;">The link is valid for 24 hours. If you didn't sign up for Tanuki, ignore this email.</p>`,
-        ),
-      };
+    case LANGUAGE.RU:
+      return buildEmailContent(
+        language,
+        {
+          subject: 'Подтвердите почту в Tanuki',
+          preheader: 'Остался один шаг, чтобы завершить регистрацию. Ссылка действует 24 часа.',
+          title: 'Подтвердите почту',
+          paragraphs: ['Подтвердите этот адрес, чтобы завершить регистрацию и войти в Tanuki.'],
+          action: { label: 'Подтвердить почту', url, icon: EMAIL_IMAGE.CONFIRM },
+          expiry: 'Ссылка действует 24 часа.',
+          explanation: 'Если вы не регистрировались в Tanuki, просто проигнорируйте это письмо.',
+        },
+        appUrl,
+      );
+    case LANGUAGE.EN:
+      return buildEmailContent(
+        language,
+        {
+          subject: 'Confirm your email for Tanuki',
+          preheader: 'One more step to finish signing up. The link is valid for 24 hours.',
+          title: 'Confirm your email',
+          paragraphs: ['Confirm this email address to finish signing up and sign in to Tanuki.'],
+          action: { label: 'Confirm email', url, icon: EMAIL_IMAGE.CONFIRM },
+          expiry: 'The link is valid for 24 hours.',
+          explanation: "If you didn't sign up for Tanuki, just ignore this email.",
+        },
+        appUrl,
+      );
   }
 };
 
-export const resetPasswordContent = (language: Language, url: string): EmailContent => {
+export const resetPasswordContent = (
+  language: Language,
+  url: string,
+  appUrl: string,
+): EmailContent => {
   switch (language) {
-    case 'ru':
-      return {
-        subject: 'Сброс пароля в Tanuki',
-        text: `Чтобы сбросить пароль, перейдите по ссылке: ${url}\n\nСсылка действует 1 час.`,
-        html: wrapHtml(
-          'Сброс пароля',
-          `<p>Перейдите по ссылке, чтобы задать новый пароль.</p>${linkButton(url, 'Сбросить пароль')}<p style="color: #9a99a2; font-size: 13px;">Ссылка действует 1 час. Если вы не запрашивали сброс — просто проигнорируйте письмо.</p>`,
-        ),
-      };
-    case 'en':
-      return {
-        subject: 'Reset your Tanuki password',
-        text: `Reset your password by following this link: ${url}\n\nThe link is valid for 1 hour.`,
-        html: wrapHtml(
-          'Reset your password',
-          `<p>Follow the link to set a new password.</p>${linkButton(url, 'Reset password')}<p style="color: #9a99a2; font-size: 13px;">The link is valid for 1 hour. If you didn't request this, ignore this email.</p>`,
-        ),
-      };
+    case LANGUAGE.RU:
+      return buildEmailContent(
+        language,
+        {
+          subject: 'Сброс пароля в Tanuki',
+          preheader: 'Задайте новый пароль по ссылке. Она действует 1 час.',
+          title: 'Задайте новый пароль',
+          paragraphs: [
+            'Мы получили запрос на сброс пароля вашего аккаунта. Перейдите по ссылке, чтобы задать новый.',
+          ],
+          action: { label: 'Задать новый пароль', url, icon: EMAIL_IMAGE.PASSWORD },
+          expiry: 'Ссылка действует 1 час.',
+          explanation:
+            'Если вы не запрашивали сброс, проигнорируйте это письмо. Ваш пароль останется прежним.',
+        },
+        appUrl,
+      );
+    case LANGUAGE.EN:
+      return buildEmailContent(
+        language,
+        {
+          subject: 'Reset your Tanuki password',
+          preheader: 'Set a new password using the link. It is valid for 1 hour.',
+          title: 'Set a new password',
+          paragraphs: [
+            'We received a request to reset your account password. Follow the link to set a new one.',
+          ],
+          action: { label: 'Set a new password', url, icon: EMAIL_IMAGE.PASSWORD },
+          expiry: 'The link is valid for 1 hour.',
+          explanation:
+            "If you didn't request a reset, ignore this email. Your password will stay the same.",
+        },
+        appUrl,
+      );
   }
 };
 
-const codeBlock = (code: string): string =>
-  `<p style="font-family: monospace; font-size: 32px; letter-spacing: 8px; margin: 24px 0;">${code}</p>`;
-
-export const emailChangeCodeContent = (language: Language, code: string): EmailContent => {
+export const emailChangeCodeContent = (
+  language: Language,
+  code: string,
+  appUrl: string,
+): EmailContent => {
   switch (language) {
-    case 'ru':
-      return {
-        subject: `${code} — код для смены почты в Tanuki`,
-        text: `Код для смены почты в Tanuki: ${code}\n\nКод действует 15 минут.`,
-        html: wrapHtml(
-          'Код для смены почты',
-          `<p>Введите этот код в Tanuki, чтобы привязать эту почту к аккаунту.</p>${codeBlock(code)}<p style="color: #9a99a2; font-size: 13px;">Код действует 15 минут. Если вы не меняли почту в Tanuki — просто проигнорируйте письмо.</p>`,
-        ),
-      };
-    case 'en':
-      return {
-        subject: `${code} is your Tanuki email change code`,
-        text: `Your Tanuki email change code: ${code}\n\nThe code is valid for 15 minutes.`,
-        html: wrapHtml(
-          'Email change code',
-          `<p>Enter this code in Tanuki to use this email for your account.</p>${codeBlock(code)}<p style="color: #9a99a2; font-size: 13px;">The code is valid for 15 minutes. If you didn't change your email in Tanuki, ignore this email.</p>`,
-        ),
-      };
+    case LANGUAGE.RU:
+      return buildEmailContent(
+        language,
+        {
+          subject: `${code} — код для смены почты в Tanuki`,
+          preheader: 'Введите код в Tanuki, чтобы подтвердить новый адрес. Код действует 15 минут.',
+          title: 'Подтвердите новую почту',
+          paragraphs: ['Введите этот код в Tanuki, чтобы привязать новый адрес к вашему аккаунту.'],
+          code,
+          expiry: 'Код действует 15 минут.',
+          explanation:
+            'Никому не сообщайте этот код. Если вы не меняли почту в Tanuki, проигнорируйте письмо.',
+        },
+        appUrl,
+      );
+    case LANGUAGE.EN:
+      return buildEmailContent(
+        language,
+        {
+          subject: `${code} is your Tanuki email change code`,
+          preheader:
+            'Enter the code in Tanuki to confirm your new email. The code is valid for 15 minutes.',
+          title: 'Confirm your new email',
+          paragraphs: ['Enter this code in Tanuki to link the new email address to your account.'],
+          code,
+          expiry: 'The code is valid for 15 minutes.',
+          explanation:
+            "Don't share this code with anyone. If you didn't change your email in Tanuki, ignore this email.",
+        },
+        appUrl,
+      );
   }
 };
 
@@ -105,54 +127,91 @@ export const emailChangedContent = (
   language: Language,
   newEmail: string,
   url: string,
+  appUrl: string,
 ): EmailContent => {
-  const email = escapeHtml(newEmail);
   switch (language) {
-    case 'ru':
-      return {
-        subject: 'Почта в Tanuki изменена',
-        text: `Почта аккаунта Tanuki изменена на ${newEmail}. Если это были не вы, верните прежнюю по ссылке: ${url}\n\nСсылка действует 7 дней.`,
-        html: wrapHtml(
-          'Почта изменена',
-          `<p>Почта вашего аккаунта Tanuki изменена на <b>${email}</b>.</p><p>Если это были вы — ничего делать не нужно. Если нет — верните прежнюю почту: все устройства при этом выйдут из аккаунта.</p>${linkButton(url, 'Это был не я')}<p style="color: #9a99a2; font-size: 13px;">Ссылка действует 7 дней.</p>`,
-        ),
-      };
-    case 'en':
-      return {
-        subject: 'Your Tanuki email was changed',
-        text: `Your Tanuki account email was changed to ${newEmail}. If it wasn't you, restore the previous one here: ${url}\n\nThe link is valid for 7 days.`,
-        html: wrapHtml(
-          'Email changed',
-          `<p>Your Tanuki account email was changed to <b>${email}</b>.</p><p>If it was you, there's nothing to do. If not, restore your previous email: every device gets signed out.</p>${linkButton(url, "It wasn't me")}<p style="color: #9a99a2; font-size: 13px;">The link is valid for 7 days.</p>`,
-        ),
-      };
+    case LANGUAGE.RU:
+      return buildEmailContent(
+        language,
+        {
+          subject: 'Почта вашего аккаунта Tanuki изменена',
+          preheader: 'Если это были не вы, прежний адрес можно вернуть в течение 7 дней.',
+          title: 'Почта аккаунта изменена',
+          paragraphs: [
+            'К вашему аккаунту Tanuki привязан новый адрес. Если это были вы, ничего делать не нужно.',
+          ],
+          detail: { label: 'Новый адрес', value: newEmail, monospace: true },
+          action: { label: 'Вернуть прежнюю почту', url, icon: EMAIL_IMAGE.RESTORE },
+          expiry: 'Ссылка действует 7 дней.',
+          explanation:
+            'Если вы не меняли почту, верните прежний адрес. После возврата все устройства выйдут из аккаунта.',
+        },
+        appUrl,
+      );
+    case LANGUAGE.EN:
+      return buildEmailContent(
+        language,
+        {
+          subject: 'Your Tanuki account email was changed',
+          preheader: "If it wasn't you, you can restore your previous email within 7 days.",
+          title: 'Account email changed',
+          paragraphs: [
+            "A new email address has been linked to your Tanuki account. If it was you, there's nothing to do.",
+          ],
+          detail: { label: 'New email address', value: newEmail, monospace: true },
+          action: { label: 'Restore previous email', url, icon: EMAIL_IMAGE.RESTORE },
+          expiry: 'The link is valid for 7 days.',
+          explanation:
+            "If you didn't change your email, restore the previous address. All devices will be signed out afterwards.",
+        },
+        appUrl,
+      );
   }
 };
 
-/** date — уже отформатированная дата удаления. */
+/** date — уже отформатированная дата удаления, как и до смены дизайна письма. */
 export const accountDeletionScheduledContent = (
   language: Language,
   date: string,
   url: string,
+  appUrl: string,
 ): EmailContent => {
   switch (language) {
-    case 'ru':
-      return {
-        subject: 'Аккаунт Tanuki будет удалён',
-        text: `Аккаунт Tanuki будет удалён ${date} вместе со всеми данными. Чтобы отменить удаление, перейдите по ссылке: ${url}`,
-        html: wrapHtml(
-          'Аккаунт будет удалён',
-          `<p>Аккаунт Tanuki будет удалён <b>${escapeHtml(date)}</b> вместе с прогрессом, историей и настройками.</p><p>До этого удаление можно отменить — по ссылке ниже или просто войдя в аккаунт.</p>${linkButton(url, 'Отменить удаление')}`,
-        ),
-      };
-    case 'en':
-      return {
-        subject: 'Your Tanuki account will be deleted',
-        text: `Your Tanuki account will be deleted on ${date} along with all its data. To cancel, follow this link: ${url}`,
-        html: wrapHtml(
-          'Your account will be deleted',
-          `<p>Your Tanuki account will be deleted on <b>${escapeHtml(date)}</b> along with your progress, history and settings.</p><p>Until then you can cancel — via the link below or just by signing in.</p>${linkButton(url, 'Cancel deletion')}`,
-        ),
-      };
+    case LANGUAGE.RU: {
+      const deletionDate = date.replaceAll(' ', '\u00a0');
+      return buildEmailContent(
+        language,
+        {
+          subject: `Удаление аккаунта Tanuki запланировано на ${deletionDate}`,
+          preheader: `До ${deletionDate} удаление можно отменить по ссылке или входом в аккаунт.`,
+          title: 'Аккаунт будет удалён',
+          paragraphs: [
+            'Мы получили запрос на удаление вашего аккаунта Tanuki. В указанную дату аккаунт и все его данные будут удалены.',
+          ],
+          detail: { label: 'Дата удаления', value: deletionDate },
+          action: { label: 'Отменить удаление аккаунта', url, icon: EMAIL_IMAGE.RESTORE },
+          explanation:
+            'До этой даты вы можете отменить удаление кнопкой выше или просто войти в аккаунт. После удаления восстановить данные не получится.',
+        },
+        appUrl,
+      );
+    }
+    case LANGUAGE.EN:
+      return buildEmailContent(
+        language,
+        {
+          subject: `Your Tanuki account is scheduled for deletion on ${date}`,
+          preheader: `You can cancel deletion before ${date} using the link or by signing in.`,
+          title: 'Your account will be deleted',
+          paragraphs: [
+            'We received a request to delete your Tanuki account. On the specified date, your account and all its data will be deleted.',
+          ],
+          detail: { label: 'Deletion date', value: date },
+          action: { label: 'Cancel account deletion', url, icon: EMAIL_IMAGE.RESTORE },
+          explanation:
+            "Until then, you can cancel deletion using the button above or just by signing in to your account. Once deleted, your data can't be recovered.",
+        },
+        appUrl,
+      );
   }
 };
