@@ -127,7 +127,7 @@ Vite-приложение. Полностью клиентский роутин�
 
 ## Self-host release
 
-Production: один API, PostgreSQL, Valkey, migrator и Caddy/web в `docker-compose.yml`. БД и кеш без опубликованных портов; общий origin web/API, фиксированная граница доверия прокси. Инфраструктура разработки — `docker-compose.dev.yml`.
+Production: один API, PostgreSQL, два Valkey (ограниченный кеш и отдельные счётчики защиты входа), migrator и Caddy/web в `docker-compose.yml`. БД и Valkey без опубликованных портов; общий origin web/API, фиксированная граница доверия прокси. Инфраструктура разработки — `docker-compose.dev.yml`. Значения лимитов — в `docs/14-resource-limits.md`.
 
 Установка, эксплуатация и диагностика: [README](../README.md#self-host).
 План и критерии: [self-host-release](plans/self-host-release.md).
