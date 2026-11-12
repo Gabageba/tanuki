@@ -11,6 +11,29 @@ services:
       timeout: 3s
       retries: 15
 
+  cache:
+    image: valkey/valkey:8-alpine
+    command:
+      [
+        'valkey-server',
+        '--maxmemory',
+        '32mb',
+        '--maxmemory-policy',
+        'allkeys-lru',
+        '--save',
+        '',
+        '--appendonly',
+        'no',
+      ]
+    mem_limit: 64m
+    ports:
+      - '${CACHE_PORT:-6380}:6379'
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
   postgres:
     image: postgres:17-alpine
     environment:

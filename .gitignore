@@ -31,6 +31,7 @@ apps/api/dist-e2e/
 apps/web/e2e/report/
 apps/web/e2e/test-results/
 tests/e2e/report/
+tests/load/report/
 /tanuki
 /.backup.*/
 /.restore.*/
