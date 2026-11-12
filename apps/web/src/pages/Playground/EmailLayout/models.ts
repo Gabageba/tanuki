@@ -146,6 +146,10 @@ export const SECTION_GROUPS: SectionNavGroup[] = [
       ({ code, title }) => ({ letter: code, title }),
     ),
   },
+  {
+    title: 'Итог',
+    axes: [{ letter: 'R', title: 'Выбран E1b' }],
+  },
 ];
 
 export const SCHEME_OPTIONS = [

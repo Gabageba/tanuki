@@ -20,6 +20,14 @@ type Story = StoryObj<typeof META>;
 
 export const Default: Story = { name: 'Обычная' };
 export const Mobile: Story = { name: 'На телефоне', globals: MOBILE_GLOBALS };
+export const SelectedResult: Story = {
+  name: 'Итог · E1b',
+  play: async ({ canvasElement }) => {
+    const result = within(canvasElement).getByText('Итог · E1b', { exact: true });
+    result.scrollIntoView({ block: 'start' });
+    await expect(result).toBeVisible();
+  },
+};
 export const CompactAction: Story = {
   name: 'E1a · кнопка 36 px',
   play: async ({ canvasElement }) => {

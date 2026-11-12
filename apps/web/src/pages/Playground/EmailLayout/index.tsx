@@ -7,6 +7,7 @@ import { ROUTE_PATHS } from '@/shared/lib/routes';
 import DemoSection from '../components/DemoSection';
 import SandboxOnly from '../components/SandboxOnly';
 import SectionNav from '../components/SectionNav';
+import ResultSection from './components/ResultSection';
 import VariantGallery from './components/VariantGallery';
 import { SCHEME_OPTIONS, SECTION_GROUPS, VARIANTS, type EmailScheme } from './models';
 
@@ -22,10 +23,10 @@ function PlaygroundEmailLayout() {
       </Group>
       <Stack gap="xs" maw={880}>
         <Text fz="sm" c="dimmed">
-          В конце страницы — доработка выбранной карточки E1: E1a с кнопкой 36 px и E1b с кнопкой 44
-          px. В обоих обычное начертание текста, иконка по центру и короткая запасная ссылка. Первые
-          E0–E3 сохранены на прежних местах. У каждого варианта все пять писем: подтверждение почты,
-          сброс пароля, код смены адреса, уведомление о смене и удаление аккаунта.
+          Выбран E1b: карточка E1 с кнопкой 44 px, обычным начертанием текста, иконкой по центру и
+          короткой запасной ссылкой. В конце страницы собран «Итог · E1b». Прежние варианты
+          сохранены на своих местах. У каждого варианта все пять писем: подтверждение почты, сброс
+          пароля, код смены адреса, уведомление о смене и удаление аккаунта.
         </Text>
         <Text fz="sm" c="dimmed">
           Рядом показаны компьютер и телефон; на узком экране рамки сужаются до доступной ширины.
@@ -87,6 +88,7 @@ function PlaygroundEmailLayout() {
               </DemoSection>
             </Stack>
           ))}
+          <ResultSection scheme={scheme} brandedFonts={brandedFonts} />
         </Stack>
       </Group>
     </Stack>
