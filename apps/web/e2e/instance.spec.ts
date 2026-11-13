@@ -261,7 +261,14 @@ test('ошибки настоящего парсера: fallback, background, pr
   const before = await (await request.get(`${METRICS}/metrics`, { headers })).text();
   // Fresh cache never invokes the parser, even when the source has just broken.
   expect((await control('context=request')).ok()).toBeTruthy();
-  expect(await (await request.get(`${METRICS}/metrics`, { headers })).text()).toBe(before);
+  // Process memory gauges change between scrapes; cache hits must preserve parser metrics.
+  const parserMetrics = (metrics: string) =>
+    metrics
+      .split('\n')
+      .filter((line) => !line.startsWith('tanuki_process_memory_bytes{'))
+      .join('\n');
+  const after = await (await request.get(`${METRICS}/metrics`, { headers })).text();
+  expect(parserMetrics(after)).toBe(parserMetrics(before));
   for (const context of ['request', 'background']) {
     const fallback = await (await control(`context=${context}&force=true`)).json();
     expect(fallback.stale).toBe(true);
