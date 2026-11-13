@@ -707,7 +707,8 @@ describe('Inkstory getBookmarks via SSR and server functions', () => {
     if (typeof input === 'object') {
       const entries = Object.entries(input);
       return {
-        t: 10, i: 0,
+        t: 10,
+        i: 0,
         p: { k: entries.map(([key]) => key), v: entries.map(([, value]) => seroval(value)) },
         o: 0,
       };
@@ -721,9 +722,9 @@ describe('Inkstory getBookmarks via SSR and server functions', () => {
   });
 
   const viewerPage = (loggedIn: boolean) =>
-    `<script>$R[1]={currentUser:${loggedIn
-      ? `$R[2]={id:"${USER_ID}",username:"Reader"}`
-      : 'null'}}</script>`;
+    `<script>$R[1]={currentUser:${
+      loggedIn ? `$R[2]={id:"${USER_ID}",username:"Reader"}` : 'null'
+    }}</script>`;
 
   const libraryPage = `<link rel="modulepreload" href="/assets/tanstack-start-test.js"/>
 <script>($R=>$R[0]={currentUser:$R[1]={id:"${USER_ID}",username:"Reader"},folders:$R[2]=[
@@ -737,16 +738,20 @@ const t1=m().handler(f("${MARKS_HASH}")),Go=e=>T({queryKey:["bookmarks",{bookId:
   const setUp = (domain = DOMAIN, loggedIn = true) => {
     const http = new FakeHttpClient();
     http.register((url) => url === `https://${domain}/faq`, {
-      status: 200, body: viewerPage(loggedIn),
+      status: 200,
+      body: viewerPage(loggedIn),
     });
     http.register((url) => url === `https://${domain}/library`, {
-      status: 200, body: libraryPage,
+      status: 200,
+      body: libraryPage,
     });
     http.register((url) => url === `https://${domain}/assets/tanstack-start-test.js`, {
-      status: 200, body: javascript,
+      status: 200,
+      body: javascript,
     });
     http.register(
-      (url) => url.includes(`/_serverFn/${ITEMS_HASH}`) &&
+      (url) =>
+        url.includes(`/_serverFn/${ITEMS_HASH}`) &&
         new URL(url).searchParams.get('payload')?.includes(READING_ID) === true,
       json([
         { folderId: READING_ID, bookId: book.id, book },
@@ -754,16 +759,22 @@ const t1=m().handler(f("${MARKS_HASH}")),Go=e=>T({queryKey:["bookmarks",{bookId:
       ]),
     );
     http.register(
-      (url) => url.includes(`/_serverFn/${ITEMS_HASH}`) &&
+      (url) =>
+        url.includes(`/_serverFn/${ITEMS_HASH}`) &&
         new URL(url).searchParams.get('payload')?.includes(OWN_ID) === true,
       json([{ folderId: OWN_ID, bookId: book.id, book }]),
     );
-    http.register((url) => url.includes(`/_serverFn/${MARKS_HASH}`), json([
-      { bookId: book.id, updatedAt: '2026-01-01T00:00:00Z',
-        chapter: { number: 2, volume: 1 } },
-      { bookId: book.id, updatedAt: '2026-02-01T00:00:00Z',
-        chapter: { number: 42.5, volume: 3 } },
-    ]));
+    http.register(
+      (url) => url.includes(`/_serverFn/${MARKS_HASH}`),
+      json([
+        { bookId: book.id, updatedAt: '2026-01-01T00:00:00Z', chapter: { number: 2, volume: 1 } },
+        {
+          bookId: book.id,
+          updatedAt: '2026-02-01T00:00:00Z',
+          chapter: { number: 42.5, volume: 3 },
+        },
+      ]),
+    );
     return http;
   };
 
@@ -780,12 +791,14 @@ const t1=m().handler(f("${MARKS_HASH}")),Go=e=>T({queryKey:["bookmarks",{bookId:
       { name: 'Читаю', builtIn: BUILT_IN_BOOKMARK_FOLDER.READING },
       { name: 'Моя папка', builtIn: null },
     ]);
-    expect(folders[0]!.items).toEqual([expect.objectContaining({
-      url: book.id,
-      title: book.name.ru,
-      lastChapterNumber: 42.5,
-      lastChapterVolume: 3,
-    })]);
+    expect(folders[0]!.items).toEqual([
+      expect.objectContaining({
+        url: book.id,
+        title: book.name.ru,
+        lastChapterNumber: 42.5,
+        lastChapterVolume: 3,
+      }),
+    ]);
     expect(folders[1]!.items).toHaveLength(1);
     expect(http.requests.some(({ url }) => url.includes('/v2/'))).toBe(false);
     expect(http.requests.some(({ url }) => url.includes('/_serverFn/'))).toBe(true);
@@ -796,13 +809,17 @@ const t1=m().handler(f("${MARKS_HASH}")),Go=e=>T({queryKey:["bookmarks",{bookId:
     const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
     const folders = await asUser(() => parser.getBookmarks!(), PUREMANGA_DOMAIN);
     expect(folders[0]!.items).toHaveLength(1);
-    expect(http.requests.some(({ url }) => url.startsWith(`https://${PUREMANGA_DOMAIN}/library`))).toBe(true);
+    expect(
+      http.requests.some(({ url }) => url.startsWith(`https://${PUREMANGA_DOMAIN}/library`)),
+    ).toBe(true);
   });
 
   it('requires a valid session and refuses an unauthenticated library', async () => {
     const http = setUp(DOMAIN, false);
     const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
-    await expect(asUser(() => parser.getBookmarks!())).rejects.toBeInstanceOf(SourceAuthRequiredError);
+    await expect(asUser(() => parser.getBookmarks!())).rejects.toBeInstanceOf(
+      SourceAuthRequiredError,
+    );
     await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
   });
 });
