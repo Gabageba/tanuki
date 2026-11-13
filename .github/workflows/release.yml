@@ -123,7 +123,17 @@ jobs:
           rm -rf bundle/maps
           cd bundle
           sha256sum docker-compose.yml release.env tanuki README.md LICENSE env.example api.env.example sourcemaps.tar.gz > SHA256SUMS
-      # A draft is reviewable before publication. A tag alone never exposes a release bundle.
+      # Publish only after all CI, image builds and native smoke tests pass.
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create '${{ github.ref_name }}' bundle/* --draft --verify-tag --generate-notes --title 'Tanuki ${{ github.ref_name }}'
+        run: gh release create '${{ github.ref_name }}' bundle/* --verify-tag --generate-notes --title 'Tanuki ${{ github.ref_name }}'
+
+  deploy:
+    needs: bundle
+    # Enable after configuring SSH secrets and validating the first installation.
+    if: ${{ vars.TANUKI_AUTO_DEPLOY == 'true' }}
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ github.ref_name }}
+      operation: update
+    secrets: inherit
