@@ -682,145 +682,145 @@ describe('Inkstory getHome', () => {
   });
 });
 
-describe('Inkstory getBookmarks', () => {
-  const USER_ID = '752215b2-799e-4dc8-87ed-e58993c34e8f';
-  const READING_ID = 'f-reading';
-  const FAVORITES_ID = 'f-favorites';
-  const OWN_ID = 'f-own';
-
-  // Состояние роутера в SSR — как у живой страницы (проверено 2026-10-27).
-  const viewerPage = (isLoggedIn: boolean) =>
-    `<script>$R[1]={currentDomainId:"inkstory",currentUser:${
-      isLoggedIn ? `$R[27]={id:"${USER_ID}",username:"Reader",slug:null}` : 'null'
-    },members:$R[2]=[]}</script>`;
-
-  const FOLDERS_JSON = JSON.stringify([
-    { id: OWN_ID, name: 'Перечитать', system: false, sortOrder: 6 },
-    { id: FAVORITES_ID, name: 'Любимые', system: true, sortOrder: 5 },
-    { id: READING_ID, name: 'Читаю', system: true, sortOrder: 1 },
-  ]);
-
-  const FOLDER_ITEMS_JSON = JSON.stringify([
-    { folderId: READING_ID, bookId: MANGA_ID },
-    { folderId: READING_ID, bookId: 'hidden-book' },
-    { folderId: OWN_ID, bookId: MANGA_ID },
-  ]);
-
-  // Книгу «только в библиотеке» список `/v2/books` не отдаёт — только её страница.
-  const HIDDEN_BOOK_JSON = {
+describe('Inkstory getBookmarks via SSR and server functions', () => {
+  const USER_ID = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
+  const READING_ID = 'folder-reading';
+  const OWN_ID = 'folder-custom';
+  const ITEMS_HASH = 'a'.repeat(64);
+  const MARKS_HASH = 'b'.repeat(64);
+  const book = {
     ...LIST_MANGA_JSON,
-    id: 'hidden-book',
-    name: { ru: 'Скрытая' },
-    country: 'KOREA',
-    readingRestriction: 'LIBRARY_ONLY',
+    serviceName: 'inkstory',
+  };
+  const foreignBook = {
+    ...LIST_MANGA_JSON,
+    id: 'other-book',
+    serviceName: 'puremanga.me',
   };
 
-  // Две ветки одной книги — позиция берётся из самой свежей.
-  const READING_BOOKMARKS_JSON = JSON.stringify([
-    { bookId: MANGA_ID, chapterId: 'old-ch', updatedAt: '2026-01-01T00:00:00.123456Z' },
-    { bookId: MANGA_ID, chapterId: 'new-ch', updatedAt: '2026-02-01T00:00:00.123456Z' },
-    { bookId: 'not-in-folders', chapterId: 'other-ch', updatedAt: '2026-02-01T00:00:00Z' },
-  ]);
-
-  const json = (body: unknown) => ({
+  const seroval = (input: unknown): unknown => {
+    if (input === null) return { t: 2, s: 1 };
+    if (typeof input === 'string') return { t: 1, s: input };
+    if (typeof input === 'number') return { t: 0, s: input };
+    if (typeof input === 'boolean') return { t: 2, s: input ? 2 : 3 };
+    if (Array.isArray(input)) return { t: 9, i: 0, a: input.map(seroval), o: 0 };
+    if (typeof input === 'object') {
+      const entries = Object.entries(input);
+      return {
+        t: 10,
+        i: 0,
+        p: { k: entries.map(([key]) => key), v: entries.map(([, value]) => seroval(value)) },
+        o: 0,
+      };
+    }
+    throw Error('Unexpected fixture value');
+  };
+  const json = (data: unknown) => ({
     status: 200,
-    body: typeof body === 'string' ? body : JSON.stringify(body),
+    body: JSON.stringify(seroval({ result: data, error: null, context: {} })),
     contentType: 'application/json',
   });
 
-  /** Листаемый список API: первая страница с данными, дальше — пустые. */
-  const registerPaged = (http: FakeHttpClient, path: string, body: string) => {
-    const isPath = (url: string) => url.includes(`/v2/${path}?`);
-    const page = (url: string) => new URL(url).searchParams.get('page');
-    http.register((url) => isPath(url) && page(url) === '0', json(body));
-    http.register((url) => isPath(url) && page(url) !== '0', json([]));
-  };
+  const viewerPage = (loggedIn: boolean) =>
+    `<script>$R[1]={currentUser:${
+      loggedIn ? `$R[2]={id:"${USER_ID}",username:"Reader"}` : 'null'
+    }}</script>`;
 
-  const setUp = (isLoggedIn: boolean, viewerDomain = DOMAIN) => {
+  const libraryPage = `<link rel="modulepreload" href="/assets/tanstack-start-test.js"/>
+<script>($R=>$R[0]={currentUser:$R[1]={id:"${USER_ID}",username:"Reader"},folders:$R[2]=[
+$R[3]={id:"${OWN_ID}",name:"Моя папка",system:!1,sortOrder:6},
+$R[4]={id:"${READING_ID}",name:"Читаю",system:!0,sortOrder:1}
+]})($R["tsr"])</script>`;
+
+  const javascript = `const l_=m().handler(f("${ITEMS_HASH}")),ou=e=>St({queryKey:["infinite-folder-items-list",{...e}]});
+const t1=m().handler(f("${MARKS_HASH}")),Go=e=>T({queryKey:["bookmarks",{bookId:e}]});`;
+
+  const setUp = (domain = DOMAIN, loggedIn = true) => {
     const http = new FakeHttpClient();
-    http.register((url) => url === `https://${viewerDomain}/faq`, {
+    http.register((url) => url === `https://${domain}/faq`, {
       status: 200,
-      body: viewerPage(isLoggedIn),
+      body: viewerPage(loggedIn),
     });
-    http.register((url) => url.includes('/v2/folders?'), json(FOLDERS_JSON));
-    registerPaged(http, 'folder-items', FOLDER_ITEMS_JSON);
-    registerPaged(http, 'bookmarks', READING_BOOKMARKS_JSON);
-    http.register((url) => url.includes('/v2/books?'), json([LIST_MANGA_JSON]));
-    http.register((url) => url.includes('/v2/books/hidden-book'), json(HIDDEN_BOOK_JSON));
-    http.register((url) => url.includes('/v2/chapters/new-ch'), json({ number: 42.5, volume: 3 }));
+    http.register((url) => url === `https://${domain}/library`, {
+      status: 200,
+      body: libraryPage,
+    });
+    http.register((url) => url === `https://${domain}/assets/tanstack-start-test.js`, {
+      status: 200,
+      body: javascript,
+    });
+    http.register(
+      (url) =>
+        url.includes(`/_serverFn/${ITEMS_HASH}`) &&
+        new URL(url).searchParams.get('payload')?.includes(READING_ID) === true,
+      json([
+        { folderId: READING_ID, bookId: book.id, book },
+        { folderId: READING_ID, bookId: foreignBook.id, book: foreignBook },
+      ]),
+    );
+    http.register(
+      (url) =>
+        url.includes(`/_serverFn/${ITEMS_HASH}`) &&
+        new URL(url).searchParams.get('payload')?.includes(OWN_ID) === true,
+      json([{ folderId: OWN_ID, bookId: book.id, book }]),
+    );
+    http.register(
+      (url) => url.includes(`/_serverFn/${MARKS_HASH}`),
+      json([
+        { bookId: book.id, updatedAt: '2026-01-01T00:00:00Z', chapter: { number: 2, volume: 1 } },
+        {
+          bookId: book.id,
+          updatedAt: '2026-02-01T00:00:00Z',
+          chapter: { number: 42.5, volume: 3 },
+        },
+      ]),
+    );
     return http;
   };
 
-  /** Аккаунт сети с cookie сессии на домене того сайта, откуда её перенесли. */
   const asUser = async <T>(fn: () => Promise<T>, sessionDomain = DOMAIN) => {
-    const jar = await createInukoSessionJar(sessionDomain, 'NrHoLrFoQijL5sH3');
+    const jar = await createInukoSessionJar(sessionDomain, 'TEST_COOKIE_NOT_REAL');
     return runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.INUKO]: { jar } }, fn);
   };
 
-  it('reads folders by the viewer id, sorted, with system folders mapped to built-in ones', async () => {
-    const http = setUp(true);
+  it('reads folders, filters neighboring services, preserves the newest progress and does not call v2', async () => {
+    const http = setUp();
     const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
-
     const folders = await asUser(() => parser.getBookmarks!());
-
-    expect(folders.map(({ id, builtIn, name }) => ({ id, builtIn, name }))).toEqual([
-      { id: READING_ID, builtIn: BUILT_IN_BOOKMARK_FOLDER.READING, name: 'Читаю' },
-      { id: FAVORITES_ID, builtIn: BUILT_IN_BOOKMARK_FOLDER.FAVORITE, name: 'Любимые' },
-      { id: OWN_ID, builtIn: null, name: 'Перечитать' },
+    expect(folders.map(({ name, builtIn }) => ({ name, builtIn }))).toEqual([
+      { name: 'Читаю', builtIn: BUILT_IN_BOOKMARK_FOLDER.READING },
+      { name: 'Моя папка', builtIn: null },
     ]);
     expect(folders[0]!.items).toEqual([
-      {
-        id: expect.any(Number),
-        url: MANGA_ID,
-        title: 'Ван-Пис',
-        coverUrl: 'https://cdn.inkstory.me/one-piece.jpg',
-        contentRating: CONTENT_RATING.SAFE,
-        type: TITLE_TYPE.MANGA,
+      expect.objectContaining({
+        url: book.id,
+        title: book.name.ru,
         lastChapterNumber: 42.5,
         lastChapterVolume: 3,
-      },
-      expect.objectContaining({
-        url: 'hidden-book',
-        title: 'Скрытая',
-        type: TITLE_TYPE.MANHWA,
-        lastChapterNumber: null,
       }),
     ]);
-    expect(folders[2]!.items.map(({ url }) => url)).toEqual([MANGA_ID]);
-    const folderItems = http.requests.find(({ url }) => url.includes('/v2/folder-items?'));
-    const query = new URL(folderItems!.url).searchParams;
-    expect(query.get('userId')).toBe(USER_ID);
-    expect(query.get('serviceName')).toBe(SERVICE_NAME);
-    // Глава книги не из папок не запрашивается.
-    expect(http.requests.some(({ url }) => url.includes('other-ch'))).toBe(false);
+    expect(folders[1]!.items).toHaveLength(1);
+    expect(http.requests.some(({ url }) => url.includes('/v2/'))).toBe(false);
+    expect(http.requests.some(({ url }) => url.includes('/_serverFn/'))).toBe(true);
   });
 
-  it('a session moved from a sibling site: the viewer is read on that site, the library on this one', async () => {
-    const http = setUp(true, PUREMANGA_DOMAIN);
+  it('uses the session cookie domain for a sibling source', async () => {
+    const http = setUp(PUREMANGA_DOMAIN);
     const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
-
     const folders = await asUser(() => parser.getBookmarks!(), PUREMANGA_DOMAIN);
-
-    expect(folders).toHaveLength(3);
-    expect(http.requests.some(({ url }) => url === `https://${DOMAIN}/faq`)).toBe(false);
-    const folderItems = http.requests.find(({ url }) => url.includes('/v2/folder-items?'));
-    expect(new URL(folderItems!.url).searchParams.get('serviceName')).toBe(SERVICE_NAME);
+    expect(folders[0]!.items).toHaveLength(1);
+    expect(
+      http.requests.some(({ url }) => url.startsWith(`https://${PUREMANGA_DOMAIN}/library`)),
+    ).toBe(true);
   });
 
-  it('an expired session — auth required', async () => {
-    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(setUp(false)));
-
+  it('requires a valid session and refuses an unauthenticated library', async () => {
+    const http = setUp(DOMAIN, false);
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
     await expect(asUser(() => parser.getBookmarks!())).rejects.toBeInstanceOf(
       SourceAuthRequiredError,
     );
-  });
-
-  it('without the user’s own account — auth required, no request', async () => {
-    const http = setUp(true);
-    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
-
     await expect(parser.getBookmarks!()).rejects.toBeInstanceOf(SourceAuthRequiredError);
-    expect(http.requests).toHaveLength(0);
   });
 });
 
