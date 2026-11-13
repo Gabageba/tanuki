@@ -222,6 +222,7 @@ export const fetchInukoLibrary = async (options: {
     const response = await http.getJson<unknown>(url.toString(), {
       ...headers,
       Accept: 'application/x-tss-framed, application/x-ndjson, application/json',
+      'x-tsr-serverfn': 'true',
       Referer: `https://${domain}${refererPath}`,
     });
     return decodeInukoServerResponse(response, sourceId);
