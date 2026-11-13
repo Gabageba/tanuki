@@ -1,8 +1,14 @@
 name: Deploy release to VPS
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      operation:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       version:
@@ -30,8 +36,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      VERSION: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version }}
-      OPERATION: ${{ github.event_name == 'release' && 'update' || inputs.operation }}
+      VERSION: ${{ inputs.version }}
+      OPERATION: ${{ inputs.operation }}
       GH_TOKEN: ${{ github.token }}
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -50,6 +56,7 @@ jobs:
             echo "::error::Version must be a release tag such as v1.0.0"
             exit 1
           }
+          [[ "$OPERATION" == stage || "$OPERATION" == update ]] || exit 1
           [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]] || exit 1
           [[ -n "$DEPLOY_HOST" && -n "$DEPLOY_SSH_KEY" && -n "$DEPLOY_KNOWN_HOSTS" ]] || {
             echo "::error::Configure DEPLOY_HOST, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS in Actions secrets."
