@@ -31,14 +31,14 @@ test('приглашение → email → каталог → чтение → �
   await page.goto(verify!);
   await expect(page).not.toHaveURL(/verify-email/, { timeout: 20_000 });
   await page.goto('/catalog/acomics');
-  await expect(page.getByText('Тестовый комикс').first()).toBeVisible();
+  await expect(page.getByText('Тестовый комикс').filter({ visible: true }).first()).toBeVisible();
   const catalog = await (await context.request.get('/api/v1/sources/acomics/titles')).json();
   const title = catalog.items[0];
   expect(title.id).toBeTruthy();
   const stream = await context.request.get('/api/v1/search?query=fixture&sources=acomics');
   expect(await stream.text()).toContain('event: group');
   await page.goto(`/title/${title.id}`);
-  await expect(page.getByText('Тестовый комикс').first()).toBeVisible();
+  await expect(page.getByText('Тестовый комикс').filter({ visible: true }).first()).toBeVisible();
   const chapters = await (await context.request.get(`/api/v1/titles/${title.id}/chapters`)).json();
   const chapter = chapters.items[0];
   const pages = await (
