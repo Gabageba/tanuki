@@ -179,12 +179,12 @@
 - [ ] a11y-аудит: клавиатура, фокус, контраст, `prefers-reduced-motion`
 - [ ] Перф-аудит на реальном среднем Android: LCP, размер бандла, fps скролла
 - [x] Skeleton-состояния и осмысленные ошибки — по правилу **Loading** из `CLAUDE.md`: общий механизм `QueryBlock` / `skeleton` у `PageLayout.Content` ([план](./plans/loading-states.md))
-- [ ] Мониторинг: Sentry (self-hosted), счётчик `PARSER_FAILED` по источникам
-- [ ] Документация self-host: `docker compose up` на чистой машине — нет Dockerfile для `apps/api` и `apps/web`
-- [ ] `robots.txt` с `Disallow: /`, `noindex`
+- [x] Опциональный Sentry и закрытый счётчик ошибок парсеров ([план](plans/self-host-release.md))
+- [x] Self-host: Dockerfile API/web, Compose, CLI и README; публикация/живой HTTPS — внешняя приёмка ([план](plans/self-host-release.md))
+- [x] `robots.txt` с `Disallow: /`, meta и HTTP `noindex`
 - [x] Лицензии: `packages/parsers` — порт GPL-кода, импортируется в процессе `apps/api` →
       GPLv3 на весь репозиторий, единый `LICENSE` в корне ([09](09-legal.md))
-- [ ] E2E на Playwright по ключевым сценариям
+- [x] E2E Chromium desktop/mobile через настоящий API ([план](plans/self-host-release.md))
 - [ ] ~~Автообновление форка парсеров: еженедельный бот + PR~~ — снято: после перехода на
       TS-порт (`packages/parsers`) больше нет форка, за обновлениями которого нужно следить;
       актуальность парсеров теперь поддерживается контрактными тестами

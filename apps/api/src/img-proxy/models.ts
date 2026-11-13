@@ -8,6 +8,10 @@ export const IMAGE_FORMAT = {
 } as const;
 export type ImageFormat = EnumLiteralsOf<typeof IMAGE_FORMAT>;
 
+export const IMAGE_WIDTHS = [360, 480, 720, 1080, 1440] as const;
+export const IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+export const IMAGE_MAX_PIXELS = 20_000_000;
+
 export type SignedImageOptions = {
   width?: number;
   format?: ImageFormat;

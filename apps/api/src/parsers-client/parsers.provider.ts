@@ -1,6 +1,7 @@
 import { Logger, type Provider } from '@nestjs/common';
 import { createRegistry, type ParsersRegistry } from '@tanuki/parsers';
 import type { Env } from '../config/env';
+import { observeParser } from '../observability/parser-metrics';
 import { ENV } from '../config/env.module';
 
 export const PARSERS = Symbol('PARSERS');
@@ -43,6 +44,22 @@ export const parsersProvider: Provider = {
     // ECONNREFUSED in the vite dev proxy (the web dev server boots much faster). Calls that
     // actually hit a source await registry.ready() instead — see ParsersClientService.
     void registry.init();
-    return registry;
+    const knownSources = new Set(registry.listSources().map(({ id }) => id));
+    const observed = new Map<string, ReturnType<typeof observeParser>>();
+    const getObservedParser = (sourceId: string) => {
+      const existing = observed.get(sourceId);
+      if (existing) return existing;
+      const parser = observeParser(registry.get(sourceId));
+      observed.set(sourceId, parser);
+      return parser;
+    };
+    return {
+      ...registry,
+      get: getObservedParser,
+      decodeImage: async (sourceId, bytes, imageUrl) => {
+        if (!knownSources.has(sourceId)) return bytes;
+        return (await getObservedParser(sourceId).decodeImage?.(bytes, imageUrl)) ?? bytes;
+      },
+    };
   },
 };

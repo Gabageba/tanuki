@@ -7,6 +7,7 @@ import AdultContent from './AdultContent';
 import BranchControls from './BranchControls';
 import ChartLabels from './ChartLabels';
 import CoverlessTitleCard from './CoverlessTitleCard';
+import EmailLayout from './EmailLayout';
 import FolderRow from './FolderRow';
 import GlobalToasts from './GlobalToasts';
 import HeaderBackground from './HeaderBackground';
@@ -47,6 +48,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'email-layout',
+    Component: EmailLayout,
+    title: 'Письма Tanuki',
+    description:
+      'Выбран E1b: карточка, кнопка 44 px с обычным начертанием и иконкой по центру, короткая запасная ссылка. Итог всех пяти писем и прежние варианты сохранены.',
+    createdAt: '2026-11-12',
+    decision: 'E1b',
+  },
   {
     slug: 'global-toasts',
     Component: GlobalToasts,

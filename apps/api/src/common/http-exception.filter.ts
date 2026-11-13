@@ -3,6 +3,7 @@ import { Catch, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ZodValidationException } from 'nestjs-zod';
 import { API_ERROR_CODE, type ApiError, type ApiErrorCode } from '@tanuki/contracts';
+import { reportUnexpected } from '../observability/sentry';
 import { ApiException } from './errors';
 import { resolveLanguage, translateErrorMessage, type ErrorMessageKey } from './error-messages';
 
@@ -43,6 +44,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const language = resolveLanguage(http.getRequest<FastifyRequest>().headers['accept-language']);
 
     if (exception instanceof ApiException) {
+      if (exception.retryAfter !== undefined) reply.header('Retry-After', exception.retryAfter);
       const body: ApiError = {
         error: {
           code: exception.code,
@@ -64,6 +66,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return;
     }
 
+    reportUnexpected(exception);
     this.logger.error(exception);
     const body: ApiError = {
       error: {

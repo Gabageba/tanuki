@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { initObservability, reportWebError } from './shared/lib/observability/sentry';
 import AppToastHost from './app/Toasts/AppToastHost';
 import Providers from './app/Providers';
 import { registerServiceWorker } from './shared/lib/serviceWorker';
@@ -10,10 +11,11 @@ if (!rootElement) {
   throw new Error('#root element not found');
 }
 
+initObservability();
 registerInstallPrompt();
 registerServiceWorker();
 
-createRoot(rootElement).render(
+createRoot(rootElement, { onUncaughtError: reportWebError }).render(
   <StrictMode>
     <Providers>
       <AppToastHost />

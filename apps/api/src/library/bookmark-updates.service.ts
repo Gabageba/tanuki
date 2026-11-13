@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { CronJob } from 'cron';
+import { reportUnexpected } from '../observability/sentry';
 import { SOURCE_STATUS } from '@tanuki/contracts';
 import { NotFoundApiException } from '../common/errors';
 import type { Env } from '../config/env';
@@ -159,6 +160,7 @@ export class BookmarkUpdatesService implements OnModuleInit {
       const elapsed = Math.round((Date.now() - startedAt) / 1000);
       this.logger.log(`Проверка закладок закончилась за ${elapsed}с`);
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(`Проверка закладок упала: ${(error as Error).message}`);
     } finally {
       this.isRunning = false;
@@ -213,6 +215,7 @@ export class BookmarkUpdatesService implements OnModuleInit {
         }),
       );
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(`Первые снимки закладок упали: ${(error as Error).message}`);
     } finally {
       this.isFilling = false;
@@ -224,6 +227,7 @@ export class BookmarkUpdatesService implements OnModuleInit {
       const deleted = await this.snapshots.deleteOrphans();
       this.logger.log(`Чистка снимков глав: удалено ${deleted}`);
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(`Чистка снимков глав упала: ${(error as Error).message}`);
     }
   }

@@ -13,6 +13,7 @@ import { ENV } from '../config/env.module';
 export class RateLimitService implements OnModuleDestroy {
   private readonly logger = new Logger(RateLimitService.name);
   private readonly redis: Redis;
+  private readinessQuery: Promise<void> | undefined;
 
   constructor(@Inject(ENV) env: Env) {
     this.redis = new Redis(env.REDIS_URL, {
@@ -41,6 +42,16 @@ export class RateLimitService implements OnModuleDestroy {
       if (error instanceof TooManyRequestsException) throw error;
       this.logger.warn(`Rate limit check failed for ${key}: ${(error as Error).message}`);
     }
+  }
+
+  async ping(): Promise<void> {
+    this.readinessQuery ??= this.redis
+      .ping()
+      .then(() => undefined)
+      .finally(() => {
+        this.readinessQuery = undefined;
+      });
+    await this.readinessQuery;
   }
 
   async onModuleDestroy(): Promise<void> {

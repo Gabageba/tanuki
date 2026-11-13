@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  images:
+    needs: checks
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        app: [api, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: names
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "image=ghcr.io/${REPOSITORY,,}-${{ matrix.app }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.names.outputs.image }}:${{ github.ref_name }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.licenses=GPL-3.0-only
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+      - run: |
+          mkdir -p digests
+          printf '%s\n' '${{ steps.names.outputs.image }}@${{ steps.build.outputs.digest }}' > digests/${{ matrix.app }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.app }}
+          path: digests/*
+
+  native-smoke:
+    needs: images
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+      # Deliberately no registry login: this verifies anonymous pulls. Packages must be public.
+      - run: |
+          docker pull "$(cat digests/api)"
+          docker pull "$(cat digests/web)"
+          docker tag "$(cat digests/api)" tanuki-api:local
+          docker tag "$(cat digests/web)" tanuki-web:local
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: E2E_SKIP_BUILD=1 E2E_SMOKE_ONLY=1 node tests/e2e/run.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: native-smoke-${{ matrix.os }}
+          path: tests/e2e/report
+          retention-days: 14
+
+  bundle:
+    needs: [images, native-smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p bundle/maps/web bundle/maps/api
+          cp docker-compose.yml bundle/
+          cp scripts/self-host/tanuki.sh bundle/tanuki
+          printf 'CONFIG_SCHEMA=1\nTANUKI_VERSION=%s\nAPI_IMAGE=%s\nWEB_IMAGE=%s\n' "$VERSION" "$(cat digests/api)" "$(cat digests/web)" > bundle/release.env
+          cp README.md LICENSE bundle/
+          cp .env.example bundle/env.example
+          cp deploy/api.env.example bundle/api.env.example
+          find apps/web/dist -name '*.map' -exec cp '{}' bundle/maps/web/ \;
+          cp -r apps/api/dist bundle/maps/api/dist
+          find bundle/maps/api -type f ! -name '*.map' -delete
+          tar -C bundle/maps -czf bundle/sourcemaps.tar.gz .
+          rm -rf bundle/maps
+          cd bundle
+          sha256sum docker-compose.yml release.env tanuki README.md LICENSE env.example api.env.example sourcemaps.tar.gz > SHA256SUMS
+      # A draft is reviewable before publication. A tag alone never exposes a release bundle.
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create '${{ github.ref_name }}' bundle/* --draft --verify-tag --generate-notes --title 'Tanuki ${{ github.ref_name }}'

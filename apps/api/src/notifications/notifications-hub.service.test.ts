@@ -142,7 +142,7 @@ describe('NotificationsHubService', () => {
     const subscription = open(hub, 'me', received);
     vi.advanceTimersByTime(STREAM_HEARTBEAT_MS);
     subscription.unsubscribe();
-    expect(received).toHaveBeenCalledWith({ type: 'ping', data: '' });
+    expect(received).toHaveBeenCalledWith({ type: 'ping', data: '{}' });
     expect(vi.getTimerCount()).toBe(0);
   });
 });

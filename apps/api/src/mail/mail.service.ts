@@ -3,6 +3,7 @@ import { createTransport, type Transporter } from 'nodemailer';
 import type { Language } from '@tanuki/contracts';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
+import type { EmailContent } from './models';
 import {
   accountDeletionScheduledContent,
   emailChangeCodeContent,
@@ -38,15 +39,15 @@ export class MailService {
   }
 
   async sendVerifyEmail(to: string, language: Language, url: string): Promise<void> {
-    await this.send(to, verifyEmailContent(language, url));
+    await this.send(to, verifyEmailContent(language, url, this.env.APP_URL));
   }
 
   async sendResetPassword(to: string, language: Language, url: string): Promise<void> {
-    await this.send(to, resetPasswordContent(language, url));
+    await this.send(to, resetPasswordContent(language, url, this.env.APP_URL));
   }
 
   async sendEmailChangeCode(to: string, language: Language, code: string): Promise<void> {
-    await this.send(to, emailChangeCodeContent(language, code));
+    await this.send(to, emailChangeCodeContent(language, code, this.env.APP_URL));
   }
 
   async sendEmailChanged(
@@ -55,7 +56,7 @@ export class MailService {
     newEmail: string,
     url: string,
   ): Promise<void> {
-    await this.send(to, emailChangedContent(language, newEmail, url));
+    await this.send(to, emailChangedContent(language, newEmail, url, this.env.APP_URL));
   }
 
   async sendAccountDeletionScheduled(
@@ -64,10 +65,10 @@ export class MailService {
     date: string,
     url: string,
   ): Promise<void> {
-    await this.send(to, accountDeletionScheduledContent(language, date, url));
+    await this.send(to, accountDeletionScheduledContent(language, date, url, this.env.APP_URL));
   }
 
-  private async send(to: string, content: { subject: string; text: string; html: string }) {
+  private async send(to: string, content: EmailContent) {
     if (!this.transport) {
       this.logger.log(`SMTP не настроен — письмо «${content.subject}» для ${to}:\n${content.text}`);
       return;
@@ -79,6 +80,7 @@ export class MailService {
       subject: content.subject,
       text: content.text,
       html: content.html,
+      attachments: content.attachments,
     });
   }
 }

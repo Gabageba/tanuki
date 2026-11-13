@@ -20,3 +20,20 @@ contract-report.json
 # Визуальные тесты: отчёт и диффы прогона (эталоны в __screenshots__ — в git).
 apps/web/visual/test-results/
 apps/web/visual/report/
+
+# Self-host configuration and integration reports
+/api.env
+/backups/
+/operation.state
+/.admin-lock/
+apps/api/dist-cli/
+apps/api/dist-e2e/
+apps/web/e2e/report/
+apps/web/e2e/test-results/
+tests/e2e/report/
+tests/load/report/
+/tanuki
+/.backup.*/
+/.restore.*/
+/.release.*/
+/.env-write.*

@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnModuleInit,
+  type OnModuleDestroy,
+} from '@nestjs/common';
 import Redis from 'ioredis';
 import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
@@ -28,12 +34,13 @@ export type GetOrSetOptions<T> = {
 };
 
 @Injectable()
-export class CacheService implements OnModuleDestroy {
+export class CacheService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CacheService.name);
   private readonly redis: Redis;
+  private readinessQuery: Promise<void> | undefined;
 
-  constructor(@Inject(ENV) env: Env) {
-    this.redis = new Redis(env.REDIS_URL, {
+  constructor(@Inject(ENV) private readonly env: Env) {
+    this.redis = new Redis(env.CACHE_REDIS_URL ?? env.REDIS_URL, {
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       retryStrategy: (times) => (times > 3 ? null : Math.min(times * 200, 1000)),
@@ -41,6 +48,29 @@ export class CacheService implements OnModuleDestroy {
     this.redis.on('error', (error: Error) => {
       this.logger.warn(`Valkey error: ${error.message}`);
     });
+  }
+
+  async onModuleInit(): Promise<void> {
+    if (!this.env.CACHE_REDIS_URL || this.env.CACHE_REDIS_URL === this.env.REDIS_URL) return;
+    // Upgrade from the shared store: discard only disposable cache records. Rate-limit
+    // counters remain in the original store and are never subject to cache eviction.
+    const legacy = new Redis(this.env.REDIS_URL, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+      retryStrategy: () => null,
+    });
+    legacy.on('error', () => undefined);
+    try {
+      for await (const keys of legacy.scanStream({ match: 'cache:*', count: 100 }) as AsyncIterable<
+        string[]
+      >) {
+        if (keys.length > 0) await legacy.unlink(...keys);
+      }
+    } catch {
+      this.logger.warn('Could not remove cache records from the legacy store');
+    } finally {
+      await legacy.quit().catch(() => undefined);
+    }
   }
 
   /**
@@ -125,6 +155,16 @@ export class CacheService implements OnModuleDestroy {
     if (hasKeys) {
       await pipeline.exec();
     }
+  }
+
+  async ping(): Promise<void> {
+    this.readinessQuery ??= this.redis
+      .ping()
+      .then(() => undefined)
+      .finally(() => {
+        this.readinessQuery = undefined;
+      });
+    await this.readinessQuery;
   }
 
   async onModuleDestroy(): Promise<void> {

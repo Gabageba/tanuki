@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { and, eq, inArray, notExists } from 'drizzle-orm';
+import { reportUnexpected } from '../observability/sentry';
 import {
   NOTIFICATION_TYPE,
   SOURCE_STATUS,
@@ -60,6 +61,7 @@ export class SourceStatusNotifierService {
         });
       }
     } catch (error) {
+      reportUnexpected(error);
       this.logger.warn(
         `Уведомления об источнике ${sourceId} не созданы: ${(error as Error).message}`,
       );

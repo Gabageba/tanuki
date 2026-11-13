@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_call:
   pull_request:
   push:
     branches: [master, main]
@@ -13,12 +14,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run lint
       - run: pnpm exec stylelint "apps/**/*.scss" --allow-empty-input
       - run: pnpm exec prettier --check .
+      - run: pnpm lint:i18n
 
   typecheck:
     runs-on: ubuntu-latest
@@ -27,7 +29,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run typecheck
@@ -39,7 +41,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build
@@ -54,10 +56,11 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run test
+      - run: pnpm test:self-host
 
   # Визуальные тесты историй Storybook (apps/web/visual): снимки сверяются с эталонами из git.
   # Образ — тот же, что у `pnpm test:visual`; его версия совпадает с @playwright/test в apps/web.
@@ -71,7 +74,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build --filter=@tanuki/contracts
@@ -83,4 +86,25 @@ jobs:
         with:
           name: visual-report
           path: apps/web/visual/report
+          retention-days: 14
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-report
+          path: |
+            apps/web/e2e/report
+            apps/web/e2e/test-results
+            tests/e2e/report
           retention-days: 14

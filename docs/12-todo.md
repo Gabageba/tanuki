@@ -113,12 +113,12 @@
 
 ## Релиз ([08 Фаза 6](08-roadmap.md#фаза-6--полировка-и-релиз), [09](09-legal.md))
 
-- [ ] **Self-host**: Dockerfile для `apps/api` и `apps/web`, `docker compose up` поднимает весь
-      инстанс, инструкция в README. Существующий Compose поднимает только инфраструктуру для
-      разработки: PostgreSQL, Valkey и Mailpit.
-- [ ] `robots.txt` с `Disallow: /` и `<meta name="robots" content="noindex">`.
-- [ ] Мониторинг: Sentry (self-hosted), счётчик `PARSER_FAILED` по источникам.
-- [ ] E2E на Playwright по ключевым сценариям. Визуальные проверки Storybook на Playwright уже есть.
+- [x] **Self-host**: Dockerfile API/web, полный Compose, CLI install/update/backup/restore,
+      README; dev-инфраструктура — отдельный Compose
+      ([план и внешняя приёмка](plans/self-host-release.md), реализовано 2026-11-11).
+- [x] `robots.txt` с `Disallow: /`, meta и HTTP `noindex` ([план](plans/self-host-release.md)).
+- [x] Опциональный внешний Sentry и закрытый Prometheus counter ошибок парсеров ([план](plans/self-host-release.md)).
+- [x] E2E Chromium desktop/mobile через настоящий API на каждом PR/master ([план](plans/self-host-release.md)).
 - [ ] a11y-аудит: клавиатура, фокус, контраст, `prefers-reduced-motion`.
 - [ ] Перф-аудит на среднем Android: LCP, размер бандла, fps скролла.
 
@@ -136,3 +136,9 @@
 - Настройки читалки «Инвертирование» и «Качество изображений».
 - История чтения.
 - Синхронизация local-first через Dexie — закладки, прогресс и настройки живут на сервере.
+
+---
+
+1. Надо проработать письма.
+2. Описать README
+3. Создай гайд по установке на сервер
