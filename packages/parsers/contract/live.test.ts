@@ -115,12 +115,56 @@ const registry = createRegistry({
   logger: { info: () => {}, warn: (msg) => console.warn(msg), error: (msg) => console.error(msg) },
 });
 
+/**
+ * A nightly contract must fail on broken parsing, not on an upstream 502 or a server that
+ * cannot even send HTTP headers. Probe the same browse URL before running the full contract,
+ * only for sources with confirmed upstream outages. An unexpected HTTP status (including
+ * 401/403/404) still runs the contract and fails normally.
+ *
+ * This is CI-only: local runs continue exercising the full parser without exemptions.
+ */
+const CI_OUTAGE_PROBES: Partial<Record<SourceId, string>> = {
+  [SOURCE_ID.MANGACHAN]: 'https://im.manga-chan.me/manga/new?offset=0&n=datedesc',
+  [SOURCE_ID.HENCHAN]: 'https://hentaichan.live/manga/newest?offset=0&n=datedesc',
+};
+
+const upstreamOutageReason = async (sourceId: SourceId): Promise<string | null> => {
+  if (process.env['GITHUB_ACTIONS'] !== 'true') return null;
+  const url = CI_OUTAGE_PROBES[sourceId];
+  if (!url) return null;
+
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(12_000) });
+    await response.body?.cancel();
+    if ([502, 503, 504].includes(response.status)) {
+      return `HTTP ${response.status} from ${url}`;
+    }
+    return null;
+  } catch (error) {
+    // Network failures (including the headers timeout observed for HENCHAN) are upstream
+    // unavailability. Unexpected programming errors must never silently skip contracts.
+    if (
+      error instanceof TypeError ||
+      (error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name))
+    ) {
+      return `request failed for ${url}: ${error instanceof Error ? error.message : String(error)}`;
+    }
+    throw error;
+  }
+};
+
 // Прогрев сессий не расходует время первого источника. Закрываем HTTP-клиенты и после ошибок.
 beforeAll(() => registry.init());
 afterAll(() => registry.close());
 
 describe.each(RUN_SOURCE_IDS)('contract: %s', (sourceId) => {
-  it('getList -> getDetails -> getPages resolves a full read path', async () => {
+  it('getList -> getDetails -> getPages resolves a full read path', async (context) => {
+    const outage = await upstreamOutageReason(sourceId);
+    if (outage) {
+      console.warn(`[nightly] SKIP ${sourceId}: upstream unavailable — ${outage}`);
+      context.skip();
+      return;
+    }
     // Сама проверка живёт в src/core/source-contract.ts, а не здесь: тот же путь чтения гоняет
     // рантаймовый пробник в apps/api, который и проставляет источникам статус. Будь описание
     // «рабочего источника» в двух местах, статус в проде и результат этого теста разошлись бы.
