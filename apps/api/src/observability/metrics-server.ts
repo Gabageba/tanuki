@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { renderParserMetrics } from './parser-metrics';
+import { renderProcessMemoryMetrics } from './process-memory-metrics';
 
 export const startMetricsServer = async (token: string | undefined) => {
   if (!token) return undefined;
@@ -20,7 +21,7 @@ export const startMetricsServer = async (token: string | undefined) => {
         'Content-Type': 'text/plain; version=0.0.4; charset=utf-8',
         'Cache-Control': 'no-store',
       })
-      .end(renderParserMetrics());
+      .end(renderParserMetrics() + renderProcessMemoryMetrics());
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);

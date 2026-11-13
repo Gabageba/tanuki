@@ -352,7 +352,7 @@ restore() {
   [[ $password =~ ^[a-f0-9]{64}$ ]] || fail 'Ожидался сгенерированный пароль БД (64 hex).'
   printf "ALTER ROLE tanuki PASSWORD '%s';\n" "$password" | compose exec -T postgres psql -U tanuki -d postgres -v ON_ERROR_STOP=1 >/dev/null
   compose exec -T valkey valkey-cli FLUSHALL >/dev/null
-  compose run --rm --no-deps -T --entrypoint sh api -c 'find /data/libsocial-tokens -mindepth 1 -delete; tar -xf - -C /data/libsocial-tokens' < "$WORK/tokens.tar"
+  compose run --rm --no-deps -T --entrypoint sh api -c 'find /data/libsocial-tokens -mindepth 1 -delete; tar -xmf - -C /data/libsocial-tokens' < "$WORK/tokens.tar"
   compose run --rm --no-deps -T --entrypoint sh web -c 'find /data -mindepth 1 -delete; tar -xf - -C /data' < "$WORK/caddy.tar"
   start
   cp "$WORK/config/tanuki" tanuki; chmod 700 tanuki
