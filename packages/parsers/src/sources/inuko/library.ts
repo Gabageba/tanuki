@@ -235,13 +235,17 @@ export const fetchInukoLibrary = async (options: {
   for (const folder of rawFolders) {
     let completed = false;
     for (let page = 0; page < MAX_PAGES; page += 1) {
-      const rawItems = await call(functions.folderItems, {
-        folderId: [folder.id],
-        userId,
-        includeSiblingDomains: true,
-        size: PAGE_SIZE,
-        page,
-      }, `/library?tab=${encodeURIComponent(folder.id)}`);
+      const rawItems = await call(
+        functions.folderItems,
+        {
+          folderId: [folder.id],
+          userId,
+          includeSiblingDomains: true,
+          size: PAGE_SIZE,
+          page,
+        },
+        `/library?tab=${encodeURIComponent(folder.id)}`,
+      );
       if (!Array.isArray(rawItems) || !rawItems.every(isItem))
         return invalid(sourceId, 'invalid folder items response');
       items.push(...rawItems.filter((item) => item.book.serviceName === serviceName));
