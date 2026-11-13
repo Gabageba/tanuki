@@ -223,6 +223,9 @@ export const fetchInukoLibrary = async (options: {
       ...headers,
       Accept: 'application/x-tss-framed, application/x-ndjson, application/json',
       'x-tsr-serverfn': 'true',
+      'sec-fetch-dest': 'empty',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-origin',
       Referer: `https://${domain}${refererPath}`,
     });
     return decodeInukoServerResponse(response, sourceId);
