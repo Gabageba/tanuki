@@ -53,18 +53,13 @@ import { parseFloatOrNull } from '../../core/text/numbers';
 import { nullIfEmpty } from '../../core/text/strings';
 import { toHomeSections, uniqueByUrl } from '../../core/home';
 import { fetchInukoViewer, findInukoSessionDomain } from './auth';
+import { fetchInukoLibrary, type InukoLibraryFolder } from './library';
 import type { InukoConfig } from './config';
 import { readInukoSsr } from './ssr';
 
 const PAGE_SIZE = 20;
 const FIRST_PAGE = 0;
 const DECRYPTION_KEY_TTL_MS = 10 * 60 * 1000;
-/** Потолок `size` у списков API: `/v2/books` больше 100 не отдаёт (проверено 2026-10-27). */
-const LIBRARY_PAGE_SIZE = 100;
-/** Предохранитель листания библиотеки — 100 страниц по 100 больше любой реальной. */
-const LIBRARY_MAX_PAGES = 100;
-/** Сколько запросов по одному тайтлу (глава закладки, скрытая книга) уходит разом. */
-const LIBRARY_REQUESTS_BATCH = 8;
 
 /** The per-site `api.<domain>` host is gone (it doesn't even resolve any more): every site of
  *  the "inuko" network — sso.inuko.me, static.inuko.me — reads one API serving every sibling site
@@ -188,26 +183,6 @@ type PageJson = {
   image: string;
 };
 
-type FolderJson = {
-  id: string;
-  name: string;
-  /** Пять стандартных папок, которые сайт создаёт каждому аккаунту. */
-  system: boolean;
-  sortOrder: number;
-};
-
-type FolderItemJson = {
-  folderId: string;
-  bookId: string;
-};
-
-/** Место чтения: своя запись на каждую ветку перевода, которую человек открывал. */
-type ReadingBookmarkJson = {
-  bookId: string;
-  chapterId: string;
-  updatedAt: string;
-};
-
 type ChapterUpdateFeedItem = {
   book: MangaJson;
 };
@@ -243,7 +218,7 @@ const FORMAT_KEYS = [
 
 /** Стандартная папка сайта → встроенная; созданные человеком — свои папки. Сайт
  *  отдаёт имена системных папок, ключа статуса у них нет. Проверено вживую 2026-10-27. */
-const getBuiltInBookmarkFolder = (folder: FolderJson): BuiltInBookmarkFolder | null => {
+const getBuiltInBookmarkFolder = (folder: InukoLibraryFolder): BuiltInBookmarkFolder | null => {
   if (!folder.system) return null;
   switch (folder.name) {
     case 'Читаю':
@@ -1021,91 +996,6 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
   };
 
   /**
-   * Все страницы списка API. Листается до пустой страницы, а не до неполной: потолок `size` у
-   * эндпоинтов разный, и неполная страница ещё не значит, что дальше ничего нет.
-   */
-  const fetchAllPages = async <T>(path: string, params: Record<string, string>): Promise<T[]> => {
-    const items: T[] = [];
-    for (let page = FIRST_PAGE; page < FIRST_PAGE + LIBRARY_MAX_PAGES; page += 1) {
-      const url = apiUrl(path);
-      for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
-      url.searchParams.set('page', String(page));
-      url.searchParams.set('size', String(LIBRARY_PAGE_SIZE));
-      const pageItems = await ctx.http.getJson<T[]>(url.toString());
-      if (pageItems.length === 0) break;
-      items.push(...pageItems);
-    }
-    return items;
-  };
-
-  /**
-   * Книги по id, пачками: `/v2/books` принимает повторяющийся `id`. Книги «только в
-   * библиотеке» (`readingRestriction: LIBRARY_ONLY`) список не отдаёт, хотя они лежат в папках,
-   * — их добираем по одной, страницей книги (проверено 2026-10-27).
-   */
-  const fetchBooksById = async (bookIds: string[]): Promise<Map<string, MangaJson>> => {
-    const books = new Map<string, MangaJson>();
-    for (let start = 0; start < bookIds.length; start += LIBRARY_PAGE_SIZE) {
-      const url = apiUrl('/v2/books');
-      url.searchParams.set('size', String(LIBRARY_PAGE_SIZE));
-      for (const id of bookIds.slice(start, start + LIBRARY_PAGE_SIZE)) {
-        url.searchParams.append('id', id);
-      }
-      for (const book of await ctx.http.getJson<MangaJson[]>(url.toString())) {
-        books.set(book.id, book);
-      }
-    }
-    const missing = bookIds.filter((id) => !books.has(id));
-    for (let start = 0; start < missing.length; start += LIBRARY_REQUESTS_BATCH) {
-      const batch = await Promise.all(
-        missing
-          .slice(start, start + LIBRARY_REQUESTS_BATCH)
-          .map((id) =>
-            ctx.http.getJson<MangaJson>(apiUrl(`/v2/books/${id}`).toString()).catch(() => null),
-          ),
-      );
-      for (const book of batch) if (book) books.set(book.id, book);
-    }
-    return books;
-  };
-
-  /**
-   * Глава, на которой человек остановился в каждой книге, — из самой свежей записи места чтения.
-   * Номера в записи нет, только id главы: он берётся из самой главы, по запросу на книгу.
-   * Удалённая глава не валит импорт — у книги просто не будет прогресса.
-   */
-  const fetchReadingPositions = async (
-    userId: string,
-    bookIds: Set<string>,
-  ): Promise<Map<string, ChapterJson>> => {
-    const latest = new Map<string, ReadingBookmarkJson>();
-    for (const mark of await fetchAllPages<ReadingBookmarkJson>('/v2/bookmarks', { userId })) {
-      if (!bookIds.has(mark.bookId)) continue;
-      const current = latest.get(mark.bookId);
-      if (!current || parseIsoDate(mark.updatedAt) > parseIsoDate(current.updatedAt)) {
-        latest.set(mark.bookId, mark);
-      }
-    }
-    const marks = [...latest.values()];
-    const positions = new Map<string, ChapterJson>();
-    for (let start = 0; start < marks.length; start += LIBRARY_REQUESTS_BATCH) {
-      const batch = marks.slice(start, start + LIBRARY_REQUESTS_BATCH);
-      const chapters = await Promise.all(
-        batch.map((mark) =>
-          ctx.http
-            .getJson<ChapterJson>(apiUrl(`/v2/chapters/${mark.chapterId}`).toString())
-            .catch(() => null),
-        ),
-      );
-      batch.forEach((mark, index) => {
-        const chapter = chapters[index];
-        if (chapter) positions.set(mark.bookId, chapter);
-      });
-    }
-    return positions;
-  };
-
-  /**
    * Id аккаунта, от которого идут запросы, — по разметке страницы с его cookie сессии. Cookie
    * лежит на домене того сайта сети, с которого её перенесли, а не обязательно на этом: id
    * пользователя в сети общий, поэтому страница открывается на домене из jar.
@@ -1123,28 +1013,29 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
   };
 
   /**
-   * Папки библиотеки аккаунта. Сами папки и их книги API отдаёт по id пользователя, без
-   * авторизации, — сессия нужна только узнать, чей это аккаунт. `serviceName` оставляет книги
-   * одного сайта: библиотека у пользователя сети общая, в ней лежат книги всех её сайтов.
+   * Inuko now renders folders on the authenticated /library page and loads items and
+   * reading positions through TanStack server functions. Function hashes are discovered
+   * from the current client bundle, never persisted as constants.
    */
   const getBookmarks = async (): Promise<RawBookmarkFolder[]> => {
     const userId = await resolveLibraryOwnerId();
-    const foldersUrl = apiUrl('/v2/folders');
-    foldersUrl.searchParams.set('userId', userId);
-    const [folders, folderItems] = await Promise.all([
-      ctx.http.getJson<FolderJson[]>(foldersUrl.toString()),
-      fetchAllPages<FolderItemJson>('/v2/folder-items', { userId }),
-    ]);
-    const bookIds = [...new Set(folderItems.map((item) => item.bookId))];
-    const [books, positions] = await Promise.all([
-      fetchBooksById(bookIds),
-      fetchReadingPositions(userId, new Set(bookIds)),
-    ]);
+    const account = currentSourceAccount(SOURCE_AUTH_FAMILY.INUKO);
+    const sessionDomain = account?.jar ? await findInukoSessionDomain(account.jar) : null;
+    if (!sessionDomain) {
+      throw new SourceAuthRequiredError('Inuko session is missing', SOURCE_ID);
+    }
 
-    const toBookmark = (bookId: string): RawBookmark | null => {
-      const book = books.get(bookId);
-      if (!book) return null;
-      const position = positions.get(bookId);
+    const { folders, items, positions } = await fetchInukoLibrary({
+      http: ctx.http,
+      domain: sessionDomain,
+      sourceId: SOURCE_ID,
+      serviceName: config.serviceName,
+      userId,
+    });
+
+    const toBookmark = (item: (typeof items)[number]): RawBookmark => {
+      const book = item.book;
+      const position = positions.get(book.id)?.chapter;
       return {
         id: generateUid(SOURCE_ID, book.id),
         url: book.id,
@@ -1163,10 +1054,7 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
         id: folder.id,
         builtIn: getBuiltInBookmarkFolder(folder),
         name: folder.name,
-        items: folderItems
-          .filter((item) => item.folderId === folder.id)
-          .map((item) => toBookmark(item.bookId))
-          .filter((item): item is RawBookmark => item !== null),
+        items: items.filter((item) => item.folderId === folder.id).map(toBookmark),
       }));
   };
 
