@@ -1,0 +1,15 @@
+# Optional override for small VPS instances. Keep normal docker-compose.yml unchanged.
+# Apply with: docker compose -f docker-compose.yml -f docker-compose.low-memory.yml up -d
+# Verify application SQL workloads before reducing PostgreSQL resources further.
+services:
+  postgres:
+    command:
+      - postgres
+      - -c
+      - shared_buffers=32MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=30
