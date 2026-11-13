@@ -1,73 +1,58 @@
-# Доставка приватных релизов Tanuki через GitHub Actions и SSH
+# Доставка приватного Tanuki Release на VPS через GitHub Actions
 
-Этот сценарий нужен для приватного репозитория `Gabageba/tanuki`: файлы релиза скачивает GitHub Actions с `GITHUB_TOKEN`, а на VPS передаются только проверенные файлы. Токен GitHub на VPS **не требуется**. Docker-образы должны быть доступны из GHCR (текущий workflow Release проверяет анонимную загрузку).
+Репозиторий `Gabageba/tanuki` остаётся приватным. GitHub Actions скачивает опубликованный релиз по `GITHUB_TOKEN`, сверяет SHA256 и отправляет пакет на VPS через SSH. GitHub-токен на сервере не нужен, а Docker-образы загружаются из публичного GHCR.
 
-## Схема
+## Выпуск и обновления
 
-- `.github/workflows/release.yml` после успешных CI, сборок и native smoke **автоматически публикует** релиз (без Draft). Если проверки упали, релиз не создаётся.
-- `.github/workflows/deploy.yml` запускается вручную (`workflow_dispatch`) или как reusable workflow, вызываемый **в рамках того же** Release workflow после публикации. Отдельное событие `release.published` не используется: публикация через `GITHUB_TOKEN` не запускает новый workflow.
-- Workflow скачивает `docker-compose.yml`, `release.env`, `SHA256SUMS`, `tanuki` из приватного GitHub Release и сверяет SHA256.
-- Workflow передаёт их по SSH в `/opt/tanuki/.releases/<version>/` и отдельно текущую версию `scripts/self-host/tanuki.sh` как `tanuki-deploy`.
-- Автоматическая доставка включается только при repository variable `TANUKI_AUTO_DEPLOY=true`. При наличии `/opt/tanuki/.env` и `/opt/tanuki/api.env` выполняется `./tanuki update <version>` со staged-файлами. При отсутствии конфигурации только размещаются файлы, без запуска контейнеров.
-- Первый `install` нужно выполнить **один раз интерактивно**: он создаёт секреты на VPS, запрашивает домен и SMTP. Последующие публикации релизов запускают обновление.
+Отправка нового тега `vX.Y.Z` запускает `.github/workflows/release.yml`. После CI, сборки образов и native smoke workflow автоматически публикует релиз. Если проверка завершается ошибкой, релиз не публикуется и доставка не запускается.
 
-**Важно:** workflow не делает rollback после начавшейся миграции БД: команда `tanuki update` сохраняет резервную копию и выводит инструкцию ручного `restore` при ошибке. Не публикуйте релиз, если не готовы принять обновление приложения.
+Когда в Actions Variables задано `TANUKI_AUTO_DEPLOY=true`, job `deploy` вызывает `.github/workflows/deploy.yml` в рамках того же workflow. Он загружает артефакты `docker-compose.yml`, `release.env`, `SHA256SUMS`, `tanuki`, проверяет контрольные суммы и передаёт их в `/opt/tanuki/.releases/<version>/`.
+
+При существующих `/opt/tanuki/.env` и `/opt/tanuki/api.env` выполняется `tanuki update` с локально подготовленным релизом. Если Tanuki ещё не установлен, пакет только передаётся на сервер. Вручную запускать миграции на первый раз нельзя: перед этим нужно пройти интерактивную установку.
+
+До проверки первого развёртывания **не включайте** `TANUKI_AUTO_DEPLOY`.
 
 ## Подготовка SSH
 
-GitHub Actions нужен отдельный ключ для развёртывания. Его **приватную** часть храните только в GitHub Actions secret. Не отправляйте ключ в чат, коммиты, Obsidian или открытые файлы.
-
-На доверенной локальной машине:
+Создайте на Mac отдельный ключ без passphrase для GitHub Actions:
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/tanuki-github-deploy -C "tanuki-github-actions"
 ```
 
-Публичную часть добавьте в `/root/.ssh/authorized_keys` на VPS. Можно сделать это через уже работающее SSH-подключение:
+Публичный ключ из `~/.ssh/tanuki-github-deploy.pub` добавьте в `/root/.ssh/authorized_keys` на VPS. Используйте адрес, по которому уже работает SSH; `vm232656` само по себе не обязательно является DNS-именем.
 
 ```bash
 cat ~/.ssh/tanuki-github-deploy.pub | ssh root@YOUR_VPS_HOST 'umask 077; mkdir -p ~/.ssh; chmod 700 ~/.ssh; cat >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys'
-```
-
-Проверьте новый ключ локально:
-
-```bash
 ssh -i ~/.ssh/tanuki-github-deploy root@YOUR_VPS_HOST 'id -u'
 ```
 
-Должно вернуть `0`. Если SSH-порт нестандартный, добавьте `-p PORT`.
+Последняя команда должна вывести `0`. При нестандартном SSH-порте добавьте `-p PORT`.
 
-**Фиксация SSH host key:** на VPS узнайте fingerprint ключа сервера:
+Проверьте fingerprint публичного host key **на самом VPS**:
 
 ```bash
 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
 ```
 
-На локальной машине получите публичный host key:
+На Mac получите и проверьте host key удалённой машины:
 
 ```bash
 ssh-keyscan -t ed25519 -p 22 YOUR_VPS_HOST > /tmp/tanuki-known-hosts
 ssh-keygen -lf /tmp/tanuki-known-hosts
 ```
 
-Сравните fingerprint **с результатом на самом VPS**, а не просто доверяйте `ssh-keyscan`. При другом SSH-порте укажите его вместо `22`.
+Сравните fingerprint с результатом на VPS. Не доверяйте выводу `ssh-keyscan` без проверки.
 
-В `Settings → Secrets and variables → Actions` добавьте Secrets:
+В GitHub Settings → Secrets and variables → Actions добавьте три repository secrets: `DEPLOY_HOST` (публичный SSH-адрес VPS), `DEPLOY_SSH_KEY` (полное содержимое приватного ключа Mac, включая заголовки) и `DEPLOY_KNOWN_HOSTS` (проверенное содержимое `/tmp/tanuki-known-hosts`). Если порт не 22, задайте repository variable `DEPLOY_PORT`.
 
-| Secret | Значение |
-|---|---|
-| `DEPLOY_HOST` | Публичный адрес/IP VPS, доступный с GitHub-hosted runners по SSH |
-| `DEPLOY_SSH_KEY` | Содержимое **приватного** ключа `~/.ssh/tanuki-github-deploy` |
-| `DEPLOY_KNOWN_HOSTS` | Проверенный текст `/tmp/tanuki-known-hosts` |
+Приватный SSH-ключ не должен попадать в чат, Vault, исходный код или логи. Его компрометация опасна: этот ключ предоставляет root SSH-доступ. Если сервер доступен только по VPN или SSH-адрес недоступен из GitHub-hosted runners, доставка завершится ошибкой.
 
-При нестандартном порте добавьте Repository **variable** `DEPLOY_PORT`, по умолчанию используется `22`.
+## Первая установка v1.0.0
 
-SSH-доступ `root` обеспечивает полные права на сервер. Ограничивайте доступ к изменению workflow и secrets в репозитории. Если SSH доступен только из VPN или по allowlist, GitHub-hosted runner не подключится: сначала потребуется специально настроить сетевой доступ.
+После объединения PR с `master` откройте GitHub Actions → Deploy release to VPS → Run workflow. Выберите `version=v1.0.0`, `operation=stage`. Это только передаёт готовый пакет на VPS, не меняя VPN и не запуская контейнеры.
 
-## Первый запуск: `v1.0.0`
-
-1. В GitHub Actions откройте **Deploy release to VPS → Run workflow**, ветка `master`, `version=v1.0.0`, `operation=stage`.
-2. После успешного job на VPS проверьте:
+На VPS:
 
 ```bash
 ls -la /opt/tanuki/.releases/v1.0.0
@@ -75,16 +60,16 @@ cd /opt/tanuki
 install -m 700 .releases/v1.0.0/tanuki-deploy ./tanuki
 ```
 
-3. **До установки** проверьте, что конфигурация Xray действительно направляет обычный HTTP fallback на порт `8080`, и что Xray не изменён. Если порт 8080 занят — остановитесь. Запуск `--external-proxy` занимает localhost `8080` и `8443`, не занимает `443`.
-4. Запустите первый install:
+**Перед установкой** проверьте, что Xray и VPN работают, а HTTP fallback действительно направляется на `8080`. Tanuki с `--external-proxy` занимает локальные порты 8080 и 8443, не 443. Домен приложения должен соответствовать TLS-сертификату Xray.
 
 ```bash
 cd /opt/tanuki
 TANUKI_RELEASE_DIR=/opt/tanuki/.releases/v1.0.0 ./tanuki install --external-proxy
 ```
 
-Программа спросит доменное имя, доверенный адрес прокси и SMTP. Для Xray на хосте доверенный источник, видимый Caddy, часто `172.30.98.1/32`, но **проверяйте** сетевые параметры в `docker network inspect`, не доверяйте всей приватной сети. Домен для приложения должен вести на сервер и соответствовать сертификату Xray. В `.env` будут сгенерированы пароли БД и другие секреты. Не используйте Mailpit в production. Проверку подлинного клиентского IP через Xray fallback нужно провести отдельно.
-5. После установки проверьте здоровье приложения, доступность VPN и создайте приглашение администратора:
+Установка запросит домен, SMTP и IP/CIDR доверенного прокси. Последний должен совпадать с адресом, который Caddy реально видит. Для Docker это часто gateway сети Compose `172.30.98.1/32`, но это нужно проверять через `docker network inspect`. Не доверяйте всем приватным сетям. Скрипт самостоятельно создаст секреты.
+
+После установки:
 
 ```bash
 cd /opt/tanuki
@@ -92,30 +77,12 @@ cd /opt/tanuki
 ./tanuki admin-invite
 ```
 
-Не передавайте пригласительную ссылку посторонним.
+Проверьте внешний HTTPS, доступность API, работу VPN и создание администратора. Затем включите Actions variable `TANUKI_AUTO_DEPLOY=true` для следующих релизов.
 
-## Последующие обновления
+## Обновления и ограничения
 
-Когда первая установка проверена и VPN работает, добавьте в `Settings → Secrets and variables → Actions → Variables` переменную `TANUKI_AUTO_DEPLOY` со значением `true`. До этого значения job `deploy` в Release пропускается, а пакет можно доставить вручную через `stage`.
+При следующем теге Release job вызовет Deploy job только после успешных проверок и публикации. `tanuki update` загружает образы по digest, создаёт резервную копию, выполняет миграции и проверяет готовность сервисов. Для ручного вызова используйте `operation=update`; `operation=stage` только копирует файлы.
 
-После включения переменной **отправка нового тега** запускает CI, сборку образов, native smoke, автоматическую публикацию GitHub Release и вызов `Deploy release to VPS` **в том же workflow**. Это работает без ручной публикации и без повторной сборки существующего `v1.0.0`. При любой ошибке до публикации шаг доставки не выполняется. Для ручного запуска выберите операцию `update` и тег уже опубликованного релиза. `stage` только загружает файлы и **не меняет** запущенный инстанс.
+В случае ошибки миграции автоматический откат не выполняется: используйте инструкцию `restore`, которую выведет управляющий скрипт. Не используйте `docker compose down -v`, иначе могут быть удалены данные приложения.
 
-Перед автоматическим обновлением workflow использует существующую безопасную процедуру `tanuki update`: скачивание образов по digest, остановка записи, резервное копирование, миграции и healthcheck. Но успех деплоя зависит также от доступности публичных Docker-образов, конфигурации Xray и SMTP.
-
-Для диагностики:
-
-```bash
-cd /opt/tanuki
-./tanuki status
-docker compose --env-file .env ps
-docker compose --env-file .env logs --tail=100 api web migrate
-```
-
-**Не выполняйте** `docker compose down -v` на работающем сервере — это удаляет данные PostgreSQL и Valkey.
-
-## Ограничения
-
-- Изменения workflow и скрипта доставки внесены после сборки `v1.0.0`; Docker-образы **не пересобираются**, но скрипт `tanuki-deploy` доставляется из текущей `master`. Не изменяйте эту связь без проверки совместимости.
-- Перед первым запуском нужно вручную подтвердить конфигурацию Xray fallback и работающий VPN. Workflow не меняет порт 443 и настройки 3x-ui.
-- Отсутствие `.env` или `api.env` при автоматическом событии release приводит лишь к размещению файла; выполняйте первый install самостоятельно.
-- Приватный GitHub Release нельзя скачивать анонимным `curl`: это нормально.
+Изменения в механизме доставки не требуют пересборки Docker-образов `v1.0.0`. Первый запуск остаётся интерактивным. GitHub Actions не меняет конфигурацию Xray, но ресурсы Tanuki и VPN используются на одном VPS.
