@@ -184,7 +184,11 @@ export const fetchInukoLibrary = async (options: {
   const call = async (hash: string, data: Record<string, unknown>): Promise<unknown> => {
     const url = new URL(`https://${domain}/_serverFn/${hash}`);
     url.searchParams.set('payload', encodeInukoServerPayload(data));
-    const response = await http.getJson<unknown>(url.toString());
+    const response = await http.getJson<unknown>(url.toString(), {
+      ...headers,
+      Accept: 'application/json',
+      Referer: `https://${domain}/library`,
+    });
     return decodeInukoServerResponse(response, sourceId);
   };
 
