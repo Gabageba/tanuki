@@ -1,6 +1,8 @@
 name: Deploy release to VPS
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       version:
@@ -28,8 +30,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      VERSION: ${{ inputs.version }}
-      OPERATION: ${{ inputs.operation }}
+      VERSION: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version }}
+      OPERATION: ${{ github.event_name == 'release' && 'update' || inputs.operation }}
       GH_TOKEN: ${{ github.token }}
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -101,7 +103,7 @@ jobs:
             "set -eu; umask 077; mkdir -p /opt/tanuki/.releases/$VERSION; tar -xz -C /opt/tanuki/.releases/$VERSION; cd /opt/tanuki/.releases/$VERSION; sha256sum -c --ignore-missing SHA256SUMS"
 
       - name: Update installed instance (only when explicitly selected)
-        if: inputs.operation == 'update'
+        if: env.OPERATION == 'update'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -111,4 +113,4 @@ jobs:
             -o StrictHostKeyChecking=yes \
             -o ConnectTimeout=15 \
             "root@$DEPLOY_HOST" \
-            "set -eu; cd /opt/tanuki; test -f .env; test -f api.env; install -m 700 .releases/$VERSION/tanuki-deploy ./tanuki; TANUKI_RELEASE_DIR=/opt/tanuki/.releases/$VERSION ./tanuki update $VERSION"
+            "set -eu; cd /opt/tanuki; if test -f .env && test -f api.env; then install -m 700 .releases/$VERSION/tanuki-deploy ./tanuki; TANUKI_RELEASE_DIR=/opt/tanuki/.releases/$VERSION ./tanuki update $VERSION; else echo 'First installation is not configured: release staged only'; fi"
