@@ -90,8 +90,15 @@ fetch_release() {
   version_valid "$version"
   mkdir -p "$target"
   for file in docker-compose.yml release.env SHA256SUMS tanuki; do
-    curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
-      "https://github.com/$REPOSITORY/releases/download/$version/$file" -o "$target/$file" || fail "Не удалось скачать $file релиза $version."
+    if [[ -n ${TANUKI_RELEASE_DIR:-} ]]; then
+      [[ -f $TANUKI_RELEASE_DIR/$file ]] || fail "Нет $file в каталоге локального релиза."
+      cp -- "$TANUKI_RELEASE_DIR/$file" "$target/$file" ||
+        fail "Не удалось скопировать $file локального релиза."
+    else
+      curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+        "https://github.com/$REPOSITORY/releases/download/$version/$file" -o "$target/$file" ||
+        fail "Не удалось скачать $file релиза $version."
+    fi
   done
   # Verify required payloads even though the complete manifest also covers docs/maps.
   awk '$2=="docker-compose.yml" || $2=="release.env" || $2=="tanuki"' "$target/SHA256SUMS" > "$target/required.sha256"

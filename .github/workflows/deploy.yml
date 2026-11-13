@@ -1,0 +1,123 @@
+name: Deploy release to VPS
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      operation:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published release tag (for example v1.0.0)
+        required: true
+        type: string
+      operation:
+        description: Stage files for first installation or update an existing instance
+        required: true
+        type: choice
+        default: stage
+        options:
+          - stage
+          - update
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tanuki-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ inputs.version }}
+      OPERATION: ${{ inputs.operation }}
+      GH_TOKEN: ${{ github.token }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate deployment inputs and credentials
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || {
+            echo "::error::Version must be a release tag such as v1.0.0"
+            exit 1
+          }
+          [[ "$OPERATION" == stage || "$OPERATION" == update ]] || exit 1
+          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]] || exit 1
+          [[ -n "$DEPLOY_HOST" && -n "$DEPLOY_SSH_KEY" && -n "$DEPLOY_KNOWN_HOSTS" ]] || {
+            echo "::error::Configure DEPLOY_HOST, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS in Actions secrets."
+            exit 1
+          }
+
+      - name: Download published private release using GitHub Actions token
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p bundle
+          gh release download "$VERSION" \
+            --repo "${{ github.repository }}" --dir bundle \
+            --pattern 'docker-compose.yml' --pattern 'release.env' \
+            --pattern 'SHA256SUMS' --pattern 'tanuki'
+          for file in docker-compose.yml release.env SHA256SUMS tanuki; do
+            test -s "bundle/$file"
+          done
+          (cd bundle
+            awk '$2=="docker-compose.yml" || $2=="release.env" || $2=="SHA256SUMS" || $2=="tanuki" {print}' SHA256SUMS > required.sha256
+            test "$(wc -l < required.sha256)" -eq 3
+            sha256sum --check --status required.sha256
+            rm required.sha256
+          )
+          grep -Fxq "TANUKI_VERSION=$VERSION" bundle/release.env
+          cp scripts/self-host/tanuki.sh bundle/tanuki-deploy
+          tar -czf staged-release.tar.gz -C bundle .
+
+      - name: Configure pinned SSH host and temporary private key
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Upload verified release bundle over SSH
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cat staged-release.tar.gz | ssh \
+            -i ~/.ssh/id_ed25519 \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            "root@$DEPLOY_HOST" \
+            "set -eu; umask 077; mkdir -p /opt/tanuki/.releases/$VERSION; tar -xz -C /opt/tanuki/.releases/$VERSION; cd /opt/tanuki/.releases/$VERSION; sha256sum -c --ignore-missing SHA256SUMS"
+
+      - name: Update installed instance (only when explicitly selected)
+        if: env.OPERATION == 'update'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ssh -i ~/.ssh/id_ed25519 \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            "root@$DEPLOY_HOST" \
+            "set -eu; cd /opt/tanuki; if test -f .env && test -f api.env; then install -m 700 .releases/$VERSION/tanuki-deploy ./tanuki; TANUKI_RELEASE_DIR=/opt/tanuki/.releases/$VERSION ./tanuki update $VERSION; else echo 'First installation is not configured: release staged only'; fi"
