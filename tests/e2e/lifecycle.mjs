@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { request } from './request.mjs';
 
 export const checkLifecycle = async ({ stage, args, invite }) => {
   const run = (...extra) => execFileSync('docker', [...args, ...extra], { stdio: 'inherit' });
-  const api = (path, options = {}) => fetch(`http://localhost:18080/api/v1${path}`, options);
+  const api = (path, options = {}) => request(`http://localhost:18080/api/v1${path}`, options);
   const json = (data) => ({
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -22,9 +23,9 @@ export const checkLifecycle = async ({ stage, args, invite }) => {
     }),
   );
   assert.equal(registration.status, 204);
-  const mail = await (await fetch('http://localhost:18025/api/v1/messages')).json();
+  const mail = await (await request('http://localhost:18025/api/v1/messages')).json();
   const message = await (
-    await fetch(`http://localhost:18025/api/v1/message/${mail.messages[0].ID}`)
+    await request(`http://localhost:18025/api/v1/message/${mail.messages[0].ID}`)
   ).json();
   const token = String(message.Text).match(/verify-email\?token=([a-zA-Z0-9_-]+)/)?.[1];
   assert.ok(token);

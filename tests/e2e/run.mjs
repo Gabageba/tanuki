@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { checkLifecycle } from './lifecycle.mjs';
+import { request } from './request.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const OUTPUT = join(ROOT, 'tests/e2e/report');
@@ -86,13 +87,13 @@ for (const mode of process.env.E2E_PROJECT
       let ready;
       for (let attempt = 0; attempt < 20; attempt += 1) {
         try {
-          ready = await fetch('http://localhost:18080/api/v1/health/ready');
+          ready = await request('http://localhost:18080/api/v1/health/ready');
           if (ready.ok) break;
         } catch {}
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
       if (!ready?.ok) throw new Error('Not ready');
-      const auth = await fetch('http://localhost:18080/api/v1/auth/me');
+      const auth = await request('http://localhost:18080/api/v1/auth/me');
       if (auth.status !== 401) throw new Error(`Unauthenticated API: ${auth.status}`);
     }
     // These operations exercise native modules on the actual image architecture.

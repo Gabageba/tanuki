@@ -21,7 +21,7 @@
     "start": "pnpm run docker && turbo run dev",
     "storybook": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web storybook",
     "test": "turbo run test",
-    "test:e2e": "node tests/e2e/run.mjs",
+    "test:e2e": "node --test tests/e2e/*.test.mjs && node tests/e2e/run.mjs",
     "test:self-host": "node --test scripts/self-host/*.test.mjs",
     "test:visual": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web test:visual",
     "test:visual:update": "turbo run build --filter=@tanuki/contracts && pnpm --filter @tanuki/web test:visual:update",
