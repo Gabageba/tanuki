@@ -212,13 +212,17 @@ export const fetchInukoLibrary = async (options: {
   const bundle = findInukoClientBundle(html, sourceId);
   const js = (await http.get(`https://${domain}${bundle}`, headers)).text();
   const functions = discoverInukoServerFunctions(js, sourceId);
-  const call = async (hash: string, data: Record<string, unknown>): Promise<unknown> => {
+  const call = async (
+    hash: string,
+    data: Record<string, unknown>,
+    refererPath = '/library',
+  ): Promise<unknown> => {
     const url = new URL(`https://${domain}/_serverFn/${hash}`);
     url.searchParams.set('payload', encodeInukoServerPayload(data));
     const response = await http.getJson<unknown>(url.toString(), {
       ...headers,
-      Accept: 'application/json',
-      Referer: `https://${domain}/library`,
+      Accept: 'application/x-tss-framed, application/x-ndjson, application/json',
+      Referer: `https://${domain}${refererPath}`,
     });
     return decodeInukoServerResponse(response, sourceId);
   };
@@ -233,7 +237,7 @@ export const fetchInukoLibrary = async (options: {
         includeSiblingDomains: true,
         size: PAGE_SIZE,
         page,
-      });
+      }, `/library?tab=${encodeURIComponent(folder.id)}`);
       if (!Array.isArray(rawItems) || !rawItems.every(isItem))
         return invalid(sourceId, 'invalid folder items response');
       items.push(...rawItems.filter((item) => item.book.serviceName === serviceName));
