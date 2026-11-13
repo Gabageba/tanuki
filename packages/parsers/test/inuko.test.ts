@@ -745,13 +745,19 @@ const t1=m().handler(f("${MARKS_HASH}")),Go=e=>T({queryKey:["bookmarks",{bookId:
     http.register((url) => url === `https://${domain}/assets/tanstack-start-test.js`, {
       status: 200, body: javascript,
     });
-    http.register((url) => url.includes(`/_serverFn/${ITEMS_HASH}`), {
-      ...json([
+    http.register(
+      (url) => url.includes(`/_serverFn/${ITEMS_HASH}`) &&
+        new URL(url).searchParams.get('payload')?.includes(READING_ID) === true,
+      json([
         { folderId: READING_ID, bookId: book.id, book },
         { folderId: READING_ID, bookId: foreignBook.id, book: foreignBook },
-        { folderId: OWN_ID, bookId: book.id, book },
       ]),
-    });
+    );
+    http.register(
+      (url) => url.includes(`/_serverFn/${ITEMS_HASH}`) &&
+        new URL(url).searchParams.get('payload')?.includes(OWN_ID) === true,
+      json([{ folderId: OWN_ID, bookId: book.id, book }]),
+    );
     http.register((url) => url.includes(`/_serverFn/${MARKS_HASH}`), json([
       { bookId: book.id, updatedAt: '2026-01-01T00:00:00Z',
         chapter: { number: 2, volume: 1 } },
