@@ -120,6 +120,9 @@ export const discoverInukoServerFunctions = (javascript: string, sourceId: strin
   const pattern = /handler\(f\("([a-f0-9]{64})"\)\)[\s\S]{0,140}?queryKey:\["(infinite-folder-items-list|bookmarks)"/g;
   for (const match of javascript.matchAll(pattern)) {
     const key = match[2] as ServerFunctionKey;
+    // The same bundle also has a global ["bookmarks"] query: it is NOT the
+    // per-book reading-position API used by the library importer.
+    if (key === 'bookmarks' && !match[0].includes('queryKey:["bookmarks",{bookId:')) continue;
     if (result.has(key) && result.get(key) !== match[1])
       return invalid(sourceId, `ambiguous server function: ${key}`);
     result.set(key, match[1]!);
