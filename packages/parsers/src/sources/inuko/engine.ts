@@ -754,16 +754,19 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
       url.searchParams.set('sort', getSortKey(order, direction));
     }
     applyFilterParams(url, filters);
-    let items: MangaJson[];
-    try {
-      items = await ctx.http.getJson<MangaJson[]>(url.toString());
-    } catch (error) {
-      if (!(error instanceof NotFoundError)) throw error;
-      // The public API retired books/chapters; the site's SSR still exposes the same data.
+    // Search now lives in the site's SSR catalog (TanStack Server Functions).
+    // Prefer the site-backed path for queries, while retaining the legacy API
+    // as a fallback if SSR cannot be read. Do not hardcode _serverFn hashes:
+    // those change whenever the website is rebuilt.
+    const fetchSsrCatalog = async (): Promise<MangaJson[]> => {
       const catalogUrl = new URL(`https://${domain}/content`);
-      const [sort, orderBy] = getSortKey(order, direction).split(',');
-      catalogUrl.searchParams.set('sort', sort!);
-      catalogUrl.searchParams.set('orderBy', orderBy!);
+      // The site returns HTTP 500 for sort=updatedAt in SSR catalog search.
+      // Let the catalog use its own default ordering instead.
+      if (order !== undefined && order !== SORT_ORDER.UPDATED) {
+        const [sort, orderBy] = getSortKey(order, direction).split(',');
+        catalogUrl.searchParams.set('sort', sort!);
+        catalogUrl.searchParams.set('orderBy', orderBy!);
+      }
       catalogUrl.searchParams.set('page', String(page));
       catalogUrl.searchParams.set('size', String(PAGE_SIZE));
       if (query) catalogUrl.searchParams.set('search', query);
@@ -788,7 +791,24 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
         }
       }
       const read = await fetchSsr(`${catalogUrl.pathname}${catalogUrl.search}`);
-      items = read<MangaJson[]>('books');
+      return read<MangaJson[]>('books');
+    };
+
+    if (query) {
+      try {
+        return (await fetchSsrCatalog()).map(toManga);
+      } catch {
+        // A site-side SSR change should not suppress results from a still-working API.
+        return (await ctx.http.getJson<MangaJson[]>(url.toString())).map(toManga);
+      }
+    }
+
+    let items: MangaJson[];
+    try {
+      items = await ctx.http.getJson<MangaJson[]>(url.toString());
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error;
+      items = await fetchSsrCatalog();
     }
     return items.map(toManga);
   };
