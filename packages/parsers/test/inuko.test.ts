@@ -247,9 +247,7 @@ describe('Inuko retired reading API', () => {
     const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
     const items = await parser.getList({ offset: 0, limit: 20, query: 'искатель', order });
     expect(items).toHaveLength(1);
-    const request = http.requests.find(({ url }) =>
-      url.startsWith(`https://${DOMAIN}/content?`),
-    )!;
+    const request = http.requests.find(({ url }) => url.startsWith(`https://${DOMAIN}/content?`))!;
     const params = new URL(request.url).searchParams;
     expect(params.get('search')).toBe('искатель');
     expect(params.has('sort')).toBe(false);
