@@ -63,6 +63,7 @@ async function main(): Promise<void> {
     const initialCookies = await context.cookies();
     let eventCount = 0;
     const inspectedChunks = new Map<string, string[]>();
+    const codeSamples = new Map<string, string[]>();
     let inspectedCount = 0;
 
     context.on('response', (response) => {
@@ -77,6 +78,24 @@ async function main(): Promise<void> {
                 .map((match) => match[0]);
               const distinct = [...new Set(paths)].slice(0, 20);
               inspectedChunks.set(url.pathname.split('/').pop() ?? 'chunk', [...matches, ...distinct]);
+              const filename = url.pathname.split('/').pop() ?? 'chunk';
+              const wantedFiles = /^(?:99868-|77638-|40225-|page-e421eea)/.test(filename);
+              if (wantedFiles) {
+                const sections: string[] = [];
+                for (const keyword of ['token/refresh/', 'auth:server-token', 'auth:token', '/bff-api/auth/credentials']) {
+                  let from = 0;
+                  for (let i = 0; i < 2; i += 1) {
+                    const index = source.indexOf(keyword, from);
+                    if (index < 0) break;
+                    const start = Math.max(0, index - 220);
+                    const end = Math.min(source.length, index + keyword.length + 260);
+                    const fragment = source.slice(start, end).replace(/\\s+/g, ' ');
+                    sections.push(keyword + ': ' + fragment);
+                    from = index + keyword.length;
+                  }
+                }
+                if (sections.length) codeSamples.set(filename, sections);
+              }
             }
           }).catch(() => {});
           pending.add(task);
@@ -110,6 +129,12 @@ async function main(): Promise<void> {
         console.log('  ' + chunk + ': ' + matches.join(', '));
       }
       if (inspectedChunks.size === 0) console.log('  Совпадений не обнаружено');
+      console.log('BFF: фрагменты публичного JS вокруг ключевых вызовов:');
+      for (const [filename, samples] of codeSamples) {
+        console.log('  Файл: ' + filename);
+        for (const sample of samples) console.log('    ' + sample);
+      }
+      if (codeSamples.size === 0) console.log('  Целевые участки не найдены');
       console.log('Код серверных обработчиков BFF в клиентских JS-файлах может отсутствовать.');
     }
 
