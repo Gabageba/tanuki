@@ -1,7 +1,7 @@
 /**
  * Diagnostic browser login for ReManga.
  *
- * Usage: pnpm --filter @tanuki/parsers login:remanga [--check-refresh | --check-bff]
+ * Usage: pnpm --filter @tanuki/parsers login:remanga [--check-refresh | --check-bff | --inspect-bff]
  *
  * Opens a real browser for a manual CAPTCHA/login and prints ONLY JSON field names
  * from authentication-related responses on remanga.org subdomains. No token values, passwords, URLs with
@@ -16,6 +16,7 @@ const SITE_URL = 'https://remanga.org/';
 const API_ORIGIN = 'https://api.remanga.org';
 const AUTH_ROUTE = /(?:auth|login|refresh|token|session|oauth|sso|users\/current)/i;
 const MAX_EVENTS = 80;
+const BFF_STATIC_KEYS = ['bff-api/auth/', 'auth:server-token', 'auth:token', 'token/refresh/', 'refresh_token', 'credentials'];
 
 const AUTH_PATH = AUTH_ROUTE;
 
@@ -61,8 +62,27 @@ async function main(): Promise<void> {
     const pending = new Set<Promise<void>>();
     const initialCookies = await context.cookies();
     let eventCount = 0;
+    const inspectedChunks = new Map<string, string[]>();
+    let inspectedCount = 0;
 
     context.on('response', (response) => {
+      if (process.argv.includes('--inspect-bff') && inspectedCount < 80) {
+        const url = new URL(response.url());
+        if (url.hostname.endsWith('remanga.org') && /\.js(?:$)/i.test(url.pathname) && response.status() === 200) {
+          inspectedCount += 1;
+          const task = response.text().then((source) => {
+            const matches = BFF_STATIC_KEYS.filter((key) => source.includes(key));
+            if (matches.length) {
+              const paths = [...source.matchAll(/\/bff-api\/auth\/[a-z][a-z0-9/_-]{0,80}/gi)]
+                .map((match) => match[0]);
+              const distinct = [...new Set(paths)].slice(0, 20);
+              inspectedChunks.set(url.pathname.split('/').pop() ?? 'chunk', [...matches, ...distinct]);
+            }
+          }).catch(() => {});
+          pending.add(task);
+          void task.finally(() => pending.delete(task));
+        }
+      }
       if (eventCount >= MAX_EVENTS) return;
       const url = new URL(response.url());
       if (!url.hostname.endsWith('remanga.org') || !AUTH_ROUTE.test(url.pathname)) return;
@@ -83,6 +103,15 @@ async function main(): Promise<void> {
     console.log('Cookie при первой загрузке:', loadedCookies.filter((c) => /auth|token|session|refresh/i.test(c.name)).map((c) => c.name).join(', ') || '(нет)');
     await new Promise<void>((resolve) => process.stdin.once('data', () => resolve()));
     await Promise.allSettled([...pending]);
+    if (process.argv.includes('--inspect-bff')) {
+      console.log('BFF: анализ статических JS-файлов, без вывода исходного кода:');
+      console.log('Просмотрено JS-файлов:', inspectedCount);
+      for (const [chunk, matches] of inspectedChunks) {
+        console.log('  ' + chunk + ': ' + matches.join(', '));
+      }
+      if (inspectedChunks.size === 0) console.log('  Совпадений не обнаружено');
+      console.log('Код серверных обработчиков BFF в клиентских JS-файлах может отсутствовать.');
+    }
 
     // Cookie names help locate opaque session/refresh credentials without disclosure.
     const cookies = await context.cookies();
