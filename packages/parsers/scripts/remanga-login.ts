@@ -1,7 +1,7 @@
 /**
  * Diagnostic browser login for ReManga.
  *
- * Usage: pnpm --filter @tanuki/parsers login:remanga [--check-refresh]
+ * Usage: pnpm --filter @tanuki/parsers login:remanga [--check-refresh | --check-bff]
  *
  * Opens a real browser for a manual CAPTCHA/login and prints ONLY JSON field names
  * from authentication-related responses on remanga.org subdomains. No token values, passwords, URLs with
@@ -30,6 +30,13 @@ const inspectResponse = async (response: Response): Promise<void> => {
 
   // Show only the path (never query parameters) and metadata, never response values.
   console.log(`[ReManga] ${response.request().method()} ${url.pathname}: HTTP ${response.status()}`);
+  const setCookieNames = (await response.headersArray())
+    .filter(({ name }) => name.toLowerCase() === 'set-cookie')
+    .map(({ value }) => value.split('=')[0]?.trim())
+    .filter((name): name is string => Boolean(name));
+  if (setCookieNames.length > 0) {
+    console.log('  Set-Cookie names:', setCookieNames.join(', '));
+  }
 
   try {
     const body: unknown = await response.json();
@@ -96,6 +103,29 @@ async function main(): Promise<void> {
       console.log('Session Storage keys:', storage.session.join(', ') || '(нет)');
     } catch {
       console.log('Storage keys недоступны');
+    }
+
+    if (process.argv.includes('--check-bff')) {
+      console.log('BFF: обновляю страницу с уже существующей авторизацией.');
+      const beforeReload = new Map(
+        cookies
+          .filter(({ name }) => /auth|token|session|refresh/i.test(name))
+          .map((cookie) => [`${cookie.domain}:${cookie.name}`, cookie]),
+      );
+      try {
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 });
+        await page.waitForTimeout(3000);
+        const afterReload = await context.cookies();
+        for (const cookie of afterReload.filter(({ name }) => /auth|token|session|refresh/i.test(name))) {
+          const before = beforeReload.get(`${cookie.domain}:${cookie.name}`);
+          console.log(
+            `BFF cookie ${cookie.name}: ${before ? (before.value === cookie.value ? 'значение не изменилось' : 'значение изменилось') : 'новая cookie'}, ${before && before.expires !== cookie.expires ? 'срок изменился' : 'срок не изменился'}`,
+          );
+        }
+        console.log('BFF: проверка одного повторного открытия завершена. Это не тест истечения токена.');
+      } catch (error) {
+        console.log('BFF: ошибка перезагрузки:', error instanceof Error ? error.name : 'unknown');
+      }
     }
 
     if (process.argv.includes('--check-refresh')) {
