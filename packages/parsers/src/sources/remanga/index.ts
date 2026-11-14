@@ -46,7 +46,8 @@ import { NotFoundError } from '../../errors';
 import { fetchHomeSections } from '../../core/home';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { fetchRemangaBookmarks } from './bookmarks';
-import { fetchRemangaTitleJson } from './auth';
+import { fetchRemangaTitleJson, saveRemangaSessionToken } from './auth';
+import { readRemangaServiceSession } from './service-session';
 import type {
   MangaJson,
   TagJson,
@@ -765,6 +766,17 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   return {
     id: SOURCE_ID,
+    async init() {
+      const sessionFile = ctx.credentials.remanga?.sessionFile;
+      if (!sessionFile) return;
+      const session = await readRemangaServiceSession(sessionFile);
+      if (!session) {
+        ctx.logger.info('ReManga service session not configured');
+        return;
+      }
+      await saveRemangaSessionToken(ctx.jar, ctx.domain, session.token);
+      ctx.logger.info('ReManga service session loaded');
+    },
     info: {
       id: SOURCE_ID,
       title: 'Реманга',
