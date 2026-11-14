@@ -161,3 +161,39 @@ export const fetchRemangaSessionJson = async <T>(ctx: ParserContext, path: strin
     return fetchRemangaAccountJson<T>(ctx.http, ctx.domain, refreshed, path);
   }
 };
+
+/**
+ * Protected title/chapter requests are normally public. ReManga answers 401 for some titles
+ * (including age-restricted ones), in which case retry with the current viewer's Bearer token.
+ * An anonymous viewer never inherits the service jar. Only background/service requests may
+ * use it, and only when it contains a session.
+ */
+export const fetchRemangaTitleJson = async <T>(ctx: ParserContext, path: string): Promise<T> => {
+  const url = `https://api.${ctx.domain}${path}`;
+  const response = await ctx.http.request({ url, method: 'GET' });
+  if (response.status !== 401) {
+    const error = classifyResponse(
+      SOURCE_ID.REMANGA,
+      response.status,
+      response.url,
+      response.headers,
+      response.text().slice(0, 4096),
+    );
+    if (error) throw error;
+    return response.json<T>();
+  }
+
+  const account = currentSourceAccount(SOURCE_AUTH_FAMILY.REMANGA);
+  if (account) {
+    if (!account.jar) {
+      throw new SourceAuthRequiredError('ReManga title requires login', SOURCE_ID.REMANGA);
+    }
+    return fetchRemangaSessionJson<T>(ctx, path);
+  }
+
+  const token = await getRemangaSessionToken(ctx.jar, ctx.domain);
+  if (!token) {
+    throw new SourceAuthRequiredError('ReManga title requires login', SOURCE_ID.REMANGA);
+  }
+  return fetchRemangaAccountJson<T>(ctx.http, ctx.domain, token, path);
+};
