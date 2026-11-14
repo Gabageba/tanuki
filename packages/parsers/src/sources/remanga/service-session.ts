@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-const TOKEN_REGEX = /^[\\w.~+/-]{20,}=*$/;
+const TOKEN_REGEX = /^[\w.~+/-]{20,}=*$/;
 
 type RemangaServiceSession = { token: string };
 
