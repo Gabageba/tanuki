@@ -89,7 +89,7 @@ async function main(): Promise<void> {
                     if (index < 0) break;
                     const start = Math.max(0, index - 220);
                     const end = Math.min(source.length, index + keyword.length + 260);
-                    const fragment = source.slice(start, end).replace(/\\s+/g, ' ');
+                    const fragment = source.slice(start, end).replace(/\s+/g, ' ');
                     sections.push(keyword + ': ' + fragment);
                     from = index + keyword.length;
                   }
