@@ -5,6 +5,7 @@ import type { ParserContext } from '../src/core/parser';
 import { runWithSourceAccounts } from '../src/core/source-accounts';
 import {
   ParseError,
+  SourceAuthRequiredError,
   SourceLoginRequiresSessionError,
   SourceTokenExpiredError,
   SourceUnavailableError,
@@ -12,6 +13,7 @@ import {
 import {
   createRemangaSessionJar,
   fetchRemangaSessionJson,
+  fetchRemangaTitleJson,
   getRemangaSessionToken,
   loginRemanga,
 } from '../src/sources/remanga/auth';
@@ -152,5 +154,77 @@ describe('ReManga remembered password', () => {
     );
     expect(http.requests).toHaveLength(2);
     expect(await getRemangaSessionToken(jar, DOMAIN)).toBe(OLD_TOKEN);
+  });
+});
+
+describe('ReManga protected title authentication', () => {
+  const titlePath = '/api/v2/titles/sperm-pay/';
+  const protectedTitle = { dir: 'sperm-pay', main_name: 'Protected' };
+  const registerTitle = (http: FakeHttpClient) =>
+    http.register(
+      (url) => url === `${API}${titlePath}`,
+      () => ({
+        status:
+          http.requests.at(-1)?.headers.Authorization === `Bearer ${TOKEN}` ? 200 : 401,
+        body: JSON.stringify(protectedTitle),
+        contentType: 'application/json',
+      }),
+    );
+
+  it('returns a public title without a token or additional request', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url === `${API}${titlePath}`, {
+      status: 200,
+      body: JSON.stringify(protectedTitle),
+      contentType: 'application/json',
+    });
+    expect(await fetchRemangaTitleJson(makeContext(http), titlePath)).toEqual(protectedTitle);
+    expect(http.requests).toHaveLength(1);
+    expect(http.requests[0]?.headers.Authorization).toBeUndefined();
+  });
+
+  it('maps an anonymous 401 to auth required, not an outage', async () => {
+    const http = new FakeHttpClient();
+    registerTitle(http);
+    await runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.REMANGA]: {} }, async () => {
+      await expect(fetchRemangaTitleJson(makeContext(http), titlePath)).rejects.toBeInstanceOf(
+        SourceAuthRequiredError,
+      );
+    });
+    expect(http.requests).toHaveLength(1);
+  });
+
+  it('retries with the viewer token after 401', async () => {
+    const http = new FakeHttpClient();
+    registerTitle(http);
+    const jar = await createRemangaSessionJar(DOMAIN, TOKEN);
+    await runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.REMANGA]: { jar } }, async () => {
+      expect(await fetchRemangaTitleJson(makeContext(http), titlePath)).toEqual(protectedTitle);
+    });
+    expect(http.requests).toHaveLength(2);
+    expect(http.requests[0]?.headers.Authorization).toBeUndefined();
+    expect(http.requests[1]?.headers.Authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('never exposes the service token to an anonymous viewer', async () => {
+    const http = new FakeHttpClient();
+    registerTitle(http);
+    const ctx = makeContext(http);
+    ctx.jar = await createRemangaSessionJar(DOMAIN, TOKEN);
+    await runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.REMANGA]: {} }, async () => {
+      await expect(fetchRemangaTitleJson(ctx, titlePath)).rejects.toBeInstanceOf(
+        SourceAuthRequiredError,
+      );
+    });
+    expect(http.requests).toHaveLength(1);
+  });
+
+  it('allows a service request to use its own token after 401', async () => {
+    const http = new FakeHttpClient();
+    registerTitle(http);
+    const ctx = makeContext(http);
+    ctx.jar = await createRemangaSessionJar(DOMAIN, TOKEN);
+    expect(await fetchRemangaTitleJson(ctx, titlePath)).toEqual(protectedTitle);
+    expect(http.requests[1]?.headers.Authorization).toBe(`Bearer ${TOKEN}`);
   });
 });
