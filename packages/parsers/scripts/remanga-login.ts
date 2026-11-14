@@ -1,7 +1,7 @@
 /**
  * Diagnostic browser login for ReManga.
  *
- * Usage: pnpm --filter @tanuki/parsers login:remanga
+ * Usage: pnpm --filter @tanuki/parsers login:remanga [--check-refresh]
  *
  * Opens a real browser for a manual CAPTCHA/login and prints ONLY JSON field names
  * from authentication-related responses on remanga.org subdomains. No token values, passwords, URLs with
@@ -96,6 +96,49 @@ async function main(): Promise<void> {
       console.log('Session Storage keys:', storage.session.join(', ') || '(нет)');
     } catch {
       console.log('Storage keys недоступны');
+    }
+
+    if (process.argv.includes('--check-refresh')) {
+      const serverToken = cookies.find((cookie) => cookie.name === 'auth:server-token');
+      if (!serverToken?.value) {
+        console.log('Проверка refresh: cookie auth:server-token не найдена.');
+      } else {
+        console.log('Проверяю auth:server-token как refresh_token (одноразовая попытка).');
+        console.log('Внимание: при успешном обновлении исходная сессия может стать недействительной.');
+        try {
+          const refresh = await context.request.post(
+            'https://api.remanga.org/api/v2/users/token/refresh/',
+            {
+              data: { refresh_token: serverToken.value },
+              headers: { 'content-type': 'application/json' },
+              failOnStatusCode: false,
+              timeout: 15_000,
+            },
+          );
+          console.log('Refresh HTTP:', refresh.status());
+          try {
+            const body: unknown = await refresh.json();
+            printKeys('Поля ответа refresh', body);
+            if (body && typeof body === 'object' && !Array.isArray(body)) {
+              const record = body as Record<string, unknown>;
+              printKeys('Поля content refresh', record.content);
+              printKeys('Поля data refresh', record.data);
+              printKeys('Поля detail refresh', record.detail);
+              for (const key of ['access_token', 'refresh_token', 'token', 'error', 'code']) {
+                console.log('  Есть поле ' + key + ': ' + Object.hasOwn(record, key));
+              }
+            }
+          } catch {
+            console.log('Refresh: ответ не JSON.');
+          }
+          console.log('Результат диагностический: новые токены не сохраняются.');
+        } catch (error) {
+          console.log(
+            'Ошибка refresh-запроса:',
+            error instanceof Error ? error.name : 'unknown',
+          );
+        }
+      }
     }
   } finally {
     await browser.close();
