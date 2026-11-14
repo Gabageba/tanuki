@@ -46,6 +46,8 @@ import { NotFoundError } from '../../errors';
 import { fetchHomeSections } from '../../core/home';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { fetchRemangaBookmarks } from './bookmarks';
+import { fetchRemangaTitleJson, saveRemangaSessionToken } from './auth';
+import { readRemangaServiceSession } from './service-session';
 import type {
   MangaJson,
   TagJson,
@@ -601,7 +603,10 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     const result: ChapterJson[] = [];
     for (let page = 1; ; page += 1) {
       const url = `https://${apiHost}/api/v2/titles/chapters/?branch_id=${branchId}&page=${page}&count=500`;
-      const json = await ctx.http.getJson<{ results: ChapterJson[] }>(url);
+      const json = await fetchRemangaTitleJson<{ results: ChapterJson[] }>(
+        ctx,
+        new URL(url).pathname + new URL(url).search,
+      );
       if (json.results.length === 0) break;
       result.push(...json.results);
     }
@@ -610,7 +615,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const slug = slugFromUrl(mangaUrl);
-    const json = await ctx.http.getJson<MangaJson>(`https://${apiHost}/api/v2/titles/${slug}/`);
+    const json = await fetchRemangaTitleJson<MangaJson>(ctx, `/api/v2/titles/${slug}/`);
 
     const url = `/manga/${json.dir}`;
     const cover = json.cover;
@@ -629,8 +634,8 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
           .join(', ') || null;
       const branchChapters = (await fetchAllChapters(branch.id)).slice().reverse();
       for (const cjo of branchChapters) {
-        // Закрытые платные главы пропускаются. Купленные остаются без isPaid: своих аккаунтов у
-        // REMANGA нет, всё читается от сервисной сессии — её покупки видны всем.
+        // Закрытые платные главы пропускаются. У каждого зрителя свой scope;
+        // купленные главы не должны попадать в общий кеш.
         if (cjo.is_paid) hasPaidChapters = true;
         if (cjo.is_paid && !cjo.is_bought) continue;
         chapters.push({
@@ -703,9 +708,10 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const url = toAbsoluteUrl(chapterUrl, apiHost);
-    const json = await ctx.http.getJson<{ pages?: (PageJson | PageJson[])[]; pub_date?: string }>(
-      url,
-    );
+    const json = await fetchRemangaTitleJson<{
+      pages?: (PageJson | PageJson[])[];
+      pub_date?: string;
+    }>(ctx, new URL(url).pathname + new URL(url).search);
     if (!json.pages) {
       throw new NotFoundError(`Chapter is not available yet: ${url}`, SOURCE_ID);
     }
@@ -760,6 +766,17 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   return {
     id: SOURCE_ID,
+    async init() {
+      const sessionFile = ctx.credentials.remanga?.sessionFile;
+      if (!sessionFile) return;
+      const session = await readRemangaServiceSession(sessionFile);
+      if (!session) {
+        ctx.logger.info('ReManga service session not configured');
+        return;
+      }
+      await saveRemangaSessionToken(ctx.jar, ctx.domain, session.token);
+      ctx.logger.info('ReManga service session loaded');
+    },
     info: {
       id: SOURCE_ID,
       title: 'Реманга',

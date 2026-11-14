@@ -43,6 +43,10 @@ const EnvSchema = z.object({
   LIBSOCIAL_TOKEN_STORE_DIR: z
     .string()
     .default(resolve(process.cwd(), '../../data/libsocial-tokens')),
+  // ReManga: file written after a human browser login (CAPTCHA required). No password refresh.
+  REMANGA_SESSION_FILE: z
+    .string()
+    .default(resolve(process.cwd(), '../../data/libsocial-tokens/remanga.json')),
   // Ключ шифрования личных аккаунтов источников (AES-256-GCM, 32 байта в base64). Без него
   // привязать аккаунт нельзя. Потеря ключа = все привязки придётся делать заново.
   SOURCE_SECRETS_KEY: z

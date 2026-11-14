@@ -233,9 +233,16 @@ export class ParsersClientService {
     url: string,
     options?: { force?: boolean },
   ): Promise<CachedResult<RawTitle>> {
-    const key = cacheKey('details', sourceId, url);
+    const key = cacheKey('details', sourceId, sourceId === 'remanga' ? 'auth-v2' : '', url);
     const scope = await this.sourceAccess.resolveScope(sourceId);
     const fetch = (parser: Parser) => parser.getDetails(url);
+
+    // ReManga's protected title and chapter metadata depends on the viewer's Bearer token.
+    // Never write or read that account-scoped response through the shared details cache.
+    if (sourceId === 'remanga' && hasSourceAccount(scope)) {
+      const fetchedAt = Date.now();
+      return { data: await this.guardedFetch(sourceId, fetch, scope), stale: false, fetchedAt };
+    }
 
     const result = await this.cache.getOrSet(
       key,
@@ -267,9 +274,11 @@ export class ParsersClientService {
     options?: { isPaid?: boolean },
   ): Promise<CachedResult<{ items: RawPage[] }>> {
     const fetch = async (parser: Parser) => ({ items: await parser.getPages(chapterUrl) });
-    if (options?.isPaid) {
+    if (options?.isPaid || sourceId === 'remanga') {
       const scope = await this.sourceAccess.resolveScope(sourceId);
-      return { data: await this.guardedFetch(sourceId, fetch, scope), stale: false };
+      if (options?.isPaid || hasSourceAccount(scope)) {
+        return { data: await this.guardedFetch(sourceId, fetch, scope), stale: false };
+      }
     }
     const key = cacheKey('pages', sourceId, chapterUrl);
     return this.fetchCached(key, CACHE_TTL.pages, sourceId, fetch);
