@@ -235,7 +235,9 @@ describe('Inuko retired reading API', () => {
     const items = await parser.getList({ offset: 0, limit: 20, query: 'Ван-Пис' });
     expect(items).toHaveLength(1);
     expect(items[0]!.title).toBe('Ван-Пис');
-    expect(http.requests.some(({ url }) => url.startsWith(`https://${API_HOST}/v2/books?`))).toBe(false);
+    expect(http.requests.some(({ url }) => url.startsWith(`https://${API_HOST}/v2/books?`))).toBe(
+      false,
+    );
   });
 
   it.each([undefined, SORT_ORDER.UPDATED])('omits updatedAt sort: %s', async (order) => {
