@@ -17,6 +17,7 @@ const API_ORIGIN = 'https://api.remanga.org';
 const AUTH_ROUTE = /(?:auth|login|refresh|token|session|oauth|sso|users\/current)/i;
 const MAX_EVENTS = 80;
 const BFF_STATIC_KEYS = ['bff-api/auth/', 'auth:server-token', 'auth:token', 'token/refresh/', 'refresh_token', 'credentials'];
+const SAFE_AUTH_FIELDS = new Set(['token', 'access_token', 'refresh_token', 'user', 'username', 'password', 'method', 'provider', 'type', 'expires_in', 'expires_at', 'id']);
 
 const AUTH_PATH = AUTH_ROUTE;
 
@@ -64,7 +65,26 @@ async function main(): Promise<void> {
     let eventCount = 0;
     const inspectedChunks = new Map<string, string[]>();
     const codeSamples = new Map<string, string[]>();
+    const refreshMentions = new Map<string, string[]>();
+    const authRequests: string[] = [];
     let inspectedCount = 0;
+
+    context.on('request', (request) => {
+      if (!process.argv.includes('--inspect-bff')) return;
+      const url = new URL(request.url());
+      if (!url.hostname.endsWith('remanga.org') || !/\/bff-api\/auth\/|\/token\/refresh\//.test(url.pathname)) return;
+      const parsed: unknown = (() => {
+        try { return request.postDataJSON(); } catch { return null; }
+      })();
+      let fields = '(без JSON body)';
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const keys = Object.keys(parsed);
+        const safeKeys = keys.filter((key) => SAFE_AUTH_FIELDS.has(key));
+        fields = safeKeys.join(', ') || '(нет известных полей)';
+        if (safeKeys.length !== keys.length) fields += ' (+ неизвестных полей: ' + (keys.length - safeKeys.length) + ')';
+      }
+      authRequests.push(request.method() + ' ' + url.pathname + ' — поля JSON: ' + fields);
+    });
 
     context.on('response', (response) => {
       if (process.argv.includes('--inspect-bff') && inspectedCount < 80) {
@@ -78,6 +98,9 @@ async function main(): Promise<void> {
                 .map((match) => match[0]);
               const distinct = [...new Set(paths)].slice(0, 20);
               inspectedChunks.set(url.pathname.split('/').pop() ?? 'chunk', [...matches, ...distinct]);
+              const refreshPatterns = ['refresh_token', 'token/refresh/', 'yu(', '.yu(', 'refreshToken', 'auth:server-token'];
+              const found = refreshPatterns.filter((pattern) => source.includes(pattern));
+              if (found.length) refreshMentions.set(url.pathname.split('/').pop() ?? 'chunk', found);
               const filename = url.pathname.split('/').pop() ?? 'chunk';
               const wantedFiles = /^(?:99868-|77638-|40225-|page-e421eea)/.test(filename);
               if (wantedFiles) {
@@ -135,6 +158,13 @@ async function main(): Promise<void> {
         for (const sample of samples) console.log('    ' + sample);
       }
       if (codeSamples.size === 0) console.log('  Целевые участки не найдены');
+      console.log('BFF: сетевые запросы авторизации и структура переданных данных:');
+      for (const request of authRequests) console.log('  ' + request);
+      if (!authRequests.length) console.log('  Запросов не обнаружено');
+      console.log('BFF: упоминания refresh в загруженных модулях:');
+      for (const [filename, patterns] of refreshMentions) console.log('  ' + filename + ': ' + patterns.join(', '));
+      if (!refreshMentions.size) console.log('  Упоминаний не обнаружено');
+      console.log('Вызовы в динамически не загруженных модулях этим способом не проверяются.');
       console.log('Код серверных обработчиков BFF в клиентских JS-файлах может отсутствовать.');
     }
 
