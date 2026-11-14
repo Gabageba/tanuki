@@ -10,6 +10,7 @@
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "lint": "eslint .",
     "login:libsocial": "tsx scripts/libsocial-login.ts",
+    "login:remanga": "tsx scripts/remanga-login.ts",
     "test": "vitest run --project unit",
     "test:contract": "vitest run --project contract --reporter=verbose --reporter=json --outputFile=contract-report.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.eslint.json --noEmit"
