@@ -237,6 +237,13 @@ export class ParsersClientService {
     const scope = await this.sourceAccess.resolveScope(sourceId);
     const fetch = (parser: Parser) => parser.getDetails(url);
 
+    // ReManga's protected title and chapter metadata depends on the viewer's Bearer token.
+    // Never write or read that account-scoped response through the shared details cache.
+    if (sourceId === 'remanga' && hasSourceAccount(scope)) {
+      const fetchedAt = Date.now();
+      return { data: await this.guardedFetch(sourceId, fetch, scope), stale: false, fetchedAt };
+    }
+
     const result = await this.cache.getOrSet(
       key,
       CACHE_TTL.details,
