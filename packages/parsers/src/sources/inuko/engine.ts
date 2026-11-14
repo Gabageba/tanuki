@@ -760,9 +760,13 @@ export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Pars
     // those change whenever the website is rebuilt.
     const fetchSsrCatalog = async (): Promise<MangaJson[]> => {
       const catalogUrl = new URL(`https://${domain}/content`);
-      const [sort, orderBy] = getSortKey(order, direction).split(',');
-      catalogUrl.searchParams.set('sort', sort!);
-      catalogUrl.searchParams.set('orderBy', orderBy!);
+      // The site returns HTTP 500 for sort=updatedAt in SSR catalog search.
+      // Let the catalog use its own default ordering instead.
+      if (order !== undefined && order !== SORT_ORDER.UPDATED) {
+        const [sort, orderBy] = getSortKey(order, direction).split(',');
+        catalogUrl.searchParams.set('sort', sort!);
+        catalogUrl.searchParams.set('orderBy', orderBy!);
+      }
       catalogUrl.searchParams.set('page', String(page));
       catalogUrl.searchParams.set('size', String(PAGE_SIZE));
       if (query) catalogUrl.searchParams.set('search', query);
