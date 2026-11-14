@@ -43,6 +43,8 @@ export type Credentials = {
   /** AllHentai's qawa.org SSO gateway is a separate account system from the main network. */
   allhentai?: GroupleCredentials;
   libsocial?: LibSocialCredentials;
+  /** Path to the browser-provisioned ReManga service token, not a password. */
+  remanga?: { sessionFile: string };
   /** Service account for Nude-Moon's own login — only its title search needs it. */
   nudemoon?: GroupleCredentials;
 };
