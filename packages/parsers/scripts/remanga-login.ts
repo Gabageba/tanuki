@@ -73,17 +73,44 @@ async function main(): Promise<void> {
       if (!process.argv.includes('--inspect-bff')) return;
       const url = new URL(request.url());
       if (!url.hostname.endsWith('remanga.org') || !/\/bff-api\/auth\/|\/token\/refresh\//.test(url.pathname)) return;
-      const parsed: unknown = (() => {
-        try { return request.postDataJSON(); } catch { return null; }
-      })();
-      let fields = '(без JSON body)';
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        const keys = Object.keys(parsed);
-        const safeKeys = keys.filter((key) => SAFE_AUTH_FIELDS.has(key));
-        fields = safeKeys.join(', ') || '(нет известных полей)';
-        if (safeKeys.length !== keys.length) fields += ' (+ неизвестных полей: ' + (keys.length - safeKeys.length) + ')';
+      // Never print raw request body or any field values: it may contain credentials
+      // or bearer tokens. Only report its type, byte length, and allowlisted keys.
+      const body = request.postData();
+      const contentType = request.headers()['content-type'] ?? '(не указан)';
+      let bodyType = 'нет тела';
+      let fields = '(нет)';
+      if (body !== null) {
+        bodyType = 'неизвестный формат';
+        let parsed: unknown = null;
+        try { parsed = JSON.parse(body) as unknown; } catch { /* Not JSON. */ }
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          bodyType = 'JSON-объект';
+          const keys = Object.keys(parsed);
+          const safeKeys = keys.filter((key) => SAFE_AUTH_FIELDS.has(key));
+          fields = safeKeys.join(', ') || '(нет известных полей)';
+          if (safeKeys.length !== keys.length) {
+            fields += ' (+ других полей: ' + (keys.length - safeKeys.length) + ')';
+          }
+        } else if (parsed !== null) {
+          bodyType = 'JSON, не объект';
+        } else if (contentType.includes('application/x-www-form-urlencoded')) {
+          bodyType = 'form-urlencoded';
+          const keys = [...new URLSearchParams(body).keys()];
+          const safeKeys = keys.filter((key) => SAFE_AUTH_FIELDS.has(key));
+          fields = safeKeys.join(', ') || '(нет известных полей)';
+          if (safeKeys.length !== keys.length) {
+            fields += ' (+ других полей: ' + (keys.length - safeKeys.length) + ')';
+          }
+        }
       }
-      authRequests.push(request.method() + ' ' + url.pathname + ' — поля JSON: ' + fields);
+      const bodyBytes = body === null ? 0 : Buffer.byteLength(body, 'utf8');
+      const typeLabel = contentType.split(';')[0]?.trim() ?? '(не указан)';
+      authRequests.push(
+        request.method() + ' ' + url.pathname +
+        ' — Content-Type: ' + typeLabel +
+        ', размер: ' + bodyBytes + ' байт, формат: ' + bodyType +
+        ', поля: ' + fields,
+      );
     });
 
     context.on('response', (response) => {
