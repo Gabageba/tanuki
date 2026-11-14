@@ -27,6 +27,7 @@ export const parsersProvider: Provider = {
             ? { username: env.NUDEMOON_USERNAME, password: env.NUDEMOON_PASSWORD }
             : undefined,
         libsocial: { tokenStoreDir: env.LIBSOCIAL_TOKEN_STORE_DIR },
+        remanga: { sessionFile: env.REMANGA_SESSION_FILE },
       },
       timeouts: {
         connect: env.SOURCE_HTTP_TIMEOUT_MS,
