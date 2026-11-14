@@ -164,8 +164,7 @@ describe('ReManga protected title authentication', () => {
     http.register(
       (url) => url === `${API}${titlePath}`,
       () => ({
-        status:
-          http.requests.at(-1)?.headers.Authorization === `Bearer ${TOKEN}` ? 200 : 401,
+        status: http.requests.at(-1)?.headers.Authorization === `Bearer ${TOKEN}` ? 200 : 401,
         body: JSON.stringify(protectedTitle),
         contentType: 'application/json',
       }),

@@ -48,7 +48,9 @@ async function main(): Promise<void> {
   try {
     const response = await api.get(VERIFY_URL, { timeout: 20_000, maxRedirects: 0 });
     if (response.status() !== 200) {
-      throw new Error(`ReManga Bearer-проверка вернула HTTP ${response.status()}. Токен не сохранён.`);
+      throw new Error(
+        `ReManga Bearer-проверка вернула HTTP ${response.status()}. Токен не сохранён.`,
+      );
     }
   } finally {
     await api.dispose();
@@ -56,7 +58,9 @@ async function main(): Promise<void> {
 
   await writeRemangaServiceSession(SESSION_FILE, { token });
   console.log(`Сервисная сессия ReManga сохранена: ${SESSION_FILE}`);
-  console.log('Значения токена не выводятся. Для сервера скопируй файл в смонтированный каталог данных.');
+  console.log(
+    'Значения токена не выводятся. Для сервера скопируй файл в смонтированный каталог данных.',
+  );
 }
 
 main().catch((error: unknown) => {

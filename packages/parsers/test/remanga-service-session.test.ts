@@ -42,7 +42,8 @@ describe('ReManga service session file', () => {
   it('rejects invalid token data', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'tanuki-remanga-'));
     dirs.push(dir);
-    await expect(writeRemangaServiceSession(join(dir, 'remanga.json'), { token: 'bad' }))
-      .rejects.toThrow('Invalid ReManga service token');
+    await expect(
+      writeRemangaServiceSession(join(dir, 'remanga.json'), { token: 'bad' }),
+    ).rejects.toThrow('Invalid ReManga service token');
   });
 });
