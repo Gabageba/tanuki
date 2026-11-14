@@ -217,6 +217,27 @@ describe('Inuko retired reading API', () => {
     expect(pages[0]!.source).toBe(config.id);
   });
 
+  it.each([
+    [INKSTORY_CONFIG, DOMAIN],
+    [PUREMANGA_CONFIG, PUREMANGA_DOMAIN],
+  ])('prefers SSR search when the legacy API still responds: %s', async (config, domain) => {
+    const http = makeSsrHttp(domain);
+    http.register((url) => url.startsWith(`https://${domain}/content?`), {
+      status: 200,
+      body: `<script>($R=>$R[0]={books:$R[1]=${LIST_JSON}})($R["tsr"])</script>`,
+    });
+    http.register((url) => url.startsWith(`https://${API_HOST}/v2/books?`), {
+      status: 200,
+      body: '[]',
+      contentType: 'application/json',
+    });
+    const parser = createInukoParser(config, makeContext(http, domain));
+    const items = await parser.getList({ offset: 0, limit: 20, query: 'Ван-Пис' });
+    expect(items).toHaveLength(1);
+    expect(items[0]!.title).toBe('Ван-Пис');
+    expect(http.requests.some(({ url }) => url.startsWith(`https://${API_HOST}/v2/books?`))).toBe(false);
+  });
+
   it('keeps catalog pagination, sorting, search and include/exclude filters in SSR requests', async () => {
     const http = makeSsrHttp(DOMAIN);
     http.register((url) => url.startsWith(`https://${DOMAIN}/content?`), {
