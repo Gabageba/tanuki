@@ -33,6 +33,8 @@ function CompactMultiSelect({ value, placeholder, ...props }: Props) {
               withRemoveButton={!disabled}
               disabled={disabled}
               onRemove={onRemove}
+              // Явная ширина кнопки убирает лишнюю ширину тега в Safari на iOS.
+              removeButtonProps={{ w: '2em', flex: 'none' }}
             >
               {option?.label ?? item}
             </Pill>
