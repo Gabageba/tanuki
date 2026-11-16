@@ -1,0 +1,20 @@
+// Локальные изменения геометрии обложки для макетов. Style props обёртки не достигают
+// вложенной обложки; !important перекрывает только её inline width/aspect-ratio.
+// Вся карточка сохраняет ширину 170px и прежнюю высоту обложки 170 * 4 / 3.
+.sideInset [data-card-cover] {
+  width: calc(100% - 44px) !important;
+  height: calc(170px * 4 / 3);
+  aspect-ratio: auto !important;
+}
+
+.stackCrop [data-card-cover],
+.stackFit [data-card-cover] {
+  height: calc(170px * 4 / 3 - 76px);
+  margin-bottom: 76px;
+  aspect-ratio: auto !important;
+}
+
+.stackFit [data-card-cover] {
+  width: calc((170px * 4 / 3 - 76px) * 3 / 4) !important;
+  margin-inline: auto;
+}
