@@ -2,11 +2,42 @@ name: CI
 
 on:
   workflow_call:
+    inputs:
+      full:
+        description: Run every release check without change selection
+        type: boolean
+        default: true
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run all checks
+        type: boolean
+        default: true
   pull_request:
+  merge_group:
   push:
     branches: [master, main]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Select checks (release tags always run everything)
+        id: plan
+        env:
+          CHECKS_FULL: ${{ inputs.full == true || startsWith(github.ref, 'refs/tags/') }}
+          CHECKS_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+          CHECKS_HEAD: ${{ github.sha }}
+        run: node scripts/checks/run.mjs --plan
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -23,7 +54,13 @@ jobs:
       - run: pnpm lint:i18n
 
   typecheck:
+    needs: changes
+    # Preserve required check names even when no expensive work is selected.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
+    env:
+      CHECKS_PLAN: ${{ needs.changes.outputs.plan }}
+      CHECKS_PLAN_RESULT: ${{ needs.changes.result }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -31,11 +68,22 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Decide whether this check is affected
+        id: selection
+        run: node scripts/checks/run.mjs --task typecheck --status
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run typecheck
+        if: steps.selection.outputs.run == 'true'
+      - run: node scripts/checks/run.mjs --task typecheck
+        if: steps.selection.outputs.run == 'true'
 
   build:
+    needs: changes
+    # Preserve required check names even when no expensive work is selected.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
+    env:
+      CHECKS_PLAN: ${{ needs.changes.outputs.plan }}
+      CHECKS_PLAN_RESULT: ${{ needs.changes.result }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -43,14 +91,23 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Decide whether this check is affected
+        id: selection
+        run: node scripts/checks/run.mjs --task build --status
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build
+        if: steps.selection.outputs.run == 'true'
+      - run: node scripts/checks/run.mjs --task build
+        if: steps.selection.outputs.run == 'true'
 
-  # Юнит- и фикстурные тесты (packages/parsers, apps/api). Живые контрактные тесты источников
-  # (реальные запросы к сайтам) намеренно не гоняются здесь — только в parsers-nightly.yml —
-  # чтобы PR не зависели от доступности внешних сайтов.
+  # Live source contract tests remain in parsers-nightly.yml, outside release/PR checks.
   test:
+    needs: changes
+    # Preserve required check names even when no expensive work is selected.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
+    env:
+      CHECKS_PLAN: ${{ needs.changes.outputs.plan }}
+      CHECKS_PLAN_RESULT: ${{ needs.changes.result }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -58,17 +115,23 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Decide whether this check is affected
+        id: selection
+        run: node scripts/checks/run.mjs --task test --status
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run test
-      - run: pnpm test:self-host
+        if: steps.selection.outputs.run == 'true'
+      - run: node scripts/checks/run.mjs --task test
+        if: steps.selection.outputs.run == 'true'
 
-  # Визуальные тесты историй Storybook (apps/web/visual): снимки сверяются с эталонами из git.
-  # Образ — тот же, что у `pnpm test:visual`; его версия совпадает с @playwright/test в apps/web.
+  # Docker is started only when visual checks are selected, using the same image locally and in CI.
   visual:
+    needs: changes
+    # Preserve required check names even when no expensive work is selected.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
-      options: --ipc=host
+    env:
+      CHECKS_PLAN: ${{ needs.changes.outputs.plan }}
+      CHECKS_PLAN_RESULT: ${{ needs.changes.result }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -76,11 +139,13 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Decide whether this check is affected
+        id: selection
+        run: node scripts/checks/run.mjs --task visual --status
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run build --filter=@tanuki/contracts
-      - run: pnpm --filter @tanuki/web storybook:build
-      - run: pnpm --filter @tanuki/web exec playwright test -c visual
-      # Отчёт с диффами: что именно съехало и на каких историях.
+        if: steps.selection.outputs.run == 'true'
+      - run: node scripts/checks/run.mjs --task visual
+        if: steps.selection.outputs.run == 'true'
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -89,7 +154,13 @@ jobs:
           retention-days: 14
 
   e2e:
+    needs: changes
+    # Preserve required check names even when no expensive work is selected.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
+    env:
+      CHECKS_PLAN: ${{ needs.changes.outputs.plan }}
+      CHECKS_PLAN_RESULT: ${{ needs.changes.result }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -97,8 +168,13 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Decide whether this check is affected
+        id: selection
+        run: node scripts/checks/run.mjs --task e2e --status
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:e2e
+        if: steps.selection.outputs.run == 'true'
+      - run: node scripts/checks/run.mjs --task e2e
+        if: steps.selection.outputs.run == 'true'
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
