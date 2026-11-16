@@ -14,8 +14,12 @@ export class LimitedTaskQueue {
     private readonly timeoutMs: number,
   ) {}
 
-  async run<T>(task: () => Promise<T>, signal?: AbortSignal): Promise<T> {
-    await this.acquire(signal);
+  async run<T>(
+    task: () => Promise<T>,
+    signal?: AbortSignal,
+    timeoutMs = this.timeoutMs,
+  ): Promise<T> {
+    await this.acquire(timeoutMs, signal);
     try {
       signal?.throwIfAborted();
       return await task();
@@ -26,7 +30,7 @@ export class LimitedTaskQueue {
     }
   }
 
-  private async acquire(signal?: AbortSignal): Promise<void> {
+  private async acquire(timeoutMs: number, signal?: AbortSignal): Promise<void> {
     signal?.throwIfAborted();
     if (this.active < this.concurrency) {
       this.active += 1;
@@ -53,7 +57,7 @@ export class LimitedTaskQueue {
           resolve();
         },
       };
-      const timer = setTimeout(() => cancel(new TooManyRequestsException(1)), this.timeoutMs);
+      const timer = setTimeout(() => cancel(new TooManyRequestsException(1)), timeoutMs);
       this.queue.push(waiter);
       signal?.addEventListener('abort', abort, { once: true });
     });

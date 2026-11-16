@@ -101,6 +101,7 @@ export class ImgProxyController implements OnModuleDestroy {
     @Query('f') f: string | undefined,
     @Res() reply: FastifyReply,
   ): Promise<void> {
+    reply.header('Cache-Control', 'no-store');
     const absoluteUrl = verifySignedImageUrl(this.env.IMG_SIGN_SECRET, { u, s, exp, sig });
     const width = w === undefined ? undefined : Number(w);
     if (
@@ -237,7 +238,7 @@ export class ImgProxyController implements OnModuleDestroy {
     }
 
     const promise = this.concurrency
-      .runDownload(() => this.fetchAndTransform(absoluteUrl, sourceId, width, format))
+      .runCoverDownload(() => this.fetchAndTransform(absoluteUrl, sourceId, width, format))
       .finally(() => {
         this.inFlight.delete(key);
       });
