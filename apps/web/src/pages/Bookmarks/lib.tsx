@@ -1,5 +1,12 @@
 import type { TFunction } from 'i18next';
-import { BOOKMARK_SORT, type BookmarkSort, type BookmarksResponse } from '@tanuki/contracts';
+import { readEnumParam } from '@/shared/lib/searchParams';
+import {
+  BOOKMARK_SORT,
+  SORT_DIRECTION,
+  getDefaultBookmarkSortDirection,
+  type BookmarkSort,
+  type BookmarksResponse,
+} from '@tanuki/contracts';
 
 export const getBookmarkSortLabel = (sort: BookmarkSort, t: TFunction) => {
   switch (sort) {
@@ -21,3 +28,17 @@ export const getBookmarkItems = (pages: BookmarksResponse[]) => [
     pages.flatMap(({ items }) => items).map((bookmark) => [bookmark.titleId, bookmark]),
   ).values(),
 ];
+
+export const readBookmarksParams = (params: URLSearchParams) => {
+  const sort = readEnumParam(params, 'sort', BOOKMARK_SORT, BOOKMARK_SORT.UPDATED);
+  return {
+    query: params.get('query') ?? '',
+    sort,
+    direction: readEnumParam(
+      params,
+      'direction',
+      SORT_DIRECTION,
+      getDefaultBookmarkSortDirection(sort),
+    ),
+  };
+};

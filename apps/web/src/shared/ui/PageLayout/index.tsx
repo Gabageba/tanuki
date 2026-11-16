@@ -27,6 +27,8 @@ type Props<TQuery extends PageLayoutBaseQuery, TQueries extends PageLayoutQuerie
    *  падает, только когда упали все, а упавший один показывает пустым свой блок. */
   requireAll?: boolean;
   params?: TParams;
+  /** Внешний источник параметров, например URL. */
+  onParamsChange?: (params: TParams) => void;
   children: ReactNode;
 };
 
@@ -39,9 +41,12 @@ function PageLayout<
   useQueries,
   requireAll = false,
   params: initialParams = {} as TParams,
+  onParamsChange,
   children,
 }: Props<TQuery, TQueries, TParams>) {
-  const [params, setParams] = useState<TParams>(initialParams);
+  const [localParams, setLocalParams] = useState<TParams>(initialParams);
+  const params = onParamsChange ? initialParams : localParams;
+  const setParams = onParamsChange ?? setLocalParams;
   const usePageQuery: (params: TParams) => TQuery | null = useQuery ?? useNoQuery;
   const usePageQueries: (params: TParams) => TQueries | null = useQueries ?? useNoQuery;
   const query = usePageQuery(params);

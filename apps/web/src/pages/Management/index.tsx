@@ -10,6 +10,7 @@ import ManagementInvites from './components/ManagementInvites';
 import ManagementUsers from './components/ManagementUsers';
 import useManagementQueries from './hooks/useManagementQueries';
 import { isManagementTab } from './lib';
+import { updateSearchParams } from '@/shared/lib/searchParams';
 
 function Management() {
   const { t } = useTranslation();
@@ -20,7 +21,10 @@ function Management() {
 
   const handleTabChange = (value: string | null) => {
     if (!isManagementTab(value)) return;
-    setSearchParams({ [MANAGEMENT_TAB_SEARCH_PARAM]: value }, { replace: true });
+    setSearchParams(
+      (current) => updateSearchParams(current, { [MANAGEMENT_TAB_SEARCH_PARAM]: value }),
+      { replace: true },
+    );
   };
 
   const TABS = useMemo(

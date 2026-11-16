@@ -16,7 +16,8 @@ import BookmarksEmpty from './BookmarksEmpty';
 import BookmarksList from './BookmarksList';
 import BookmarksToolbar from './BookmarksToolbar';
 import FolderTabs from './FolderTabs';
-import type { BookmarksParams } from '../models';
+import { readBookmarksParams } from '../lib';
+import useUrlState from '@/shared/hooks/useUrlState';
 
 /** Задержка поиска: запрос уходит, когда человек перестал печатать. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -29,7 +30,7 @@ type Props = {
 function BookmarksContent({ onImport }: Props) {
   const { data: folders } = PageLayout.useQuery<ReturnType<typeof useBookmarkFolders>>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { params, setParams } = PageLayout.useParams<BookmarksParams>();
+  const { params, setParams } = useUrlState(readBookmarksParams);
   // Вид общий с каталогом: читается из настроек и пишется туда же.
   const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredViewMode() ?? VIEW_MODE.GRID);
 
@@ -38,14 +39,7 @@ function BookmarksContent({ onImport }: Props) {
   const activeFolder = items.find(({ id }) => id === folderParam) ?? items[0];
   const activeFolderId = activeFolder?.id;
 
-  // Другая папка — поиск с начала, откуда бы ни пришла смена: вкладка, иконка закладок в шапке
-  // или удалённая папка в адресе. Пока params не догнали папку, сброшенный поиск берётся сразу;
-  // затем он записывается, чтобы прежняя папка не вернула свой.
-  const isSameFolder = params.folderId === activeFolderId;
-  const query = isSameFolder ? params.query : '';
-  const { sort, direction } = params;
-  const updateParams = (patch: Partial<BookmarksParams>) =>
-    setParams({ ...params, folderId: activeFolderId, query, ...patch });
+  const { query, sort, direction } = params;
 
   // Набор отложен вместе с папкой: строка, набранная в прежней папке, в запрос новой не уходит.
   const search = useMemo(() => ({ folderId: activeFolderId, query }), [activeFolderId, query]);
@@ -54,21 +48,23 @@ function BookmarksContent({ onImport }: Props) {
   const listQuery =
     query && debouncedSearch.folderId === activeFolderId ? debouncedSearch.query : '';
 
-  useEffect(() => {
-    if (isSameFolder) return;
-    setParams({ ...params, folderId: activeFolderId, query: '' });
-  }, [isSameFolder, params, activeFolderId, setParams]);
-
   // Без папки в адресе (или с удалённой) открывается первая — и сразу попадает в адрес.
   useEffect(() => {
     if (!activeFolderId || folderParam === activeFolderId) return;
-    setSearchParams({ [BOOKMARKS_FOLDER_SEARCH_PARAM]: activeFolderId }, { replace: true });
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set(BOOKMARKS_FOLDER_SEARCH_PARAM, activeFolderId);
+        return next;
+      },
+      { replace: true },
+    );
   }, [activeFolderId, folderParam, setSearchParams]);
 
   const isEmpty = items.every(({ count }) => count === 0);
 
   const handleQueryChange = (value: string) => {
-    updateParams({ query: value });
+    setParams({ query: value });
   };
 
   const handleViewModeChange = (value: ViewMode) => {
@@ -77,7 +73,15 @@ function BookmarksContent({ onImport }: Props) {
   };
 
   const handleFolderChange = (folderId: string) => {
-    setSearchParams({ [BOOKMARKS_FOLDER_SEARCH_PARAM]: folderId }, { replace: true });
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set(BOOKMARKS_FOLDER_SEARCH_PARAM, folderId);
+        next.delete('query');
+        return next;
+      },
+      { replace: true, flushSync: true },
+    );
   };
 
   return (
@@ -95,13 +99,13 @@ function BookmarksContent({ onImport }: Props) {
             sort={sort}
             onSortChange={(value) => {
               // У каждой сортировки своё естественное направление: алфавит — от «А», даты — свежие.
-              updateParams({
+              setParams({
                 sort: value,
                 direction: getDefaultBookmarkSortDirection(value),
               });
             }}
             direction={direction}
-            onDirectionChange={(value) => updateParams({ direction: value })}
+            onDirectionChange={(value) => setParams({ direction: value })}
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
           />

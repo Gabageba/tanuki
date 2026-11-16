@@ -1,5 +1,6 @@
+import { useState } from 'react';
+import { useForm } from '@mantine/form';
 import { Flex, Group } from '@mantine/core';
-import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import CatalogHeaderSkeleton from './CatalogHeaderSkeleton';
 import SourceTitle from '@/entities/source/components/SourceTitle';
@@ -19,20 +20,18 @@ type Props = {
 function CatalogHeader({ sourceQuery }: Props) {
   const { t } = useTranslation();
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
-  const [, setSearchParams] = useSearchParams();
+
+  const urlQuery = params.query ?? '';
+  const form = useForm({ initialValues: { query: urlQuery } });
+  const [shownUrlQuery, setShownUrlQuery] = useState(urlQuery);
+  if (urlQuery !== shownUrlQuery) {
+    setShownUrlQuery(urlQuery);
+    form.setFieldValue('query', urlQuery);
+  }
 
   // Запрос живёт и в адресе: на него ведёт «Все результаты» с /search.
   const handleSearch = (query: string) => {
     setParams({ ...params, query });
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (query) next.set('query', query);
-        else next.delete('query');
-        return next;
-      },
-      { replace: true },
-    );
   };
 
   return (
@@ -52,7 +51,8 @@ function CatalogHeader({ sourceQuery }: Props) {
               w={{ base: '100%', sm: 300 }}
               allowClear
               handleSearch={handleSearch}
-              defaultValue={params.query}
+              value={form.values.query}
+              onChange={(value) => form.setFieldValue('query', value)}
               disabled={isTitleSearchLocked(source.id, source)}
               placeholder={
                 isTitleSearchLocked(source.id, source)

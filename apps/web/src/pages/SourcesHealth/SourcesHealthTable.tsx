@@ -1,12 +1,8 @@
-import { useState } from 'react';
 import { Stack } from '@mantine/core';
 import { useSearchParams } from 'react-router';
-import {
-  SORT_DIRECTION,
-  type SortDirection,
-  type SourceContentType,
-  type SourceStatus,
-} from '@tanuki/contracts';
+import { SORT_DIRECTION } from '@tanuki/contracts';
+import useUrlState from '@/shared/hooks/useUrlState';
+import { updateSearchParams } from '@/shared/lib/searchParams';
 import PageLayout from '@/shared/ui/PageLayout';
 import QueryBlock from '@/shared/ui/QueryBlock';
 import { flattenSources } from '@/entities/source/lib';
@@ -16,7 +12,7 @@ import HealthList from './HealthList';
 import HealthTableSkeleton from './HealthTableSkeleton';
 import SourceDrawer from './SourceDrawer';
 import {
-  HEALTH_SORT,
+  readHealthParams,
   filterSources,
   getDefaultSortDirection,
   sortSources,
@@ -32,10 +28,8 @@ type Props = {
  *  поэтому фильтрует и сортирует клиент, без поиска и страниц. По умолчанию лежащие сверху. */
 function SourcesHealthTable({ isStaff }: Props) {
   const query = PageLayout.useQuery<SourcesHealthQuery>();
-  const [status, setStatus] = useState<SourceStatus[]>([]);
-  const [contentType, setContentType] = useState<SourceContentType[]>([]);
-  const [sort, setSort] = useState<HealthSort>(HEALTH_SORT.STATUS);
-  const [direction, setDirection] = useState<SortDirection>(SORT_DIRECTION.ASC);
+  const { params, setParams } = useUrlState(readHealthParams);
+  const { status, contentType, sort, direction } = params;
   // id в адресе, а не снимок: после проверки и опроса карточка сразу показывает свежий статус,
   // а уведомление об источнике открывает его карточку.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,22 +40,26 @@ function SourcesHealthTable({ isStaff }: Props) {
   /** Повторный клик по тому же ключу разворачивает направление. */
   const handleSortChange = (next: HealthSort) => {
     if (next === sort) {
-      setDirection(direction === SORT_DIRECTION.ASC ? SORT_DIRECTION.DESC : SORT_DIRECTION.ASC);
-    } else {
-      setSort(next);
-      setDirection(getDefaultSortDirection(next));
+      setParams({
+        direction: direction === SORT_DIRECTION.ASC ? SORT_DIRECTION.DESC : SORT_DIRECTION.ASC,
+      });
+      return;
     }
+    setParams({ sort: next, direction: getDefaultSortDirection(next) });
   };
 
   const handleOpenedChange = (sourceId: string | null) => {
-    setSearchParams(sourceId ? { [SOURCES_HEALTH_SOURCE_SEARCH_PARAM]: sourceId } : {}, {
-      replace: true,
-    });
+    setSearchParams(
+      (current) =>
+        updateSearchParams(current, {
+          [SOURCES_HEALTH_SOURCE_SEARCH_PARAM]: sourceId ?? undefined,
+        }),
+      { replace: true, flushSync: true },
+    );
   };
 
   const handleReset = () => {
-    setStatus([]);
-    setContentType([]);
+    setParams({ status: [], contentType: [] });
   };
 
   return (
@@ -69,8 +67,8 @@ function SourcesHealthTable({ isStaff }: Props) {
       <HealthFilters
         status={status}
         contentType={contentType}
-        onStatusChange={setStatus}
-        onContentTypeChange={setContentType}
+        onStatusChange={(status) => setParams({ status })}
+        onContentTypeChange={(contentType) => setParams({ contentType })}
       />
       <QueryBlock query={query} skeleton={<HealthTableSkeleton />}>
         {(data) => (

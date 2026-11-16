@@ -11,6 +11,7 @@ import ProfileData from './components/ProfileData';
 import ProfileSourceAccounts from './components/ProfileSourceAccounts';
 import { PROFILE_TAB_SEARCH_PARAM, PROFILE_TABS } from '@/shared/lib/routes';
 import useProfileQueries from './hooks/useProfileQueries';
+import { updateSearchParams } from '@/shared/lib/searchParams';
 import { isProfileTab } from './lib';
 
 function Profile() {
@@ -22,7 +23,10 @@ function Profile() {
 
   const handleTabChange = (value: string | null) => {
     if (!isProfileTab(value)) return;
-    setSearchParams({ [PROFILE_TAB_SEARCH_PARAM]: value }, { replace: true });
+    setSearchParams(
+      (current) => updateSearchParams(current, { [PROFILE_TAB_SEARCH_PARAM]: value }),
+      { replace: true },
+    );
   };
 
   const TABS = useMemo(

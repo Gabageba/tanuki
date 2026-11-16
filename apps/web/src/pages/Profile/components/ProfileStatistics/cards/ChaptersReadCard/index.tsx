@@ -1,11 +1,17 @@
 import { useTranslation } from 'react-i18next';
 import { SegmentedControl, Stack } from '@mantine/core';
-import { useState } from 'react';
+import useUrlState from '@/shared/hooks/useUrlState';
 import type { ChaptersReadPoint } from '@tanuki/contracts';
 import ProfileStatisticCard from '../ProfileStatisticCard';
 import ProfileStatisticHeadline from '../ProfileStatisticHeadline';
 import type { StatisticPeriod } from '../lib';
-import { formatBarDate, formatBarLabel, getStatisticPeriodCaption, STATISTIC_PERIOD } from '../lib';
+import {
+  formatBarDate,
+  formatBarLabel,
+  getStatisticPeriodCaption,
+  readStatisticParams,
+  STATISTIC_PERIOD,
+} from '../lib';
 import BarChart from '@/shared/ui/BarChart';
 import ChaptersReadCardFooter from './ChaptersReadCardFooter';
 
@@ -33,7 +39,8 @@ const getPeriodPoints = (
 
 function ChaptersReadCard({ chaptersByDay, chaptersByMonth }: Props) {
   const { t, i18n } = useTranslation();
-  const [period, setPeriod] = useState<StatisticPeriod>(STATISTIC_PERIOD.WEEK);
+  const { params, setParams } = useUrlState(readStatisticParams);
+  const { period } = params;
 
   const points = getPeriodPoints(period, chaptersByDay, chaptersByMonth);
   const total = points.reduce((sum, { count }) => sum + count, 0);
@@ -55,7 +62,7 @@ function ChaptersReadCard({ chaptersByDay, chaptersByMonth }: Props) {
         <SegmentedControl
           size="xs"
           value={period}
-          onChange={(value) => setPeriod(value as StatisticPeriod)}
+          onChange={(value) => setParams({ period: value as StatisticPeriod })}
           data={[
             { label: t('week'), value: STATISTIC_PERIOD.WEEK },
             { label: t('month'), value: STATISTIC_PERIOD.MONTH },

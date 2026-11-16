@@ -2,6 +2,7 @@ import { Anchor, AppShell, Box, Group, Indicator, Typography } from '@mantine/co
 import { Link } from 'react-router';
 import { BellIcon, BookmarkSimpleIcon, HouseIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import useListNavigation from '@/shared/hooks/useListNavigation';
 import LogoHorizontal from './LogoHorizontal';
 import Avatar from './components/Avatar';
 import DesktopSourceSelect from './components/DesktopSourceSelect';
@@ -15,6 +16,7 @@ import styles from './Header.module.scss';
 
 function Header() {
   const { t } = useTranslation();
+  const getListPath = useListNavigation();
   const { data: bookmarkFolders } = useBookmarkFolders();
   // Подборки — продолжение главной: «Назад» с них ведёт туда, домик остаётся выделенным.
   const isHomeActive = useIsActiveUrl([ROUTE_PATHS.HOME, ROUTE_PATHS.SELECTIONS]);
@@ -41,7 +43,7 @@ function Header() {
           <HeaderSearch className={styles.form} />
           <Group gap={4} visibleFrom="md">
             <HeaderIconButton
-              to={ROUTE_PATHS.BOOKMARKS}
+              to={getListPath(ROUTE_PATHS.BOOKMARKS)}
               label={t('bookmarks')}
               isActive={isBookmarksActive}
             >
@@ -50,7 +52,7 @@ function Header() {
               </Indicator>
             </HeaderIconButton>
             <HeaderIconButton
-              to={ROUTE_PATHS.NOTIFICATIONS}
+              to={getListPath(ROUTE_PATHS.NOTIFICATIONS)}
               label={t('notifications')}
               isActive={isNotificationsActive}
             >

@@ -1,7 +1,8 @@
+import { useSearchParams } from 'react-router';
 import { useEffect } from 'react';
 import { Group } from '@mantine/core';
-import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { updateSearchParams } from '@/shared/lib/searchParams';
 import PageLayout from '@/shared/ui/PageLayout';
 import QueryBlock from '@/shared/ui/QueryBlock';
 import { toOptionalQuery } from '@/shared/ui/QueryBlock/lib';
@@ -14,7 +15,6 @@ import {
 } from '../../utils/sortOrder';
 import type { CatalogParams } from '../../models';
 import useFilters from '../../hooks/useFilters';
-import useSetCatalogFilters from '../../hooks/useSetCatalogFilters';
 import FilterBar from '@/features/filters/FilterBar';
 import CatalogSettingsSkeleton from './CatalogSettingsSkeleton';
 import CatalogSort from './CatalogSort';
@@ -32,7 +32,6 @@ function CatalogSettings({ sourceId }: Props) {
   const filters = filtersQuery.data;
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
   const [, setSearchParams] = useSearchParams();
-  const setFilters = useSetCatalogFilters();
 
   const isFiltersLocked = isFiltersLockedByQuery(source, params.query);
   const activeFilters = isFiltersLocked ? undefined : params.filters;
@@ -42,32 +41,30 @@ function CatalogSettings({ sourceId }: Props) {
   const order = resolveOrder(params.order, effectiveSortOrders);
   const direction = params.direction ?? SORT_DIRECTION.DESC;
 
-  // Сортировка (и направление, если источник его поддерживает) не может отсутствовать в урле
-  // и не может остаться той, что недоступна для активного фильтра (см.
-  // resolveEffectiveSortOrders) — как только источник/фильтры подгрузились, сразу закрепляем
-  // актуальные значения в урле. Оба поля обновляются одним setParams/setSearchParams, чтобы не
-  // потерять одно изменение из-за того, что setParams — обычный useState-сеттер, а не
-  // функциональный.
+  // После загрузки источника и фильтров закрепляем доступную сортировку в URL.
   useEffect(() => {
+    if (sourceQuery.isPending || filtersQuery.isPending) return;
     const needsOrder = order !== undefined && params.order !== order;
     const needsDirection = effectiveSupportsDirection && !params.direction;
     if (!needsOrder && !needsDirection) return;
 
-    setParams({
-      ...params,
-      ...(needsOrder && { order }),
-      ...(needsDirection && { direction }),
-    });
     setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (needsOrder) next.set('order', order);
-        if (needsDirection) next.set('direction', direction);
-        return next;
-      },
+      (current) =>
+        updateSearchParams(current, {
+          ...(needsOrder && { order }),
+          ...(needsDirection && { direction }),
+        }),
       { replace: true },
     );
-  }, [order, direction, params, effectiveSupportsDirection, setParams, setSearchParams]);
+  }, [
+    order,
+    direction,
+    params,
+    effectiveSupportsDirection,
+    setSearchParams,
+    sourceQuery.isPending,
+    filtersQuery.isPending,
+  ]);
 
   return (
     // Фильтры не загрузились — пропадает только кнопка «Фильтры», сортировка и вид остаются.
@@ -81,7 +78,7 @@ function CatalogSettings({ sourceId }: Props) {
           mb="md"
           groups={filtersData?.groups}
           selection={params.filters ?? []}
-          onChange={setFilters}
+          onChange={(filters) => setParams({ ...params, filters })}
           locked={isFiltersLocked}
           lockedNote={t('titleSearchWithoutFilters')}
           actions={

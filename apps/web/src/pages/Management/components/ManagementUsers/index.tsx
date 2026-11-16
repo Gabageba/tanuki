@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { Stack } from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
+import useManagementUsersQuery from '../../hooks/useManagementUsersQuery';
 import {
   getUserManagementPermissions,
   SORT_DIRECTION,
   type ManagedUser,
   type ManagedUsersSort,
-  type SortDirection,
-  type UserRole,
-  type UserStatus,
 } from '@tanuki/contracts';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import BlockUserModal from './BlockUserModal';
@@ -19,66 +16,38 @@ import UsersList from './UsersList';
 import useBlockUser from './hooks/useBlockUser';
 import useChangeUserRole from './hooks/useChangeUserRole';
 import useDeleteUser from './hooks/useDeleteUser';
-import useManagedUsers from './hooks/useManagedUsers';
 import useUnblockUser from './hooks/useUnblockUser';
-import {
-  DEFAULT_USERS_QUERY,
-  getDefaultSortDirection,
-  SEARCH_DEBOUNCE_MS,
-  type UserHandlers,
-} from './models';
+import { getDefaultSortDirection, type UserHandlers } from './models';
 
 /** Вкладка «Пользователи»: поиск и фильтры, таблица постранично, карточка и модалки действий. */
 function ManagementUsers() {
   const { data: currentUser } = useCurrentUser();
-  const [query, setQuery] = useState('');
-  const [role, setRole] = useState<UserRole[]>(DEFAULT_USERS_QUERY.role);
-  const [status, setStatus] = useState<UserStatus[]>(DEFAULT_USERS_QUERY.status);
-  const [sort, setSort] = useState<ManagedUsersSort>(DEFAULT_USERS_QUERY.sort);
-  const [direction, setDirection] = useState<SortDirection>(DEFAULT_USERS_QUERY.direction);
-  const [page, setPage] = useState(DEFAULT_USERS_QUERY.page);
+  const { params, setParams, query: users } = useManagementUsersQuery();
+  const { query, role, status, sort, direction, page } = params;
   // Снимки, а не id: карточка не должна закрываться, если после действия человек выпал из фильтра.
   const [opened, setOpened] = useState<ManagedUser | null>(null);
   const [blockTarget, setBlockTarget] = useState<ManagedUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null);
 
-  const [debouncedQuery] = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
-  const users = useManagedUsers({
-    page,
-    query: debouncedQuery || undefined,
-    role,
-    status,
-    sort,
-    direction,
-  });
   const changeRole = useChangeUserRole();
   const blockUser = useBlockUser();
   const unblockUser = useUnblockUser();
   const deleteUser = useDeleteUser();
 
-  const resetPage =
-    <Value,>(setter: (value: Value) => void) =>
-    (value: Value) => {
-      setter(value);
-      setPage(1);
-    };
-
   /** Повторный клик по тому же столбцу разворачивает направление. */
   const handleSortChange = (next: ManagedUsersSort) => {
     if (next === sort) {
-      setDirection(direction === SORT_DIRECTION.ASC ? SORT_DIRECTION.DESC : SORT_DIRECTION.ASC);
-    } else {
-      setSort(next);
-      setDirection(getDefaultSortDirection(next));
+      setParams({
+        direction: direction === SORT_DIRECTION.ASC ? SORT_DIRECTION.DESC : SORT_DIRECTION.ASC,
+        page: 1,
+      });
+      return;
     }
-    setPage(1);
+    setParams({ sort: next, direction: getDefaultSortDirection(next), page: 1 });
   };
 
   const handleReset = () => {
-    setQuery('');
-    setRole([]);
-    setStatus([]);
-    setPage(1);
+    setParams({ query: '', role: [], status: [], page: 1 });
   };
 
   const handlers: UserHandlers = {
@@ -104,7 +73,7 @@ function ManagementUsers() {
         setDeleteTarget(null);
         setOpened(null);
         // Удалили последнего на странице — уходим на предыдущую, а не на пустую.
-        if (users.data?.items.length === 1 && page > 1) setPage(page - 1);
+        if (users.data?.items.length === 1 && page > 1) setParams({ page: page - 1 });
       },
     });
 
@@ -117,9 +86,9 @@ function ManagementUsers() {
         query={query}
         role={role}
         status={status}
-        onQueryChange={resetPage(setQuery)}
-        onRoleChange={resetPage(setRole)}
-        onStatusChange={resetPage(setStatus)}
+        onQueryChange={(query) => setParams({ query, page: 1 })}
+        onRoleChange={(role) => setParams({ role, page: 1 })}
+        onStatusChange={(status) => setParams({ status, page: 1 })}
       />
 
       <UsersList
@@ -128,7 +97,7 @@ function ManagementUsers() {
         page={page}
         sort={sort}
         direction={direction}
-        onPageChange={setPage}
+        onPageChange={(page) => setParams({ page })}
         onSortChange={handleSortChange}
         onOpen={handlers.onOpen}
         onReset={handleReset}

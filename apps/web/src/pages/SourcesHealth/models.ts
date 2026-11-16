@@ -1,6 +1,8 @@
+import { readEnumParam, readEnumListParam } from '@/shared/lib/searchParams';
 import {
   SORT_DIRECTION,
   SOURCE_STATUS,
+  SOURCE_CONTENT_TYPE,
   type EnumLiteralsOf,
   type Source,
   type SourceContentType,
@@ -103,3 +105,13 @@ export const filterSources = (sources: Source[], { status, contentType }: Health
       (!status.length || status.includes(source.status)) &&
       (!contentType.length || contentType.includes(source.contentType)),
   );
+
+export const readHealthParams = (params: URLSearchParams) => {
+  const sort = readEnumParam(params, 'sort', HEALTH_SORT, HEALTH_SORT.STATUS);
+  return {
+    status: readEnumListParam(params, 'status', SOURCE_STATUS),
+    contentType: readEnumListParam(params, 'contentType', SOURCE_CONTENT_TYPE),
+    sort,
+    direction: readEnumParam(params, 'direction', SORT_DIRECTION, getDefaultSortDirection(sort)),
+  };
+};

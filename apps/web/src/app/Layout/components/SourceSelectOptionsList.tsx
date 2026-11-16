@@ -1,6 +1,7 @@
 import { Stack } from '@mantine/core';
 import { generatePath } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import useListNavigation from '@/shared/hooks/useListNavigation';
 import SourceSelectOption from './SourceSelectOption';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import AllElementsIcon from './AllElementsIcon';
@@ -27,6 +28,7 @@ function SourceSelectOptionsList({
   onResetQuery,
 }: Props) {
   const { t } = useTranslation();
+  const getListPath = useListNavigation();
 
   return (
     <Stack gap="md">
@@ -41,7 +43,7 @@ function SourceSelectOptionsList({
         {filteredSources.map(({ id, title }) => (
           <SourceSelectOption
             key={id}
-            to={generatePath(ROUTE_PATHS.CATALOG, { sourceId: id })}
+            to={getListPath(generatePath(ROUTE_PATHS.CATALOG, { sourceId: id }))}
             onClick={onClose}
             leftSection={<SourceIcon id={id} title={title} size={22} bdrs="sm" />}
             label={title}

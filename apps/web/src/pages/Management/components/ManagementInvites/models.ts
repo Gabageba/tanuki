@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { readEnumParam, readEnumListParam, readPageParam } from '@/shared/lib/searchParams';
 import {
   INVITE_STATUS,
   INVITES_SORT,
@@ -111,4 +112,15 @@ export const getInviteDrawerTitle = (invite: Invite, isOwn: boolean, t: TFunctio
   return invite.createdByUsername
     ? t('inviteFromUsername', { username: invite.createdByUsername })
     : t('inviteFromConsole');
+};
+
+export const readListParams = (params: URLSearchParams) => {
+  const sort = readEnumParam(params, 'sort', INVITES_SORT, DEFAULT_INVITES_QUERY.sort);
+  return {
+    page: readPageParam(params),
+    role: readEnumListParam(params, 'role', USER_ROLE),
+    status: readEnumListParam(params, 'status', INVITE_STATUS),
+    sort,
+    direction: readEnumParam(params, 'direction', SORT_DIRECTION, getDefaultSortDirection(sort)),
+  };
 };

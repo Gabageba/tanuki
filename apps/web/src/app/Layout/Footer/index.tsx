@@ -3,6 +3,7 @@ import { BellIcon, BookmarkSimpleIcon, HouseIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import useListNavigation from '@/shared/hooks/useListNavigation';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
 import UnreadNotificationsIndicator from '@/entities/notification/UnreadNotificationsIndicator';
@@ -15,6 +16,7 @@ import styles from './Footer.module.scss';
 
 function Footer() {
   const { t } = useTranslation();
+  const getListPath = useListNavigation();
   const navigate = useNavigate();
   const { data: bookmarkFolders } = useBookmarkFolders();
   const isSourcesActive = useIsActiveUrl([
@@ -76,7 +78,7 @@ function Footer() {
           }}
         />
         <MobileNavigationButton
-          onClick={() => navigateFromFooter(ROUTE_PATHS.BOOKMARKS, isBookmarksActive)}
+          onClick={() => navigateFromFooter(getListPath(ROUTE_PATHS.BOOKMARKS), isBookmarksActive)}
           title={t('bookmarks')}
           isActive={isBookmarksActive && !isSourcesOpened && !isMenuOpened}
           leftSection={
@@ -86,7 +88,9 @@ function Footer() {
           }
         />
         <MobileNavigationButton
-          onClick={() => navigateFromFooter(ROUTE_PATHS.NOTIFICATIONS, isNotificationsActive)}
+          onClick={() =>
+            navigateFromFooter(getListPath(ROUTE_PATHS.NOTIFICATIONS), isNotificationsActive)
+          }
           title={t('notifications')}
           isActive={isNotificationsActive && !isSourcesOpened && !isMenuOpened}
           leftSection={

@@ -5,7 +5,6 @@ import ImportFromSourceModal from '@/features/source-import/ImportFromSourceModa
 import PageLayout from '@/shared/ui/PageLayout';
 import BookmarksContent from './components/BookmarksContent';
 import BookmarksSkeleton from './components/BookmarksSkeleton';
-import { INITIAL_BOOKMARKS_PARAMS } from './models';
 
 function Bookmarks() {
   const { t } = useTranslation();
@@ -14,7 +13,7 @@ function Bookmarks() {
   const [isImportOpened, { open: openImport, close: closeImport }] = useDisclosure(false);
 
   return (
-    <PageLayout useQuery={useBookmarkFolders} params={INITIAL_BOOKMARKS_PARAMS}>
+    <PageLayout useQuery={useBookmarkFolders}>
       <PageLayout.Content title={t('bookmarks')} skeleton={<BookmarksSkeleton />}>
         <BookmarksContent onImport={openImport} />
       </PageLayout.Content>
