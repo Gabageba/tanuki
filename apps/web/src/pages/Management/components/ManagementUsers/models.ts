@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next';
+import { readEnumParam, readEnumListParam, readPageParam } from '@/shared/lib/searchParams';
 import {
   MANAGED_USERS_SORT,
+  USER_ROLE,
   SORT_DIRECTION,
   USER_STATUS,
   type EnumLiteralsOf,
@@ -151,3 +153,15 @@ export const getBlockedUntil = (duration: BlockDuration, customDate: string) => 
 
 /** Сегодня в формате поля даты — раньше блокировку не закончить. */
 export const getToday = () => new Date().toISOString().slice(0, 10);
+
+export const readListParams = (params: URLSearchParams) => {
+  const sort = readEnumParam(params, 'sort', MANAGED_USERS_SORT, DEFAULT_USERS_QUERY.sort);
+  return {
+    page: readPageParam(params),
+    role: readEnumListParam(params, 'role', USER_ROLE),
+    status: readEnumListParam(params, 'status', USER_STATUS),
+    sort,
+    direction: readEnumParam(params, 'direction', SORT_DIRECTION, getDefaultSortDirection(sort)),
+    query: params.get('query') ?? '',
+  };
+};

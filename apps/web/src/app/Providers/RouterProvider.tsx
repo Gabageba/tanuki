@@ -1,8 +1,5 @@
-import {
-  createBrowserRouter,
-  Navigate,
-  RouterProvider as InternalRouterProvider,
-} from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
+import { RouterProvider as InternalRouterProvider } from 'react-router/dom';
 import Layout from '@/app/Layout';
 import AuthLayout from '@/app/AuthLayout';
 import RequireAuth from '@/app/RequireAuth';

@@ -16,6 +16,8 @@ declare const self: ServiceWorkerGlobalScope & {
 };
 
 const DAY_SECONDS = 24 * 60 * 60;
+const MAX_COVER_RETRY_SECONDS = 5;
+const COVER_RETRY_JITTER_MS = 500;
 
 /**
  * Запросы API, ответы которых нужны без сети: страница тайтла, закладки, главная, настройки.
@@ -34,6 +36,22 @@ const STRIP_SIGNATURE_PLUGIN: WorkboxPlugin = {
     url.searchParams.delete('exp');
     url.searchParams.delete('sig');
     return url.href;
+  },
+};
+
+const RETRY_BUSY_COVER_PLUGIN: WorkboxPlugin = {
+  fetchDidSucceed: async ({ request, response }) => {
+    if (response.status !== 429) return response;
+    const retryAfter = response.headers.get('Retry-After');
+    if (retryAfter === null || !/^\d+$/.test(retryAfter)) return response;
+    const seconds = Number(retryAfter);
+    if (seconds > MAX_COVER_RETRY_SECONDS) return response;
+
+    // Разносим повторы по времени, чтобы обложки каталога снова не пришли одной пачкой.
+    await new Promise((resolve) =>
+      setTimeout(resolve, seconds * 1000 + Math.random() * COVER_RETRY_JITTER_MS),
+    );
+    return fetch(request);
   },
 };
 
@@ -78,6 +96,7 @@ export const registerCaching = () => {
       cacheName: 'tanuki-covers',
       plugins: [
         STRIP_SIGNATURE_PLUGIN,
+        RETRY_BUSY_COVER_PLUGIN,
         new ExpirationPlugin({
           maxEntries: 500,
           maxAgeSeconds: 30 * DAY_SECONDS,

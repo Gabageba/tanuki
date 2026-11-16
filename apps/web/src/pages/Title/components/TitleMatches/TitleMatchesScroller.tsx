@@ -8,16 +8,22 @@ import useSources from '@/entities/source/hooks/useSources';
 import { flattenSources } from '@/entities/source/lib';
 import MatchConfidenceLabel from './MatchConfidenceLabel';
 import TitleMatchCard from './TitleMatchCard';
-import type useSetTitleLink from '../../hooks/useSetTitleLink';
 
 type Props = {
   matches: TitleMatch[] | undefined;
-  mutateTitleLink: ReturnType<typeof useSetTitleLink>['mutate'];
-  isTitleLinkPending: boolean;
-  isStaff: boolean;
+  isChecking: boolean;
+  selectedTargetIds: string[];
+  disabled: boolean;
+  onToggle: (targetId: string) => void;
 };
 
-function TitleMatchesScroller({ matches, mutateTitleLink, isTitleLinkPending, isStaff }: Props) {
+function TitleMatchesScroller({
+  matches,
+  isChecking,
+  selectedTargetIds,
+  disabled,
+  onToggle,
+}: Props) {
   const { t } = useTranslation();
   const { data: sources } = useSources();
 
@@ -60,9 +66,10 @@ function TitleMatchesScroller({ matches, mutateTitleLink, isTitleLinkPending, is
                   <TitleMatchCard
                     key={match.title.id}
                     match={match}
-                    mutateTitleLink={mutateTitleLink}
-                    isTitleLinkPending={isTitleLinkPending}
-                    isStaff={isStaff}
+                    isChecking={isChecking}
+                    selected={selectedTargetIds.includes(match.title.id)}
+                    disabled={disabled}
+                    onToggle={onToggle}
                   />
                 ))}
               </Group>

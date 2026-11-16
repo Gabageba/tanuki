@@ -2,6 +2,7 @@ import { Card, Group, Overlay, Stack, Text } from '@mantine/core';
 import { generatePath, Link } from 'react-router';
 import { LockSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import useListNavigation from '@/shared/hooks/useListNavigation';
 import { SOURCE_ACCESS, type Source } from '@tanuki/contracts';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import SourceTitle from '@/entities/source/components/SourceTitle';
@@ -14,13 +15,14 @@ type Props = {
 };
 function SourceCard({ source }: Props) {
   const { t } = useTranslation();
+  const getListPath = useListNavigation();
 
   const isSourceAvailable = source.access === SOURCE_ACCESS.AVAILABLE;
 
   return (
     <Card
       component={Link}
-      to={generatePath(ROUTE_PATHS.CATALOG, { sourceId: source.id })}
+      to={getListPath(generatePath(ROUTE_PATHS.CATALOG, { sourceId: source.id }))}
       className={isSourceAvailable ? styles.card : undefined}
       withBorder
       pos="relative"

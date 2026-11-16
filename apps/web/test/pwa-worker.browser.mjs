@@ -16,6 +16,31 @@ const CONTENT_TYPES = {
   '.woff2': 'font/woff2',
 };
 
+const serveBuild = async (pathname, response, version) => {
+  const file = new globalThis.URL(`.${pathname}`, DIST);
+  const content = file.href.startsWith(DIST.href) && (await readFile(file).catch(() => null));
+  if (!content) {
+    response.writeHead(404).end();
+    return;
+  }
+  response.setHeader(
+    'Content-Type',
+    Object.entries(CONTENT_TYPES).find(([ext]) => pathname.endsWith(ext))?.[1] ??
+      'application/octet-stream',
+  );
+  response.end(
+    pathname === '/sw.js' && version ? `${content}\n// test version ${version}` : content,
+  );
+};
+
+const openControlledPage = async (context, port) => {
+  const page = await context.newPage();
+  await page.goto(`http://127.0.0.1:${port}/harness`);
+  await page.evaluate(() => globalThis.navigator.serviceWorker.register('/sw.js'));
+  await page.waitForFunction(() => globalThis.navigator.serviceWorker.controller !== null);
+  return page;
+};
+
 /** Настоящий собранный SW, две его версии и очередь из двух глав с задержанной страницей. */
 for (const closeInitiator of [false, true])
   test(
@@ -57,18 +82,7 @@ for (const closeInitiator of [false, true])
           } else response.end('page');
           return;
         }
-        const file = new globalThis.URL(`.${pathname}`, DIST);
-        const content = file.href.startsWith(DIST.href) && (await readFile(file).catch(() => null));
-        if (!content) {
-          response.writeHead(404).end();
-          return;
-        }
-        response.setHeader(
-          'Content-Type',
-          Object.entries(CONTENT_TYPES).find(([ext]) => pathname.endsWith(ext))?.[1] ??
-            'application/octet-stream',
-        );
-        response.end(pathname === '/sw.js' ? `${content}\n// test version ${version}` : content);
+        await serveBuild(pathname, response, version);
       });
       server.listen(0, '127.0.0.1');
       await once(server, 'listening');
@@ -76,13 +90,7 @@ for (const closeInitiator of [false, true])
       try {
         browser = await chromium.launch();
         const context = await browser.newContext();
-        const page = await context.newPage();
-        await page.goto(`http://127.0.0.1:${server.address().port}/harness`);
-        await page.evaluate(async () => {
-          await globalThis.navigator.serviceWorker.register('/sw.js');
-          await globalThis.navigator.serviceWorker.ready;
-        });
-        await page.waitForFunction(() => globalThis.navigator.serviceWorker.controller !== null);
+        const page = await openControlledPage(context, server.address().port);
         version = 2;
         await page.evaluate(async () =>
           (await globalThis.navigator.serviceWorker.getRegistration()).update(),
@@ -228,3 +236,81 @@ for (const closeInitiator of [false, true])
       }
     },
   );
+
+test(
+  'SW повторяет перегруженную обложку один раз и кеширует успешный ответ',
+  { timeout: 20_000 },
+  async () => {
+    const png = await readFile(new globalThis.URL('icon-192.png', DIST));
+    const requests = new Map();
+    const server = createServer(async (request, response) => {
+      const { pathname, searchParams } = new globalThis.URL(request.url, 'http://localhost');
+      response.setHeader('Cache-Control', 'no-store');
+      if (pathname === '/harness') {
+        response.setHeader('Content-Type', 'text/html');
+        response.end('<!doctype html><title>PWA test</title>');
+        return;
+      }
+      if (pathname !== '/api/v1/img') {
+        await serveBuild(pathname, response);
+        return;
+      }
+
+      const key = searchParams.get('u');
+      const timestamps = requests.get(key) ?? [];
+      timestamps.push(Date.now());
+      requests.set(key, timestamps);
+      if (key === 'recovering' && timestamps.length === 2) {
+        response.writeHead(200, { 'Content-Type': 'image/png' }).end(png);
+      } else if (key === 'forbidden') {
+        response.writeHead(403).end();
+      } else {
+        response.writeHead(429, { 'Retry-After': '1' }).end();
+      }
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    let browser;
+    try {
+      browser = await chromium.launch();
+      const page = await openControlledPage(await browser.newContext(), server.address().port);
+      const cover = '/api/v1/img?u=recovering&w=360&exp=1&sig=one';
+      await page.evaluate((src) => {
+        const image = globalThis.document.createElement('img');
+        image.src = src;
+        globalThis.document.body.append(image);
+      }, cover);
+      await page.waitForFunction(() => globalThis.document.querySelector('img').naturalWidth > 0);
+      const [first, retry] = requests.get('recovering');
+      assert.ok(retry - first >= 1_000);
+
+      const cachedCover = '/api/v1/img?u=recovering&w=360';
+      await expect
+        .poll(() =>
+          page.evaluate(async (url) => {
+            const cache = await globalThis.caches.open('tanuki-covers');
+            return (await cache.match(url))?.status;
+          }, cachedCover),
+        )
+        .toBe(200);
+
+      const statuses = await page.evaluate(
+        (paths) => Promise.all(paths.map(async (path) => (await globalThis.fetch(path)).status)),
+        [
+          `${cachedCover}&exp=2&sig=two`,
+          '/api/v1/img?u=busy&w=360',
+          '/api/v1/img?u=forbidden&w=360',
+          '/api/v1/img?u=chapter-page',
+        ],
+      );
+      assert.deepEqual(statuses, [200, 429, 403, 429]);
+      assert.equal(requests.get('recovering').length, 2);
+      assert.equal(requests.get('busy').length, 2);
+      assert.equal(requests.get('forbidden').length, 1);
+      assert.equal(requests.get('chapter-page').length, 1);
+    } finally {
+      await browser?.close();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  },
+);

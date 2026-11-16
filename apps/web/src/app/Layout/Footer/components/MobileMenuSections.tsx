@@ -2,6 +2,7 @@ import { Box, ScrollArea, Text } from '@mantine/core';
 import { SignOutIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
+import useListNavigation from '@/shared/hooks/useListNavigation';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
 import MobileMenuRow from './MobileMenuRow';
@@ -25,6 +26,7 @@ type Props = {
  *  пункту текущей страницы адрес не меняет, и drawer закрывается здесь, через `onNavigate`. */
 function MobileMenuSections({ onNavigate }: Props) {
   const { t } = useTranslation();
+  const getListPath = useListNavigation();
   const { pathname } = useLocation();
   const { data: user } = useCurrentUser();
   const logout = useLogout();
@@ -52,7 +54,7 @@ function MobileMenuSections({ onNavigate }: Props) {
             {items.map((item) => (
               <MobileMenuRow
                 key={item}
-                to={getAccountMenuItemPath(item)}
+                to={getListPath(getAccountMenuItemPath(item))}
                 onClick={getAccountMenuItemPath(item) === pathname ? onNavigate : undefined}
                 leftSection={getAccountMenuItemIcon(item)}
               >

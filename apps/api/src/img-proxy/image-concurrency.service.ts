@@ -8,7 +8,7 @@ export class ImageConcurrencyService {
   private readonly downloads: LimitedTaskQueue;
   private readonly transforms: LimitedTaskQueue;
 
-  constructor(@Inject(ENV) env: Env) {
+  constructor(@Inject(ENV) private readonly env: Env) {
     this.downloads = new LimitedTaskQueue(
       env.IMAGE_DOWNLOAD_CONCURRENCY,
       env.IMAGE_DOWNLOAD_QUEUE_LIMIT,
@@ -17,12 +17,16 @@ export class ImageConcurrencyService {
     this.transforms = new LimitedTaskQueue(
       env.IMAGE_TRANSFORM_CONCURRENCY,
       env.IMAGE_TRANSFORM_QUEUE_LIMIT,
-      env.IMAGE_QUEUE_TIMEOUT_MS,
+      env.IMAGE_COVER_QUEUE_TIMEOUT_MS,
     );
   }
 
   runDownload<T>(task: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     return this.downloads.run(task, signal);
+  }
+
+  runCoverDownload<T>(task: () => Promise<T>): Promise<T> {
+    return this.downloads.run(task, undefined, this.env.IMAGE_COVER_QUEUE_TIMEOUT_MS);
   }
 
   runTransform<T>(task: () => Promise<T>): Promise<T> {

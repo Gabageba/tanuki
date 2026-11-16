@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import type { BookmarkFolderCopy, TitleBookmark } from '@tanuki/contracts';
 import useTitleBookmark from '@/features/bookmark/hooks/useTitleBookmark';
 import BookmarkFolderModal from '../BookmarkFolderModal';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
+import { mergeQueries } from '@/shared/ui/QueryBlock/lib';
 
 type Props = {
   titleId: string;
@@ -42,21 +44,24 @@ const mergeCopies = (
  */
 function TitleLinkBookmarkModal({ titleId, targetId, isPending, onClose, onSubmit }: Props) {
   const { t } = useTranslation();
-  const { data: own } = useTitleBookmark(titleId);
-  const { data: target } = useTitleBookmark(targetId);
-
-  if (!own || !target) return null;
-
-  const copies = mergeCopies(toSideCopies(own, titleId), toSideCopies(target, targetId));
-  if (copies.length === 0) return null;
+  const ownQuery = useTitleBookmark(titleId);
+  const targetQuery = useTitleBookmark(targetId);
+  const { isSkeleton } = useSkeletonTiming(mergeQueries([ownQuery, targetQuery]));
+  const own = ownQuery.data;
+  const target = targetQuery.data;
+  const copies =
+    own && target ? mergeCopies(toSideCopies(own, titleId), toSideCopies(target, targetId)) : [];
 
   return (
     <BookmarkFolderModal
       opened
       onClose={onClose}
       copies={copies}
+      loading={isSkeleton}
       message={
-        target.folderId ? t('bothTitlesInBookmarksWhichFolder') : t('titleCopiesInDifferentFolders')
+        target?.folderId
+          ? t('bothTitlesInBookmarksWhichFolder')
+          : t('titleCopiesInDifferentFolders')
       }
       hint={t('afterLinkOneBookmark')}
       submitLabel={t('link')}

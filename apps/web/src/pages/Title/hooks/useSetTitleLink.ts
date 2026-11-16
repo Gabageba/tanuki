@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   API_ERROR_CODE,
@@ -8,13 +8,9 @@ import {
 } from '@tanuki/contracts';
 import { ApiRequestError, apiFetch } from '@/shared/api/client';
 import type { ErrorMeta } from '@/shared/api/errorMeta';
-import { invalidateBookmarks } from '@/entities/bookmark/lib';
-import { getReadingProgressQueryKey } from '@/entities/title/hooks/useReadingProgress';
 
 type Params = {
   titleId: string;
-  /** Обе стороны в закладках в разных папках — связь не поставлена, нужно выбрать папку. */
-  onBookmarkConflict: (targetId: string) => void;
 };
 
 type Variables = {
@@ -29,16 +25,14 @@ const isBookmarkConflict = (error: unknown) =>
 
 /**
  * Ручная правка связи между тайтлами. Правки глобальны — их видят все, кто откроет тайтл, —
- * и применяются поверх кеша матчей, поэтому достаточно перезапросить именно его. Заодно —
- * прогресс чтения и закладки: они общие для группы подтверждённых совпадений, и с новой связью
- * в них могут появиться (или пропасть) другие источники.
+ * и применяются поверх кеша матчей. Вызывающий код обновляет совпадения, прогресс и закладки
+ * после всей очереди, чтобы лента не перезагружалась между отдельными решениями.
  *
- * Конфликт папок закладок — не ошибка: мутация завершается без связи, а onBookmarkConflict
- * открывает выбор папки, после которого запрос повторяется с bookmarkFolderId.
+ * Конфликт папок закладок — не ошибка: мутация завершается без связи, вызывающий код
+ * открывает выбор папки и повторяет запрос с bookmarkFolderId.
  */
-function useSetTitleLink({ titleId, onBookmarkConflict }: Params) {
+function useSetTitleLink({ titleId }: Params) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
 
   return useMutation({
     meta: { errorTitle: t('failedToSave') } satisfies ErrorMeta,
@@ -56,19 +50,11 @@ function useSetTitleLink({ titleId, onBookmarkConflict }: Params) {
         return { isLinked: true };
       } catch (error) {
         if (verdict === TITLE_LINK_VERDICT.CONFIRMED && isBookmarkConflict(error)) {
-          onBookmarkConflict(targetId);
           return { isLinked: false };
         }
         throw error;
       }
     },
-    onSuccess: ({ isLinked }) =>
-      isLinked &&
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['title', titleId, 'matches'] }),
-        queryClient.invalidateQueries({ queryKey: getReadingProgressQueryKey(titleId) }),
-        invalidateBookmarks(queryClient),
-      ]),
   });
 }
 

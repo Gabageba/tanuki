@@ -2,6 +2,7 @@ import { Avatar as MantineAvatar, Box, Menu } from '@mantine/core';
 import { SignOutIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
+import useListNavigation from '@/shared/hooks/useListNavigation';
 import { PRIMARY_COLOR } from '@/shared/lib/palette';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
 import useLogout from '@/entities/user/hooks/useLogout';
@@ -19,6 +20,7 @@ import styles from './../Header.module.scss';
 
 function Avatar() {
   const { t } = useTranslation();
+  const getListPath = useListNavigation();
   const { data: user } = useCurrentUser();
   const logout = useLogout();
 
@@ -49,7 +51,7 @@ function Avatar() {
               <Menu.Item
                 key={item}
                 component={Link}
-                to={getAccountMenuItemPath(item)}
+                to={getListPath(getAccountMenuItemPath(item))}
                 leftSection={getAccountMenuItemIcon(item)}
               >
                 {getAccountMenuItemLabel(item, t)}

@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { readEnumParam } from '@/shared/lib/searchParams';
 import type { EnumLiteralsOf } from '@tanuki/contracts';
 
 export const STATISTIC_PERIOD = {
@@ -66,3 +67,7 @@ export const formatBarDate = (isoDate: string, period: StatisticPeriod, locale: 
 
 /** Час начала окна → «22:00». */
 export const formatHour = (hour: number) => `${String(hour % 24).padStart(2, '0')}:00`;
+
+export const readStatisticParams = (params: URLSearchParams) => ({
+  period: readEnumParam(params, 'period', STATISTIC_PERIOD, STATISTIC_PERIOD.WEEK),
+});

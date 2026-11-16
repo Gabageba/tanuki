@@ -5,7 +5,6 @@ import PageLayout from '@/shared/ui/PageLayout';
 import useSource from '@/entities/source/hooks/useSource';
 import type { CatalogParams } from '../../../models';
 import { isFiltersLockedByQuery } from '../../../utils/sortOrder';
-import useSetCatalogFilters from '../../../hooks/useSetCatalogFilters';
 
 type Props = {
   sourceId: string | undefined;
@@ -18,8 +17,7 @@ type Props = {
 function CatalogEmpty({ sourceId }: Props) {
   const { t } = useTranslation();
   const { data: source } = useSource({ sourceId });
-  const { params } = PageLayout.useParams<CatalogParams>();
-  const setFilters = useSetCatalogFilters();
+  const { params, setParams } = PageLayout.useParams<CatalogParams>();
 
   const withFilters =
     !isFiltersLockedByQuery(source, params.query) && (params.filters?.length ?? 0) > 0;
@@ -32,7 +30,11 @@ function CatalogEmpty({ sourceId }: Props) {
         icon={<FunnelIcon />}
       >
         <EmptyState.Actions>
-          <Button variant="default" leftSection={<FunnelXIcon />} onClick={() => setFilters([])}>
+          <Button
+            variant="default"
+            leftSection={<FunnelXIcon />}
+            onClick={() => setParams({ ...params, filters: [] })}
+          >
             {t('resetFilters')}
           </Button>
         </EmptyState.Actions>

@@ -64,6 +64,7 @@ const EnvSchema = z.object({
   IMAGE_DOWNLOAD_QUEUE_LIMIT: z.coerce.number().int().min(0).max(512).default(128),
   IMAGE_TRANSFORM_QUEUE_LIMIT: z.coerce.number().int().min(0).max(128).default(32),
   IMAGE_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(100).max(30_000).default(2_000),
+  IMAGE_COVER_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(100).max(30_000).default(15_000),
   // Значения по умолчанию совпадают с docker-compose.yml, чтобы локальный запуск не требовал
   // настройки. База нужна только для ручных правок связей между тайтлами: без неё API
   // работает, но правки сохранить нельзя.

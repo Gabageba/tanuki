@@ -1,4 +1,3 @@
-import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { SORT_DIRECTION, type SortDirection, type SortOrder } from '@tanuki/contracts';
 import { resolveOrder } from '../../utils/sortOrder';
@@ -15,33 +14,16 @@ type Props = {
 function CatalogSort({ sortOrders, supportsDirection }: Props) {
   const { t } = useTranslation();
   const { params, setParams } = PageLayout.useParams<CatalogParams>();
-  const [, setSearchParams] = useSearchParams();
 
   const order = resolveOrder(params.order, sortOrders);
   const direction = params.direction ?? SORT_DIRECTION.DESC;
 
   const handleOrderChange = (nextOrder: SortOrder) => {
     setParams({ ...params, order: nextOrder });
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('order', nextOrder);
-        return next;
-      },
-      { replace: true },
-    );
   };
 
   const handleDirectionChange = (nextDirection: SortDirection) => {
     setParams({ ...params, direction: nextDirection });
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('direction', nextDirection);
-        return next;
-      },
-      { replace: true },
-    );
   };
 
   if (!sortOrders.length) {

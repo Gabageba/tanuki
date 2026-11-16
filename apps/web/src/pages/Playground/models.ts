@@ -30,6 +30,7 @@ import SourcesHealthTable from './SourcesHealthTable';
 import SourcesSetup from './SourcesSetup';
 import ThemePicker from './ThemePicker';
 import TitleSearch from './TitleSearch';
+import TitleLinkConfirmation from './TitleLinkConfirmation';
 import TitleBookmarkMarkers from './TitleBookmarkMarkers';
 import UsersAdmin from './UsersAdmin';
 
@@ -48,6 +49,15 @@ export type PlaygroundTask = {
  *  после выбора — как артефакт решения, — но живут только в DEV и в сборку не попадают, поэтому
  *  тексты не идут через i18n. */
 export const PLAYGROUND_TASKS: PlaygroundTask[] = [
+  {
+    slug: 'title-link-confirmation',
+    Component: TitleLinkConfirmation,
+    title: 'Подтверждение связей',
+    description:
+      'Выбран B11b: режим выбора карточек, общие цветные действия под разделителем и нейтральное «К просмотру». При пустом выборе нижняя панель скрыта; итог и предыдущие варианты сохранены.',
+    createdAt: '2026-11-16',
+    decision: 'B11b',
+  },
   {
     slug: 'email-layout',
     Component: EmailLayout,

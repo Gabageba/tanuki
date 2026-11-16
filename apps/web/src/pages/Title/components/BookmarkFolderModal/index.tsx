@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Button, Radio, Stack, Text } from '@mantine/core';
+import { Button, EmptyState, Radio, Stack, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { BookmarkSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,8 @@ import FolderRadioCard from '@/features/bookmark/FolderRadioCard';
 import ModalButtonsLayout from '@/shared/ui/ModalButtonsLayout';
 import ToneModal from '@/shared/ui/ToneModal';
 import { MODAL_TONE } from '@/shared/ui/ToneModal/models';
+import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
+import BookmarkFolderOptionsSkeleton from './BookmarkFolderOptionsSkeleton';
 
 type Props = {
   opened: boolean;
@@ -23,6 +25,7 @@ type Props = {
   submitLabel: string;
   submitIcon: ReactNode;
   isPending: boolean;
+  loading?: boolean;
   onSubmit: (folderId: string) => void;
 };
 
@@ -44,26 +47,44 @@ function BookmarkFolderModal({
   submitLabel,
   submitIcon,
   isPending,
+  loading = false,
   onSubmit,
 }: Props) {
   const { t } = useTranslation();
-  const { data: folders } = useBookmarkFolders();
-  const form = useForm<FormValues>({ initialValues: { folderId: copies[0]?.folderId ?? '' } });
+  const foldersQuery = useBookmarkFolders();
+  const { isSkeleton } = useSkeletonTiming(foldersQuery);
+  const folders = foldersQuery.data;
 
   const options = copies.flatMap(({ folderId, sourceIds }) => {
     const folder = folders?.items.find(({ id }) => id === folderId);
     return folder ? [{ folder, sourceIds }] : [];
   });
+  const form = useForm<FormValues>({
+    initialValues: { folderId: '' },
+    validate: {
+      folderId: (value) =>
+        options.some(({ folder }) => folder.id === (value || options[0]?.folder.id))
+          ? null
+          : t('chooseAtLeastOneFolder'),
+    },
+  });
+  const selectedFolderId = form.values.folderId || options[0]?.folder.id || '';
 
   return (
     <ToneModal
       opened={opened}
-      onClose={onClose}
+      onClose={() => {
+        if (!isPending) onClose();
+      }}
       tone={MODAL_TONE.WARNING}
       icon={BookmarkSimpleIcon}
       title={t('folderForBookmark')}
     >
-      <form onSubmit={form.onSubmit(({ folderId }) => onSubmit(folderId))}>
+      <form
+        onSubmit={form.onSubmit(() => {
+          if (!isPending && !loading && !isSkeleton) onSubmit(selectedFolderId);
+        })}
+      >
         <Stack gap="md">
           <Stack gap={4}>
             <Text fz="sm">{message}</Text>
@@ -71,25 +92,41 @@ function BookmarkFolderModal({
               {hint}
             </Text>
           </Stack>
-          <Radio.Group {...form.getInputProps('folderId')}>
-            <Stack gap="xs">
-              {options.map(({ folder, sourceIds }) => (
-                <FolderRadioCard
-                  key={folder.id}
-                  folder={folder}
-                  isChecked={form.getValues().folderId === folder.id}
-                  description={t('liesOnSource', {
-                    source: sourceIds.map(getCatalogSourceTitle).join(', '),
-                  })}
-                />
-              ))}
-            </Stack>
-          </Radio.Group>
+          {loading || isSkeleton ? (
+            <BookmarkFolderOptionsSkeleton />
+          ) : (
+            <Radio.Group
+              {...form.getInputProps('folderId')}
+              value={selectedFolderId}
+              onChange={(value) => {
+                if (!isPending) form.setFieldValue('folderId', value);
+              }}
+            >
+              <Stack gap="xs">
+                {options.length === 0 && <EmptyState title={t('noDataYet')} size="sm" />}
+                {options.map(({ folder, sourceIds }) => (
+                  <FolderRadioCard
+                    key={folder.id}
+                    folder={folder}
+                    isChecked={selectedFolderId === folder.id}
+                    description={t('liesOnSource', {
+                      source: sourceIds.map(getCatalogSourceTitle).join(', '),
+                    })}
+                  />
+                ))}
+              </Stack>
+            </Radio.Group>
+          )}
           <ModalButtonsLayout>
-            <Button variant="default" onClick={onClose}>
+            <Button variant="default" onClick={onClose} disabled={isPending}>
               {t('cancel')}
             </Button>
-            <Button type="submit" leftSection={submitIcon} loading={isPending}>
+            <Button
+              type="submit"
+              leftSection={submitIcon}
+              loading={isPending}
+              disabled={loading || isSkeleton}
+            >
               {submitLabel}
             </Button>
           </ModalButtonsLayout>

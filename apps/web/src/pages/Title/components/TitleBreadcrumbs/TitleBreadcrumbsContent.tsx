@@ -2,6 +2,7 @@ import { Anchor, Breadcrumbs, Group, Text } from '@mantine/core';
 import { generatePath, Link } from 'react-router';
 import { ArrowSquareOutIcon, CaretLeftIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import useListNavigation from '@/shared/hooks/useListNavigation';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
 import type { Source, Title } from '@tanuki/contracts';
 
@@ -13,7 +14,8 @@ type Props = {
 /** Крошки до каталога источника и ссылка на тайтл на сайте. */
 function TitleBreadcrumbsContent({ title, source }: Props) {
   const { t } = useTranslation();
-  const catalogPath = generatePath(ROUTE_PATHS.CATALOG, { sourceId: source.id });
+  const getListPath = useListNavigation();
+  const catalogPath = getListPath(generatePath(ROUTE_PATHS.CATALOG, { sourceId: source.id }));
 
   const items = [
     { title: t('home'), href: ROUTE_PATHS.HOME },
