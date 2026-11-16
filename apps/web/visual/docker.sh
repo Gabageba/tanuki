@@ -7,7 +7,7 @@ set -e
 cd "$(dirname "$0")/.."
 VERSION=$(node -p "require('@playwright/test/package.json').version")
 ROOT=$(cd ../.. && pwd)
-exec docker run --rm --ipc=host --init \
+exec docker run --rm --ipc=host --init -e CI \
   -v "$ROOT":/work -w /work/apps/web \
   "mcr.microsoft.com/playwright:v$VERSION-noble" \
   node node_modules/@playwright/test/cli.js test -c visual "$@"

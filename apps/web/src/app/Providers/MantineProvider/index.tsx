@@ -105,6 +105,11 @@ const createAppTheme = (t: TFunction) =>
       }
     },
     components: {
+      Input: {
+        classNames: {
+          input: styles.input,
+        },
+      },
       // Hover-граница `muted` — так же, как у `Button`: переменную кладут `vars`, применяет её
       // `.actionIcon` в модуле стилей.
       ActionIcon: {

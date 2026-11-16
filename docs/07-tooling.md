@@ -156,7 +156,7 @@ camelCase в `selector-class-pattern` — то, что нужно для CSS Mod
 `.husky/pre-commit`:
 
 ```
-pnpm lint-staged
+pnpm lint-staged --concurrent false --hide-all --diff-filter=ACMRD
 ```
 
 `.husky/commit-msg`:
@@ -165,23 +165,12 @@ pnpm lint-staged
 pnpm commitlint --edit "$1"
 ```
 
-`.husky/pre-push`:
-
-```
-pnpm turbo typecheck test
-```
-
-`.lintstagedrc.mjs`:
-
-```js
-export default {
-  '*.{ts,tsx}': ['eslint --fix', 'prettier --write'],
-  '*.scss': ['stylelint --fix', 'prettier --write'],
-  '*.{json,md,yml,yaml}': ['prettier --write'],
-  'package.json': 'sort-package-json',
-  'apps/web/src/**/*.{ts,tsx,json}': () => 'node scripts/check-i18n.mjs',
-};
-```
+`.lintstagedrc.mjs` запускает ESLint, Stylelint, Prettier, сортировку `package.json` и аудит i18n.
+Последней задачей (`*`) выполняется `node scripts/checks/run.mjs --staged --task local`:
+typecheck затронутых пакетов и связанные unit-тесты. Задачи идут последовательно, после
+автоисправлений. `--hide-all` скрывает незастейдженные изменения и untracked-файлы на время
+проверок; lint-staged восстанавливает их после выполнения. Удаления включены в выборку, но
+удалённые файлы не передаются линтерам и форматтерам. Хука `pre-push` нет.
 
 Порядок в `*.{ts,tsx}` важен: сначала `eslint --fix`, потом `prettier --write`. Обратный
 порядок даёт коммиты, где Prettier переформатировал то, что ESLint только что починил.
@@ -234,16 +223,52 @@ export default {
 
 ## CI
 
-GitHub Actions, один воркфлоу на PR:
+GitHub Actions: `.github/workflows/ci.yml` на PR, merge queue и push в `master`/`main`.
+`scripts/checks/plan.mjs` выбирает проверки по файлам и зависимостям workspace-пакетов
+(включая потребителей). PR сравнивается с merge-base базовой ветки, push — с предыдущим SHA.
+Checkout определения изменений получает всю историю. Если база недоступна, изменился lockfile,
+корневая конфигурация или неизвестный механизму файл, выполняются все проверки.
 
 ```
 lint (eslint + stylelint + prettier --check)
-typecheck (tsc --noEmit во всех пакетах)
-test (vitest run --coverage)
-build (turbo build)
-e2e (Playwright Chromium desktop/mobile, каждый PR и master)
+typecheck (затронутые пакеты и потребители)
+test (связанные unit-тесты; полные наборы при изменении зависимостей/фикстур)
+build (затронутые production-пакеты и потребители)
+visual (полный набор Storybook при изменении web, кроме playground и отдельных test/e2e)
+e2e (полный набор при изменении рабочего приложения, инфраструктуры или e2e/self-host)
 parsers-contract (раз в сутки: по запросу на каждый P0/P1-источник)
 ```
+
+Изменения только документации не запускают тесты приложения; изменения только историй
+запускают typecheck web и visual. Фикстуры и миграции, читаемые с диска, а также удаления
+модулей запускают полный unit-набор своего пакета. API и parsers используют `vitest related
+--run`; небольшой web-набор на `node:test` выполняется целиком. Частичные наборы запускаются
+вне Turbo, чтобы кеш частичного прогона не мог удовлетворить полный прогон.
+
+Имена обязательных проверок `lint`, `typecheck`, `test`, `build`, `visual`, `e2e` сохранены:
+job без затронутой работы завершается успешно с сообщением `not affected`, без установки
+зависимостей и запуска тестов. Workflow не фильтруется через `paths`. При ошибке определения
+изменений зависимые jobs запускаются через `always()` и падают, чтобы не разрешить слияние
+без проверок. Существующие required checks в защите ветки менять не требуется.
+
+**Релиз:** `release.yml` вызывает CI с `full: true`; тег релиза также принудительно включает
+полный режим. Все релизные проверки, включая `checks/e2e`, выполняются независимо от diff;
+unit, self-host, visual и e2e выполняются без кеширования результатов тестов. Проверки готовых
+образов amd64/arm64 в release workflow остаются обязательными. Live-контракты источников
+сохраняют отдельный ночной запуск.
+
+Ручные команды:
+
+```sh
+pnpm checks:changed --base origin/master --plan # показать выборку для ветки
+pnpm checks:changed --base origin/master --task all # выполнить выбранные проверки
+pnpm checks:changed --staged --dry-run # показать локальные команды для index
+pnpm checks:full # полный прогон, включая Docker visual/e2e
+pnpm test:checks # регрессии механизма выбора проверок
+```
+
+Ручной `--staged` вне lint-staged выбирает файлы из index, но выполняет тесты рабочего дерева;
+автоматический pre-commit использует скрытие незастейдженных изменений, описанное выше.
 
 `parsers-contract` вынесен из PR-пайплайна намеренно: он ходит в интернет и падает по
 причинам, не связанным с вашим кодом. Красный джоб от того, что у ReadManga профилактика,
@@ -251,7 +276,7 @@ parsers-contract (раз в сутки: по запросу на каждый P0
 
 ## Self-host release
 
-`pnpm docker`/`pnpm start` используют `docker-compose.dev.yml`; production Compose полный и требует конфигурацию. `pnpm test:e2e` использует отдельные временные volumes и настоящий API/БД/Valkey/Mailpit/Caddy, HTTP-фикстуры AComics, Chromium desktop/mobile. Запуск на каждом PR и master. Release workflow строит multiarch GHCR и draft bundle с digest/SHA256 и отдельными sourcemaps; native-smoke на amd64/arm64 проверяет анонимный pull и native-модули.
+`pnpm docker`/`pnpm start` используют `docker-compose.dev.yml`; production Compose полный и требует конфигурацию. `pnpm test:e2e` использует отдельные временные volumes и настоящий API/БД/Valkey/Mailpit/Caddy, HTTP-фикстуры AComics, Chromium desktop/mobile. В PR и master запуск зависит от изменений; в релизе он обязателен. Release workflow строит multiarch GHCR и draft bundle с digest/SHA256 и отдельными sourcemaps; native-smoke на amd64/arm64 проверяет анонимный pull и native-модули.
 
 Установка, эксплуатация и диагностика: [README](../README.md#self-host).
 План и критерии: [self-host-release](plans/self-host-release.md).

@@ -49,3 +49,41 @@ export const Empty: Story = {
     );
   },
 };
+
+export const SingleValue: Story = {
+  name: 'Один короткий тег в широком поле',
+  render: function Render() {
+    const [value, setValue] = useState(['Модератор']);
+    return (
+      <Box p="md" w="100%" maw={390}>
+        <CompactMultiSelect
+          data={DATA}
+          value={value}
+          onChange={setValue}
+          placeholder="Все роли"
+          leftSection={<ShieldIcon />}
+          clearable
+        />
+      </Box>
+    );
+  },
+};
+
+export const LongValue: Story = {
+  name: 'Длинный тег и +N в узком поле',
+  render: function Render() {
+    const [value, setValue] = useState(['Администратор с длинным названием роли', 'Модератор']);
+    return (
+      <Box p="md" w={260}>
+        <CompactMultiSelect
+          data={[...DATA, 'Администратор с длинным названием роли']}
+          value={value}
+          onChange={setValue}
+          placeholder="Все роли"
+          leftSection={<ShieldIcon />}
+          clearable
+        />
+      </Box>
+    );
+  },
+};
