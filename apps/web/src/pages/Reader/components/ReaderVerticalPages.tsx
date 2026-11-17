@@ -10,20 +10,10 @@ type Props = {
   settings: ReaderSettings;
   window: ReturnType<typeof useReaderPageWindow>;
   loaded: Set<string>;
-  activeKey: string;
-  transform: string;
   loading?: boolean;
 };
 
-function ReaderVerticalPages({
-  chapter,
-  settings,
-  window,
-  loaded,
-  activeKey,
-  transform,
-  loading = false,
-}: Props) {
+function ReaderVerticalPages({ chapter, settings, window, loaded, loading = false }: Props) {
   if (chapter.pages.length === 0)
     return <ReaderPagesSkeleton containerWidth={settings.containerWidth} />;
   return (
@@ -45,7 +35,6 @@ function ReaderVerticalPages({
               (window.visible.has(key) || loaded.has(page.url))
             }
             onMeasure={window.measure}
-            transform={key === activeKey ? transform : undefined}
           />
         );
       })}

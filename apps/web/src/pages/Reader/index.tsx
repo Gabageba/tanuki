@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AppShell } from '@mantine/core';
 import { useParams } from 'react-router';
 import { DEFAULT_READER_SETTINGS, READER_READING_MODE } from '@tanuki/contracts';
@@ -21,6 +22,7 @@ import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
 
 function Reader() {
   const { titleId = '', chapterId = '' } = useParams<{ titleId: string; chapterId: string }>();
+  const [zoomed, setZoomed] = useState(false);
   const settingsQuery = useReaderSettings();
   const { data: readerSettings } = settingsQuery;
   const settingsTiming = useSkeletonTiming(settingsQuery);
@@ -44,6 +46,7 @@ function Reader() {
   } = useReaderFeed({
     titleId,
     chapterId,
+    zoomed,
     readingMode: settings.readingMode,
     autoNextChapter: settingsReady && settings.autoNextChapter,
     pageStep,
@@ -129,6 +132,7 @@ function Reader() {
         loading={!settingsReady}
         registerPage={registerPage}
         onTap={toggle}
+        onZoomChange={setZoomed}
         isChapterUnavailable={isChapterUnavailable}
       />
       <ReaderMobileControls

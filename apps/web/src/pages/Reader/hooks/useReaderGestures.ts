@@ -1,5 +1,12 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { isReaderInteractionBlocked } from '../navigation';
+import type { Bounds, Pinch, Point, View } from './models';
 
 const GESTURE = {
   SWIPE_DISTANCE: 50,
@@ -9,13 +16,13 @@ const GESTURE = {
   MAX_SCALE: 4,
 } as const;
 
-type Point = { x: number; y: number };
 type Params = {
   horizontal: boolean;
   positionKey: string;
   onLeft: () => void;
   onRight: () => void;
   onTap: () => void;
+  onZoomChange: (zoomed: boolean) => void;
   tapZoneWidth: number;
 };
 
@@ -28,69 +35,157 @@ function useReaderGestures({
   onLeft,
   onRight,
   onTap,
+  onZoomChange,
   tapZoneWidth,
 }: Params) {
-  const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
+  const [zoomed, setZoomed] = useState(false);
+  const currentView = useRef<View>({ scale: 1, x: 0, y: 0 });
+  const zoomState = useRef(false);
+  const frame = useRef<number | null>(null);
+  const contentElement = useRef<HTMLDivElement>(null);
+  const contentRef = useCallback((element: HTMLDivElement | null) => {
+    contentElement.current = element;
+    if (!contentElement.current) return;
+    const current = currentView.current;
+    contentElement.current.style.transform = `translate(${current.x}px, ${current.y}px) scale(${current.scale})`;
+  }, []);
+  const bounds = useRef<Bounds | null>(null);
   const [renderedKey, setRenderedKey] = useState(positionKey);
   if (renderedKey !== positionKey) {
     setRenderedKey(positionKey);
-    setView({ scale: 1, x: 0, y: 0 });
+    setZoomed(false);
   }
   const pointers = useRef(new Map<number, Point>());
   const start = useRef<Point | null>(null);
-  const pinch = useRef<{
-    distance: number;
-    center: Point;
-    scale: number;
-    x: number;
-    y: number;
-  } | null>(null);
+  const pinch = useRef<Pinch | null>(null);
   const pan = useRef<Point>({ x: 0, y: 0 });
   const moved = useRef(false);
   const wasPinch = useRef(false);
   const lastTap = useRef<{ point: Point; time: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const syncZoomState = (active: boolean) => {
+    if (zoomState.current === active) return;
+    zoomState.current = active;
+    setZoomed(active);
+    onZoomChange(active);
+  };
+
+  const updateView = (next: View) => {
+    currentView.current = next;
+    // Keep observation paused until a pinch ends, even when it briefly returns to ×1.
+    syncZoomState(next.scale > 1 || pointers.current.size > 1);
+    if (frame.current !== null) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      const current = currentView.current;
+      if (contentElement.current)
+        contentElement.current.style.transform = `translate(${current.x}px, ${current.y}px) scale(${current.scale})`;
+    });
+  };
+
+  // React delegates touch listeners passively. A native listener prevents a two-finger pan
+  // from becoming document scrolling midway through a pinch that started with pan-y.
+  const viewportRef = useCallback((element: HTMLElement | null) => {
+    if (!element) return;
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length > 1 || currentView.current.scale > 1) event.preventDefault();
+    };
+    element.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => element.removeEventListener('touchmove', onTouchMove);
+  }, []);
+
+  useLayoutEffect(() => {
+    const activePointers = pointers.current;
     const reset = () => {
-      pointers.current.clear();
+      activePointers.clear();
       pinch.current = null;
       start.current = null;
-      setView({ scale: 1, x: 0, y: 0 });
-    };
-    window.addEventListener('resize', reset);
-    return () => window.removeEventListener('resize', reset);
-  }, []);
-  useEffect(
-    () => () => {
+      bounds.current = null;
       if (timer.current) clearTimeout(timer.current);
-      pointers.current.clear();
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      frame.current = null;
       lastTap.current = null;
-    },
-    [positionKey],
-  );
+      currentView.current = { scale: 1, x: 0, y: 0 };
+      if (contentElement.current)
+        contentElement.current.style.transform = 'translate(0px, 0px) scale(1)';
+      zoomState.current = false;
+      onZoomChange(false);
+    };
+    reset();
+    const onResize = () => {
+      reset();
+      setZoomed(false);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (timer.current) clearTimeout(timer.current);
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      frame.current = null;
+      activePointers.clear();
+      lastTap.current = null;
+    };
+  }, [positionKey, onZoomChange]);
+
+  const measureBounds = () => {
+    const content = contentElement.current;
+    if (!content) return;
+    const rect = content.getBoundingClientRect();
+    const transform = new DOMMatrix(getComputedStyle(content).transform);
+    bounds.current = {
+      x: rect.left - transform.e,
+      y: rect.top - transform.f,
+      width: content.clientWidth,
+      height: content.clientHeight,
+    };
+  };
+
+  const constrainView = (next: View): View => {
+    const rect = bounds.current;
+    if (next.scale === 1) return { scale: 1, x: 0, y: 0 };
+    if (!rect) return next;
+    const minX = window.innerWidth - rect.x - rect.width * next.scale;
+    const minY = window.innerHeight - rect.y - rect.height * next.scale;
+    return {
+      scale: next.scale,
+      x: Math.max(Math.min(minX, -rect.x), Math.min(-rect.x, next.x)),
+      y: Math.max(Math.min(minY, -rect.y), Math.min(-rect.y, next.y)),
+    };
+  };
+
+  // Keep the content coordinate under the fingers at their moving midpoint.
+  const zoomAt = (initial: View, anchor: Point, point: Point, scale: number) => {
+    const origin = bounds.current ?? { x: 0, y: 0 };
+    const ratio = scale / initial.scale;
+    return constrainView({
+      scale,
+      x: point.x - origin.x - (anchor.x - origin.x - initial.x) * ratio,
+      y: point.y - origin.y - (anchor.y - origin.y - initial.y) * ratio,
+    });
+  };
 
   const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0 || isReaderInteractionBlocked(event.nativeEvent)) return;
     const point = { x: event.clientX, y: event.clientY };
+    if (pointers.current.size === 0) measureBounds();
     pointers.current.set(event.pointerId, point);
     event.currentTarget.setPointerCapture(event.pointerId);
     if (pointers.current.size === 1) {
       start.current = point;
-      pan.current = { x: view.x, y: view.y };
+      pan.current = currentView.current;
       moved.current = false;
       wasPinch.current = false;
     } else if (pointers.current.size === 2) {
       if (timer.current) clearTimeout(timer.current);
       const [a, b] = [...pointers.current.values()];
       if (!a || !b) return;
+      lastTap.current = null;
       wasPinch.current = true;
       pinch.current = {
         distance: distance(a, b),
         center: center(a, b),
-        scale: view.scale,
-        x: view.x,
-        y: view.y,
+        view: currentView.current,
       };
     }
   };
@@ -107,34 +202,37 @@ function useReaderGestures({
       const midpoint = center(a, b);
       const scale = Math.min(
         GESTURE.MAX_SCALE,
-        Math.max(1, (initial.scale * distance(a, b)) / Math.max(1, initial.distance)),
+        Math.max(1, (initial.view.scale * distance(a, b)) / Math.max(1, initial.distance)),
       );
-      setView({
-        scale,
-        x: scale === 1 ? 0 : initial.x + midpoint.x - initial.center.x,
-        y: scale === 1 ? 0 : initial.y + midpoint.y - initial.center.y,
-      });
-    } else if (view.scale > 1 && start.current && !wasPinch.current) {
-      const limitX = (event.currentTarget.clientWidth * (view.scale - 1)) / 2;
-      const limitY = (window.innerHeight * (view.scale - 1)) / 2;
-      setView({
-        scale: view.scale,
-        x: Math.max(-limitX, Math.min(limitX, pan.current.x + point.x - start.current.x)),
-        y: Math.max(-limitY, Math.min(limitY, pan.current.y + point.y - start.current.y)),
-      });
+      updateView(zoomAt(initial.view, initial.center, midpoint, scale));
+    } else if (currentView.current.scale > 1 && start.current) {
+      updateView(
+        constrainView({
+          scale: currentView.current.scale,
+          x: pan.current.x + point.x - start.current.x,
+          y: pan.current.y + point.y - start.current.y,
+        }),
+      );
     }
   };
 
   const onPointerUp = (event: ReactPointerEvent<HTMLElement>) => {
     if (!pointers.current.has(event.pointerId)) return;
     pointers.current.delete(event.pointerId);
+    if (pointers.current.size === 0) syncZoomState(currentView.current.scale > 1);
+    if (pointers.current.size === 1 && wasPinch.current) {
+      start.current = [...pointers.current.values()][0] ?? null;
+      pan.current = currentView.current;
+      pinch.current = null;
+      return;
+    }
     if (pointers.current.size > 0 || wasPinch.current || !start.current) return;
     const point = { x: event.clientX, y: event.clientY };
     const deltaX = point.x - start.current.x;
     const deltaY = point.y - start.current.y;
     if (moved.current) {
       if (
-        view.scale === 1 &&
+        currentView.current.scale === 1 &&
         horizontal &&
         Math.abs(deltaX) >= GESTURE.SWIPE_DISTANCE &&
         Math.abs(deltaX) > Math.abs(deltaY) * 1.2
@@ -151,7 +249,15 @@ function useReaderGestures({
     ) {
       if (timer.current) clearTimeout(timer.current);
       lastTap.current = null;
-      setView({ scale: view.scale > 1 ? 1 : GESTURE.DOUBLE_TAP_SCALE, x: 0, y: 0 });
+      measureBounds();
+      updateView(
+        zoomAt(
+          currentView.current,
+          point,
+          point,
+          currentView.current.scale > 1 ? 1 : GESTURE.DOUBLE_TAP_SCALE,
+        ),
+      );
       return;
     }
     lastTap.current = { point, time: Date.now() };
@@ -159,7 +265,7 @@ function useReaderGestures({
     const ratio = (point.x - left) / width;
     timer.current = setTimeout(() => {
       lastTap.current = null;
-      if (view.scale > 1) return;
+      if (currentView.current.scale > 1) return;
       if (!horizontal) onTap();
       else if (ratio < tapZoneWidth / 100) onLeft();
       else if (ratio > 1 - tapZoneWidth / 100) onRight();
@@ -169,12 +275,16 @@ function useReaderGestures({
 
   const onPointerCancel = () => {
     pointers.current.clear();
+    syncZoomState(currentView.current.scale > 1);
     start.current = null;
     pinch.current = null;
     if (timer.current) clearTimeout(timer.current);
+    lastTap.current = null;
   };
 
   return {
+    contentRef,
+    viewportRef,
     bindings: {
       onPointerDown,
       onPointerMove,
@@ -185,9 +295,7 @@ function useReaderGestures({
       },
     },
     // Keep tall pages scrollable at their normal scale; horizontal swipes stay app-owned.
-    touchAction: view.scale > 1 ? 'none' : 'pan-y',
-    transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
-    zoomed: view.scale > 1,
+    touchAction: zoomed ? 'none' : 'pan-y',
   };
 }
 

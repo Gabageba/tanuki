@@ -22,6 +22,7 @@ type Params = {
    *  переписываем мы сами. */
   chapterId: string;
   readingMode: ReaderReadingMode;
+  zoomed?: boolean;
   /** Настройка «Сразу открывать следующую главу». Выключена — лента следующую главу не
    *  подклеивает: в конце главы читатель видит экран с переходом и уходит на неё сам. */
   autoNextChapter: boolean;
@@ -38,6 +39,7 @@ function useReaderFeed({
   titleId,
   chapterId,
   readingMode,
+  zoomed = false,
   autoNextChapter,
   pageStep,
   prefetchPages,
@@ -59,6 +61,7 @@ function useReaderFeed({
 
   const { registerPage, scrollToPosition, isPinned } = useCurrentPageObserver({
     enabled: readingMode === READER_READING_MODE.VERTICAL,
+    paused: zoomed,
     onChange: setPosition,
   });
 

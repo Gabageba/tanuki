@@ -11,10 +11,9 @@ type Props = {
   position: ReaderPosition;
   pageStep: number;
   window: ReturnType<typeof useReaderPageWindow>;
-  transform: string;
 };
 
-function ReaderSpread({ chapter, settings, position, pageStep, window, transform }: Props) {
+function ReaderSpread({ chapter, settings, position, pageStep, window }: Props) {
   if (!chapter?.pages.length) return <ReaderChapterEmpty />;
   const pages = chapter.pages.slice(position.pageIndex, position.pageIndex + pageStep);
   const pageSettings =
@@ -27,7 +26,6 @@ function ReaderSpread({ chapter, settings, position, pageStep, window, transform
       justify="center"
       direction={settings.direction === READER_DIRECTION.RTL ? 'row-reverse' : 'row'}
       gap={0}
-      style={{ transform, transformOrigin: 'center center' }}
     >
       {pages.map((page) => (
         <ReaderPageSlot
