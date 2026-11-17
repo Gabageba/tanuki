@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { URL } from 'node:url';
+import { URL, URLSearchParams } from 'node:url';
 import { createServer } from 'vite';
 import { chromium, expect } from '@playwright/test';
 
@@ -50,11 +50,19 @@ function VerticalProbe() {
         'data-chapter-id': chapter.chapterId, 'data-page-index': page.index,
         style: {height: 600}}, chapter.chapterId + ':' + page.index)))));
 }
+function EntryProbe() {
+  const [opened, setOpened] = React.useState(false);
+  React.useLayoutEffect(() => {
+    if (!opened) globalThis.window.harness = {openReader: () => setOpened(true)};
+  }, [opened]);
+  return opened ? React.createElement(VerticalProbe) : React.createElement('main', {style: {height: 4000}});
+}
 const vertical = new URLSearchParams(location.search).has('vertical');
+const entry = new URLSearchParams(location.search).has('entry');
 const root = createRoot(document.getElementById('root'));
 root.render(
   React.createElement(QueryClientProvider, {client}, React.createElement(BrowserRouter, null,
-    React.createElement(vertical ? VerticalProbe : Probe))));
+    React.createElement(entry ? EntryProbe : vertical ? VerticalProbe : Probe))));
 </script></body></html>`;
 
 let server;
@@ -89,6 +97,8 @@ const openReader = async ({
   readStatus = () => 204,
   waitProgress = async () => {},
   vertical = false,
+  entryScroll,
+  resumePage,
 } = {}) => {
   const page = await browser.newPage();
   const saves = [];
@@ -140,10 +150,19 @@ const openReader = async ({
     } else await route.fulfill({ status: 204 });
   });
   await page.clock.install();
-  await page.goto(
-    `${server.resolvedUrls.local[0]}reader-progress-test${vertical ? '?vertical' : ''}`,
-  );
+  const params = new URLSearchParams();
+  if (vertical) params.set('vertical', '');
+  if (entryScroll !== undefined) params.set('entry', '');
+  if (resumePage !== undefined) params.set('page', String(resumePage));
+  await page.goto(`${server.resolvedUrls.local[0]}reader-progress-test?${params}`);
   await page.waitForFunction(() => Boolean(globalThis.window.harness));
+  if (entryScroll !== undefined) {
+    await page.evaluate((top) => {
+      globalThis.window.scrollTo({ top, behavior: 'instant' });
+      globalThis.window.harness.openReader();
+    }, entryScroll);
+    await page.waitForFunction(() => Boolean(globalThis.window.harness.client));
+  }
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   return { page, saves, reads, errors };
 };
@@ -383,9 +402,34 @@ for (const status of [200, 503]) {
   });
 }
 
+for (const resumePage of [undefined, 3]) {
+  test(`вход из прокрученного экрана открывает страницу ${resumePage ?? 1} без смещения`, async () => {
+    const { page, errors } = await openReader({ vertical: true, entryScroll: 180, resumePage });
+    try {
+      const pageIndex = (resumePage ?? 1) - 1;
+      const slot = page.locator(
+        `[data-chapter-id="source:chapter-0"][data-page-index="${pageIndex}"]`,
+      );
+      await expect(slot).toHaveCount(1);
+      await page.clock.runFor(32);
+      await expect
+        .poll(() => slot.evaluate((element) => element.getBoundingClientRect().top))
+        .toBe(0);
+      await expect
+        .poll(() => ownPosition(page))
+        .toEqual({ chapterId: 'source:chapter-0', pageIndex });
+      assert.deepEqual(errors, []);
+    } finally {
+      await page.close();
+    }
+  });
+}
+
 test('вертикальная лента определяет позицию и учитывает 30 глав при настоящей прокрутке', async () => {
   const { page, saves, reads, errors } = await openReader({ vertical: true });
   try {
+    await page.mouse.wheel(0, 1);
+    await page.clock.runFor(32);
     for (let chapter = 0; chapter < 30; chapter++) {
       for (let index = 0; index < 4; index++) {
         const slot = page.locator(

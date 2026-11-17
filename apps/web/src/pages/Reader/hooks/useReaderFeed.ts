@@ -53,10 +53,8 @@ function useReaderFeed({
   }));
   const [position, setPosition] = useState<ReaderPosition>(initialPosition);
   const [renderedChapterId, setRenderedChapterId] = useState(chapterId);
-  // В вертикальном режиме к восстановленной странице ещё нужно прокрутить.
-  const [scrollTarget, setScrollTarget] = useState<ReaderPosition | null>(
-    initialPosition.pageIndex > 0 ? initialPosition : null,
-  );
+  // При входе прокручиваем и к первой странице: иначе остаётся скролл предыдущего экрана.
+  const [scrollTarget, setScrollTarget] = useState<ReaderPosition>(initialPosition);
   const [tailChapterId, setTailChapterId] = useState<string | null>(null);
 
   const { registerPage, scrollToPosition, isPinned } = useCurrentPageObserver({
@@ -197,8 +195,6 @@ function useReaderFeed({
   // Цель прокрутки не сбрасывается после использования: эффект и так срабатывает только на новую
   // цель, а сброс означал бы setState внутри эффекта.
   useLayoutEffect(() => {
-    if (!scrollTarget) return;
-
     scrollToPosition(scrollTarget);
   }, [scrollTarget, scrollToPosition]);
 
