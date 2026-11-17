@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { TITLE_LINK_VERDICT, type TitleLinkVerdict, type TitleMatch } from '@tanuki/contracts';
 import { invalidateBookmarks } from '@/entities/bookmark/lib';
 import { getTitleBookmarkQueryKey } from '@/entities/bookmark/models';
-import { getReadingProgressQueryKey } from '@/entities/title/hooks/useReadingProgress';
 import useSetTitleLink from '../../../hooks/useSetTitleLink';
 
 type Params = {
@@ -108,8 +107,11 @@ function useTitleMatchReview({ titleId, matches }: Params) {
       if (mounted.current) setConflictTargetId(null);
       if (hasSaved) {
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['title', titleId, 'matches'] }),
-          queryClient.invalidateQueries({ queryKey: getReadingProgressQueryKey(titleId) }),
+          // Правка затрагивает всю группу, включая тайтлы, которых нет в текущей выдаче.
+          queryClient.invalidateQueries({
+            predicate: ({ queryKey }) => queryKey[0] === 'title' && queryKey[2] === 'matches',
+          }),
+          queryClient.invalidateQueries({ queryKey: ['reading-progress'] }),
           invalidateBookmarks(queryClient),
         ]);
       }
