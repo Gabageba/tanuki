@@ -9,7 +9,10 @@ const isPwaPlugin = (plugin: PluginOption) =>
   plugin.name.startsWith('vite-plugin-pwa');
 
 const config: StorybookConfig = {
-  stories: ['../src/**/*.stories.tsx'],
+  stories: [
+    '../src/{app,entities,features,shared}/**/*.stories.tsx',
+    '../src/pages/!(Playground)/**/*.stories.tsx',
+  ],
   framework: '@storybook/react-vite',
   // ./public — mockServiceWorker.js для msw-storybook-addon, ../public — иконки приложения.
   staticDirs: ['./public', '../public'],
