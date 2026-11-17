@@ -88,7 +88,7 @@ export const getSourceAccountStatusLabel = (account: SourceAccount | undefined, 
     case SOURCE_ACCOUNT_STATUS.ACTIVE:
       return t('loggedIn');
     case SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED:
-      return t('reloginRequired');
+      return t('sessionExpired');
   }
 };
 

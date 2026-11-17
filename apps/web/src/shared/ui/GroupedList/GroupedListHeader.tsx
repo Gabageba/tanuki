@@ -3,7 +3,7 @@ import { getMutedBorderColor } from '@/shared/lib/palette';
 import type { RowProps } from './models';
 
 type Props = RowProps & {
-  /** Боковой блок: компактные отступы, выравнивание сверху и без нижней линии. */
+  /** Боковой блок: компактные отступы, без нижней линии; с пояснением выравнивается сверху. */
   isAside?: boolean;
 };
 
@@ -20,11 +20,13 @@ function GroupedListHeader({
   color,
   isAside = false,
 }: Props) {
+  const align = isAside && description ? 'flex-start' : 'center';
+
   return (
     <Group
       justify="space-between"
       gap={isAside ? 'xs' : 'md'}
-      align={isAside ? 'flex-start' : undefined}
+      align={align}
       px="md"
       py="xs"
       style={
@@ -33,13 +35,7 @@ function GroupedListHeader({
           : undefined
       }
     >
-      <Group
-        gap={isAside ? 'xs' : 'md'}
-        wrap="nowrap"
-        align={isAside ? 'flex-start' : undefined}
-        flex={1}
-        miw={0}
-      >
+      <Group gap={isAside ? 'xs' : 'md'} wrap="nowrap" align={align} flex={1} miw={0}>
         {icon && (
           <Box c={color || 'dimmed'} fz={24} lh={0} flex="none">
             {icon}
