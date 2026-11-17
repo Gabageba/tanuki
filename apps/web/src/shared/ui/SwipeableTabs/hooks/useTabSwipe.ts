@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import {
   ROOT_SELECTOR,
   IGNORED_SELECTOR,
@@ -9,12 +9,35 @@ import {
   type TabSwipeGesture,
 } from '../models';
 
-function useTabSwipe(enabled: boolean) {
+function useTabSwipe(enabled: boolean, value?: string | null) {
   const ref = useRef<HTMLDivElement>(null);
+  const pendingTabRef = useRef<HTMLButtonElement | null>(null);
+
+  // URL может обновляться в transition. До его коммита следующие жесты продолжают путь
+  // с последней выбранной вкладки; внешний переход или коммит подтверждает новый выбор.
+  useLayoutEffect(() => {
+    pendingTabRef.current = null;
+  }, [enabled, value]);
 
   useEffect(() => {
     const root = ref.current;
     if (!enabled || !root) return;
+    let activationFrame: number | null = null;
+
+    const getSelectedTab = () =>
+      Array.from(
+        root.querySelectorAll<HTMLButtonElement>('[role="tab"][aria-selected="true"]'),
+      ).find((tab) => tab.closest(ROOT_SELECTOR) === root);
+
+    const rememberTabClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const tab = target.closest<HTMLButtonElement>('[role="tab"]');
+      if (tab?.closest(ROOT_SELECTOR) !== root) return;
+      if (activationFrame !== null) cancelAnimationFrame(activationFrame);
+      activationFrame = null;
+      pendingTabRef.current = tab;
+    };
 
     const getTabs = () =>
       Array.from(root.querySelectorAll<HTMLButtonElement>('[role="tab"]')).filter(
@@ -56,22 +79,22 @@ function useTabSwipe(enabled: boolean) {
         event.touches.length !== 1 ||
         !touch ||
         !(target instanceof Element) ||
-        target.closest(ROOT_SELECTOR) !== root ||
         target.closest(IGNORED_SELECTOR) ||
-        isScrollable(target) ||
         touch.clientX < EDGE_DISTANCE ||
         touch.clientX > window.innerWidth - EDGE_DISTANCE
       ) {
         return;
       }
-      const tabs = getTabs();
-      const activeTab = tabs.find((tab) => tab.getAttribute('aria-selected') === 'true');
-      if (tabs.length < 2 || !activeTab) return;
+      const selected = getSelectedTab();
+      const pending = pendingTabRef.current;
+      const activeTab = pending && root.contains(pending) ? pending : selected;
+      if (!activeTab) return;
       gesture = {
         id: touch.identifier,
         x: touch.clientX,
         y: touch.clientY,
         horizontal: false,
+        target,
         activeTab,
       };
     };
@@ -87,7 +110,15 @@ function useTabSwipe(enabled: boolean) {
       const dy = Math.abs(touch.clientY - gesture.y);
       if (!gesture.horizontal) {
         if (Math.max(dx, dy) < DIRECTION_DISTANCE) return;
-        if (dx < dy * HORIZONTAL_RATIO || event.defaultPrevented) {
+        if (dx < dy * HORIZONTAL_RATIO || event.defaultPrevented || isScrollable(gesture.target)) {
+          cancel();
+          return;
+        }
+        const tabs = getTabs();
+        const index = tabs.indexOf(gesture.activeTab);
+        // Вложенные вкладки забирают жест только при наличии соседа в его направлении.
+        // На границе touchmove доходит до родителя без preventDefault.
+        if (index < 0 || !tabs[index + (touch.clientX < gesture.x ? 1 : -1)]) {
           cancel();
           return;
         }
@@ -107,7 +138,13 @@ function useTabSwipe(enabled: boolean) {
       cancel();
       if (!current?.horizontal || event.touches.length > 0) return;
       const touch = Array.from(event.changedTouches).find((item) => item.identifier === current.id);
-      if (!touch || current.activeTab.getAttribute('aria-selected') !== 'true') return;
+      if (
+        !touch ||
+        (current.activeTab !== pendingTabRef.current &&
+          current.activeTab.getAttribute('aria-selected') !== 'true')
+      ) {
+        return;
+      }
       const dx = touch.clientX - current.x;
       if (
         Math.abs(dx) < SWIPE_DISTANCE ||
@@ -119,39 +156,53 @@ function useTabSwipe(enabled: boolean) {
       const index = tabs.indexOf(current.activeTab);
       if (index < 0) return;
       const next = tabs[index + (dx < 0 ? 1 : -1)];
-      // Клик сохраняет штатный onChange, URL и неконтролируемое состояние Mantine.
-      next?.click();
       // Показываем активную вкладку в её полосе, не прокручивая саму страницу по вертикали.
       if (!next) return;
-      for (
-        let element = next.parentElement;
-        element && element !== root;
-        element = element.parentElement
-      ) {
-        if (
-          element.scrollWidth <= element.clientWidth ||
-          !['auto', 'scroll'].includes(getComputedStyle(element).overflowX)
+      pendingTabRef.current = next;
+      if (activationFrame !== null) return;
+      // В одном кадре активируем только последнюю цель. Очередь жестов не запускает рендер
+      // и запрос промежуточной папки для каждого накопившегося touchend.
+      activationFrame = requestAnimationFrame(() => {
+        activationFrame = null;
+        const tab = pendingTabRef.current;
+        if (!tab || !root.contains(tab) || tab.disabled) return;
+        // Геометрию читаем до клика: onChange может синхронно заменить содержимое.
+        for (
+          let element = tab.parentElement;
+          element && element !== root;
+          element = element.parentElement
         ) {
-          continue;
+          if (
+            element.scrollWidth <= element.clientWidth ||
+            !['auto', 'scroll'].includes(getComputedStyle(element).overflowX)
+          ) {
+            continue;
+          }
+          const tabRect = tab.getBoundingClientRect();
+          const scrollRect = element.getBoundingClientRect();
+          const offset =
+            Math.min(0, tabRect.left - scrollRect.left) +
+            Math.max(0, tabRect.right - scrollRect.right);
+          element.scrollBy({ left: offset });
         }
-        const tabRect = next.getBoundingClientRect();
-        const scrollRect = element.getBoundingClientRect();
-        const offset =
-          Math.min(0, tabRect.left - scrollRect.left) +
-          Math.max(0, tabRect.right - scrollRect.right);
-        element.scrollBy({ left: offset });
-      }
+        // Клик сохраняет штатный onChange, URL и неконтролируемое состояние Mantine.
+        tab.click();
+      });
     };
 
     root.addEventListener('touchstart', start, { passive: true });
     root.addEventListener('touchmove', move, { passive: false });
     root.addEventListener('touchend', end, { passive: true });
     root.addEventListener('touchcancel', cancel, { passive: true });
+    root.addEventListener('click', rememberTabClick, { capture: true });
     return () => {
       root.removeEventListener('touchstart', start);
       root.removeEventListener('touchmove', move);
       root.removeEventListener('touchend', end);
       root.removeEventListener('touchcancel', cancel);
+      root.removeEventListener('click', rememberTabClick, { capture: true });
+      if (activationFrame !== null) cancelAnimationFrame(activationFrame);
+      pendingTabRef.current = null;
     };
   }, [enabled]);
 

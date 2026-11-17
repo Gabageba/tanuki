@@ -76,7 +76,7 @@ function BookmarkCard({ bookmark, viewMode }: Props) {
           )
         }
       />
-      <MoveBookmarkModal bookmark={bookmark} opened={isMoveOpened} onClose={moveModal.close} />
+      {isMoveOpened && <MoveBookmarkModal bookmark={bookmark} opened onClose={moveModal.close} />}
     </>
   );
 }

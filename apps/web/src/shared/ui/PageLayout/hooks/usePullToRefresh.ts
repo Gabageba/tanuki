@@ -46,6 +46,8 @@ function usePullToRefresh(onRefresh: (() => unknown) | undefined) {
       const target = event.target;
       if (
         event.touches.length !== 1 ||
+        window.scrollY > 0 ||
+        isRefreshingRef.current ||
         isNestedScroll(target) ||
         (target instanceof Element &&
           target.closest(
@@ -68,6 +70,7 @@ function usePullToRefresh(onRefresh: (() => unknown) | undefined) {
       // Горизонтальный свайп вкладок и масштабирование не превращаются в обновление страницы.
       if (
         event.touches.length !== 1 ||
+        event.defaultPrevented ||
         window.scrollY > 0 ||
         Math.abs(touch.clientX - startXRef.current) > Math.abs(delta)
       ) {

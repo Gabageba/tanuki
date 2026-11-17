@@ -43,11 +43,16 @@ function BookmarksContent({ onImport }: Props) {
   const { query, sort, direction } = params;
 
   // Набор отложен вместе с папкой: строка, набранная в прежней папке, в запрос новой не уходит.
-  const search = useMemo(() => ({ folderId: activeFolderId, query }), [activeFolderId, query]);
+  const search = useMemo(
+    () => (query ? { folderId: activeFolderId, query } : null),
+    [activeFolderId, query],
+  );
   const [debouncedSearch] = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   // Сброс поиска (кнопкой или сменой папки) применяется сразу, без задержки набора.
   const listQuery =
-    query && debouncedSearch.folderId === activeFolderId ? debouncedSearch.query : '';
+    query && debouncedSearch && debouncedSearch.folderId === activeFolderId
+      ? debouncedSearch.query
+      : '';
 
   // Без папки в адресе (или с удалённой) открывается первая — и сразу попадает в адрес.
   useEffect(() => {
@@ -81,7 +86,8 @@ function BookmarksContent({ onImport }: Props) {
         next.delete('query');
         return next;
       },
-      { replace: true, flushSync: true },
+      // Router обновит вкладку в transition: большой кешированный список не блокирует touchend.
+      { replace: true },
     );
   };
 

@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Box, Scroller, Stack, Tabs, Text } from '@mantine/core';
+import { Box, Scroller, Skeleton, Stack, Tabs, Text } from '@mantine/core';
 import { BookOpenIcon, GearIcon, ListIcon } from '@phosphor-icons/react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { MOBILE_GLOBALS } from '@/shared/storybook/models';
 import SearchInput from '@/shared/ui/SearchInput';
+import QueryBlock from '@/shared/ui/QueryBlock';
 import SwipeableTabs from './index';
 
 const META = {
@@ -67,4 +68,57 @@ export const Mobile: Story = {
   ...Default,
   name: 'На телефоне',
   globals: MOBILE_GLOBALS,
+};
+
+export const DelayedControlled: Story = {
+  name: 'Медленное обновление страницы: мгновенный выбор',
+  globals: MOBILE_GLOBALS,
+  render: function Render() {
+    const [value, setValue] = useState<string | null>('books');
+    const TABS = useMemo(
+      () => [
+        { id: 'books', title: 'Книги', icon: <BookOpenIcon />, content: 'Список книг' },
+        { id: 'chapters', title: 'Главы', icon: <ListIcon />, content: 'Список глав' },
+        { id: 'settings', title: 'Настройки', icon: <GearIcon />, content: 'Настройки книг' },
+      ],
+      [],
+    );
+    const handleChange = async (next: string | null) => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setValue(next);
+    };
+
+    return (
+      <Box p="md">
+        <SwipeableTabs value={value} onChange={handleChange}>
+          <Tabs.List>
+            <Scroller>
+              {TABS.map(({ id, title, icon }) => (
+                <Tabs.Tab key={id} value={id} leftSection={icon}>
+                  {title}
+                </Tabs.Tab>
+              ))}
+            </Scroller>
+          </Tabs.List>
+          {TABS.map(({ id, content }) => (
+            <Tabs.Panel key={id} value={id} pt="md" mih={300}>
+              <QueryBlock
+                query={{
+                  data: content,
+                  isError: false,
+                  error: null,
+                  isPlaceholderData: false,
+                  fetchStatus: 'idle',
+                  refetch: () => undefined,
+                }}
+                skeleton={<Skeleton h={120} />}
+              >
+                {(data) => <Text>{data}</Text>}
+              </QueryBlock>
+            </Tabs.Panel>
+          ))}
+        </SwipeableTabs>
+      </Box>
+    );
+  },
 };

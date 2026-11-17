@@ -5,23 +5,37 @@
     }
   }
 
-  &[data-view-mode='grid']:has(.link:hover, .link:focus-visible) {
+  &[data-view-mode='grid']:has(.link:focus-visible) {
     color: var(--mantine-primary-color-filled);
   }
 
   &[data-view-mode='list'],
   &[data-view-mode='coverless'] {
-    &:has(.link:hover) {
-      background-color: var(--tanuki-color-hover) !important;
-    }
-
     &:has(.link:focus-visible) {
       border-color: var(--mantine-primary-color-filled);
     }
   }
 
-  &:has(.link:hover, .link:focus-visible) .image {
+  &:has(.link:focus-visible) .image {
     transform: scale(1.05);
+  }
+
+  // На iOS :hover остаётся после касания: анимация обложки не должна сопровождать свайп.
+  @media (hover: hover) and (pointer: fine) {
+    &[data-view-mode='grid']:has(.link:hover) {
+      color: var(--mantine-primary-color-filled);
+    }
+
+    &[data-view-mode='list'],
+    &[data-view-mode='coverless'] {
+      &:has(.link:hover) {
+        background-color: var(--tanuki-color-hover) !important;
+      }
+    }
+
+    &:has(.link:hover) .image {
+      transform: scale(1.05);
+    }
   }
 }
 

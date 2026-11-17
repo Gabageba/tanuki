@@ -11,5 +11,6 @@ export type TabSwipeGesture = {
   x: number;
   y: number;
   horizontal: boolean;
+  target: Element;
   activeTab: HTMLButtonElement;
 };
