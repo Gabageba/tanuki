@@ -58,26 +58,27 @@ function useDateFormat() {
   };
 
   /**
-   * «5мин назад», «2ч назад», «3д назад» — для дат, где важна давность, а не сам день.
+   * «5 мин назад», «2 ч назад», «3 дн. назад» — для дат, где важна давность, а не сам день.
+   * Компактный вариант: «5 мин», «2 ч», «3 дн.».
    * Начиная с недели давность уже не читается с одного взгляда — показываем дату: «10 сент».
    */
-  const formatRelative = (isoDate: string) => {
+  const formatRelative = (isoDate: string, compact: boolean) => {
     const elapsedMinutes = Math.floor((Date.now() - new Date(isoDate).getTime()) / 60_000);
     if (elapsedMinutes < 1) {
-      return t('justNow');
+      return compact ? t('now') : t('justNow');
     }
     if (elapsedMinutes < 60) {
-      return t('minutesAgoAbbrev', { count: elapsedMinutes });
+      return t(compact ? 'minutesAbbrev' : 'minutesAgoAbbrev', { count: elapsedMinutes });
     }
 
     const elapsedHours = Math.floor(elapsedMinutes / 60);
     if (elapsedHours < 24) {
-      return t('hoursAgoAbbrev', { count: elapsedHours });
+      return t(compact ? 'hoursAbbrev' : 'hoursAgoAbbrev', { count: elapsedHours });
     }
 
     const elapsedDays = Math.floor(elapsedHours / 24);
     if (elapsedDays < 7) {
-      return t('daysAgoAbbrev', { count: elapsedDays });
+      return t(compact ? 'daysAbbrev' : 'daysAgoAbbrev', { count: elapsedDays });
     }
 
     return formatDateCompact(isoDate);
@@ -144,11 +145,11 @@ function useDateFormat() {
       }
       return formatDateNumeric(isoDate);
     },
-    formatRelative: (isoDate: string | null) => {
+    formatRelative: (isoDate: string | null, { compact = false } = {}) => {
       if (!isoDate) {
         return null;
       }
-      return formatRelative(isoDate);
+      return formatRelative(isoDate, compact);
     },
   };
 }

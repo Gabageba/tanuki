@@ -39,7 +39,13 @@ export const Default: Story = {
 
 export const Mobile: Story = {
   name: 'На телефоне: 18+ и метка папки',
-  args: { bookmark: { ...BOOKMARK_CARD, contentRating: CONTENT_RATING.ADULT } },
+  args: {
+    bookmark: {
+      ...BOOKMARK_CARD,
+      contentRating: CONTENT_RATING.ADULT,
+      latestNewAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  },
   globals: MOBILE_GLOBALS,
 };
 

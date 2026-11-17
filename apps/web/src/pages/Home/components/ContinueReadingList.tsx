@@ -3,6 +3,7 @@ import type { ContinueReadingItem } from '@tanuki/contracts';
 import useHideFromContinueReading from '../hooks/useHideFromContinueReading';
 import ContinueReadingCard from './ContinueReadingCard';
 import ContinueReadingEmpty from './ContinueReadingEmpty';
+import { CONTINUE_READING_CARD_WIDTH } from '../models';
 
 type Props = {
   items: ContinueReadingItem[];
@@ -20,7 +21,7 @@ function ContinueReadingList({ items }: Props) {
     <Scroller>
       <Group gap="md" wrap="nowrap" align="flex-start">
         {items.map((item) => (
-          <Box key={item.title.id} w={{ base: 128, sm: 168 }} flex="none">
+          <Box key={item.title.id} w={CONTINUE_READING_CARD_WIDTH} flex="none">
             <ContinueReadingCard item={item} onRemove={() => hide.mutate(item.title.id)} />
           </Box>
         ))}
