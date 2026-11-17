@@ -72,6 +72,217 @@ const openPage = async (path, width = 1280) => {
   return { page, requests, errors, close: () => context.close() };
 };
 
+const pullToRefresh = (page, { dx = 0, dy = 180, cancel = false, selector = 'main' } = {}) =>
+  page.evaluate(
+    ({ dx, dy, cancel, selector }) => {
+      const target = globalThis.document.querySelector(selector);
+      const touch = (clientX, clientY) =>
+        new globalThis.Touch({ identifier: 1, target, clientX, clientY });
+      const start = touch(100, 150);
+      const end = touch(100 + dx, 150 + dy);
+      const dispatch = (type, touches, changedTouches) =>
+        target.dispatchEvent(
+          new globalThis.TouchEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            touches,
+            changedTouches,
+          }),
+        );
+      dispatch('touchstart', [start], [start]);
+      dispatch('touchmove', [end], [end]);
+      dispatch(cancel ? 'touchcancel' : 'touchend', [], [end]);
+    },
+    { dx, dy, cancel, selector },
+  );
+
+test('pull-to-refresh закладок обновляет папки и карточки, сохраняет параметры и ждёт ответ', async () => {
+  const run = await openPage('/bookmarks?sort=alphabetical&direction=asc&query=Тест', 375);
+  const { page, requests } = run;
+  try {
+    await expect(page.locator('a[href^="/title/"]').first()).toBeVisible();
+    const saved = page.url();
+    const count = (path) => requests.filter((url) => url.pathname === path).length;
+    const foldersBefore = count('/api/v1/bookmark-folders');
+    const cardsBefore = count('/api/v1/bookmarks');
+    let release;
+    const responseGate = new Promise((resolve) => (release = resolve));
+    await page.route('**/api/v1/bookmark-folders', async (route) => {
+      await responseGate;
+      await route.fallback();
+    });
+    let navigations = 0;
+    page.on('framenavigated', () => navigations++);
+    await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+    await pullToRefresh(page);
+    try {
+      await expect.poll(() => count('/api/v1/bookmarks')).toBe(cardsBefore + 1);
+      // Медленный ответ не снимает блокировку через прежние фиксированные 500 мс.
+      await page.waitForTimeout(650);
+      await pullToRefresh(page);
+      assert.equal(count('/api/v1/bookmarks'), cardsBefore + 1);
+      await expect(page.locator('.mantine-Center-root > .mantine-Loader-root')).toBeVisible();
+    } finally {
+      release();
+    }
+    await expect.poll(() => count('/api/v1/bookmark-folders')).toBe(foldersBefore + 1);
+    await expect(page.locator('a[href^="/title/"]').first()).toBeVisible();
+    await expect(page).toHaveURL(saved);
+    await expect(page.getByPlaceholder('Поиск по названию')).toHaveValue('Тест');
+    const last = requests.filter((url) => url.pathname === '/api/v1/bookmarks').at(-1);
+    assert.equal(last.searchParams.get('sort'), 'alphabetical');
+    assert.equal(last.searchParams.get('direction'), 'asc');
+    assert.equal(last.searchParams.get('query'), 'Тест');
+    assert.equal(navigations, 0);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('pull-to-refresh не срабатывает при коротком, горизонтальном и отменённом жесте или в поле', async () => {
+  const run = await openPage('/bookmarks', 375);
+  const { page, requests } = run;
+  try {
+    await expect(page.locator('a[href^="/title/"]').first()).toBeVisible();
+    const before = requests.length;
+    await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+    await pullToRefresh(page, { dy: 50 });
+    await pullToRefresh(page, { dx: 240 });
+    await pullToRefresh(page, { cancel: true });
+    await pullToRefresh(page, { selector: 'input' });
+    await page.waitForTimeout(100);
+    assert.equal(requests.length, before);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('pull-to-refresh каталога сохраняет обход серверного кеша', async () => {
+  const run = await openPage('/catalog/readmanga_ru', 375);
+  const { page, requests } = run;
+  try {
+    await expect(page.locator('a[href^="/title/"]').first()).toBeVisible();
+    await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+    await pullToRefresh(page);
+    await expect
+      .poll(() =>
+        requests.some(
+          (url) => url.pathname.endsWith('/titles') && url.searchParams.get('refresh') === 'true',
+        ),
+      )
+      .toBe(true);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+for (const { name, path, ready, paths } of [
+  {
+    name: 'главной',
+    path: '/',
+    ready: 'main a[href^="/title/"]',
+    paths: ['/api/v1/reading-progress/recent', '/api/v1/bookmarks/new-chapters'],
+  },
+  {
+    name: 'уведомлений',
+    path: '/notifications?categories=chapters',
+    ready: 'main a[href^="/title/"]',
+    paths: [
+      '/api/v1/notifications',
+      '/api/v1/notifications/unread-count',
+      '/api/v1/notifications/push/config',
+    ],
+  },
+  {
+    name: 'источников',
+    path: '/sources',
+    ready: 'main a[href^="/catalog/"]',
+    paths: ['/api/v1/sources'],
+  },
+  {
+    name: 'здоровья источников',
+    path: '/sources/health?status=ok&sort=title&direction=desc',
+    ready: 'main tbody tr',
+    paths: ['/api/v1/sources'],
+  },
+  {
+    name: 'подборок',
+    path: '/selections?source=nudemoon&section=popular&variant=2026-11&order=likes',
+    ready: 'main a[href^="/title/"]',
+    paths: ['/api/v1/sources', '/api/v1/user-settings', '/api/v1/selections/nudemoon/popular'],
+  },
+  {
+    name: 'тайтла',
+    path: '/title/readmanga_ru:berserk?tab=chapters&direction=asc',
+    ready: 'main .mantine-Tabs-tab',
+    paths: [
+      '/api/v1/titles/readmanga_ru:berserk',
+      '/api/v1/titles/readmanga_ru:berserk/chapters',
+      '/api/v1/titles/readmanga_ru:berserk/progress',
+      '/api/v1/titles/readmanga_ru:berserk/bookmark',
+    ],
+  },
+]) {
+  test(`pull-to-refresh ${name} обновляет все блоки и сохраняет адрес`, async () => {
+    const run = await openPage(path, 375);
+    const { page, requests } = run;
+    const count = (path) => requests.filter((url) => decodeURI(url.pathname) === path).length;
+    try {
+      await expect(page.locator(ready).first()).toBeVisible();
+      await expect.poll(() => paths.every((path) => count(path) > 0)).toBe(true);
+      await expect(page.locator('main .mantine-Skeleton-root')).toHaveCount(0);
+      const saved = page.url();
+      const before = paths.map(count);
+      const visitsBefore = requests.filter((url) =>
+        url.pathname.endsWith('/bookmark/visit'),
+      ).length;
+      await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+      await pullToRefresh(page);
+      for (const [index, path] of paths.entries()) {
+        await expect.poll(() => count(path), `Не обновился ${path}`).toBeGreaterThan(before[index]);
+      }
+      await expect(page.locator(ready).first()).toBeVisible();
+      await expect(page.locator('main .mantine-Skeleton-root')).toHaveCount(0);
+      await expect(page).toHaveURL(saved);
+      assert.equal(
+        requests.filter((url) => url.pathname.endsWith('/bookmark/visit')).length,
+        visitsBefore,
+      );
+      assert.equal(
+        requests.some((url) => url.pathname.endsWith('/probe')),
+        false,
+      );
+      assert.deepEqual(run.errors, []);
+    } finally {
+      await run.close();
+    }
+  });
+}
+
+test('pull-to-refresh не перехватывает прокрутку списка глав', async () => {
+  const run = await openPage('/title/readmanga_ru:berserk?tab=chapters', 375);
+  const { page, requests } = run;
+  try {
+    const list = page.locator('main .mantine-ScrollArea-viewport');
+    await expect(list).toBeVisible();
+    await expect(page.locator('main .mantine-Skeleton-root')).toHaveCount(0);
+    await list.evaluate((element) => {
+      element.scrollTop = 50;
+    });
+    await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+    const before = requests.filter((url) => url.pathname.includes('/titles/')).length;
+    await pullToRefresh(page, { selector: 'main .mantine-ScrollArea-viewport' });
+    await page.waitForTimeout(100);
+    assert.equal(requests.filter((url) => url.pathname.includes('/titles/')).length, before);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
 for (const width of [1280, 375]) {
   test(`закладки сохраняют сортировку между папками, после тайтла и перезагрузки, ${width}px`, async () => {
     const run = await openPage('/bookmarks?sort=alphabetical&direction=asc&query=Тест', width);
