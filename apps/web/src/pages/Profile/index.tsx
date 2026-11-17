@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { ChartBarIcon, DatabaseIcon, KeyIcon, ShieldCheckIcon } from '@phosphor-icons/react';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 import PageLayout from '@/shared/ui/PageLayout';
 import ProfileInfo from './components/ProfileInfo';
 import ProfileStatistics from './components/ProfileStatistics';
@@ -63,7 +64,7 @@ function Profile() {
       <PageLayout.Content>
         <Stack gap="lg">
           <ProfileInfo />
-          <Tabs value={activeTab} onChange={handleTabChange}>
+          <SwipeableTabs value={activeTab} onChange={handleTabChange}>
             <Tabs.List>
               <Scroller>
                 {TABS.map(({ title, id, icon }) => (
@@ -79,7 +80,7 @@ function Profile() {
                 {content}
               </Tabs.Panel>
             ))}
-          </Tabs>
+          </SwipeableTabs>
         </Stack>
       </PageLayout.Content>
     </PageLayout>

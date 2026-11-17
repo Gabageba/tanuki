@@ -3,6 +3,7 @@ import { Tabs } from '@mantine/core';
 import { CheckCircleIcon, ClockIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 import { DOWNLOAD_STATUS } from '@/entities/download/models';
 import {
   DOWNLOADS_TAB_SEARCH_PARAM,
@@ -60,7 +61,7 @@ function DownloadsTabs({ userId, data }: Props) {
   );
 
   return (
-    <Tabs value={activeTab} onChange={handleTabChange}>
+    <SwipeableTabs value={activeTab} onChange={handleTabChange}>
       <Tabs.List mb="md">
         {TABS.map(({ id, title, icon }) => (
           <Tabs.Tab key={id} value={id} leftSection={icon}>
@@ -73,7 +74,7 @@ function DownloadsTabs({ userId, data }: Props) {
           {content}
         </Tabs.Panel>
       ))}
-    </Tabs>
+    </SwipeableTabs>
   );
 }
 

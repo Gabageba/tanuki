@@ -96,6 +96,194 @@ const pullToRefresh = (page, { dx = 0, dy = 180, cancel = false, selector = 'mai
     { dx, dy, cancel, selector },
   );
 
+const swipeTabs = (target, options = {}) =>
+  target.evaluate((element, { dx = -100, dy = 0, x = 180, cancel = false, multi = false }) => {
+    const touch = (clientX, clientY, identifier = 1) =>
+      new globalThis.Touch({ identifier, target: element, clientX, clientY });
+    const start = touch(x, 250);
+    const end = touch(x + dx, 250 + dy);
+    const dispatch = (type, touches, changedTouches = touches) =>
+      element.dispatchEvent(
+        new globalThis.TouchEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          touches,
+          changedTouches,
+        }),
+      );
+    dispatch('touchstart', [start]);
+    dispatch('touchmove', multi ? [end, touch(x, 260, 2)] : [end]);
+    dispatch(cancel ? 'touchcancel' : 'touchend', [], [end]);
+  }, options);
+
+test('свайп пальцем переключает настройки в обе стороны и не замыкает вкладки', async () => {
+  const run = await openPage('/settings', 375);
+  const { page } = run;
+  try {
+    const general = page.getByRole('tab', { name: 'Общее', exact: true });
+    const sources = page.getByRole('tab', { name: 'Источники', exact: true });
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('main [role="tabpanel"]:visible').first()).toBeVisible();
+    const session = await page.context().newCDPSession(page);
+    await session.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+    const swipe = async (from, to, dy = 0) => {
+      const panel = page.locator('main [role="tabpanel"]:visible').first();
+      const box = await panel.boundingBox();
+      const y = box.y + 4;
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: from, y }],
+      });
+      for (let step = 1; step <= 5; step++) {
+        await session.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: from + ((to - from) * step) / 5, y: y + (dy * step) / 5 }],
+        });
+      }
+      await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    };
+    await swipe(260, 100);
+    await expect(sources).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/tab=sources/);
+    await swipe(100, 260);
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    await swipe(180, 180, -120);
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(() => page.evaluate(() => globalThis.scrollY)).toBeGreaterThan(0);
+    await swipe(100, 260);
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    const last = page.getByRole('tab').last();
+    await last.click();
+    await swipeTabs(page.locator('main [role="tabpanel"]:visible').first());
+    await expect(last).toHaveAttribute('aria-selected', 'true');
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('свайп вкладок игнорирует скролл, короткий жест, отмену, мультитач и край экрана', async () => {
+  const run = await openPage('/settings', 375);
+  const { page } = run;
+  try {
+    const general = page.getByRole('tab', { name: 'Общее', exact: true });
+    const panel = page.locator('main [role="tabpanel"]:visible').first();
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    for (const options of [
+      { dx: 15, dy: 120 },
+      { dx: -30 },
+      { dx: -100, dy: 90 },
+      { cancel: true },
+      { multi: true },
+      { x: 370 },
+      { x: 5, dx: 100 },
+    ]) {
+      await swipeTabs(panel, options);
+      await expect(general).toHaveAttribute('aria-selected', 'true');
+    }
+    await swipeTabs(page.getByRole('tablist'));
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(page.getByRole('switch').first());
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    // Горизонтальный скролл внутри содержимого сохраняет жест даже у своего края.
+    await panel.evaluate((element) => {
+      const scroll = globalThis.document.createElement('div');
+      scroll.dataset.swipeScroll = '';
+      scroll.style.cssText = 'width:100px;overflow-x:auto';
+      const content = globalThis.document.createElement('div');
+      content.style.width = '500px';
+      content.textContent = 'scroll';
+      scroll.append(content);
+      element.append(scroll);
+    });
+    await swipeTabs(page.locator('[data-swipe-scroll]'));
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    // Disabled-вкладка пропускается, порядок берётся из реально показанной полосы.
+    await page.getByRole('tab', { name: 'Источники', exact: true }).evaluate((tab) => {
+      tab.disabled = true;
+    });
+    await swipeTabs(panel);
+    await expect(page).toHaveURL(/tab=selections/);
+    const selected = await page.getByRole('tab', { name: 'Подборки', exact: true }).boundingBox();
+    assert.ok(selected.x >= 0 && selected.x + selected.width <= 375);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('свайп папок закладок использует содержимое и сохраняет сортировку', async () => {
+  const run = await openPage('/bookmarks?sort=alphabetical&direction=asc&query=Тест', 375);
+  const { page } = run;
+  try {
+    await expect(page.getByPlaceholder('Поиск по названию')).toHaveValue('Тест');
+    const tabs = page.getByRole('tab');
+    const before = page.url();
+    const root = page.locator('main [data-swipeable-tabs]');
+    await swipeTabs(page.getByPlaceholder('Поиск по названию'));
+    await expect(page).toHaveURL(before);
+    await swipeTabs(root);
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/sort=alphabetical/);
+    await expect(page).toHaveURL(/direction=asc/);
+    await expect(page.getByPlaceholder('Поиск по названию')).toHaveValue('');
+    await swipeTabs(root, { dx: 100 });
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('вложенные ветки глав переключаются отдельно от вкладок тайтла', async () => {
+  const run = await openPage('/title/readmanga_ru:berserk?tab=chapters', 375);
+  const { page } = run;
+  try {
+    await page.route('**/api/v1/titles/readmanga_ru:berserk', async (route) => {
+      const { TITLE_DETAILS_RESPONSE: details } = await server.ssrLoadModule(
+        '/src/shared/storybook/titles.ts',
+      );
+      await route.fulfill({
+        json: {
+          ...details,
+          branches: [details.branches[0], { ...details.branches[0], id: 'second', name: 'Вторая' }],
+        },
+      });
+    });
+    await page.reload();
+    const chapters = page.getByRole('tab', { name: 'Главы', exact: true });
+    const secondBranch = page.getByRole('tab', { name: /Вторая/ });
+    await expect(secondBranch).toBeVisible();
+    const branches = page.locator('[data-swipeable-tabs] [data-swipeable-tabs]');
+    await swipeTabs(branches);
+    await expect(secondBranch).toHaveAttribute('aria-selected', 'true');
+    await expect(chapters).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(branches);
+    await expect(chapters).toHaveAttribute('aria-selected', 'true');
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('свайп разделов подборок меняет раздел в URL', async () => {
+  const run = await openPage('/selections?source=readmanga_ru', 375);
+  const { page } = run;
+  try {
+    const tabs = page.getByRole('tab');
+    await expect(tabs.nth(1)).toBeVisible();
+    const root = page.locator('main [data-swipeable-tabs]');
+    await swipeTabs(root);
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/section=/);
+    await swipeTabs(root, { dx: 100 });
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
 test('pull-to-refresh закладок обновляет папки и карточки, сохраняет параметры и ждёт ответ', async () => {
   const run = await openPage('/bookmarks?sort=alphabetical&direction=asc&query=Тест', 375);
   const { page, requests } = run;

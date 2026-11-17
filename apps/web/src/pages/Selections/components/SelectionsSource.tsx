@@ -19,6 +19,7 @@ import SectionFeed from './SectionFeed';
 import SectionPanel from './SectionPanel';
 import SectionTabs from './SectionTabs';
 import SourceMissedState from './SourceMissedState';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 
 type Props = {
   source: Source;
@@ -83,28 +84,30 @@ function SelectionsSource({
   const sectionViewMode = section.viewMode ?? viewMode;
 
   return (
-    <Stack gap="lg">
-      <SectionTabs sections={sections} activeId={section.id} onChange={onSectionChange} />
-      <SectionPanel
-        section={section}
-        order={order}
-        onOrderChange={onOrderChange}
-        variant={variant?.id ?? ''}
-        onVariantChange={onVariantChange}
-        viewMode={sectionViewMode}
-        onViewModeChange={handleViewModeChange}
-      />
-      {status && status !== SEARCH_GROUP_STATUS.OK ? (
-        <SourceMissedState
-          source={source}
-          status={status}
-          isRetrying={query.isRefetching}
-          onRetry={query.refetch}
+    <SwipeableTabs value={section.id} onChange={(value) => value && onSectionChange(value)}>
+      <Stack gap="lg">
+        <SectionTabs sections={sections} />
+        <SectionPanel
+          section={section}
+          order={order}
+          onOrderChange={onOrderChange}
+          variant={variant?.id ?? ''}
+          onVariantChange={onVariantChange}
+          viewMode={sectionViewMode}
+          onViewModeChange={handleViewModeChange}
         />
-      ) : (
-        <SectionFeed key={section.id} query={query} viewMode={sectionViewMode} />
-      )}
-    </Stack>
+        {status && status !== SEARCH_GROUP_STATUS.OK ? (
+          <SourceMissedState
+            source={source}
+            status={status}
+            isRetrying={query.isRefetching}
+            onRetry={query.refetch}
+          />
+        ) : (
+          <SectionFeed key={section.id} query={query} viewMode={sectionViewMode} />
+        )}
+      </Stack>
+    </SwipeableTabs>
   );
 }
 

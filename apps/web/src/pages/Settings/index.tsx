@@ -11,6 +11,7 @@ import {
   TrayArrowDownIcon,
 } from '@phosphor-icons/react';
 import { useMemo } from 'react';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 import usePushConfig from '@/entities/notification/hooks/usePushConfig';
 import PageLayout from '@/shared/ui/PageLayout';
 import useUserSettings from '@/shared/hooks/useUserSettings';
@@ -99,7 +100,7 @@ function Settings() {
     <PageLayout useQuery={useUserSettings}>
       {/* Вкладки видны сразу, а блоки, которые ждут настроек, грузятся скелетоном внутри. */}
       <PageLayout.Content title={t('settings')}>
-        <Tabs value={activeTab} onChange={handleTabChange}>
+        <SwipeableTabs value={activeTab} onChange={handleTabChange}>
           <Tabs.List>
             <Scroller>
               {TABS.map(({ id, icon, title }) => (
@@ -114,7 +115,7 @@ function Settings() {
               {content}
             </Tabs.Panel>
           ))}
-        </Tabs>
+        </SwipeableTabs>
       </PageLayout.Content>
     </PageLayout>
   );

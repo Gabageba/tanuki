@@ -3,6 +3,7 @@ import { InfoIcon, ListDashesIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 import TitleInfoTabContent from './TitleInfoTabContent';
 import { SORT_DIRECTION, SortDirectionSchema, type Branch, type Title } from '@tanuki/contracts';
 import TitleChaptersTabContent from '../TitleChaptersTabContent';
@@ -71,7 +72,7 @@ function TitleContent({ title, branches }: Props) {
   );
 
   return (
-    <Tabs value={activeTab} onChange={handleTabChange}>
+    <SwipeableTabs value={activeTab} onChange={handleTabChange}>
       <Tabs.List>
         {TABS.map((tab) => (
           <Tabs.Tab key={tab.id} value={tab.id} leftSection={tab.icon}>
@@ -85,7 +86,7 @@ function TitleContent({ title, branches }: Props) {
           {tab.content}
         </Tabs.Panel>
       ))}
-    </Tabs>
+    </SwipeableTabs>
   );
 }
 

@@ -18,6 +18,7 @@ import BookmarksToolbar from './BookmarksToolbar';
 import FolderTabs from './FolderTabs';
 import { readBookmarksParams } from '../lib';
 import useUrlState from '@/shared/hooks/useUrlState';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 
 /** Задержка поиска: запрос уходит, когда человек перестал печатать. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -85,38 +86,41 @@ function BookmarksContent({ onImport }: Props) {
   };
 
   return (
-    <Stack gap="md">
-      {activeFolder && (
-        <FolderTabs folders={items} activeId={activeFolder.id} onChange={handleFolderChange} />
-      )}
-      {isEmpty || !activeFolder ? (
-        <BookmarksEmpty onImport={onImport} />
-      ) : (
-        <>
-          <BookmarksToolbar
-            query={query}
-            onQueryChange={handleQueryChange}
-            sort={sort}
-            onSortChange={(value) => {
-              // У каждой сортировки своё естественное направление: алфавит — от «А», даты — свежие.
-              setParams({
-                sort: value,
-                direction: getDefaultBookmarkSortDirection(value),
-              });
-            }}
-            direction={direction}
-            onDirectionChange={(value) => setParams({ direction: value })}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-          />
-          <BookmarksList
-            params={{ folderId: activeFolder.id, sort, direction, query: listQuery }}
-            viewMode={viewMode}
-            onResetQuery={() => handleQueryChange('')}
-          />
-        </>
-      )}
-    </Stack>
+    <SwipeableTabs
+      value={activeFolderId ?? null}
+      onChange={(value) => value && handleFolderChange(value)}
+    >
+      <Stack gap="md">
+        <FolderTabs folders={items} />
+        {isEmpty || !activeFolder ? (
+          <BookmarksEmpty onImport={onImport} />
+        ) : (
+          <>
+            <BookmarksToolbar
+              query={query}
+              onQueryChange={handleQueryChange}
+              sort={sort}
+              onSortChange={(value) => {
+                // У каждой сортировки своё естественное направление: алфавит — от «А», даты — свежие.
+                setParams({
+                  sort: value,
+                  direction: getDefaultBookmarkSortDirection(value),
+                });
+              }}
+              direction={direction}
+              onDirectionChange={(value) => setParams({ direction: value })}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+            />
+            <BookmarksList
+              params={{ folderId: activeFolder.id, sort, direction, query: listQuery }}
+              viewMode={viewMode}
+              onResetQuery={() => handleQueryChange('')}
+            />
+          </>
+        )}
+      </Stack>
+    </SwipeableTabs>
   );
 }
 
