@@ -43,18 +43,27 @@ function useUpdateReadingProgress({ titleId, notifyOnError = true }: Params) {
           linked: current?.linked ?? [],
         }));
       }
-      return { previous };
+      return {
+        previous,
+        optimistic: queryClient.getQueryData<TitleReadingProgressResponse>(queryKey),
+      };
     },
-    onSuccess: (own) => {
+    onSuccess: (own, _variables, context) => {
       if (!own) return;
       queryClient.setQueryData<TitleReadingProgressResponse>(queryKey, (current) => ({
-        own,
+        // Более новая оптимистичная отметка уже принадлежит следующей странице или мутации.
+        own: current?.own === context?.optimistic?.own ? own : (current?.own ?? own),
         linked: current?.linked ?? [],
       }));
       void queryClient.invalidateQueries({ queryKey: CONTINUE_READING_QUERY_KEY });
     },
     onError: (_error, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      if (
+        context?.previous &&
+        queryClient.getQueryData<TitleReadingProgressResponse>(queryKey)?.own ===
+          context.optimistic?.own
+      )
+        queryClient.setQueryData(queryKey, context.previous);
     },
   });
 }

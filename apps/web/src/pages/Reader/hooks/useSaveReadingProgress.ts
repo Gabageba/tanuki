@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { TitleReadingProgressResponse } from '@tanuki/contracts';
 import useChapters from '@/entities/title/hooks/useChapters';
@@ -11,9 +11,10 @@ import { toOptimisticProgress } from '@/entities/title/readingProgress';
 import { getReaderPageKey } from '../lib';
 import type { ReaderPosition } from '../models';
 
-/** Позиция уходит на сервер, только когда читатель задержался на странице, — листание подряд не
- *  превращается в запрос на каждую страницу. */
+/** После остановки позиция сохраняется быстрее очередного checkpoint. */
 const SAVE_DELAY_MS = 2000;
+/** Непрерывное листание тоже сохраняется; этот же таймер повторяет неудачную отправку. */
+const CHECKPOINT_INTERVAL_MS = 5000;
 
 type Params = {
   titleId: string;
@@ -28,7 +29,7 @@ type Params = {
  */
 function useSaveReadingProgress({ titleId, position }: Params) {
   const queryClient = useQueryClient();
-  const { mutate } = useUpdateReadingProgress({ titleId, notifyOnError: false });
+  const { mutateAsync } = useUpdateReadingProgress({ titleId, notifyOnError: false });
   // Та же ветка по умолчанию, что и у шапки читалки: запрос уже в кеше.
   const { data: chaptersData } = useChapters({ titleId });
   const { data: user } = useCurrentUser();
@@ -36,35 +37,70 @@ function useSaveReadingProgress({ titleId, position }: Params) {
 
   const pending = useRef<ReaderPosition | null>(null);
   const lastSavedKey = useRef<string | null>(null);
+  const inFlightKey = useRef<string | null>(null);
+  const exitInFlightKey = useRef<string | null>(null);
+  const isLeaving = useRef(false);
 
-  /** Несохранённая позиция, если она отличается от уже отправленной. */
-  const takePending = useCallback(() => {
+  const getPending = useCallback(() => {
     const target = pending.current;
-    pending.current = null;
     if (!target) return null;
-
     const key = getReaderPageKey(target);
-    if (key === lastSavedKey.current) return null;
-
-    lastSavedKey.current = key;
-    return target;
+    return key === lastSavedKey.current ||
+      key === inFlightKey.current ||
+      key === exitInFlightKey.current
+      ? null
+      : target;
   }, []);
 
-  const flush = useCallback(() => {
-    const target = takePending();
-    if (target) mutate({ chapterId: target.chapterId, pageIndex: target.pageIndex });
-  }, [takePending, mutate]);
+  const flush = useCallback(async (): Promise<void> => {
+    // Пока запрос летит, новые страницы заменяют pending: устаревшие позиции не копим.
+    if (inFlightKey.current !== null || exitInFlightKey.current !== null) return;
+    let target = getPending();
+    while (target) {
+      const key = getReaderPageKey(target);
+      inFlightKey.current = key;
+      try {
+        await mutateAsync({ chapterId: target.chapterId, pageIndex: target.pageIndex });
+        lastSavedKey.current = key;
+      } catch {
+        // Позиция остаётся несохранённой: следующий checkpoint или выход повторит запрос.
+      } finally {
+        inFlightKey.current = null;
+      }
+      // При уходе могла ещё лететь предыдущая страница. Дождавшись её, сохраняем последнюю.
+      // Неудачный запрос той же позиции здесь не повторяем: это дело таймера.
+      target = isLeaving.current ? getPending() : null;
+      if (target && getReaderPageKey(target) === key) return;
+    }
+  }, [getPending, mutateAsync]);
 
   // Страница уходит: мутация стартует запрос только после await в onMutate и может не успеть,
-  // поэтому запрос шлётся напрямую, прямо в обработчике. Если вкладку только спрятали, приложение
-  // живёт дальше — «Продолжить чтение» на главной должна увидеть новую позицию.
+  // поэтому запрос шлётся напрямую, прямо в обработчике.
   const flushOnExit = useCallback(() => {
-    const target = takePending();
+    const target = getPending();
     if (!target) return;
+    const key = getReaderPageKey(target);
+    exitInFlightKey.current = key;
     sendReadingProgress(userId, titleId, target)
-      .then(() => queryClient.invalidateQueries({ queryKey: CONTINUE_READING_QUERY_KEY }))
-      .catch(() => undefined);
-  }, [takePending, userId, titleId, queryClient]);
+      .then(() => {
+        lastSavedKey.current = key;
+        return queryClient.invalidateQueries({ queryKey: CONTINUE_READING_QUERY_KEY });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        exitInFlightKey.current = null;
+        // После возврата во вкладку читатель мог уйти с более новой страницы.
+        // Повтор той же неудачной позиции оставляем таймеру, пока читалка открыта.
+        const target = getPending();
+        if (isLeaving.current && target && getReaderPageKey(target) !== key) void flush();
+      });
+  }, [getPending, userId, titleId, queryClient, flush]);
+
+  const checkpoint = useEffectEvent(flush);
+  useEffect(() => {
+    const timer = setInterval(checkpoint, CHECKPOINT_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   const chapterId = position?.chapterId;
   const pageIndex = position?.pageIndex;
@@ -90,19 +126,21 @@ function useSaveReadingProgress({ titleId, position }: Params) {
   }, [titleId, chapterId, pageIndex, chapter, queryClient, flush]);
 
   useEffect(() => {
+    isLeaving.current = false;
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') flushOnExit();
     };
 
     // visibilitychange приходит при сворачивании и закрытии, pagehide — ещё и при перезагрузке
-    // и в Safari, где на закрытие первого события может не быть. Повтор отсекает lastSavedKey.
+    // и в Safari, где на закрытие первого события может не быть. Повтор отсекается даже до ответа.
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pagehide', flushOnExit);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', flushOnExit);
       // Уход внутри приложения: страница живёт дальше, так что через мутацию — с ответом в кеш.
-      flush();
+      isLeaving.current = true;
+      void flush();
     };
   }, [flush, flushOnExit]);
 }
