@@ -60,7 +60,10 @@ function ReaderPageImage({ page, alt, brightness, onMeasure }: Props) {
         w="100%"
         h="100%"
         className={styles.page}
-        style={{ filter: `brightness(${brightness}%)` }}
+        style={{
+          filter: `brightness(${brightness}%)`,
+          visibility: isLoading ? 'hidden' : 'visible',
+        }}
         onLoad={(event) => {
           const { naturalWidth, naturalHeight } = event.currentTarget;
           if (naturalWidth && naturalHeight) onMeasure(naturalWidth / naturalHeight);
