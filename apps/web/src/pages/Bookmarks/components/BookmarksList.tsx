@@ -3,11 +3,9 @@ import TitleCardsGridSkeleton from '@/entities/title/card/TitleCardsGridSkeleton
 import type { ViewMode } from '@/shared/lib/viewMode';
 import PageLayout from '@/shared/ui/PageLayout';
 import QueryBlock from '@/shared/ui/QueryBlock';
-import ViewModeGrid from '@/shared/ui/ViewModeGrid';
 import useBookmarks from '../hooks/useBookmarks';
-import { getBookmarkItems } from '../lib';
 import type { BookmarksListParams } from '../models';
-import BookmarkCard from './BookmarkCard';
+import BookmarkCards from './BookmarkCards';
 import BookmarkCardSkeleton from './BookmarkCardSkeleton';
 import FolderEmpty from './FolderEmpty';
 import SearchEmpty from './SearchEmpty';
@@ -32,6 +30,7 @@ function BookmarksList({ params, viewMode, onResetQuery }: Props) {
       query={query}
       skeleton={
         <TitleCardsGridSkeleton
+          virtualized
           viewMode={viewMode}
           skeleton={<BookmarkCardSkeleton viewMode={viewMode} />}
         />
@@ -41,11 +40,7 @@ function BookmarksList({ params, viewMode, onResetQuery }: Props) {
     >
       {({ pages }) => (
         <Stack gap={0}>
-          <ViewModeGrid viewMode={viewMode}>
-            {getBookmarkItems(pages).map((bookmark) => (
-              <BookmarkCard key={bookmark.titleId} bookmark={bookmark} viewMode={viewMode} />
-            ))}
-          </ViewModeGrid>
+          <BookmarkCards pages={pages} viewMode={viewMode} />
           <PageLayout.InfiniteScrollTrigger query={query} />
         </Stack>
       )}

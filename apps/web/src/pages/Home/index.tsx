@@ -16,6 +16,7 @@ function Home() {
 
   return (
     <PageLayout useQueries={useHomeQueries}>
+      <PageLayout.PullToRefresh />
       <PageLayout.Content title={t('home')}>
         <Stack gap="xl">
           <ContinueReading />

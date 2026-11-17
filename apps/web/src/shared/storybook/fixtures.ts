@@ -146,6 +146,63 @@ export const SOURCE_ACCOUNTS_RESPONSE: SourceAccountsResponse = {
   isLinkingAvailable: true,
 };
 
+export const EMPTY_SOURCE_ACCOUNTS_RESPONSE: SourceAccountsResponse = {
+  ...SOURCE_ACCOUNTS_RESPONSE,
+  items: [],
+};
+
+export const UNLINKED_SOURCES_RESPONSE = Object.fromEntries(
+  Object.entries(SOURCES_RESPONSE).map(([contentType, sources]) => [
+    contentType,
+    sources.map((source) => ({
+      ...source,
+      isLoggedIn: false,
+      access:
+        source.loginRequirement === SOURCE_LOGIN_REQUIREMENT.REQUIRED
+          ? SOURCE_ACCESS.LOCKED
+          : SOURCE_ACCESS.AVAILABLE,
+    })),
+  ]),
+) as SourcesResponse;
+
+/** Истекли и сессия входа по паролю, и перенесённая cookie без имени аккаунта. */
+export const EXPIRED_SOURCE_ACCOUNTS_RESPONSE: SourceAccountsResponse = {
+  ...SOURCE_ACCOUNTS_RESPONSE,
+  items: [
+    ...SOURCE_ACCOUNTS_RESPONSE.items.map((account) => ({
+      ...account,
+      status: SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED,
+      hasSavedPassword: false,
+    })),
+    {
+      family: SOURCE_AUTH_FAMILY.INUKO,
+      sourceIds: null,
+      login: null,
+      status: SOURCE_ACCOUNT_STATUS.RELOGIN_REQUIRED,
+      hasSavedPassword: false,
+      linkedAt: '2026-09-02T12:00:00Z',
+    },
+  ],
+};
+
+export const EXPIRED_SESSION_SOURCES_RESPONSE = Object.fromEntries(
+  Object.entries(SOURCES_RESPONSE).map(([contentType, sources]) => [
+    contentType,
+    sources.map((source) =>
+      EXPIRED_SOURCE_ACCOUNTS_RESPONSE.items.some((account) => account.family === source.authFamily)
+        ? {
+            ...source,
+            isLoggedIn: false,
+            access:
+              source.loginRequirement === SOURCE_LOGIN_REQUIREMENT.REQUIRED
+                ? SOURCE_ACCESS.RELOGIN_REQUIRED
+                : SOURCE_ACCESS.AVAILABLE,
+          }
+        : source,
+    ),
+  ]),
+) as SourcesResponse;
+
 export const FOLDER_ID = {
   READING: '0b6c8c1e-2a7d-4c8e-9a51-0d1c5f8b7a01',
   PLANNED: '0b6c8c1e-2a7d-4c8e-9a51-0d1c5f8b7a02',

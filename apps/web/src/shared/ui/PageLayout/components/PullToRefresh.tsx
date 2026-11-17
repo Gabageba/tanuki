@@ -1,10 +1,17 @@
 import { Center, Loader } from '@mantine/core';
-import useQuery from '../hooks/useQuery';
+import { useContext } from 'react';
+import { PageLayoutQueryContext, PageLayoutStatusContext } from '../context';
 import usePullToRefresh from '../hooks/usePullToRefresh';
-import type { PageLayoutRefreshableQuery } from '../models';
 
-function PullToRefresh() {
-  const { refresh } = useQuery<PageLayoutRefreshableQuery>();
+type Props = {
+  /** Обновить и запросы вложенных блоков, которые не входят в запрос страницы. */
+  onRefresh?: () => unknown;
+};
+
+function PullToRefresh({ onRefresh }: Props) {
+  const query = useContext(PageLayoutQueryContext);
+  const status = useContext(PageLayoutStatusContext);
+  const refresh = onRefresh ?? query?.refresh ?? status?.refetch;
   const { pullDistance, isRefreshing } = usePullToRefresh(refresh);
 
   const height = isRefreshing ? 40 : pullDistance;

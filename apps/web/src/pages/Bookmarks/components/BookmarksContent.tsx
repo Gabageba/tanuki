@@ -18,6 +18,7 @@ import BookmarksToolbar from './BookmarksToolbar';
 import FolderTabs from './FolderTabs';
 import { readBookmarksParams } from '../lib';
 import useUrlState from '@/shared/hooks/useUrlState';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 
 /** Задержка поиска: запрос уходит, когда человек перестал печатать. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -42,11 +43,16 @@ function BookmarksContent({ onImport }: Props) {
   const { query, sort, direction } = params;
 
   // Набор отложен вместе с папкой: строка, набранная в прежней папке, в запрос новой не уходит.
-  const search = useMemo(() => ({ folderId: activeFolderId, query }), [activeFolderId, query]);
+  const search = useMemo(
+    () => (query ? { folderId: activeFolderId, query } : null),
+    [activeFolderId, query],
+  );
   const [debouncedSearch] = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   // Сброс поиска (кнопкой или сменой папки) применяется сразу, без задержки набора.
   const listQuery =
-    query && debouncedSearch.folderId === activeFolderId ? debouncedSearch.query : '';
+    query && debouncedSearch && debouncedSearch.folderId === activeFolderId
+      ? debouncedSearch.query
+      : '';
 
   // Без папки в адресе (или с удалённой) открывается первая — и сразу попадает в адрес.
   useEffect(() => {
@@ -80,43 +86,47 @@ function BookmarksContent({ onImport }: Props) {
         next.delete('query');
         return next;
       },
-      { replace: true, flushSync: true },
+      // Router обновит вкладку в transition: большой кешированный список не блокирует touchend.
+      { replace: true },
     );
   };
 
   return (
-    <Stack gap="md">
-      {activeFolder && (
-        <FolderTabs folders={items} activeId={activeFolder.id} onChange={handleFolderChange} />
-      )}
-      {isEmpty || !activeFolder ? (
-        <BookmarksEmpty onImport={onImport} />
-      ) : (
-        <>
-          <BookmarksToolbar
-            query={query}
-            onQueryChange={handleQueryChange}
-            sort={sort}
-            onSortChange={(value) => {
-              // У каждой сортировки своё естественное направление: алфавит — от «А», даты — свежие.
-              setParams({
-                sort: value,
-                direction: getDefaultBookmarkSortDirection(value),
-              });
-            }}
-            direction={direction}
-            onDirectionChange={(value) => setParams({ direction: value })}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-          />
-          <BookmarksList
-            params={{ folderId: activeFolder.id, sort, direction, query: listQuery }}
-            viewMode={viewMode}
-            onResetQuery={() => handleQueryChange('')}
-          />
-        </>
-      )}
-    </Stack>
+    <SwipeableTabs
+      value={activeFolderId ?? null}
+      onChange={(value) => value && handleFolderChange(value)}
+    >
+      <Stack gap="md">
+        <FolderTabs folders={items} />
+        {isEmpty || !activeFolder ? (
+          <BookmarksEmpty onImport={onImport} />
+        ) : (
+          <>
+            <BookmarksToolbar
+              query={query}
+              onQueryChange={handleQueryChange}
+              sort={sort}
+              onSortChange={(value) => {
+                // У каждой сортировки своё естественное направление: алфавит — от «А», даты — свежие.
+                setParams({
+                  sort: value,
+                  direction: getDefaultBookmarkSortDirection(value),
+                });
+              }}
+              direction={direction}
+              onDirectionChange={(value) => setParams({ direction: value })}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+            />
+            <BookmarksList
+              params={{ folderId: activeFolder.id, sort, direction, query: listQuery }}
+              viewMode={viewMode}
+              onResetQuery={() => handleQueryChange('')}
+            />
+          </>
+        )}
+      </Stack>
+    </SwipeableTabs>
   );
 }
 

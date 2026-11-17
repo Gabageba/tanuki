@@ -13,7 +13,7 @@ function ContinueChapter({ chapter }: Props) {
 
   if (chapter.number !== null) {
     return (
-      <Box component="span" ff="monospace" lh="tight">
+      <Box component="span" ff="monospace" lh="tight" style={{ wordSpacing: '-0.25em' }}>
         {t('chapterNumberAbbrev', { number: chapter.number })}
       </Box>
     );

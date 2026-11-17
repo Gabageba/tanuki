@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Tabs, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { KeyIcon, PasswordIcon, SignInIcon } from '@phosphor-icons/react';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 import type { LibSocialLoginStep, Source } from '@tanuki/contracts';
 import useLinkLibSocialAccount from '../hooks/useLinkLibSocialAccount';
 import PasswordAccountForm from './PasswordAccountForm';
@@ -103,7 +104,7 @@ function LinkLibSocialModal({ source, opened, onClose }: Props) {
       {pendingSite ? (
         <LibSocialCodeStep key={pendingSourceId} source={source} onStep={handleStep} />
       ) : (
-        <Tabs defaultValue={LOGIN_TAB.PASSWORD} keepMounted={false}>
+        <SwipeableTabs defaultValue={LOGIN_TAB.PASSWORD} keepMounted={false}>
           <Tabs.List>
             {TABS.map(({ id, title, icon }) => (
               <Tabs.Tab key={id} value={id} leftSection={icon}>
@@ -116,7 +117,7 @@ function LinkLibSocialModal({ source, opened, onClose }: Props) {
               {content}
             </Tabs.Panel>
           ))}
-        </Tabs>
+        </SwipeableTabs>
       )}
     </ToneModal>
   );

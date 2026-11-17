@@ -14,6 +14,8 @@
     "test": "node --test test/*.test.mjs",
     "test:notifications-stream": "node --test test/notifications-stream.browser.mjs",
     "test:pwa": "pnpm build && node --test test/pwa-worker.browser.mjs",
+    "test:reader-gestures": "node --test test/reader-gestures.browser.mjs",
+    "test:reader-progress": "node --test test/reader-progress.browser.mjs",
     "test:title-links": "pnpm storybook:build && node --test test/title-links-stories.browser.mjs",
     "test:toast-stories": "pnpm storybook:build && node --test test/toast-stories.browser.mjs",
     "test:toasts": "node --test test/toasts.browser.mjs",

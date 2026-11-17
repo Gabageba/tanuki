@@ -10,10 +10,11 @@ import type { BookmarksListParams } from '../models';
 function useBookmarks({ folderId, sort, direction, query }: BookmarksListParams) {
   return useInfiniteQuery({
     queryKey: [...BOOKMARKS_QUERY_KEY, 'list', { folderId, sort, direction, query }],
-    queryFn: ({ pageParam }) => {
+    queryFn: ({ pageParam, signal }) => {
       const search = new URLSearchParams({ folderId, sort, direction, page: String(pageParam) });
       if (query.trim()) search.set('query', query.trim());
-      return apiFetch<BookmarksResponse>(`/bookmarks?${search}`);
+      // При быстром перелистывании ответы покинутых папок больше не занимают соединения.
+      return apiFetch<BookmarksResponse>(`/bookmarks?${search}`, { signal });
     },
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {

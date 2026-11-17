@@ -14,7 +14,6 @@ type Props = {
   spread?: boolean;
   pagesLength: number;
   onMeasure: (key: string, ratio: number) => void;
-  transform?: string;
   ref?: Ref<HTMLDivElement>;
 };
 
@@ -27,7 +26,6 @@ function ReaderPageSlot({
   spread = false,
   pagesLength,
   onMeasure,
-  transform,
   ref,
 }: Props) {
   const { t } = useTranslation();
@@ -47,7 +45,7 @@ function ReaderPageSlot({
       style={{ aspectRatio: ratio, flexShrink: 0 }}
       {...dimensions}
     >
-      <Box pos="absolute" inset={0} style={{ transform }}>
+      <Box pos="absolute" inset={0}>
         {showImage ? (
           <ReaderPageImage
             page={page}

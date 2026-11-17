@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { fileURLToPath, URL } from 'node:url';
 import { Buffer } from 'node:buffer';
-import { chromium, expect } from '@playwright/test';
+import process from 'node:process';
+import { chromium, webkit, expect } from '@playwright/test';
 import { getResponse } from 'msw';
 import { createServer } from 'vite';
 
@@ -24,7 +25,7 @@ before(async () => {
     '/src/shared/storybook/handlers.ts',
   ));
   fixtures = await server.ssrLoadModule('/src/shared/storybook/fixtures.ts');
-  browser = await chromium.launch();
+  browser = await (process.env.TEST_BROWSER === 'webkit' ? webkit : chromium).launch();
 });
 
 after(async () => {
@@ -32,7 +33,7 @@ after(async () => {
   await server?.close();
 });
 
-const openPage = async (path, width = 1280) => {
+const openPage = async (path, width = 1280, configure = async () => {}) => {
   const context = await browser.newContext({
     serviceWorkers: 'block',
     locale: 'ru-RU',
@@ -68,9 +69,668 @@ const openPage = async (path, width = 1280) => {
       body: Buffer.from(await response.arrayBuffer()),
     });
   });
+  await configure(page);
   await page.goto(`${origin}${path}`);
   return { page, requests, errors, close: () => context.close() };
 };
+
+const pullToRefresh = (page, { dx = 0, dy = 180, cancel = false, selector = 'main' } = {}) =>
+  page.evaluate(
+    ({ dx, dy, cancel, selector }) => {
+      const target = globalThis.document.querySelector(selector);
+      const touch = (clientX, clientY) =>
+        new globalThis.Touch({ identifier: 1, target, clientX, clientY });
+      const start = touch(100, 150);
+      const end = touch(100 + dx, 150 + dy);
+      const dispatch = (type, touches, changedTouches) =>
+        target.dispatchEvent(
+          new globalThis.TouchEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            touches,
+            changedTouches,
+          }),
+        );
+      dispatch('touchstart', [start], [start]);
+      dispatch('touchmove', [end], [end]);
+      dispatch(cancel ? 'touchcancel' : 'touchend', [], [end]);
+    },
+    { dx, dy, cancel, selector },
+  );
+
+const swipeTabs = (target, options = {}) =>
+  target.evaluate(
+    (element, { dx = -100, dy = 0, x = 180, cancel = false, multi = false, repeat = 1 }) => {
+      // WebKit не предоставляет конструктор Touch; обработчику нужны только координаты.
+      const touch = (clientX, clientY, identifier = 1) => ({
+        identifier,
+        target: element,
+        clientX,
+        clientY,
+      });
+      const start = touch(x, 250);
+      const end = touch(x + dx, 250 + dy);
+      const dispatch = (type, touches, changedTouches = touches) => {
+        const event = new globalThis.Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperties(event, {
+          touches: { value: touches },
+          changedTouches: { value: changedTouches },
+        });
+        return element.dispatchEvent(event);
+      };
+      for (let index = 0; index < repeat; index++) {
+        dispatch('touchstart', [start]);
+        dispatch('touchmove', multi ? [end, touch(x, 260, 2)] : [end]);
+        dispatch(cancel ? 'touchcancel' : 'touchend', [], [end]);
+      }
+    },
+    options,
+  );
+
+test('свайп пальцем переключает настройки в обе стороны и не замыкает вкладки', async () => {
+  const run = await openPage('/settings', 375);
+  const { page } = run;
+  try {
+    const general = page.getByRole('tab', { name: 'Общее', exact: true });
+    const sources = page.getByRole('tab', { name: 'Источники', exact: true });
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('main [role="tabpanel"]:visible').first()).toBeVisible();
+    const session = await page.context().newCDPSession(page);
+    await session.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+    const swipe = async (from, to, dy = 0) => {
+      const panel = page.locator('main [role="tabpanel"]:visible').first();
+      const box = await panel.boundingBox();
+      const y = box.y + 4;
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: from, y }],
+      });
+      for (let step = 1; step <= 5; step++) {
+        await session.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: from + ((to - from) * step) / 5, y: y + (dy * step) / 5 }],
+        });
+      }
+      await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    };
+    await swipe(260, 100);
+    await expect(sources).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/tab=sources/);
+    await swipe(100, 260);
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    await swipe(180, 180, -120);
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(() => page.evaluate(() => globalThis.scrollY)).toBeGreaterThan(0);
+    await swipe(100, 260);
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    const last = page.getByRole('tab').last();
+    await last.click();
+    await expect(last).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(page.locator('main [role="tabpanel"]:visible').first());
+    await expect(last).toHaveAttribute('aria-selected', 'true');
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('свайп вкладок игнорирует скролл, короткий жест, отмену, мультитач и край экрана', async () => {
+  const run = await openPage('/settings', 375);
+  const { page } = run;
+  try {
+    const general = page.getByRole('tab', { name: 'Общее', exact: true });
+    const panel = page.locator('main [role="tabpanel"]:visible').first();
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    for (const options of [
+      { dx: 15, dy: 120 },
+      { dx: -30 },
+      { dx: -100, dy: 90 },
+      { cancel: true },
+      { multi: true },
+      { x: 370 },
+      { x: 5, dx: 100 },
+    ]) {
+      await swipeTabs(panel, options);
+      await expect(general).toHaveAttribute('aria-selected', 'true');
+    }
+    await swipeTabs(page.getByRole('tablist'));
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(page.getByRole('switch').first());
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    // Горизонтальный скролл внутри содержимого сохраняет жест даже у своего края.
+    await panel.evaluate((element) => {
+      const scroll = globalThis.document.createElement('div');
+      scroll.dataset.swipeScroll = '';
+      scroll.style.cssText = 'width:100px;overflow-x:auto';
+      const content = globalThis.document.createElement('div');
+      content.style.width = '500px';
+      content.textContent = 'scroll';
+      scroll.append(content);
+      element.append(scroll);
+    });
+    await swipeTabs(page.locator('[data-swipe-scroll]'));
+    await expect(general).toHaveAttribute('aria-selected', 'true');
+    // Disabled-вкладка пропускается, порядок берётся из реально показанной полосы.
+    await page.getByRole('tab', { name: 'Источники', exact: true }).evaluate((tab) => {
+      tab.disabled = true;
+    });
+    await swipeTabs(panel);
+    await expect(page).toHaveURL(/tab=selections/);
+    const selected = await page.getByRole('tab', { name: 'Подборки', exact: true }).boundingBox();
+    assert.ok(selected.x >= 0 && selected.x + selected.width <= 375);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('свайп папок закладок использует содержимое и сохраняет сортировку', async () => {
+  const run = await openPage('/bookmarks?sort=alphabetical&direction=asc&query=Тест', 375);
+  const { page } = run;
+  try {
+    await expect(page.getByPlaceholder('Поиск по названию')).toHaveValue('Тест');
+    const tabs = page.getByRole('tab');
+    const before = page.url();
+    const root = page.locator('main [data-swipeable-tabs]');
+    await swipeTabs(page.getByPlaceholder('Поиск по названию'));
+    await expect(page).toHaveURL(before);
+    await swipeTabs(root);
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/sort=alphabetical/);
+    await expect(page).toHaveURL(/direction=asc/);
+    await expect(page.getByPlaceholder('Поиск по названию')).toHaveValue('');
+    await swipeTabs(root, { dx: 100 });
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('быстрые свайпы папок отменяют ненужные запросы и сразу возвращают кеш', async () => {
+  const run = await openPage('/bookmarks', 375);
+  const { page } = run;
+  let release;
+  const gate = new Promise((resolve) => (release = resolve));
+  try {
+    const cards = page.locator('main a[href^="/title/"]');
+    await expect(cards.first()).toBeVisible();
+    const cardCount = await cards.count();
+    const tabs = page.getByRole('tab');
+    const root = page.locator('main [data-swipeable-tabs]');
+    const pending = [];
+    const aborted = [];
+    page.on('requestfailed', (request) => {
+      if (new URL(request.url()).pathname === '/api/v1/bookmarks') aborted.push(request);
+    });
+    await page.route('**/api/v1/bookmarks?*', async (route) => {
+      pending.push(route.request());
+      await gate;
+      await route.fallback();
+    });
+    // Ответы держим: следующие жесты должны работать независимо от скорости сети.
+    for (const index of [1, 2, 3]) {
+      await swipeTabs(root);
+      await expect(tabs.nth(index)).toHaveAttribute('aria-selected', 'true');
+      const folderId = new URL(page.url()).searchParams.get('folder');
+      // StrictMode может начать и сразу отменить пробный запрос при монтировании.
+      await expect
+        .poll(() =>
+          pending
+            .filter((request) => !aborted.includes(request))
+            .map((request) => new URL(request.url()).searchParams.get('folderId')),
+        )
+        .toEqual([folderId]);
+    }
+    await expect.poll(() => aborted.length).toBeGreaterThanOrEqual(2);
+    for (const index of [2, 1, 0]) {
+      await swipeTabs(root, { dx: 100 });
+      await expect(tabs.nth(index)).toHaveAttribute('aria-selected', 'true');
+    }
+    // Пока все незавершённые ответы удерживаются, первая папка уже видна из свежего кеша.
+    await expect(cards.first()).toBeVisible();
+    await expect(cards).toHaveCount(cardCount);
+    await expect.poll(() => aborted.length).toBe(pending.length);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    release();
+    await run.close();
+  }
+});
+
+test('серия свайпов до завершения отрисовки не теряет переключения', async () => {
+  const run = await openPage('/bookmarks', 375);
+  const { page } = run;
+  try {
+    const tabs = page.getByRole('tab');
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+    const root = page.locator('main [data-swipeable-tabs]');
+    await swipeTabs(root, { repeat: 3 });
+    await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(root, { repeat: 2, dx: 100 });
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+    // После обычного выбора продолжаем с выбранной папки, а не с прежней цели жеста.
+    await tabs.nth(2).click();
+    await expect(tabs.nth(2)).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(root, { dx: 100 });
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+    // 200 накопившихся жестов дают десять переходов, не очередь из 200 навигаций.
+    await page.evaluate(() => {
+      const replaceState = globalThis.history.replaceState.bind(globalThis.history);
+      globalThis.swipeHistoryWrites = 0;
+      globalThis.history.replaceState = (...args) => {
+        globalThis.swipeHistoryWrites++;
+        return replaceState(...args);
+      };
+    });
+    for (let round = 0; round < 5; round++) {
+      await swipeTabs(root, { repeat: 20 });
+      await expect(tabs.last()).toHaveAttribute('aria-selected', 'true');
+      await swipeTabs(root, { repeat: 20, dx: 100 });
+      await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+    }
+    assert.equal(await page.evaluate(() => globalThis.swipeHistoryWrites), 10);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('форма переноса закладки сбрасывает отменённый выбор и отправляет перенос при закрытии', async () => {
+  const run = await openPage('/bookmarks', 375);
+  const { page } = run;
+  try {
+    const action = page.getByRole('button', { name: 'Действия с тайтлом' }).first();
+    await action.click();
+    await page.getByRole('menuitem', { name: 'Перенести в папку', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('radio').nth(1).click();
+    await dialog.getByRole('button', { name: 'Отменить', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await action.click();
+    await page.getByRole('menuitem', { name: 'Перенести в папку', exact: true }).click();
+    await expect(dialog.getByRole('radio').first()).toHaveAttribute('aria-checked', 'true');
+    await dialog.getByRole('radio').nth(1).click();
+    const saved = page.waitForRequest(
+      (request) => request.method() === 'PUT' && request.url().endsWith('/bookmark'),
+    );
+    await dialog.getByRole('button', { name: 'Перенести', exact: true }).click();
+    assert.ok((await saved).postDataJSON().folderId);
+    await expect(dialog).toHaveCount(0);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+const makeBookmarkItems = (count) =>
+  Array.from({ length: count }, (_, index) => ({
+    ...fixtures.BOOKMARK_ITEM,
+    titleId: `readmanga_ru:stress-${index}`,
+    name: `Закладка ${index}`,
+    coverUrl: null,
+  }));
+
+for (const viewMode of ['grid', 'list', 'coverless']) {
+  test(`большая папка ограничивает DOM, прокручивается до конца и меняет ширину: ${viewMode}`, async (t) => {
+    const items = makeBookmarkItems(300);
+    const run = await openPage('/bookmarks', 375, async (page) => {
+      await page.addInitScript((viewMode) => {
+        globalThis.localStorage.setItem('tanuki-settings', JSON.stringify({ viewMode }));
+      }, viewMode);
+      await page.route('**/api/v1/user-settings', (route) =>
+        route.request().method() === 'GET'
+          ? route.fulfill({ json: { viewMode } })
+          : route.fallback(),
+      );
+      await page.route('**/api/v1/bookmarks?*', (route) =>
+        route.fulfill({ json: { items, page: 1, total: items.length } }),
+      );
+    });
+    const { page } = run;
+    try {
+      const cards = page.locator('main [data-title-card]');
+      const first = page.getByRole('link', { name: 'Закладка 0', exact: true });
+      const last = page.getByRole('link', { name: 'Закладка 299', exact: true });
+      await expect(first).toBeVisible();
+      await expect(cards.first()).toHaveAttribute('data-view-mode', viewMode);
+      t.diagnostic(`Карточек в DOM при 300 закладках: ${await cards.count()}`);
+      assert.ok((await cards.count()) < 80, 'Число смонтированных карточек ограничено экраном');
+      await page.evaluate(() => globalThis.scrollTo(0, globalThis.document.body.scrollHeight));
+      await expect(last).toBeVisible();
+      assert.ok((await cards.count()) < 80);
+      await page.evaluate(() => globalThis.scrollTo(0, 0));
+      await expect(first).toBeVisible();
+      for (const width of [1280, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        await expect(first).toBeVisible();
+        // Измерения высот доставляются ResizeObserver в следующем кадре.
+        await expect
+          .poll(() =>
+            cards.evaluateAll((elements) => {
+              const rows = new Map();
+              for (const element of elements) {
+                const row = element.parentElement;
+                rows.set(row, row.getBoundingClientRect());
+              }
+              const boxes = [...rows.values()].sort((a, b) => a.top - b.top);
+              const gap = parseFloat(globalThis.getComputedStyle([...rows.keys()][0]).rowGap);
+              return boxes.every(
+                (box, index) =>
+                  index === 0 || Math.abs(box.top - boxes[index - 1].bottom - gap) <= 1,
+              );
+            }),
+          )
+          .toBe(true);
+      }
+      await page.screenshot({ path: `/tmp/tanuki-bookmarks-${viewMode}.png` });
+      assert.deepEqual(run.errors, []);
+    } finally {
+      await run.close();
+    }
+  });
+}
+
+test('виртуализированные закладки догружают страницы и сохраняют начало списка', async () => {
+  const items = makeBookmarkItems(96);
+  const loaded = new Set();
+  const run = await openPage('/bookmarks', 375, async (page) => {
+    await page.route('**/api/v1/bookmarks?*', (route) => {
+      const number = Number(new URL(route.request().url()).searchParams.get('page'));
+      loaded.add(number);
+      return route.fulfill({
+        json: {
+          items: items.slice((number - 1) * 24, number * 24),
+          page: number,
+          total: items.length,
+        },
+      });
+    });
+  });
+  const { page } = run;
+  try {
+    await expect(page.getByRole('link', { name: 'Закладка 0', exact: true })).toBeVisible();
+    for (const number of [2, 3, 4]) {
+      await page.evaluate(() => globalThis.scrollTo(0, globalThis.document.body.scrollHeight));
+      await expect.poll(() => loaded.has(number)).toBe(true);
+      await expect(
+        page.getByRole('link', { name: `Закладка ${(number - 1) * 24}`, exact: true }),
+      ).toHaveCount(1);
+    }
+    await page.evaluate(() => globalThis.scrollTo(0, globalThis.document.body.scrollHeight));
+    await expect(page.getByRole('link', { name: 'Закладка 95', exact: true })).toBeVisible();
+    await page.evaluate(() => globalThis.scrollTo(0, 0));
+    await expect(page.getByRole('link', { name: 'Закладка 0', exact: true })).toBeVisible();
+    assert.ok((await page.locator('main [data-title-card]').count()) < 80);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('свайп возвращает из глав на описание тайтла с одной веткой', async () => {
+  const run = await openPage('/title/readmanga_ru:berserk', 375);
+  const { page } = run;
+  try {
+    const about = page.getByRole('tab', { name: 'О тайтле', exact: true });
+    const chapters = page.getByRole('tab', { name: 'Главы', exact: true });
+    await expect(about).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(page.locator('main [role="tabpanel"]:visible').first());
+    await expect(chapters).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(page.locator('main [role="tabpanel"]:visible').last(), { dx: 100 });
+    await expect(about).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/tab=info/);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('вложенные ветки глав передают свайп вкладкам тайтла на своей границе', async () => {
+  const run = await openPage('/title/readmanga_ru:berserk?tab=chapters', 375, async (page) => {
+    await page.route('**/api/v1/titles/readmanga_ru:berserk', async (route) => {
+      const { TITLE_DETAILS_RESPONSE: details } = await server.ssrLoadModule(
+        '/src/shared/storybook/titles.ts',
+      );
+      await route.fulfill({
+        json: {
+          ...details,
+          branches: [details.branches[0], { ...details.branches[0], id: 'second', name: 'Вторая' }],
+        },
+      });
+    });
+  });
+  const { page } = run;
+  try {
+    const chapters = page.getByRole('tab', { name: 'Главы', exact: true });
+    const secondBranch = page.getByRole('tab', { name: /Вторая/ });
+    await expect(secondBranch).toBeVisible();
+    const branches = page.locator('[data-swipeable-tabs] [data-swipeable-tabs]');
+    await swipeTabs(branches);
+    await expect(secondBranch).toHaveAttribute('aria-selected', 'true');
+    await expect(chapters).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(branches);
+    await expect(chapters).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(branches, { dx: 100 });
+    await expect(secondBranch).toHaveAttribute('aria-selected', 'false');
+    await expect(chapters).toHaveAttribute('aria-selected', 'true');
+    await swipeTabs(branches, { dx: 100 });
+    await expect(page.getByRole('tab', { name: 'О тайтле', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page).toHaveURL(/tab=info/);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('свайп разделов подборок меняет раздел в URL', async () => {
+  const run = await openPage('/selections?source=readmanga_ru', 375);
+  const { page } = run;
+  try {
+    const tabs = page.getByRole('tab');
+    await expect(tabs.nth(1)).toBeVisible();
+    const root = page.locator('main [data-swipeable-tabs]');
+    await swipeTabs(root);
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/section=/);
+    await swipeTabs(root, { dx: 100 });
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('pull-to-refresh закладок обновляет папки и карточки, сохраняет параметры и ждёт ответ', async () => {
+  const run = await openPage('/bookmarks?sort=alphabetical&direction=asc&query=Тест', 375);
+  const { page, requests } = run;
+  try {
+    await expect(page.locator('a[href^="/title/"]').first()).toBeVisible();
+    const saved = page.url();
+    const count = (path) => requests.filter((url) => url.pathname === path).length;
+    const foldersBefore = count('/api/v1/bookmark-folders');
+    const cardsBefore = count('/api/v1/bookmarks');
+    let release;
+    const responseGate = new Promise((resolve) => (release = resolve));
+    await page.route('**/api/v1/bookmark-folders', async (route) => {
+      await responseGate;
+      await route.fallback();
+    });
+    let navigations = 0;
+    page.on('framenavigated', () => navigations++);
+    await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+    await pullToRefresh(page);
+    try {
+      await expect.poll(() => count('/api/v1/bookmarks')).toBe(cardsBefore + 1);
+      // Медленный ответ не снимает блокировку через прежние фиксированные 500 мс.
+      await page.waitForTimeout(650);
+      await pullToRefresh(page);
+      assert.equal(count('/api/v1/bookmarks'), cardsBefore + 1);
+      await expect(page.locator('.mantine-Center-root > .mantine-Loader-root')).toBeVisible();
+    } finally {
+      release();
+    }
+    await expect.poll(() => count('/api/v1/bookmark-folders')).toBe(foldersBefore + 1);
+    await expect(page.locator('a[href^="/title/"]').first()).toBeVisible();
+    await expect(page).toHaveURL(saved);
+    await expect(page.getByPlaceholder('Поиск по названию')).toHaveValue('Тест');
+    const last = requests.filter((url) => url.pathname === '/api/v1/bookmarks').at(-1);
+    assert.equal(last.searchParams.get('sort'), 'alphabetical');
+    assert.equal(last.searchParams.get('direction'), 'asc');
+    assert.equal(last.searchParams.get('query'), 'Тест');
+    assert.equal(navigations, 0);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('pull-to-refresh не срабатывает при коротком, горизонтальном и отменённом жесте или в поле', async () => {
+  const run = await openPage('/bookmarks', 375);
+  const { page, requests } = run;
+  try {
+    await expect(page.locator('a[href^="/title/"]').first()).toBeVisible();
+    const before = requests.length;
+    await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+    await pullToRefresh(page, { dy: 50 });
+    await pullToRefresh(page, { dx: 240 });
+    await pullToRefresh(page, { cancel: true });
+    await pullToRefresh(page, { selector: 'input' });
+    await page.waitForTimeout(100);
+    assert.equal(requests.length, before);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+test('pull-to-refresh каталога сохраняет обход серверного кеша', async () => {
+  const run = await openPage('/catalog/readmanga_ru', 375);
+  const { page, requests } = run;
+  try {
+    await expect(page.locator('a[href^="/title/"]').first()).toBeVisible();
+    await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+    await pullToRefresh(page);
+    await expect
+      .poll(() =>
+        requests.some(
+          (url) => url.pathname.endsWith('/titles') && url.searchParams.get('refresh') === 'true',
+        ),
+      )
+      .toBe(true);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
+
+for (const { name, path, ready, paths } of [
+  {
+    name: 'главной',
+    path: '/',
+    ready: 'main a[href^="/title/"]',
+    paths: ['/api/v1/reading-progress/recent', '/api/v1/bookmarks/new-chapters'],
+  },
+  {
+    name: 'уведомлений',
+    path: '/notifications?categories=chapters',
+    ready: 'main a[href^="/title/"]',
+    paths: [
+      '/api/v1/notifications',
+      '/api/v1/notifications/unread-count',
+      '/api/v1/notifications/push/config',
+    ],
+  },
+  {
+    name: 'источников',
+    path: '/sources',
+    ready: 'main a[href^="/catalog/"]',
+    paths: ['/api/v1/sources'],
+  },
+  {
+    name: 'здоровья источников',
+    path: '/sources/health?status=ok&sort=title&direction=desc',
+    ready: 'main tbody tr',
+    paths: ['/api/v1/sources'],
+  },
+  {
+    name: 'подборок',
+    path: '/selections?source=nudemoon&section=popular&variant=2026-11&order=likes',
+    ready: 'main a[href^="/title/"]',
+    paths: ['/api/v1/sources', '/api/v1/user-settings', '/api/v1/selections/nudemoon/popular'],
+  },
+  {
+    name: 'тайтла',
+    path: '/title/readmanga_ru:berserk?tab=chapters&direction=asc',
+    ready: 'main .mantine-Tabs-tab',
+    paths: [
+      '/api/v1/titles/readmanga_ru:berserk',
+      '/api/v1/titles/readmanga_ru:berserk/chapters',
+      '/api/v1/titles/readmanga_ru:berserk/progress',
+      '/api/v1/titles/readmanga_ru:berserk/bookmark',
+    ],
+  },
+]) {
+  test(`pull-to-refresh ${name} обновляет все блоки и сохраняет адрес`, async () => {
+    const run = await openPage(path, 375);
+    const { page, requests } = run;
+    const count = (path) => requests.filter((url) => decodeURI(url.pathname) === path).length;
+    try {
+      await expect(page.locator(ready).first()).toBeVisible();
+      await expect.poll(() => paths.every((path) => count(path) > 0)).toBe(true);
+      await expect(page.locator('main .mantine-Skeleton-root')).toHaveCount(0);
+      const saved = page.url();
+      const before = paths.map(count);
+      const visitsBefore = requests.filter((url) =>
+        url.pathname.endsWith('/bookmark/visit'),
+      ).length;
+      await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+      await pullToRefresh(page);
+      for (const [index, path] of paths.entries()) {
+        await expect.poll(() => count(path), `Не обновился ${path}`).toBeGreaterThan(before[index]);
+      }
+      await expect(page.locator(ready).first()).toBeVisible();
+      await expect(page.locator('main .mantine-Skeleton-root')).toHaveCount(0);
+      await expect(page).toHaveURL(saved);
+      assert.equal(
+        requests.filter((url) => url.pathname.endsWith('/bookmark/visit')).length,
+        visitsBefore,
+      );
+      assert.equal(
+        requests.some((url) => url.pathname.endsWith('/probe')),
+        false,
+      );
+      assert.deepEqual(run.errors, []);
+    } finally {
+      await run.close();
+    }
+  });
+}
+
+test('pull-to-refresh не перехватывает прокрутку списка глав', async () => {
+  const run = await openPage('/title/readmanga_ru:berserk?tab=chapters', 375);
+  const { page, requests } = run;
+  try {
+    const list = page.locator('main .mantine-ScrollArea-viewport');
+    await expect(list).toBeVisible();
+    await expect(page.locator('main .mantine-Skeleton-root')).toHaveCount(0);
+    await list.evaluate((element) => {
+      element.scrollTop = 50;
+    });
+    await page.evaluate(() => globalThis.window.scrollTo(0, 0));
+    const before = requests.filter((url) => url.pathname.includes('/titles/')).length;
+    await pullToRefresh(page, { selector: 'main .mantine-ScrollArea-viewport' });
+    await page.waitForTimeout(100);
+    assert.equal(requests.filter((url) => url.pathname.includes('/titles/')).length, before);
+    assert.deepEqual(run.errors, []);
+  } finally {
+    await run.close();
+  }
+});
 
 for (const width of [1280, 375]) {
   test(`закладки сохраняют сортировку между папками, после тайтла и перезагрузки, ${width}px`, async () => {

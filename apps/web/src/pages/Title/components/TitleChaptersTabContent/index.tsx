@@ -1,6 +1,7 @@
 import { EmptyState, Group, Scroller, Stack, Tabs, Text } from '@mantine/core';
 import { EmptyIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 import type { Branch } from '@tanuki/contracts';
 import { PRIMARY_COLOR } from '@/shared/lib/palette';
 import PageLayout from '@/shared/ui/PageLayout';
@@ -31,7 +32,8 @@ function TitleChaptersTabContent({ branches, titleId }: Props) {
   }
 
   return (
-    <Tabs
+    <SwipeableTabs
+      swipeEnabled={branches.length > 1}
       variant="tile"
       value={activeTab}
       onChange={(branchId) => setParams({ ...params, branchId })}
@@ -63,7 +65,7 @@ function TitleChaptersTabContent({ branches, titleId }: Props) {
           <TitleChaptersList branch={branch} key={branch.id} titleId={titleId} />
         ))}
       </Stack>
-    </Tabs>
+    </SwipeableTabs>
   );
 }
 

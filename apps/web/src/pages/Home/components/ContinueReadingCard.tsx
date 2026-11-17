@@ -1,4 +1,5 @@
 import { EyeSlashIcon } from '@phosphor-icons/react';
+import { Box } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import type { ContinueReadingItem } from '@tanuki/contracts';
 import TitleCard from '@/entities/title/card/TitleCard/TitleCard';
@@ -11,35 +12,44 @@ type Props = {
   onRemove: () => void;
 };
 
-/** Карточка C1a — та же, что в каталоге: обложка с лентой источника, «Гл. 12 · 2 дня назад»,
+/** Карточка C1a — та же, что в каталоге: обложка с лентой источника, «Гл. 12 · 2 дн.»,
  *  название; «⋯» на высоте мета-строки. */
 function ContinueReadingCard({ item, onRemove }: Props) {
   const { t } = useTranslation();
-  const { formatRelative } = useDateFormat();
+  const { formatRelative, formatDateTime } = useDateFormat();
 
   return (
-    <TitleCard
-      data={item.title}
-      showSource
-      meta={
-        <TitleMetaItems
-          gap={4}
-          items={[
-            <ContinueChapter key="chapter" chapter={item.chapter} />,
-            formatRelative(item.updatedAt),
-          ]}
-        />
-      }
-      actions={[
-        {
-          id: 'removeFromContinueReading',
-          children: t('removeFromContinueReading'),
-          leftSection: <EyeSlashIcon />,
-          color: 'red',
-          onClick: onRemove,
-        },
-      ]}
-    />
+    <Box title={formatDateTime(item.updatedAt) ?? undefined}>
+      <TitleCard
+        data={item.title}
+        showSource
+        meta={
+          <TitleMetaItems
+            gap={4}
+            items={[
+              <ContinueChapter key="chapter" chapter={item.chapter} />,
+              <Box
+                key="updatedAt"
+                component="time"
+                dateTime={item.updatedAt}
+                aria-label={formatRelative(item.updatedAt) ?? undefined}
+              >
+                {formatRelative(item.updatedAt, { compact: true })}
+              </Box>,
+            ]}
+          />
+        }
+        actions={[
+          {
+            id: 'removeFromContinueReading',
+            children: t('removeFromContinueReading'),
+            leftSection: <EyeSlashIcon />,
+            color: 'red',
+            onClick: onRemove,
+          },
+        ]}
+      />
+    </Box>
   );
 }
 

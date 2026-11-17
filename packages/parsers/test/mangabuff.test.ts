@@ -11,7 +11,11 @@ import {
 } from '@tanuki/contracts';
 import { createMangaBuffParser, MANGABUFF_FILTER_GROUP } from '../src/sources/mangabuff';
 import { loginMangaBuff } from '../src/sources/mangabuff/auth';
-import { runWithSourceAccounts, type SourceAccountSession } from '../src/core/source-accounts';
+import {
+  currentSourceAccount,
+  runWithSourceAccounts,
+  type SourceAccountSession,
+} from '../src/core/source-accounts';
 import { SourceAuthRequiredError, SourceBlockedError, SourceUnavailableError } from '../src/errors';
 import { SOURCE_ID } from '../src/sources/catalog';
 import type { ParserContext } from '../src/core/parser';
@@ -78,6 +82,17 @@ const DETAILS_HTML = `<!doctype html><html><body>
     <span class="chapters__add-date">01.01.2024</span>
   </a>
 </body></html>`;
+
+const detailsWithMoreChapters = (token: string | null) =>
+  DETAILS_HTML.replace(
+    '<html><body>',
+    `<html><head>${token === null ? '' : `<meta name="csrf-token" content="${token}">`}</head><body>`,
+  ).replace('</body>', '<div class="load-chapters-trigger"></div></body>');
+
+const MORE_CHAPTERS_JSON = JSON.stringify({
+  content:
+    '<a class="chapters__item" href="/manga/one-piece/0"><span class="chapters__value">Глава 0</span></a>',
+});
 
 const PAGES_HTML = `<!doctype html><html><body>
   <div class="reader__pages">
@@ -191,6 +206,118 @@ const setUpFixtures = (): FakeHttpClient => {
   http.register((url) => url.includes('/search?'), { status: 200, body: LIST_HTML });
   return http;
 };
+
+describe('MangaBuff chapter loading sessions', () => {
+  it('uses each details page token for sequential and concurrent service/user requests', async () => {
+    const http = new FakeHttpClient();
+    const currentToken = () =>
+      currentSourceAccount(SOURCE_AUTH_FAMILY.MANGABUFF)?.credentials?.username ?? 'service';
+    http.register(
+      (url) => url.endsWith('/manga/one-piece'),
+      () => ({
+        status: 200,
+        body: detailsWithMoreChapters(currentToken()),
+      }),
+    );
+    http.register((url) => url.endsWith('/chapters/load'), {
+      status: 200,
+      body: MORE_CHAPTERS_JSON,
+    });
+    const parser = createMangaBuffParser(makeContext(http));
+    const loadAs = (username: string) =>
+      runWithSourceAccounts(
+        { [SOURCE_AUTH_FAMILY.MANGABUFF]: { credentials: { username, password: 'secret' } } },
+        () => parser.getDetails('/manga/one-piece'),
+      );
+
+    await parser.getDetails('/manga/one-piece');
+    await loadAs('first-user');
+    const titles = await Promise.all([loadAs('second-user'), loadAs('third-user')]);
+    const posts = http.requests.filter(({ url }) => url.endsWith('/chapters/load'));
+    expect(posts.map(({ headers }) => headers['X-CSRF-TOKEN'])).toEqual([
+      'service',
+      'first-user',
+      'second-user',
+      'third-user',
+    ]);
+    expect(posts.every(({ body }) => body === 'manga_id=42')).toBe(true);
+    expect(http.requests).toHaveLength(8);
+    for (const title of titles) {
+      expect(title.chapters?.map(({ number }) => number)).toEqual([0, 1, 2]);
+    }
+  });
+
+  it('refreshes an expired token once in the same session', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.endsWith('/manga/one-piece'), {
+      status: 200,
+      body: detailsWithMoreChapters('expired'),
+    });
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: '<html><head><meta name="csrf-token" content="fresh"></head></html>',
+    });
+    let attempts = 0;
+    http.register(
+      (url) => url.endsWith('/chapters/load'),
+      () =>
+        ++attempts === 1
+          ? { status: 419, body: 'Page Expired' }
+          : { status: 200, body: MORE_CHAPTERS_JSON },
+    );
+    const parser = createMangaBuffParser(makeContext(http));
+
+    const title = await parser.getDetails('/manga/one-piece');
+    expect(title.chapters).toHaveLength(3);
+    const posts = http.requests.filter(({ url }) => url.endsWith('/chapters/load'));
+    expect(posts.map(({ headers }) => headers['X-CSRF-TOKEN'])).toEqual(['expired', 'fresh']);
+    expect(http.requests).toHaveLength(4);
+  });
+
+  it('falls back to a fresh homepage token when the details page has none', async () => {
+    const http = new FakeHttpClient();
+    http.register((url) => url.endsWith('/manga/one-piece'), {
+      status: 200,
+      body: detailsWithMoreChapters(null),
+    });
+    http.register((url) => url === `https://${DOMAIN}/`, {
+      status: 200,
+      body: '<html><head><meta name="csrf-token" content="fallback"></head></html>',
+    });
+    http.register((url) => url.endsWith('/chapters/load'), {
+      status: 200,
+      body: MORE_CHAPTERS_JSON,
+    });
+    const parser = createMangaBuffParser(makeContext(http));
+
+    await parser.getDetails('/manga/one-piece');
+    expect(http.requests.at(-1)?.headers['X-CSRF-TOKEN']).toBe('fallback');
+  });
+
+  it.each([419, 503])(
+    'limits retries when chapter loading keeps returning HTTP %i',
+    async (status) => {
+      const http = new FakeHttpClient();
+      http.register((url) => url.endsWith('/manga/one-piece'), {
+        status: 200,
+        body: detailsWithMoreChapters('page-token'),
+      });
+      http.register((url) => url === `https://${DOMAIN}/`, {
+        status: 200,
+        body: '<html><head><meta name="csrf-token" content="retry-token"></head></html>',
+      });
+      http.register((url) => url.endsWith('/chapters/load'), { status, body: 'Unavailable' });
+      const parser = createMangaBuffParser(makeContext(http));
+
+      await expect(parser.getDetails('/manga/one-piece')).rejects.toThrow(
+        `Upstream HTTP ${status}`,
+      );
+      expect(http.requests.filter(({ url }) => url.endsWith('/chapters/load'))).toHaveLength(
+        status === 419 ? 2 : 1,
+      );
+    },
+  );
+});
 
 describe('MangaBuff parser conformance', () => {
   const http = setUpFixtures();

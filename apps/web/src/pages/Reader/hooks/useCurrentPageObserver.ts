@@ -12,6 +12,8 @@ type Params = {
   /** В горизонтальном режиме страница на экране ровно одна и выбирают её кликами — следить за
    *  скроллом там не за чем. */
   enabled: boolean;
+  /** Enlarging the reading surface must not advance progress or reset the current zoom. */
+  paused?: boolean;
   onChange: (position: ReaderPosition) => void;
 };
 
@@ -23,7 +25,7 @@ type Params = {
  * Заодно хук держит реестр отрисованных страниц — по нему же делается прокрутка к нужной странице
  * при смене режима и при переходе к уже загруженной главе.
  */
-function useCurrentPageObserver({ enabled, onChange }: Params) {
+function useCurrentPageObserver({ enabled, paused = false, onChange }: Params) {
   const elements = useRef(new Map<string, HTMLElement>());
   const observer = useRef<IntersectionObserver | null>(null);
   /** Страница, к которой просили прокрутить, пока её ещё не отрисовали, — так бывает при входе
@@ -91,6 +93,8 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
       return;
     }
 
+    if (paused) return;
+
     const current = new IntersectionObserver(
       (entries) => {
         const centered = entries.find((entry) => entry.isIntersecting);
@@ -109,7 +113,7 @@ function useCurrentPageObserver({ enabled, onChange }: Params) {
       current.disconnect();
       observer.current = null;
     };
-  }, [enabled, onChange]);
+  }, [enabled, paused, onChange]);
 
   const registerPage = useCallback(
     (element: HTMLElement | null) => {

@@ -142,7 +142,8 @@ export class TitleLinksService {
   /**
    * Все тайтлы, связанные с этим цепочкой подтверждений: 1↔2 и 2↔3 значат, что 1, 2 и 3 — один
    * тайтл. Сам titleId в ответ не входит. Прямые отказы здесь не учитываются — их снимает
-   * excludeRejected, потому что отказ касается только той пары, между которой поставлен.
+   * excludeRejected. При новом отказе set исключает цель из всей группы и сохраняет связи
+   * между оставшимися тайтлами.
    *
    * UNION (а не UNION ALL) отбрасывает уже посещённые ключи, поэтому обход кольца
    * 1↔2↔3↔1 заканчивается сам. База недоступна — пустая группа, как и в listFor.
@@ -218,7 +219,8 @@ export class TitleLinksService {
 
   /**
    * Ставит или снимает пометку. TITLE_LINK_VERDICT.NONE удаляет запись, возвращая пару к тому,
-   * что скажет алгоритм.
+   * что скажет алгоритм. REJECTED исключает targetId из всей подтверждённой группы titleId,
+   * сохраняя оставшуюся группу даже тогда, когда её части соединялись только через targetId.
    *
    * В отличие от чтения, недоступность базы здесь превращается в ошибку: пользователь должен
    * узнать, что его правка не сохранилась.
@@ -234,21 +236,88 @@ export class TitleLinksService {
     const [aName, bName] = aId === titleId ? [titleName, targetName] : [targetName, titleName];
 
     const applied = await this.database.withFallback(async () => {
-      if (verdict === TITLE_LINK_VERDICT.NONE) {
-        await this.database.db
-          .delete(titleLinks)
-          .where(and(eq(titleLinks.aId, aId), eq(titleLinks.bId, bId)));
-        return true;
-      }
+      switch (verdict) {
+        case TITLE_LINK_VERDICT.NONE: {
+          await this.database.db
+            .delete(titleLinks)
+            .where(and(eq(titleLinks.aId, aId), eq(titleLinks.bId, bId)));
+          return true;
+        }
 
-      await this.database.db
-        .insert(titleLinks)
-        .values({ aId, bId, aName, bName, verdict })
-        .onConflictDoUpdate({
-          target: [titleLinks.aId, titleLinks.bId],
-          set: { verdict, aName, bName, updatedAt: sql`now()` },
-        });
-      return true;
+        case TITLE_LINK_VERDICT.REJECTED: {
+          await this.database.db.transaction(async (tx) => {
+            // Состав группы не должен меняться между чтением и записью отказов. Блокировка
+            // сериализует редкие ручные правки, но не мешает читать связи.
+            await tx.execute(sql`LOCK TABLE title_links IN SHARE ROW EXCLUSIVE MODE`);
+            const group = await tx.execute<{ key: string; name: string; rejected: boolean }>(sql`
+            WITH RECURSIVE title_group(key, name) AS (
+              SELECT ${titleId}::text, ${titleName}::text
+              UNION
+              SELECT
+                CASE WHEN link.a_id = title_group.key THEN link.b_id ELSE link.a_id END,
+                CASE WHEN link.a_id = title_group.key THEN link.b_name ELSE link.a_name END
+              FROM title_links AS link
+              JOIN title_group ON link.a_id = title_group.key OR link.b_id = title_group.key
+              WHERE link.verdict = ${TITLE_LINK_VERDICT.CONFIRMED}
+            )
+            SELECT DISTINCT ON (key) key, name, key IN (
+              SELECT CASE WHEN a_id = ${titleId} THEN b_id ELSE a_id END
+              FROM title_links
+              WHERE (a_id = ${titleId} OR b_id = ${titleId})
+                AND verdict = ${TITLE_LINK_VERDICT.REJECTED}
+            ) AS rejected FROM title_group
+          `);
+            const remaining = group.filter(({ key }) => key !== targetId && key !== titleId);
+            const rows: (typeof titleLinks.$inferInsert)[] = [{ aId, bId, aName, bName, verdict }];
+            const wasLinked = group.some(({ key }) => key === targetId);
+            for (const member of remaining) {
+              if (member.rejected && !wasLinked) continue;
+              const [rejectedA, rejectedB] = orderPair(member.key, targetId);
+              rows.push({
+                aId: rejectedA,
+                bId: rejectedB,
+                aName: rejectedA === member.key ? member.name : targetName,
+                bName: rejectedB === member.key ? member.name : targetName,
+                verdict,
+              });
+              if (wasLinked && !member.rejected) {
+                const [keptA, keptB] = orderPair(titleId, member.key);
+                rows.push({
+                  aId: keptA,
+                  bId: keptB,
+                  aName: keptA === titleId ? titleName : member.name,
+                  bName: keptB === titleId ? titleName : member.name,
+                  verdict: TITLE_LINK_VERDICT.CONFIRMED,
+                });
+              }
+            }
+            await tx
+              .insert(titleLinks)
+              .values(rows)
+              .onConflictDoUpdate({
+                target: [titleLinks.aId, titleLinks.bId],
+                set: {
+                  verdict: sql`excluded.verdict`,
+                  aName: sql`excluded.a_name`,
+                  bName: sql`excluded.b_name`,
+                  updatedAt: sql`now()`,
+                },
+              });
+          });
+          return true;
+        }
+
+        case TITLE_LINK_VERDICT.CONFIRMED: {
+          await this.database.db
+            .insert(titleLinks)
+            .values({ aId, bId, aName, bName, verdict })
+            .onConflictDoUpdate({
+              target: [titleLinks.aId, titleLinks.bId],
+              set: { verdict, aName, bName, updatedAt: sql`now()` },
+            });
+          return true;
+        }
+      }
     }, false);
 
     if (!applied) throw new StorageUnavailableException();

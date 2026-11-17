@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AppShell } from '@mantine/core';
 import { useParams } from 'react-router';
 import { DEFAULT_READER_SETTINGS, READER_READING_MODE } from '@tanuki/contracts';
@@ -10,7 +11,7 @@ import { getReaderPageStep, getVisiblePageEnd } from './navigation';
 import ReaderHeader from './components/ReaderHeader';
 import ReaderMobileControls from './components/ReaderMobileControls';
 import ReaderPages from './components/ReaderPages';
-import { HEADER_HEIGHT } from '@/shared/lib/appShell';
+import { APP_SHELL_HEADER } from '@/shared/lib/appShell';
 import useReaderFeed from './hooks/useReaderFeed';
 import useReaderHeaderVisibility from './hooks/useReaderHeaderVisibility';
 import useReaderSettings from '@/entities/reader/hooks/useReaderSettings';
@@ -21,6 +22,7 @@ import useSkeletonTiming from '@/shared/ui/QueryBlock/hooks/useSkeletonTiming';
 
 function Reader() {
   const { titleId = '', chapterId = '' } = useParams<{ titleId: string; chapterId: string }>();
+  const [zoomed, setZoomed] = useState(false);
   const settingsQuery = useReaderSettings();
   const { data: readerSettings } = settingsQuery;
   const settingsTiming = useSkeletonTiming(settingsQuery);
@@ -44,6 +46,7 @@ function Reader() {
   } = useReaderFeed({
     titleId,
     chapterId,
+    zoomed,
     readingMode: settings.readingMode,
     autoNextChapter: settingsReady && settings.autoNextChapter,
     pageStep,
@@ -107,7 +110,7 @@ function Reader() {
   // показ/скрытие меняло бы доступную высоту, а с ней и размер страницы в режиме «страница
   // целиком»: картинка масштабировалась бы на каждое переключение шапки.
   return (
-    <AppShell header={{ height: HEADER_HEIGHT, collapsed: !visible, offset: false }}>
+    <AppShell header={{ ...APP_SHELL_HEADER, collapsed: !visible, offset: false }}>
       <ReaderHeader
         titleId={titleId}
         chapterId={position.chapterId}
@@ -129,6 +132,7 @@ function Reader() {
         loading={!settingsReady}
         registerPage={registerPage}
         onTap={toggle}
+        onZoomChange={setZoomed}
         isChapterUnavailable={isChapterUnavailable}
       />
       <ReaderMobileControls

@@ -23,6 +23,7 @@ type Props = {
   navigation: ReturnType<typeof useHorizontalReaderNavigation>;
   registerPage: (element: HTMLElement | null) => (() => void) | undefined;
   onTap: () => void;
+  onZoomChange: (zoomed: boolean) => void;
   isChapterUnavailable: (chapterId: string) => boolean;
 };
 
@@ -36,6 +37,7 @@ function ReaderPages({
   navigation,
   registerPage,
   onTap,
+  onZoomChange,
   isChapterUnavailable,
 }: Props) {
   const horizontal = settings.readingMode === READER_READING_MODE.HORIZONTAL;
@@ -60,12 +62,13 @@ function ReaderPages({
   });
   const rtl = settings.direction === READER_DIRECTION.RTL;
   const activeKey = `${position.chapterId}#${position.pageIndex}`;
-  const gestures = useReaderGestures({
+  const { bindings, contentRef, viewportRef, touchAction } = useReaderGestures({
     horizontal,
     positionKey: `${horizontal}:${pageStep}:${activeKey}`,
     onLeft: rtl ? navigation.goNext : navigation.goPrev,
     onRight: rtl ? navigation.goPrev : navigation.goNext,
     onTap,
+    onZoomChange,
     tapZoneWidth: settings.tapZoneWidth,
   });
   const mainChapter = horizontal
@@ -86,8 +89,9 @@ function ReaderPages({
   return (
     <AppShell.Main
       bg="var(--mantine-color-body)"
-      {...gestures.bindings}
-      style={{ touchAction: gestures.touchAction, overflowX: 'clip' }}
+      ref={viewportRef}
+      {...bindings}
+      style={{ touchAction, overflow: 'clip' }}
     >
       <PageLayout.Content
         fluid
@@ -101,49 +105,52 @@ function ReaderPages({
         }
         offline={<ReaderChapterUnavailable />}
       >
-        {horizontal ? (
-          navigation.isChapterEndShown && activeChapter ? (
-            <Center mih="100dvh">
-              <ReaderChapterEnd
-                titleId={titleId}
-                nextChapterId={activeChapter.nextChapterId}
-                isNextUnavailable={Boolean(
-                  activeChapter.nextChapterId && isChapterUnavailable(activeChapter.nextChapterId),
-                )}
-              />
-            </Center>
-          ) : (
-            <ReaderSpread
-              chapter={activeChapter}
-              settings={settings}
-              position={position}
-              pageStep={pageStep}
-              window={pageWindow}
-              transform={gestures.transform}
-            />
-          )
-        ) : (
-          <Stack gap={settings.chapterGap} mih="100dvh">
-            {displayedChapters.map((chapter) => (
-              <Box key={chapter.chapterId}>
-                <ReaderVerticalChapter
-                  chapter={chapter}
-                  settings={settings}
-                  window={pageWindow}
-                  loaded={loaded}
-                  activeKey={activeKey}
-                  transform={gestures.transform}
+        <Box
+          ref={contentRef}
+          style={{ transform: 'translate(0px, 0px) scale(1)', transformOrigin: '0 0' }}
+        >
+          {horizontal ? (
+            navigation.isChapterEndShown && activeChapter ? (
+              <Center mih="100dvh">
+                <ReaderChapterEnd
+                  titleId={titleId}
+                  nextChapterId={activeChapter.nextChapterId}
+                  isNextUnavailable={Boolean(
+                    activeChapter.nextChapterId &&
+                    isChapterUnavailable(activeChapter.nextChapterId),
+                  )}
                 />
-              </Box>
-            ))}
-            <ReaderFeedFooter
-              titleId={titleId}
-              chapter={displayedChapters.at(-1)}
-              autoNextChapter={settings.autoNextChapter}
-              isChapterUnavailable={isChapterUnavailable}
-            />
-          </Stack>
-        )}
+              </Center>
+            ) : (
+              <ReaderSpread
+                chapter={activeChapter}
+                settings={settings}
+                position={position}
+                pageStep={pageStep}
+                window={pageWindow}
+              />
+            )
+          ) : (
+            <Stack gap={settings.chapterGap} mih="100dvh">
+              {displayedChapters.map((chapter) => (
+                <Box key={chapter.chapterId}>
+                  <ReaderVerticalChapter
+                    chapter={chapter}
+                    settings={settings}
+                    window={pageWindow}
+                    loaded={loaded}
+                  />
+                </Box>
+              ))}
+              <ReaderFeedFooter
+                titleId={titleId}
+                chapter={displayedChapters.at(-1)}
+                autoNextChapter={settings.autoNextChapter}
+                isChapterUnavailable={isChapterUnavailable}
+              />
+            </Stack>
+          )}
+        </Box>
       </PageLayout.Content>
     </AppShell.Main>
   );

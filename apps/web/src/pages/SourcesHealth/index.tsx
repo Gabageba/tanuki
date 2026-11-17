@@ -16,6 +16,7 @@ function SourcesHealth() {
 
   return (
     <PageLayout useQuery={useSourcesHealth}>
+      <PageLayout.PullToRefresh />
       <PageLayout.Content
         title={t('sourcesHealth')}
         actions={isStaff && <ProbeAllButton />}

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useListNavigation from '@/shared/hooks/useListNavigation';
 import { ROUTE_PATHS } from '@/shared/lib/routes';
+import { FOOTER_SAFE_AREA_PADDING } from '@/shared/lib/appShell';
 import useBookmarkFolders from '@/entities/bookmark/hooks/useBookmarkFolders';
 import UnreadNotificationsIndicator from '@/entities/notification/UnreadNotificationsIndicator';
 import { closeAllDrawers } from '@/shared/lib/drawerRegistry';
@@ -61,7 +62,17 @@ function Footer() {
   };
 
   return (
-    <AppShell.Footer data-toast-footer hiddenFrom="md" withBorder className={styles.footer}>
+    <AppShell.Footer
+      data-toast-footer
+      hiddenFrom="md"
+      withBorder
+      // Высота AppShell уже включает safe area; не прибавляем её повторно стилем Mantine.
+      h="var(--app-shell-footer-height)"
+      pb={FOOTER_SAFE_AREA_PADDING}
+      pl="env(safe-area-inset-left, 0px)"
+      pr="env(safe-area-inset-right, 0px)"
+      className={styles.footer}
+    >
       <Group h="100%" px="xs" gap={4} onClick={closeAllDrawers}>
         <MobileNavigationButton
           onClick={() => navigateFromFooter(ROUTE_PATHS.HOME, isHomeActive)}

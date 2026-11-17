@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
+import { QueryTransitionContext } from '../context';
 import { getQueryLoad, scrollBlockIntoView } from '../lib';
 import { SKELETON_DELAY_MS, SKELETON_MIN_MS, type LoadingQuery } from '../models';
 
@@ -12,17 +13,26 @@ import { SKELETON_DELAY_MS, SKELETON_MIN_MS, type LoadingQuery } from '../models
  * `ref` — на корень блока, к нему прокручивается.
  */
 function useSkeletonTiming<TElement extends HTMLElement>(query: LoadingQuery) {
-  const { isOffline, isFailed, isEmptyWait, isStaleWait } = getQueryLoad(query);
+  const isTransitioning = useContext(QueryTransitionContext);
+  const load = getQueryLoad(query);
+  const isOffline = !isTransitioning && load.isOffline;
+  const isFailed = !isTransitioning && load.isFailed;
+  const isEmptyWait = isTransitioning || load.isEmptyWait;
+  const isStaleWait = !isTransitioning && load.isStaleWait;
   const isWaiting = isEmptyWait || isStaleWait;
   const ref = useRef<TElement>(null);
-  // Устаревшие данные при монтировании: скелетон сразу, без задержки и без прокрутки.
-  const [isMountWait, setIsMountWait] = useState(isStaleWait);
+  // После перехода, как при монтировании, старые данные не возвращаются из-под скелетона.
+  const [isMountWait, setIsMountWait] = useState(isTransitioning || load.isStaleWait);
   // Когда появился скелетон после задержки; null — не показан.
   const [delayedSince, setDelayedSince] = useState<number | null>(null);
 
-  if (isMountWait && !isWaiting) {
+  if (isTransitioning && !isMountWait) {
+    setIsMountWait(true);
+  } else if (isMountWait && !isWaiting) {
     setIsMountWait(false);
   }
+  // Минимальное время скелетона прежних параметров не задерживает новый готовый контент.
+  if (isTransitioning && delayedSince !== null) setDelayedSince(null);
 
   useEffect(() => {
     if (isWaiting) {

@@ -377,6 +377,8 @@
 - Storybook (`pnpm storybook`, `apps/web/.storybook`) shows real components in states that are
   hard to reach in the running app: modals and their steps, drawers, toasts, error screens. The
   playground is for choosing between variants; Storybook is for checking what is already built.
+  Playground pages and their demo components have no stories or visual-test snapshots and are
+  excluded from the Storybook configuration.
 - A new page, modal, drawer, menu, toast or `shared/ui` component ships with a story. The story
   file sits next to the component (`DeleteUserModal.stories.tsx`), titled
   `<group>/<area>/<ComponentName>` with the groups «Страницы», «Страницы входа», «Модалки»,

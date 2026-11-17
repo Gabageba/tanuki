@@ -5,8 +5,10 @@ import {
   EnvelopeSimpleIcon,
   KeyIcon,
   PencilSimpleIcon,
+  SignInIcon,
   TrashIcon,
   UserIcon,
+  WarningCircleIcon,
 } from '@phosphor-icons/react';
 import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
 import GroupedList from '.';
@@ -136,6 +138,29 @@ export const WithAside: Story = {
               </Text>
             }
             description="Один аккаунт для всех сайтов справа"
+          />
+        }
+      >
+        <GroupedList.Row icon={<KeyIcon />} title="Первый сайт" description="Чтение глав" />
+        <GroupedList.Row icon={<KeyIcon />} title="Второй сайт" description="Импорт закладок" />
+      </GroupedList>
+    </Box>
+  ),
+};
+
+export const SingleLineAside: Story = {
+  name: 'Боковой блок без пояснения',
+  render: () => (
+    <Box p="md">
+      <GroupedList
+        label="Аккаунт"
+        aside={
+          <GroupedList.Header
+            isAside
+            icon={<WarningCircleIcon />}
+            color="gold"
+            title="Сессия истекла"
+            actionProps={{ children: 'Войти', leftSection: <SignInIcon /> }}
           />
         }
       >

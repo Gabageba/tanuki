@@ -13,6 +13,7 @@ function Sources() {
 
   return (
     <PageLayout useQuery={useSources}>
+      <PageLayout.PullToRefresh />
       <PageLayout.Content
         title={t('sources')}
         goBack={{ path: ROUTE_PATHS.HOME }}

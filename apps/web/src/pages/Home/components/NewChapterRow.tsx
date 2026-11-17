@@ -40,7 +40,7 @@ function NewChapterRow({ bookmark, folder }: Props) {
               component="span"
               ff="monospace"
               lh="tight"
-              style={{ whiteSpace: 'nowrap' }}
+              style={{ whiteSpace: 'nowrap', wordSpacing: '-0.25em' }}
             >
               {bookmark.latestChapterNumber !== null ? (
                 <Trans
@@ -60,7 +60,7 @@ function NewChapterRow({ bookmark, folder }: Props) {
                 </Box>
               )}
             </Box>,
-            bookmark.latestNewAt && formatRelative(bookmark.latestNewAt),
+            bookmark.latestNewAt && formatRelative(bookmark.latestNewAt, { compact: true }),
           ]}
         />
       }

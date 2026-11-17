@@ -1,11 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Box } from '@mantine/core';
+import { Box, Group } from '@mantine/core';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { I18N } from '@/shared/lib/i18n';
 import { clickFirstButton } from '@/shared/storybook/play';
 import SkeletonCompare from '@/shared/storybook/SkeletonCompare';
 import { CONTINUE_CARD } from '@/shared/storybook/titleCard/fixtures';
 import { checkTitleCardPair } from '@/shared/storybook/titleCard/play';
+import { MOBILE_GLOBALS } from '@/shared/storybook/models';
+import { CONTINUE_READING_CARD_WIDTH } from '../models';
 import ContinueReadingCard from './ContinueReadingCard';
 import ContinueReadingCardSkeleton from './ContinueReadingCardSkeleton';
 
@@ -55,6 +57,27 @@ export const Remove: Story = {
       within(context.canvasElement).getByRole('link', { name: CONTINUE_CARD.title.name }),
     ).toHaveAttribute('href', `/title/${CONTINUE_CARD.title.id}`);
   },
+};
+
+export const Mobile: Story = {
+  name: 'На телефоне — длинный номер главы',
+  globals: MOBILE_GLOBALS,
+  render: (args) => (
+    <Group gap="md" p="md" wrap="nowrap" align="flex-start">
+      {[117, 120.5].map((number) => (
+        <Box key={number} w={CONTINUE_READING_CARD_WIDTH} flex="none">
+          <ContinueReadingCard
+            {...args}
+            item={{
+              ...args.item,
+              chapter: { ...args.item.chapter, number },
+              updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            }}
+          />
+        </Box>
+      ))}
+    </Group>
+  ),
 };
 
 export const MenuOpened: Story = {

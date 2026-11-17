@@ -105,6 +105,13 @@ const createAppTheme = (t: TFunction) =>
       }
     },
     components: {
+      AppShellHeader: {
+        defaultProps: {
+          pt: 'env(safe-area-inset-top, 0px)',
+          pl: 'env(safe-area-inset-left, 0px)',
+          pr: 'env(safe-area-inset-right, 0px)',
+        },
+      },
       Input: {
         classNames: {
           input: styles.input,
@@ -164,7 +171,10 @@ const createAppTheme = (t: TFunction) =>
             fontWeight: 600,
           },
           content: {
-            paddingBottom: 'var(--app-shell-footer-height)',
+            paddingBottom:
+              'max(var(--app-shell-footer-height, 0px), env(safe-area-inset-bottom, 0px))',
+            paddingLeft: 'env(safe-area-inset-left, 0px)',
+            paddingRight: 'env(safe-area-inset-right, 0px)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',

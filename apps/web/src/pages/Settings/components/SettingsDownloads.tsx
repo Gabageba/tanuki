@@ -26,6 +26,7 @@ function SettingsDownloads() {
             to={ROUTE_PATHS.DOWNLOADS}
             variant="default"
             size="xs"
+            fullWidth
             leftSection={<TrayArrowDownIcon />}
           >
             {t('openDownloads')}

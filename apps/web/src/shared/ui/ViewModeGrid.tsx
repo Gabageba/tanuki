@@ -1,12 +1,14 @@
 import { SimpleGrid, type SimpleGridProps } from '@mantine/core';
+import type { Ref } from 'react';
 import { VIEW_MODE, type ViewMode } from '@/shared/lib/viewMode';
 
 type Props = {
   viewMode: ViewMode;
+  ref?: Ref<HTMLDivElement>;
 } & Omit<SimpleGridProps, 'cols' | 'spacing'>;
 
 /** Сетка карточек тайтлов в виде, выбранном пользователем: плитки, список или без обложек. */
-function ViewModeGrid({ children, viewMode }: Props) {
+function ViewModeGrid({ children, viewMode, ...props }: Props) {
   const getLayout = (): SimpleGridProps => {
     switch (viewMode) {
       case VIEW_MODE.COVERLESS:
@@ -18,7 +20,11 @@ function ViewModeGrid({ children, viewMode }: Props) {
     }
   };
 
-  return <SimpleGrid {...getLayout()}>{children}</SimpleGrid>;
+  return (
+    <SimpleGrid {...getLayout()} {...props}>
+      {children}
+    </SimpleGrid>
+  );
 }
 
 export default ViewModeGrid;

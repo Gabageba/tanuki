@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { TicketIcon, UsersIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 import PageLayout from '@/shared/ui/PageLayout';
 import { MANAGEMENT_TAB_SEARCH_PARAM, MANAGEMENT_TABS, ROUTE_PATHS } from '@/shared/lib/routes';
 import CreateInviteButton from './components/ManagementInvites/CreateInviteButton';
@@ -53,7 +54,7 @@ function Management() {
         actions={activeTab === MANAGEMENT_TABS.INVITES && <CreateInviteButton />}
         goBack={{ path: ROUTE_PATHS.HOME }}
       >
-        <Tabs value={activeTab} onChange={handleTabChange}>
+        <SwipeableTabs value={activeTab} onChange={handleTabChange}>
           <Tabs.List>
             <Scroller>
               {TABS.map(({ id, icon, title }) => (
@@ -68,7 +69,7 @@ function Management() {
               {content}
             </Tabs.Panel>
           ))}
-        </Tabs>
+        </SwipeableTabs>
       </PageLayout.Content>
     </PageLayout>
   );

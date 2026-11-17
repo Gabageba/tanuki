@@ -3,10 +3,8 @@ import type { LoadingQuery } from '../QueryBlock/models';
 /** Запрос страницы: по нему `Content` решает, показать скелетон, «Нет соединения» или ошибку. */
 export type PageLayoutBaseQuery = LoadingQuery & {
   isPending: boolean;
-};
-
-export type PageLayoutRefreshableQuery = PageLayoutBaseQuery & {
-  refresh: () => unknown;
+  /** Особое ручное обновление, например сброс страниц и обход кеша каталога. */
+  refresh?: () => unknown;
 };
 
 export type PageLayoutPaginatedQuery = PageLayoutBaseQuery & {

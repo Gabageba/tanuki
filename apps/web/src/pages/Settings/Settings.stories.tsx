@@ -97,6 +97,12 @@ export const DownloadsTab: Story = {
   },
 };
 
+export const DownloadsTabMobile: Story = {
+  ...DownloadsTab,
+  name: 'Загрузки — на телефоне',
+  globals: MOBILE_GLOBALS,
+};
+
 export const ReaderPaged: Story = {
   ...ReaderTab,
   name: 'Читалка — постраничный режим',

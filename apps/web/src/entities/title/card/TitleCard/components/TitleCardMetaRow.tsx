@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Box, Group } from '@mantine/core';
 import { CONTENT_RATING, type ContentRating } from '@tanuki/contracts';
 import TitleAdultTag from '@/entities/title/markers/TitleAdultTag';
-import { TITLE_TAG_HEIGHT } from '@/entities/title/markers/models';
 import type { TitleCardViewSlots } from '../models';
 import styles from '../TitleCard.module.scss';
 
@@ -13,14 +12,7 @@ type Props = Pick<TitleCardViewSlots, 'meta' | 'actions'> & {
 
 function TitleCardMetaRow({ meta, actions, markers, contentRating = CONTENT_RATING.SAFE }: Props) {
   return (
-    <Group
-      data-card-meta
-      className={styles.metaRow}
-      gap={6}
-      mih={TITLE_TAG_HEIGHT}
-      wrap="nowrap"
-      align="center"
-    >
+    <Group data-card-meta className={styles.metaRow} gap={6} wrap="nowrap" align="center">
       <Box className={styles.markers} pos="relative" flex="none" fz="sm" lh="tight">
         {markers}
       </Box>

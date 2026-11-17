@@ -11,7 +11,7 @@ function Layout() {
   return (
     <AppShell header={APP_SHELL_HEADER} footer={APP_SHELL_FOOTER}>
       <Header />
-      <AppShell.Main>
+      <AppShell.Main pl="env(safe-area-inset-left, 0px)" pr="env(safe-area-inset-right, 0px)">
         <OfflineStrip />
         <Outlet />
       </AppShell.Main>

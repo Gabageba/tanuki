@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { Tabs, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { CookieIcon, PasswordIcon, SignInIcon } from '@phosphor-icons/react';
+import SwipeableTabs from '@/shared/ui/SwipeableTabs';
 import { SOURCE_AUTH_FAMILY, type LinkSourceAccountRequest, type Source } from '@tanuki/contracts';
 import { getSourceAuthFamilyTitle } from '@/entities/source-account/lib';
 import ToneModal from '@/shared/ui/ToneModal';
@@ -81,7 +82,7 @@ function LinkRemangaModal({ source, opened, onClose }: Props) {
       onClose={close}
       title={t('logInToName', { name: getSourceAuthFamilyTitle(SOURCE_AUTH_FAMILY.REMANGA) })}
     >
-      <Tabs
+      <SwipeableTabs
         defaultValue={LOGIN_TAB.PASSWORD}
         keepMounted={false}
         onChange={() => {
@@ -100,7 +101,7 @@ function LinkRemangaModal({ source, opened, onClose }: Props) {
             {content}
           </Tabs.Panel>
         ))}
-      </Tabs>
+      </SwipeableTabs>
     </ToneModal>
   );
 }

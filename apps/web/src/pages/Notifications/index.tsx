@@ -12,6 +12,7 @@ function Notifications() {
 
   return (
     <PageLayout useQuery={useNotificationsFeed} params={params} onParamsChange={setParams}>
+      <PageLayout.PullToRefresh />
       <PageLayout.Content title={t('notifications')} skeleton={<NotificationsSkeleton />}>
         <NotificationsFeed />
       </PageLayout.Content>

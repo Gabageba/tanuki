@@ -10,8 +10,6 @@ type Props = {
   settings: ReaderSettings;
   window: ReturnType<typeof useReaderPageWindow>;
   loaded: Set<string>;
-  activeKey: string;
-  transform: string;
 };
 
 function ReaderVerticalChapter(props: Props) {
