@@ -10,7 +10,7 @@ import { getReaderPageStep, getVisiblePageEnd } from './navigation';
 import ReaderHeader from './components/ReaderHeader';
 import ReaderMobileControls from './components/ReaderMobileControls';
 import ReaderPages from './components/ReaderPages';
-import { HEADER_HEIGHT } from '@/shared/lib/appShell';
+import { APP_SHELL_HEADER } from '@/shared/lib/appShell';
 import useReaderFeed from './hooks/useReaderFeed';
 import useReaderHeaderVisibility from './hooks/useReaderHeaderVisibility';
 import useReaderSettings from '@/entities/reader/hooks/useReaderSettings';
@@ -107,7 +107,7 @@ function Reader() {
   // показ/скрытие меняло бы доступную высоту, а с ней и размер страницы в режиме «страница
   // целиком»: картинка масштабировалась бы на каждое переключение шапки.
   return (
-    <AppShell header={{ height: HEADER_HEIGHT, collapsed: !visible, offset: false }}>
+    <AppShell header={{ ...APP_SHELL_HEADER, collapsed: !visible, offset: false }}>
       <ReaderHeader
         titleId={titleId}
         chapterId={position.chapterId}

@@ -59,9 +59,9 @@ function ReaderMobileControls({
       px="md"
       bg="var(--mantine-color-body)"
       pos="fixed"
-      bottom={CONTROLS_OFFSET}
-      left={0}
-      right={0}
+      bottom={`calc(${CONTROLS_OFFSET}px + env(safe-area-inset-bottom, 0px))`}
+      left="env(safe-area-inset-left, 0px)"
+      right="env(safe-area-inset-right, 0px)"
       className={
         visible ? styles.mobileControls : `${styles.mobileControls} ${styles.mobileControlsHidden}`
       }

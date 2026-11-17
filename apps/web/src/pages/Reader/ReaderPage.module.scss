@@ -13,6 +13,6 @@
 }
 
 .mobileControlsHidden {
-  transform: translateY(calc(100% + 32px));
+  transform: translateY(calc(100% + 32px + env(safe-area-inset-bottom, 0px)));
   pointer-events: none;
 }

@@ -56,6 +56,7 @@ function ResponsiveDrawer({
         ref={contentRef}
         className={styles.content}
         mah={isBottom ? SHEET_MAX_HEIGHT : undefined}
+        pt={isBottom ? undefined : 'env(safe-area-inset-top, 0px)'}
       >
         <Drawer.Header
           pt={isBottom ? 'lg' : undefined}
