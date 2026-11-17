@@ -238,7 +238,6 @@ const parseChaptersCountOptions = ($: CheerioAPI): RawFilterOption[] => {
 
 export const createMangaBuffParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
-  let csrfToken: string | null = null;
 
   const parseMangaCard = ($item: Cheerio<AnyNode>, baseUrl: string): RawTitle | null => {
     // cards__item is the anchor itself; the site no longer nests a separate <a>.
@@ -508,18 +507,18 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
   };
 
   const fetchCsrfToken = async (): Promise<string> => {
-    if (csrfToken) return csrfToken;
     const doc = await ctx.http.getHtml(`https://${domain}/`);
     const token = attrOrNull(doc.$('head meta[name*=csrf-token]').first(), 'content');
     if (!token) throw new ParseError(`Unable to find CSRF token: https://${domain}/`, SOURCE_ID);
-    csrfToken = token;
     return token;
   };
 
-  const loadMoreChapterElements = async (mangaId: string): Promise<AnyNode[]> => {
-    const post = async (): Promise<AnyNode[]> => {
-      const token = await fetchCsrfToken();
-      const res = await ctx.http.request({
+  const loadMoreChapterElements = async (
+    mangaId: string,
+    csrfToken: string | null,
+  ): Promise<AnyNode[]> => {
+    const post = (token: string) =>
+      ctx.http.request({
         method: 'POST',
         url: `https://${domain}/chapters/load`,
         headers: {
@@ -529,31 +528,22 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
         },
         body: new URLSearchParams({ manga_id: mangaId }),
       });
-      if (res.status === 419) {
-        csrfToken = null;
-        throw new SourceUnavailableError(
-          `CSRF token expired: https://${domain}/chapters/load`,
-          SOURCE_ID,
-        );
-      }
-      if (res.status >= 400) {
-        throw new SourceUnavailableError(
-          `Upstream HTTP ${res.status}: https://${domain}/chapters/load`,
-          SOURCE_ID,
-        );
-      }
-      const json = res.json<{ content?: string }>();
-      const fragment = parseHtml(json.content ?? '', `https://${domain}/`);
-      return fragment.$(CHAPTER_SELECTOR).toArray();
-    };
-    try {
-      return await post();
-    } catch (err) {
-      if (csrfToken === null && err instanceof SourceUnavailableError) {
-        return post();
-      }
-      throw err;
+
+    // Laravel binds the token to the current cookie session. The parser is shared between
+    // service and user accounts, so neither the token nor its retry state can be shared.
+    let res = await post(csrfToken ?? (await fetchCsrfToken()));
+    if (res.status === 419) {
+      res = await post(await fetchCsrfToken());
     }
+    if (res.status >= 400) {
+      throw new SourceUnavailableError(
+        `Upstream HTTP ${res.status}: https://${domain}/chapters/load`,
+        SOURCE_ID,
+      );
+    }
+    const json = res.json<{ content?: string }>();
+    const fragment = parseHtml(json.content ?? '', `https://${domain}/`);
+    return fragment.$(CHAPTER_SELECTOR).toArray();
   };
 
   const parseChapterElement = (el: AnyNode, $: CheerioAPI, index: number): RawChapter | null => {
@@ -612,7 +602,8 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
     if ($('.load-chapters-trigger').length > 0) {
       const mangaId = attrOrNull($('.manga').first(), 'data-id');
       if (mangaId) {
-        chapterEls = [...chapterEls, ...(await loadMoreChapterElements(mangaId))];
+        const csrfToken = attrOrNull($('head meta[name*=csrf-token]').first(), 'content');
+        chapterEls = [...chapterEls, ...(await loadMoreChapterElements(mangaId, csrfToken))];
       }
     }
     const reversed = chapterEls.slice().reverse();
