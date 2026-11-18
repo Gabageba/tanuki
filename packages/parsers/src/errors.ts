@@ -27,6 +27,9 @@ export class SourceAuthRequiredError extends ParserError {}
  */
 export class SourceTokenExpiredError extends ParserError {}
 
+/** Local storage could not save a source session. */
+export class SourceSessionStorageError extends ParserError {}
+
 /** Вход требует шага в браузере (например, 2FA); можно перенести готовую сессию. */
 export class SourceLoginRequiresSessionError extends SourceTokenExpiredError {}
 

@@ -43,7 +43,7 @@ const EnvSchema = z.object({
   LIBSOCIAL_TOKEN_STORE_DIR: z
     .string()
     .default(resolve(process.cwd(), '../../data/libsocial-tokens')),
-  // ReManga: file written after a human browser login (CAPTCHA required). No password refresh.
+  // ReManga: token pair written after a human browser login and rotated by the parser.
   REMANGA_SESSION_FILE: z
     .string()
     .default(resolve(process.cwd(), '../../data/libsocial-tokens/remanga.json')),

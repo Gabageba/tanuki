@@ -208,20 +208,13 @@ describe('ReManga protected title authentication', () => {
   it('never exposes the service token to an anonymous viewer', async () => {
     const http = new FakeHttpClient();
     registerTitle(http);
-    const ctx = { ...makeContext(http), jar: await createRemangaSessionJar(DOMAIN, TOKEN) };
+    const fetchServiceJson = vi.fn();
     await runWithSourceAccounts({ [SOURCE_AUTH_FAMILY.REMANGA]: {} }, async () => {
-      await expect(fetchRemangaTitleJson(ctx, titlePath)).rejects.toBeInstanceOf(
-        SourceAuthRequiredError,
-      );
+      await expect(
+        fetchRemangaTitleJson(makeContext(http), titlePath, fetchServiceJson),
+      ).rejects.toBeInstanceOf(SourceAuthRequiredError);
     });
     expect(http.requests).toHaveLength(1);
-  });
-
-  it('allows a service request to use its own token after 401', async () => {
-    const http = new FakeHttpClient();
-    registerTitle(http);
-    const ctx = { ...makeContext(http), jar: await createRemangaSessionJar(DOMAIN, TOKEN) };
-    expect(await fetchRemangaTitleJson(ctx, titlePath)).toEqual(protectedTitle);
-    expect(http.requests[1]?.headers.Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(fetchServiceJson).not.toHaveBeenCalled();
   });
 });
