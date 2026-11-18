@@ -5,6 +5,8 @@ import {
   type SearchFilterCriteria,
 } from '@tanuki/contracts';
 import {
+  SOURCE_ID,
+  SourceSessionStorageError,
   runSourceContract,
   runWithSourceAccounts,
   unappliedSearchFilters,
@@ -377,10 +379,12 @@ export class ParsersClientService {
         await this.sourceAccess.markReloginRequired(viewer.userId, sourceId);
         throw new SourceAccountRequiredException(sourceId, true);
       }
-      if (apiError instanceof SourceAuthRequiredException) {
-        // Источник ответил, и ответ детерминирован (глава требует авторизации) — это не
-        // признак того, что источник "лежит", остальные главы того же источника наверняка
-        // грузятся нормально. Не даём этому ни открыть breaker, ни уронить статус источника.
+      if (
+        error instanceof SourceSessionStorageError ||
+        apiError instanceof SourceAuthRequiredException ||
+        (sourceId === SOURCE_ID.REMANGA && apiError instanceof SourceTokenExpiredException)
+      ) {
+        // Доступ к отдельной главе и локальные проблемы сервисной сессии не меняют статус источника.
         this.sourceHealth.releaseProbe(sourceId);
         throw apiError;
       }

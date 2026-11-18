@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SORT_ORDER } from '@tanuki/contracts';
+import { API_ERROR_CODE, SORT_ORDER } from '@tanuki/contracts';
+import { SOURCE_ID, SourceSessionStorageError, SourceTokenExpiredError } from '@tanuki/parsers';
 import { ParsersClientService } from './parsers-client.service';
 
 const setup = () => {
   const values = new Map<string, unknown>();
-  const parser = { getHomeSection: vi.fn(async () => ({ items: [], hasNextPage: false })) };
+  const parser = {
+    getHomeSection: vi.fn(async () => ({ items: [], hasNextPage: false })),
+    getPages: vi.fn(),
+  };
   const registry = {
     ready: async () => {},
     get: () => parser,
@@ -16,15 +20,27 @@ const setup = () => {
       return { value: values.get(key), stale: false, fromCache: true };
     }),
   };
+  const sourceHealth = {
+    canAttempt: () => true,
+    recordSuccess: vi.fn(),
+    releaseProbe: vi.fn(),
+    recordFailure: vi.fn(),
+  };
   const dependencies = [
     registry,
     cache,
-    { canAttempt: () => true, recordSuccess: vi.fn() },
+    sourceHealth,
     { recordSuccess: vi.fn() },
     { run: async (_sourceId: string, task: () => Promise<unknown>) => task() },
     { resolveScope: async () => undefined },
   ] as unknown as ConstructorParameters<typeof ParsersClientService>;
-  return { service: new ParsersClientService(...dependencies), parser, registry, cache };
+  return {
+    service: new ParsersClientService(...dependencies),
+    parser,
+    registry,
+    cache,
+    sourceHealth,
+  };
 };
 
 afterEach(() => vi.useRealTimers());
@@ -49,5 +65,29 @@ describe('ParsersClientService selections cache', () => {
     vi.setSystemTime('2027-01-01T00:00:00Z');
     expect((await service.getSources()).data.items[0]).toEqual({ month: '2027-01' });
     expect(registry.listSources).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('ParsersClientService ReManga service authentication', () => {
+  it.each([
+    [
+      new SourceTokenExpiredError('Expired', SOURCE_ID.REMANGA),
+      API_ERROR_CODE.SOURCE_TOKEN_EXPIRED,
+    ],
+    [
+      new SourceSessionStorageError('Cannot save session', SOURCE_ID.REMANGA),
+      API_ERROR_CODE.SOURCE_UNAVAILABLE,
+    ],
+  ])('reports %s without recording a source failure', async (error, code) => {
+    const { service, parser, sourceHealth } = setup();
+    parser.getPages.mockRejectedValue(error);
+
+    await expect(
+      service.getPages(SOURCE_ID.REMANGA, '/api/v2/titles/chapters/42/'),
+    ).rejects.toMatchObject({
+      code,
+    });
+    expect(sourceHealth.releaseProbe).toHaveBeenCalledWith(SOURCE_ID.REMANGA);
+    expect(sourceHealth.recordFailure).not.toHaveBeenCalled();
   });
 });

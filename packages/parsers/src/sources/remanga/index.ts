@@ -46,8 +46,8 @@ import { NotFoundError } from '../../errors';
 import { fetchHomeSections } from '../../core/home';
 import { SOURCE_ID as CATALOG_SOURCE_ID } from '../catalog';
 import { fetchRemangaBookmarks } from './bookmarks';
-import { fetchRemangaTitleJson, saveRemangaSessionToken } from './auth';
-import { readRemangaServiceSession } from './service-session';
+import { fetchRemangaTitleJson } from './auth';
+import { createRemangaServiceAuth } from './service-auth';
 import type {
   MangaJson,
   TagJson,
@@ -335,6 +335,9 @@ const SEARCH_FILTER_SPEC: SearchFilterSpec = {
 export const createRemangaParser = (ctx: ParserContext): Parser => {
   const domain = ctx.domain;
   const apiHost = `api.${domain}`;
+  const serviceAuth = createRemangaServiceAuth(ctx);
+  const getTitleJson = <T>(path: string) =>
+    fetchRemangaTitleJson<T>(ctx, path, serviceAuth.getJson);
 
   // The upstream API rate-limits aggressively; the Kotlin fork retries once after a short
   // delay instead of surfacing a hard failure for a single transient 429.
@@ -603,8 +606,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     const result: ChapterJson[] = [];
     for (let page = 1; ; page += 1) {
       const url = `https://${apiHost}/api/v2/titles/chapters/?branch_id=${branchId}&page=${page}&count=500`;
-      const json = await fetchRemangaTitleJson<{ results: ChapterJson[] }>(
-        ctx,
+      const json = await getTitleJson<{ results: ChapterJson[] }>(
         new URL(url).pathname + new URL(url).search,
       );
       if (json.results.length === 0) break;
@@ -615,7 +617,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   const getDetails = async (mangaUrl: string): Promise<RawTitle> => {
     const slug = slugFromUrl(mangaUrl);
-    const json = await fetchRemangaTitleJson<MangaJson>(ctx, `/api/v2/titles/${slug}/`);
+    const json = await getTitleJson<MangaJson>(`/api/v2/titles/${slug}/`);
 
     const url = `/manga/${json.dir}`;
     const cover = json.cover;
@@ -708,10 +710,10 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   const getPages = async (chapterUrl: string): Promise<RawPage[]> => {
     const url = toAbsoluteUrl(chapterUrl, apiHost);
-    const json = await fetchRemangaTitleJson<{
+    const json = await getTitleJson<{
       pages?: (PageJson | PageJson[])[];
       pub_date?: string;
-    }>(ctx, new URL(url).pathname + new URL(url).search);
+    }>(new URL(url).pathname + new URL(url).search);
     if (!json.pages) {
       throw new NotFoundError(`Chapter is not available yet: ${url}`, SOURCE_ID);
     }
@@ -766,17 +768,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
 
   return {
     id: SOURCE_ID,
-    async init() {
-      const sessionFile = ctx.credentials.remanga?.sessionFile;
-      if (!sessionFile) return;
-      const session = await readRemangaServiceSession(sessionFile);
-      if (!session) {
-        ctx.logger.info('ReManga service session not configured');
-        return;
-      }
-      await saveRemangaSessionToken(ctx.jar, ctx.domain, session.token);
-      ctx.logger.info('ReManga service session loaded');
-    },
+    init: serviceAuth.init,
     info: {
       id: SOURCE_ID,
       title: 'Реманга',

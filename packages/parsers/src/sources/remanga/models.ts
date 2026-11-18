@@ -106,6 +106,15 @@ export type RemangaPageJson<T> = {
 
 export type RemangaViewer = { id: number; username: string };
 
+export const REMANGA_TOKEN_REGEX = /^[\w.~+/-]{20,}=*$/;
+
+export type RemangaServiceSession = {
+  token: string;
+  refreshToken?: string;
+};
+
+export type RemangaTokenPair = Required<RemangaServiceSession>;
+
 /** Ответ формы входа ReManga: токен или требование двухфакторной проверки. */
 export type RemangaLoginJson = {
   content?: { access_token?: string; two_factor_auth?: boolean };

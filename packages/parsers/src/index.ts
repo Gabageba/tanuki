@@ -21,6 +21,7 @@ export {
   NotFoundError,
   SourceAuthRequiredError,
   SourceTokenExpiredError,
+  SourceSessionStorageError,
   SourceLoginRequiresSessionError,
   SourceUnavailableError,
   SourceBlockedError,

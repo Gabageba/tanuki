@@ -16,6 +16,7 @@ export type HttpRequest = {
   headers: Record<string, string>;
   body?: string | URLSearchParams;
   signal?: AbortSignal;
+  maxRedirects?: number;
 };
 
 export type HttpResponse = {
@@ -112,6 +113,7 @@ export class HttpClientImpl implements HttpClient {
       headers: { ...this.opts.defaultHeaders, ...req.headers },
       body: req.body,
       signal: req.signal,
+      maxRedirects: req.maxRedirects,
     };
     const chain = this.interceptors.reduceRight<(r: HttpRequest) => Promise<HttpResponse>>(
       (next, interceptor) => (r) => interceptor(r, next),
@@ -179,10 +181,6 @@ export class HttpClientImpl implements HttpClient {
   }
 
   private async sendWithRedirects(req: HttpRequest, depth: number): Promise<HttpResponse> {
-    if (depth > MAX_REDIRECTS) {
-      throw new SourceUnavailableError(`Too many redirects: ${req.url}`, this.opts.sourceId);
-    }
-
     // Cookies are attached here, not by the caller — every hop of a redirect chain gets its
     // own jar lookup, and every hop's Set-Cookie is saved before we follow the next one. An
     // interceptor-level Set-Cookie would only see the final response and lose antibot cookies
@@ -228,6 +226,9 @@ export class HttpClientImpl implements HttpClient {
 
     const location = response.headers['location'];
     if (response.statusCode >= 300 && response.statusCode < 400 && location) {
+      if (depth >= (req.maxRedirects ?? MAX_REDIRECTS)) {
+        throw new SourceUnavailableError(`Too many redirects: ${req.url}`, this.opts.sourceId);
+      }
       const nextUrl = new URL(normalizeHeaderValue(location)!, req.url).toString();
       const keepMethod = response.statusCode === 307 || response.statusCode === 308;
       return this.sendWithRedirects(

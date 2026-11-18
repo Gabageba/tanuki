@@ -11,11 +11,10 @@ import {
   SourceTokenExpiredError,
 } from '../../errors';
 import { SOURCE_ID } from '../catalog';
-import type { RemangaLoginJson, RemangaViewer } from './models';
+import { REMANGA_TOKEN_REGEX, type RemangaLoginJson, type RemangaViewer } from './models';
 
 /** Имя cookie и Bearer-заголовок — из публичного клиента remanga.org (2026-10-30). */
 export const REMANGA_SESSION_COOKIE = 'auth:token';
-const TOKEN_REGEX = /^[\w.~+/-]{20,}=*$/;
 const RELOGINS = new WeakMap<CookieJar, Promise<string>>();
 
 export const parseRemangaSessionValue = (value: string): string | null => {
@@ -30,7 +29,7 @@ export const parseRemangaSessionValue = (value: string): string | null => {
   } catch {
     return null;
   }
-  return TOKEN_REGEX.test(token) ? token : null;
+  return REMANGA_TOKEN_REGEX.test(token) ? token : null;
 };
 
 /** Сохраняем токен в общем формате cookie jar — существующее шифрование аккаунтов подходит. */
@@ -75,7 +74,7 @@ export const loginRemanga = async (
     );
   }
   const token = json.content?.access_token;
-  if (typeof token !== 'string' || !TOKEN_REGEX.test(token)) {
+  if (typeof token !== 'string' || !REMANGA_TOKEN_REGEX.test(token)) {
     throw new ParseError('ReManga login response is missing a token', SOURCE_ID.REMANGA);
   }
   return token;
@@ -96,6 +95,7 @@ export const fetchRemangaAccountJson = async <T>(
     method: 'GET',
     url: `https://api.${domain}${path}`,
     headers: { Authorization: `Bearer ${token}` },
+    maxRedirects: 0,
   });
   if (res.status === 401)
     throw new SourceTokenExpiredError('ReManga session expired', SOURCE_ID.REMANGA);
@@ -165,10 +165,13 @@ export const fetchRemangaSessionJson = async <T>(ctx: ParserContext, path: strin
 /**
  * Protected title/chapter requests are normally public. ReManga answers 401 for some titles
  * (including age-restricted ones), in which case retry with the current viewer's Bearer token.
- * An anonymous viewer never inherits the service jar. Only background/service requests may
- * use it, and only when it contains a session.
+ * Only background/service requests may use the separately stored service credential.
  */
-export const fetchRemangaTitleJson = async <T>(ctx: ParserContext, path: string): Promise<T> => {
+export const fetchRemangaTitleJson = async <T>(
+  ctx: ParserContext,
+  path: string,
+  fetchServiceJson?: <T>(path: string) => Promise<T>,
+): Promise<T> => {
   const url = `https://api.${ctx.domain}${path}`;
   const response = await ctx.http.request({ url, method: 'GET' });
   if (response.status !== 401) {
@@ -191,9 +194,8 @@ export const fetchRemangaTitleJson = async <T>(ctx: ParserContext, path: string)
     return fetchRemangaSessionJson<T>(ctx, path);
   }
 
-  const token = await getRemangaSessionToken(ctx.jar, ctx.domain);
-  if (!token) {
+  if (!fetchServiceJson) {
     throw new SourceAuthRequiredError('ReManga title requires login', SOURCE_ID.REMANGA);
   }
-  return fetchRemangaAccountJson<T>(ctx.http, ctx.domain, token, path);
+  return fetchServiceJson<T>(path);
 };
