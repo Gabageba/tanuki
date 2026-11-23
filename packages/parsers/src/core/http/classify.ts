@@ -19,6 +19,9 @@ const CHALLENGE_MARKERS = [
   'ddos-guard',
 ];
 
+// Anubis can serve the browser check with HTTP 200, including behind another proxy.
+const ANUBIS_CHALLENGE_SCRIPT = /<script\b[^<>]*\sid\s*=\s*["']anubis_challenge["']/i;
+
 /**
  * Unlike `server: cloudflare` (fronts a huge share of the legitimate web, so it's deliberately
  * *not* trusted alone — see the classifyResponse tests), these vendors are single-purpose bot
@@ -50,6 +53,8 @@ export const looksLikeAntibotChallenge = (
   headers: Record<string, string | string[] | undefined>,
   bodySample: string,
 ): boolean => {
+  if (ANUBIS_CHALLENGE_SCRIPT.test(bodySample)) return true;
+
   if (statusCode !== 403 && statusCode !== 503) {
     return false;
   }
@@ -71,11 +76,11 @@ export const classifyResponse = (
   headers: Record<string, string | string[] | undefined>,
   bodySample: string,
 ): SourceBlockedError | NotFoundError | SourceUnavailableError | null => {
-  if (statusCode < 400) {
-    return null;
-  }
   if (looksLikeAntibotChallenge(statusCode, headers, bodySample)) {
     return new SourceBlockedError(`Antibot challenge (HTTP ${statusCode}) at ${url}`, sourceId);
+  }
+  if (statusCode < 400) {
+    return null;
   }
   if (statusCode === 404) {
     return new NotFoundError(`Not found: ${url}`, sourceId);

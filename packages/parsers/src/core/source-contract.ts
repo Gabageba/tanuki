@@ -1,5 +1,6 @@
 import type { Parser } from './parser';
 import type { RawTitle } from '../types';
+import { SourceBlockedError } from '../errors';
 
 const LIST_LIMIT = 20;
 
@@ -36,8 +37,9 @@ export const runSourceContract = async (parser: Parser): Promise<void> => {
   // (сайт честно отдаёт по этому урлу собственную заглушку "не найдено"), а у MANGABUFF свежий
   // тайтл может успеть попасть в каталог раньше, чем сайт реально отдаёт страницы его первой
   // главы — оба случая проходят уже через десяток страниц. Падаем только если ни один элемент
-  // страницы каталога не довёл чтение до конца. Причину последней неудачи всё равно запоминаем —
-  // иначе итоговая ошибка ничего не говорит о том, что реально сломалось.
+  // страницы каталога не довёл чтение до конца или источник запросил антибот-проверку.
+  // Причину последней неудачи всё равно запоминаем — иначе итоговая ошибка ничего не говорит
+  // о том, что реально сломалось.
   let lastFailure: string | null = null;
   for (const candidate of list) {
     let details: RawTitle;
@@ -45,6 +47,9 @@ export const runSourceContract = async (parser: Parser): Promise<void> => {
       details = await parser.getDetails(candidate.url);
     } catch (error) {
       lastFailure = `getDetails(${candidate.url}): ${describeError(error)}`;
+      if (error instanceof SourceBlockedError) {
+        throw new SourceContractError(lastFailure, { cause: error });
+      }
       continue;
     }
     if (!details.chapters || details.chapters.length === 0) {
@@ -56,6 +61,9 @@ export const runSourceContract = async (parser: Parser): Promise<void> => {
       pages = await parser.getPages(details.chapters[0]!.url);
     } catch (error) {
       lastFailure = `getPages(${details.chapters[0]!.url}): ${describeError(error)}`;
+      if (error instanceof SourceBlockedError) {
+        throw new SourceContractError(lastFailure, { cause: error });
+      }
       continue;
     }
     if (pages.length === 0) {

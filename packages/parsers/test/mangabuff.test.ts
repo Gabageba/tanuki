@@ -348,6 +348,37 @@ describe('MangaBuff parser conformance', () => {
     expect(item!.tags).toEqual([]);
   });
 
+  it.each([
+    { cardClass: 'cards-detailed', pageSize: 30, query: undefined },
+    { cardClass: 'cards', pageSize: 25, query: 'манга' },
+  ])(
+    'keeps both items across the $cardClass page boundary',
+    async ({ cardClass, pageSize, query }) => {
+      const cards = (start: number, count: number) =>
+        `<div class="${cardClass}">${Array.from(
+          { length: count },
+          (_, index) =>
+            `<a class="${cardClass}__item" href="/manga/title-${start + index}">Тайтл</a>`,
+        ).join('')}</div>`;
+      const http = new FakeHttpClient();
+      http.register((url) => !new URL(url).searchParams.has('page'), {
+        status: 200,
+        body: cards(1, pageSize),
+      });
+      http.register((url) => new URL(url).searchParams.get('page') === '2', {
+        status: 200,
+        body: cards(pageSize + 1, 1),
+      });
+      const parser = createMangaBuffParser(makeContext(http));
+
+      const items = await parser.getList({ offset: pageSize - 1, limit: 2, query });
+      expect(items.map(({ url }) => url)).toEqual([
+        `/manga/title-${pageSize}`,
+        `/manga/title-${pageSize + 1}`,
+      ]);
+    },
+  );
+
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
     const manga = await parser.getDetails('/manga/one-piece');
     expect(manga.chapters).not.toBeNull();
@@ -436,6 +467,24 @@ describe('MangaBuff parser conformance', () => {
       { key: '0', title: '<50', count: null },
       { key: '200', title: '>200', count: null },
     ]);
+  });
+
+  it('loads filters again after the catalog stops returning an antibot challenge', async () => {
+    const http = new FakeHttpClient();
+    let blocked = true;
+    http.register(
+      (url) => url === `https://${DOMAIN}/manga`,
+      () =>
+        blocked
+          ? { status: 403, body: '<title>Just a moment...</title>' }
+          : { status: 200, body: FILTERS_HTML },
+    );
+    const parser = createMangaBuffParser(makeContext(http));
+
+    await expect(parser.getFilters!()).rejects.toBeInstanceOf(SourceBlockedError);
+    blocked = false;
+    await expect(parser.getFilters!()).resolves.toHaveLength(8);
+    expect(http.requests).toHaveLength(2);
   });
 
   it('getList with filters: genre/type/tag route through without_* when excluded', async () => {
