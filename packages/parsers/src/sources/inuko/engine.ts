@@ -45,6 +45,7 @@ import { toTitleCase } from '../../core/text/strings';
 import { NotFoundError, ParseError, SourceAuthRequiredError } from '../../errors';
 import { currentSourceAccount } from '../../core/source-accounts';
 import { UserAgents } from '../../core/http/user-agents';
+import { createAnubisInterceptor } from '../../core/http/anubis';
 import { catalogEntryFor } from '../catalog';
 import { parseHtml } from '../../core/html/dom';
 import { findHomeHeading } from '../../core/html/home';
@@ -487,6 +488,8 @@ const SEARCH_FILTER_SPEC: SearchFilterSpec = {
 };
 
 export const createInukoParser = (config: InukoConfig, ctx: ParserContext): Parser => {
+  ctx.http.use(createAnubisInterceptor());
+
   const SOURCE_ID = config.id;
   const catalogEntry = catalogEntryFor(SOURCE_ID);
   const domain = ctx.domain;
