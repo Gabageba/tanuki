@@ -19,7 +19,9 @@ import {
   parseInukoViewer,
 } from '../src/sources/inuko/auth';
 import { runWithSourceAccounts } from '../src/core/source-accounts';
-import { ParseError, SourceAuthRequiredError } from '../src/errors';
+import { HttpClientImpl } from '../src/core/http/client';
+import { runSourceContract } from '../src/core/source-contract';
+import { ParseError, SourceAuthRequiredError, SourceBlockedError } from '../src/errors';
 import { readInukoSsr } from '../src/sources/inuko/ssr';
 import { generateUid } from '../src/core/uid';
 import { SOURCE_ID } from '../src/sources/catalog';
@@ -115,13 +117,14 @@ const LABELS_JSON = JSON.stringify([
 
 const DECRYPTION_KEY = 'UySkp0BzPhwlvP2V';
 const SSR_STATE_HTML = `<script>{"root":{decryptionKey:"${DECRYPTION_KEY}",currentDomainId:"inkstory"}}</script>`;
+const ANUBIS_HTML = '<script id="anubis_challenge" type="application/json">{}</script>';
 
 const xor = (bytes: Buffer, key: string): Buffer => {
   const keyBytes = Buffer.from(key, 'utf8');
   return Buffer.from(bytes.map((b, i) => b ^ keyBytes[i % keyBytes.length]!));
 };
 
-const makeContext = (http: FakeHttpClient, domain = DOMAIN): ParserContext => {
+const makeContext = (http: ParserContext['http'], domain = DOMAIN): ParserContext => {
   return {
     http,
     domain,
@@ -190,6 +193,46 @@ describe('Inuko retired reading API', () => {
     });
     return http;
   };
+
+  it('reports the Anubis HTTP 200 from the chapters page and stops the probe after one title', async () => {
+    const transport = new FakeHttpClient();
+    transport.register((url) => url.includes('/v2/chapter-update-feed'), {
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { book: LIST_MANGA_JSON },
+        { book: { ...LIST_MANGA_JSON, id: SSR_MANGA_ID } },
+      ]),
+    });
+    transport.register((url) => url.startsWith(`https://${API_HOST}/v2/`), {
+      status: 404,
+      body: 'Not Found',
+    });
+    transport.register((url) => url.startsWith(`https://${DOMAIN}/content/`), {
+      status: 200,
+      body: ANUBIS_HTML,
+    });
+    const http = new HttpClientImpl({
+      sourceId: INKSTORY_CONFIG.id,
+      jar: new CookieJar(),
+      defaultHeaders: {},
+    });
+    http.use((request) => transport.request(request));
+    const parser = createInukoParser(INKSTORY_CONFIG, makeContext(http));
+    const chaptersUrl = `https://${DOMAIN}/content/${MANGA_ID}/chapters`;
+
+    try {
+      await expect(runSourceContract(parser)).rejects.toMatchObject({
+        message: `getDetails(${MANGA_ID}): Antibot challenge (HTTP 200) at ${chaptersUrl}`,
+        cause: expect.any(SourceBlockedError),
+      });
+      expect(transport.requests.filter(({ url }) => url.startsWith(`https://${DOMAIN}/`))).toEqual([
+        expect.objectContaining({ url: chaptersUrl }),
+      ]);
+    } finally {
+      await http.close();
+    }
+  });
 
   it.each([
     [INKSTORY_CONFIG, DOMAIN],

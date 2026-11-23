@@ -46,7 +46,7 @@ export type HttpClient = {
   use(interceptor: Interceptor): void;
   /** Raw request — does not throw on non-2xx, caller decides via classifyResponse if needed. */
   request(req: Partial<HttpRequest> & { url: string }): Promise<HttpResponse>;
-  /** GET + throws SourceUnavailableError/NotFoundError/SourceBlockedError on non-2xx. */
+  /** GET + throws for upstream errors or antibot challenges, including challenges with HTTP 200. */
   get(url: string, headers?: Record<string, string>): Promise<HttpResponse>;
   getHtml(url: string, headers?: Record<string, string>): Promise<Doc>;
   getJson<T>(url: string, headers?: Record<string, string>): Promise<T>;
@@ -61,6 +61,7 @@ export type HttpClient = {
 };
 
 const MAX_REDIRECTS = 10;
+const RESPONSE_SAMPLE_BYTES = 4096;
 
 /**
  * A connect/TLS-handshake attempt (e.g. "Client network socket disconnected before secure TLS
@@ -169,7 +170,12 @@ export class HttpClientImpl implements HttpClient {
   }
 
   private throwIfError(res: HttpResponse): void {
-    const bodySample = res.status >= 400 ? res.text().slice(0, 4096) : '';
+    const contentType = normalizeHeaderValue(res.headers['content-type']);
+    const inspectBody =
+      res.status >= 400 || !contentType || contentType.toLowerCase().startsWith('text/html');
+    const bodySample = inspectBody
+      ? decodeBytes(res.bytes.subarray(0, RESPONSE_SAMPLE_BYTES), contentType)
+      : '';
     const error = classifyResponse(
       this.opts.sourceId,
       res.status,

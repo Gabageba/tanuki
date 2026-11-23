@@ -47,6 +47,13 @@ describe('classifyResponse', () => {
     expect(classifyResponse(SOURCE_ID.DESUME, 200, URL, {}, '')).toBeNull();
   });
 
+  it('accepts a successful HTML page served through a dedicated antibot proxy', () => {
+    const body = '<html><head><title>Anubis</title></head><body>ddos-guard</body></html>';
+    expect(
+      classifyResponse(SOURCE_ID.INKSTORY, 200, URL, { server: 'ddos-guard' }, body),
+    ).toBeNull();
+  });
+
   it('maps antibot challenges to SourceBlockedError, checked before 404/generic', () => {
     const err = classifyResponse(SOURCE_ID.DESUME, 403, URL, {}, 'Just a moment...');
     expect(err).toBeInstanceOf(SourceBlockedError);
