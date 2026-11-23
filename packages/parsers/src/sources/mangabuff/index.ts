@@ -46,7 +46,8 @@ import { findHomeHeading } from '../../core/html/home';
 import { loginMangaBuff, parseMangaBuffUserId } from './auth';
 
 const SOURCE_ID = CATALOG_SOURCE_ID.MANGABUFF;
-const PAGE_SIZE = 24;
+const CATALOG_PAGE_SIZE = 30;
+const SEARCH_PAGE_SIZE = 25;
 const CHAPTER_SELECTOR = 'a.chapters__item';
 const CHAPTER_NUMBER_REGEX = /\d+(?:[.,]\d+)?/;
 /** «Прочитано до 11» в строке закладки — ссылка `/manga/<slug>/<том>/<глава>` на место чтения. */
@@ -375,7 +376,8 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
   };
 
   const getList = async (params: ListParams): Promise<RawTitle[]> => {
-    return fetchPaged(params, { size: PAGE_SIZE, firstPage: 1 }, (page) =>
+    const size = params.query ? SEARCH_PAGE_SIZE : CATALOG_PAGE_SIZE;
+    return fetchPaged(params, { size, firstPage: 1 }, (page) =>
       fetchListPage(page, params.order, params.query, params.filters),
     );
   };
@@ -422,8 +424,10 @@ export const createMangaBuffParser = (ctx: ParserContext): Parser => {
   let filtersPromise: Promise<RawFilterGroup[]> | null = null;
 
   const getFilters = (): Promise<RawFilterGroup[]> => {
-    if (!filtersPromise) filtersPromise = fetchFilters();
-    return filtersPromise;
+    return (filtersPromise ??= fetchFilters().catch((error: unknown) => {
+      filtersPromise = null;
+      throw error;
+    }));
   };
 
   const fetchFilters = async (): Promise<RawFilterGroup[]> => {
