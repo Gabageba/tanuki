@@ -494,7 +494,7 @@ export const createRemangaParser = (ctx: ParserContext): Parser => {
     query: string | undefined,
     filters: FilterSelection[] | undefined,
   ): Promise<RawTitle[]> => {
-    const path = query ? '/api/v2/search' : '/api/v2/search/catalog';
+    const path = query ? '/api/v2/search/' : '/api/v2/search/catalog/';
     const url = new URL(`https://${apiHost}${path}`);
     url.searchParams.set('page', String(page));
     url.searchParams.set('count', String(PAGE_SIZE));

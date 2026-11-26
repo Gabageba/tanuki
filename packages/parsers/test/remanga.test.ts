@@ -145,11 +145,12 @@ const setUpFixtures = (chaptersPage1 = CHAPTERS_PAGE1_JSON): FakeHttpClient => {
     body: DETAILS_JSON,
     contentType: 'application/json',
   });
-  http.register((url) => url.startsWith(`https://${API_HOST}/api/v2/search`), {
-    status: 200,
-    body: LIST_JSON,
-    contentType: 'application/json',
-  });
+  http.register(
+    (url) =>
+      url.startsWith(`https://${API_HOST}/api/v2/search/catalog/?`) ||
+      url.startsWith(`https://${API_HOST}/api/v2/search/?`),
+    { status: 200, body: LIST_JSON, contentType: 'application/json' },
+  );
   return http;
 };
 
@@ -175,6 +176,18 @@ describe('Remanga parser conformance', () => {
     expect(item!.translationState).toBe('ongoing');
     expect(item!.likes).toBe(1432);
     expect(item!.views).toBe(4234);
+  });
+
+  it('getList with a query requests the canonical search route', async () => {
+    const http = setUpFixtures();
+    const parser = createRemangaParser(makeContext(http));
+
+    await expect(
+      parser.getList({ offset: 0, limit: 20, query: 'One Piece' }),
+    ).resolves.toHaveLength(1);
+    const url = new URL(http.requests[0]!.url);
+    expect(url.pathname).toBe('/api/v2/search/');
+    expect(url.searchParams.get('query')).toBe('One Piece');
   });
 
   it('getDetails: chapters populated with valid sentinels, ids unique', async () => {
