@@ -73,6 +73,7 @@ function ReaderChapterName({ chapters, numbering, currentChapter, titleId }: Pro
           numbering={numbering}
           titleId={titleId}
           activeChapterId={currentChapter.id}
+          replaceHistory
           onChapterSelect={() => setIsDrawerOpened(false)}
           ownMark={resolveOwnMark(progress, chapters, numbering)}
           linkedMarks={resolveLinkedMarks(progress, chapters, getChapterBranchId(currentChapter))}

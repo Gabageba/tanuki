@@ -104,6 +104,7 @@ export const BackupProgressSchema = z
     chapterTitle: z.string().nullable(),
     branchId: z.string().min(1),
     pageIndex: z.number().int().min(0),
+    chapterCompleted: z.boolean().optional(),
     titleId: z.string().nullable(),
     titleName: z.string().nullable(),
     coverUrl: z.string().nullable(),

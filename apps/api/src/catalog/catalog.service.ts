@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { isLibSocialAuthFamily, catalogEntryFor } from '@tanuki/contracts';
+import { isLibSocialAuthFamily, catalogEntryFor, compareChapterNumber } from '@tanuki/contracts';
 import type {
   CatalogResponse,
   ResolvedSearchFilters,
@@ -14,7 +14,6 @@ import type { Env } from '../config/env';
 import { ENV } from '../config/env.module';
 import { decodeChapterId, decodeTitleId } from '../common/opaque-id';
 import {
-  compareChapterNumber,
   compareChapterNumberDesc,
   computeBranches,
   detectNumbering,

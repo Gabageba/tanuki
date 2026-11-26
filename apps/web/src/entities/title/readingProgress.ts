@@ -5,6 +5,7 @@ import {
   DEFAULT_BRANCH_ID,
   READING_MARK_CONFIDENCE,
   SORT_DIRECTION,
+  compareChapterNumber,
   type Chapter,
   type ChapterNumbering,
   type ReadingProgress,
@@ -75,6 +76,22 @@ export const resolveOwnMark = (
     confidence: READING_MARK_CONFIDENCE.EXACT,
     progress: own,
   };
+};
+
+/** С конца сохранённой главы продолжаем на следующей доступной в порядке навигации читалки. */
+export const resolveContinuePosition = (
+  mark: ReadingMark,
+  chapters: Chapter[],
+  isChapterUnavailable: (chapterId: string) => boolean,
+): Pick<ReadingMark, 'chapter' | 'pageIndex'> => {
+  if (mark.chapter.id !== mark.progress.chapterId || !mark.progress.chapterCompleted) return mark;
+
+  const orderedChapters = [...chapters].sort(compareChapterNumber);
+  const markIndex = orderedChapters.findIndex(({ id }) => id === mark.chapter.id);
+  const nextChapter = markIndex >= 0 ? orderedChapters[markIndex + 1] : undefined;
+  return nextChapter && !isChapterUnavailable(nextChapter.id)
+    ? { chapter: nextChapter, pageIndex: 0 }
+    : mark;
 };
 
 /**
@@ -161,7 +178,11 @@ export const getReaderPath = (titleId: string, chapterId: string, pageIndex = 0)
 };
 
 /** Отметка, какой её вернёт сервер, — чтобы показать новое место сразу, не дожидаясь ответа. */
-export const toOptimisticProgress = (chapter: Chapter, pageIndex: number): ReadingProgress => ({
+export const toOptimisticProgress = (
+  chapter: Chapter,
+  pageIndex: number,
+  chapterCompleted = false,
+): ReadingProgress => ({
   sourceId: chapter.id.slice(0, chapter.id.indexOf(':')),
   chapterId: chapter.id,
   chapterVolume: chapter.volume,
@@ -169,5 +190,6 @@ export const toOptimisticProgress = (chapter: Chapter, pageIndex: number): Readi
   chapterTitle: chapter.title,
   branchId: getChapterBranchId(chapter),
   pageIndex,
+  chapterCompleted,
   updatedAt: `${new Date().toISOString().slice(0, 19)}Z`,
 });

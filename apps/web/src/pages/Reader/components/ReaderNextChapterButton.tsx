@@ -19,6 +19,7 @@ function ReaderNextChapterButton({ titleId, chapterId }: Props) {
     <Button
       component={Link}
       to={generatePath(ROUTE_PATHS.READER, { titleId, chapterId })}
+      replace
       onClick={(event: MouseEvent) => event.stopPropagation()}
       leftSection={<ArrowRightIcon />}
     >

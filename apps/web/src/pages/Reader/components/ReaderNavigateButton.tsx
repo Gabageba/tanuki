@@ -22,6 +22,7 @@ function ReaderNavigateButton({ icon, titleId, chapterId }: Props) {
     <ActionIcon
       component={Link}
       to={generatePath(ROUTE_PATHS.READER, { titleId, chapterId })}
+      replace
       size="lg"
       variant="subtle"
       color="gray"

@@ -89,8 +89,6 @@ function Reader() {
   });
   const pageTiming = useSkeletonTiming(activeChapter?.query ?? feedQuery);
   const contentReady = settingsReady && !pageTiming.isSkeleton;
-  const validPosition = contentReady && activeChapter?.pages.length ? position : null;
-  useSaveReadingProgress({ titleId, position: validPosition });
 
   // Шапка и контролы говорят о главе, которую читают прямо сейчас, а не о той, с которой чтение
   // начиналось: в ленте это разные главы, и адрес идёт следом за первой. Пока подклеенная глава
@@ -99,6 +97,13 @@ function Reader() {
   const pageEnd = pagesLength
     ? getVisiblePageEnd(position.pageIndex, pagesLength, pageStep) + 1
     : position.pageIndex + 1;
+  useSaveReadingProgress({
+    titleId,
+    position:
+      contentReady && pagesLength !== null
+        ? { ...position, chapterCompleted: pageEnd === pagesLength }
+        : null,
+  });
   useRecordChapterRead({
     titleId,
     position: { ...position, pageIndex: pageEnd - 1 },

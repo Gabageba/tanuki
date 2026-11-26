@@ -16,11 +16,12 @@ const HARNESS = `<!doctype html><html><head></head><body><div id="root"></div><s
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, useLocation } from 'react-router';
+import { BrowserRouter, useLocation, useNavigate } from 'react-router';
 import { READER_READING_MODE } from '@tanuki/contracts';
 import useReaderFeed from '/src/pages/Reader/hooks/useReaderFeed.ts';
 import useSaveReadingProgress from '/src/pages/Reader/hooks/useSaveReadingProgress.ts';
 import useRecordChapterRead from '/src/pages/Reader/hooks/useRecordChapterRead.ts';
+import useTrackReadingTime from '/src/pages/Reader/hooks/useTrackReadingTime.ts';
 const client = new QueryClient({defaultOptions: {
   queries: {staleTime: Infinity, retry: false}, mutations: {retryDelay: 50},
 }});
@@ -28,8 +29,9 @@ client.setQueryData(['auth', 'me'], {id: 'reader'});
 client.setQueryData(['chapters', 'source:title', null], {items: ${JSON.stringify(CHAPTERS)}});
 function Probe() {
   const [position, setPosition] = React.useState({chapterId: 'source:chapter-0', pageIndex: 0});
-  useSaveReadingProgress({titleId: 'source:title', position});
+  useSaveReadingProgress({titleId: 'source:title', position: {...position, chapterCompleted: position.pageIndex === 3}});
   useRecordChapterRead({titleId: 'source:title', position, pagesLength: 4});
+  useTrackReadingTime();
   React.useLayoutEffect(() => {
     globalThis.window.harness = {setPosition, client, unmount: () => root.unmount()};
   });
@@ -37,18 +39,22 @@ function Probe() {
 }
 function VerticalProbe() {
   const location = useLocation();
+  const navigate = useNavigate();
   const chapterId = decodeURIComponent(location.pathname.split('/read/')[1] ?? 'source:chapter-0');
   const feed = useReaderFeed({titleId: 'source:title', chapterId,
     readingMode: READER_READING_MODE.VERTICAL, autoNextChapter: true, pageStep: 1, prefetchPages: 0});
-  useSaveReadingProgress({titleId: 'source:title', position: feed.activeChapter?.pages.length ? feed.position : null});
+  const pagesLength = feed.activeChapter?.pages.length;
+  useSaveReadingProgress({titleId: 'source:title', position: pagesLength
+    ? {...feed.position, chapterCompleted: feed.position.pageIndex === pagesLength - 1}
+    : null});
   useRecordChapterRead({titleId: 'source:title', position: feed.position,
     pagesLength: feed.activeChapter?.pages.length || null});
-  React.useLayoutEffect(() => { globalThis.window.harness = {client}; });
+  React.useLayoutEffect(() => { globalThis.window.harness = {client, navigate}; });
   return React.createElement('main', {style: {paddingBottom: 800}}, feed.chapters.map(chapter =>
     React.createElement('section', {key: chapter.chapterId, style: {marginBottom: 64}}, chapter.pages.map(page =>
       React.createElement('div', {key: page.index, ref: feed.registerPage,
         'data-chapter-id': chapter.chapterId, 'data-page-index': page.index,
-        style: {height: 600}}, chapter.chapterId + ':' + page.index)))));
+        style: {height: page.height}}, chapter.chapterId + ':' + page.index)))));
 }
 function EntryProbe() {
   const [opened, setOpened] = React.useState(false);
@@ -99,10 +105,13 @@ const openReader = async ({
   vertical = false,
   entryScroll,
   resumePage,
+  pageHeight = 600,
+  useFakeClock = true,
 } = {}) => {
   const page = await browser.newPage();
   const saves = [];
   const reads = [];
+  const activity = [];
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/api/v1/**', async (route) => {
@@ -116,7 +125,7 @@ const openReader = async ({
             index,
             url: 'unused',
             width: 375,
-            height: 600,
+            height: pageHeight,
           })),
           prevChapterId: chapter ? `source:chapter-${chapter - 1}` : null,
           nextChapterId: chapter < 39 ? `source:chapter-${chapter + 1}` : null,
@@ -126,6 +135,10 @@ const openReader = async ({
       saves.push(body);
       const status = progressStatus();
       await waitProgress();
+      if (status === 0) {
+        await route.abort('internetdisconnected');
+        return;
+      }
       await route.fulfill({
         status,
         json:
@@ -133,6 +146,7 @@ const openReader = async ({
             ? {
                 chapterId: body.chapterId,
                 pageIndex: body.pageIndex,
+                chapterCompleted: body.chapterCompleted,
               }
             : { error: { code: 'internal', message: 'Временный сбой' } },
       });
@@ -147,9 +161,12 @@ const openReader = async ({
               json: { error: { code: 'internal', message: 'Временный сбой' } },
             }),
       });
-    } else await route.fulfill({ status: 204 });
+    } else {
+      if (request.url().endsWith('/reading-activity')) activity.push(body.minutes);
+      await route.fulfill({ status: 204 });
+    }
   });
-  await page.clock.install();
+  if (useFakeClock) await page.clock.install();
   const params = new URLSearchParams();
   if (vertical) params.set('vertical', '');
   if (entryScroll !== undefined) params.set('entry', '');
@@ -163,8 +180,8 @@ const openReader = async ({
     }, entryScroll);
     await page.waitForFunction(() => Boolean(globalThis.window.harness.client));
   }
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
-  return { page, saves, reads, errors };
+  if (useFakeClock) await page.clock.pauseAt(new Date(Date.now() + 1000));
+  return { page, saves, reads, activity, errors };
 };
 const goTo = async (page, chapter, pageIndex) => {
   await page.evaluate(
@@ -202,7 +219,9 @@ test('непрерывное чтение 30 глав сохраняет про�
     await expect.poll(() => saves.length).toBeGreaterThan(5);
     await expect.poll(() => new Set(reads.map((read) => read.chapterId)).size).toBe(30);
     await page.clock.fastForward(5000);
-    await expect.poll(() => saves.at(-1)).toEqual({ chapterId: 'source:chapter-29', pageIndex: 3 });
+    await expect
+      .poll(() => saves.at(-1))
+      .toEqual({ chapterId: 'source:chapter-29', pageIndex: 3, chapterCompleted: true });
     assert.deepEqual(errors, []);
   } finally {
     await page.close();
@@ -221,7 +240,11 @@ test('сбой сохранения повторяется без смены с�
     await expect.poll(() => saves.length).toBe(2);
     await page.clock.fastForward(5000);
     assert.equal(saves.length, 2);
-    assert.deepEqual(saves[1], { chapterId: 'source:chapter-15', pageIndex: 2 });
+    assert.deepEqual(saves[1], {
+      chapterId: 'source:chapter-15',
+      pageIndex: 2,
+      chapterCompleted: false,
+    });
   } finally {
     await page.close();
   }
@@ -253,7 +276,11 @@ for (const status of [200, 503]) {
       assert.deepEqual(await ownPosition(page), { chapterId: 'source:chapter-16', pageIndex: 2 });
       await page.clock.fastForward(5000);
       await expect.poll(() => saves.length).toBe(2);
-      assert.deepEqual(saves[1], { chapterId: 'source:chapter-16', pageIndex: 2 });
+      assert.deepEqual(saves[1], {
+        chapterId: 'source:chapter-16',
+        pageIndex: 2,
+        chapterCompleted: false,
+      });
     } finally {
       release();
       await page.close();
@@ -308,7 +335,11 @@ test('visibilitychange и pagehide отправляют одну последн�
       globalThis.window.dispatchEvent(new globalThis.Event('pagehide'));
     });
     await expect.poll(() => saves.length).toBe(1);
-    assert.deepEqual(saves[0], { chapterId: 'source:chapter-25', pageIndex: 1 });
+    assert.deepEqual(saves[0], {
+      chapterId: 'source:chapter-25',
+      pageIndex: 1,
+      chapterCompleted: false,
+    });
     release();
   } finally {
     release();
@@ -335,6 +366,33 @@ test('повтор прочтения из прежнего аккаунта н�
   }
 });
 
+test('время чтения отправляется при сворачивании и выходе, скрытая вкладка не считается', async () => {
+  const { page, activity } = await openReader();
+  const setVisibility = (visibilityState) =>
+    page.evaluate((value) => {
+      Object.defineProperty(globalThis.document, 'visibilityState', { configurable: true, value });
+      globalThis.document.dispatchEvent(new globalThis.Event('visibilitychange'));
+    }, visibilityState);
+  try {
+    await page.clock.runFor(4000);
+    await setVisibility('hidden');
+    await expect.poll(() => activity.length).toBe(1);
+    await page.clock.runFor(65_000);
+    assert.equal(activity.length, 1);
+
+    await setVisibility('visible');
+    await page.clock.runFor(3000);
+    await page.evaluate(() => globalThis.window.harness.unmount());
+    await expect.poll(() => activity.length).toBe(2);
+    assert.equal(
+      activity[1].reduce((total, { seconds }) => total + seconds, 0),
+      3,
+    );
+  } finally {
+    await page.close();
+  }
+});
+
 test('уход из читалки во время сохранения досылает последнюю страницу', async () => {
   let release;
   let blocked = true;
@@ -353,7 +411,11 @@ test('уход из читалки во время сохранения досы
     blocked = false;
     release();
     await expect.poll(() => saves.length).toBe(2);
-    assert.deepEqual(saves[1], { chapterId: 'source:chapter-26', pageIndex: 2 });
+    assert.deepEqual(saves[1], {
+      chapterId: 'source:chapter-26',
+      pageIndex: 2,
+      chapterCompleted: false,
+    });
   } finally {
     release();
     await page.close();
@@ -394,7 +456,11 @@ for (const status of [200, 503]) {
       blocked = false;
       release();
       await expect.poll(() => saves.length).toBe(2);
-      assert.deepEqual(saves[1], { chapterId: 'source:chapter-26', pageIndex: 2 });
+      assert.deepEqual(saves[1], {
+        chapterId: 'source:chapter-26',
+        pageIndex: 2,
+        chapterCompleted: false,
+      });
     } finally {
       release();
       await page.close();
@@ -425,6 +491,107 @@ for (const resumePage of [undefined, 3]) {
   });
 }
 
+test('восстановленная короткая страница остаётся текущей до прокрутки', async () => {
+  const { page, saves } = await openReader({
+    vertical: true,
+    pageHeight: 200,
+    resumePage: 2,
+    useFakeClock: false,
+  });
+  try {
+    await expect
+      .poll(() => saves.at(-1))
+      .toEqual({
+        chapterId: 'source:chapter-0',
+        pageIndex: 1,
+        chapterCompleted: false,
+      });
+    const initialScroll = await page.evaluate(() => globalThis.window.scrollY);
+    await page.mouse.move(180, 300);
+    await page.mouse.wheel(0, 20);
+    await expect
+      .poll(() => page.evaluate(() => globalThis.window.scrollY))
+      .toBeGreaterThan(initialScroll);
+    await expect
+      .poll(() => ownPosition(page))
+      .toEqual({ chapterId: 'source:chapter-0', pageIndex: 2 });
+  } finally {
+    await page.close();
+  }
+});
+
+test('ссылка на страницу другой главы работает внутри открытой читалки', async () => {
+  const { page } = await openReader({ vertical: true });
+  try {
+    await page.clock.resume();
+    await page.evaluate(() =>
+      globalThis.window.harness.navigate('/title/source:title/read/source:chapter-10?page=3', {
+        replace: true,
+      }),
+    );
+    await expect(page).toHaveURL((url) => url.pathname.endsWith('/read/source:chapter-10'));
+    await expect(
+      page.locator('[data-chapter-id="source:chapter-10"][data-page-index="2"]'),
+    ).toHaveCount(1);
+    await expect
+      .poll(() => ownPosition(page))
+      .toEqual({ chapterId: 'source:chapter-10', pageIndex: 2 });
+  } finally {
+    await page.close();
+  }
+});
+
+test('прогресс без сети восстанавливается при открытии и уходит на сервер после подключения', async () => {
+  let offline = true;
+  const { page, saves } = await openReader({ progressStatus: () => (offline ? 0 : 200) });
+  const titleId = 'source:title';
+  const chapter = CHAPTERS[25];
+  const readProgress = () =>
+    page.evaluate(async (id) => {
+      const { applyPendingProgress } = await import('/src/entities/title/progressSync.ts');
+      const { own } = await applyPendingProgress('reader', id, { own: null, linked: [] });
+      return (
+        own && {
+          chapterId: own.chapterId,
+          pageIndex: own.pageIndex,
+          chapterCompleted: own.chapterCompleted,
+        }
+      );
+    }, titleId);
+  try {
+    await page.evaluate(
+      async (record) => {
+        const { getOfflineDb } = await import('/src/entities/download/db.ts');
+        await getOfflineDb('reader').chapters.put(record);
+      },
+      { titleId, chapterId: chapter.id, chapter },
+    );
+
+    await goTo(page, 25, 3);
+    await page.clock.fastForward(2100);
+    await expect
+      .poll(readProgress)
+      .toEqual({ chapterId: chapter.id, pageIndex: 3, chapterCompleted: true });
+    await goTo(page, 25, 1);
+    await page.clock.fastForward(2100);
+    const expected = { chapterId: chapter.id, pageIndex: 1, chapterCompleted: false };
+    await expect.poll(readProgress).toEqual(expected);
+    await page.reload();
+    await expect.poll(readProgress).toEqual(expected);
+
+    offline = false;
+    const flushed = await page.evaluate(async () => {
+      const { flushPendingProgress } = await import('/src/entities/title/progressSync.ts');
+      return flushPendingProgress('reader');
+    });
+    assert.deepEqual(flushed, [titleId]);
+    assert.deepEqual(saves.at(-1), expected);
+    assert.equal(await readProgress(), null);
+  } finally {
+    await page.close();
+  }
+});
+
 test('вертикальная лента определяет позицию и учитывает 30 глав при настоящей прокрутке', async () => {
   const { page, saves, reads, errors } = await openReader({ vertical: true });
   try {
@@ -448,7 +615,9 @@ test('вертикальная лента определяет позицию и
     }
     await expect.poll(() => new Set(reads.map((read) => read.chapterId)).size).toBe(30);
     await page.clock.fastForward(5000);
-    await expect.poll(() => saves.at(-1)).toEqual({ chapterId: 'source:chapter-29', pageIndex: 3 });
+    await expect
+      .poll(() => saves.at(-1))
+      .toEqual({ chapterId: 'source:chapter-29', pageIndex: 3, chapterCompleted: true });
     assert.deepEqual(errors, []);
   } finally {
     await page.close();

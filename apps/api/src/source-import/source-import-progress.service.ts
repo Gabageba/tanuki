@@ -258,7 +258,7 @@ export class SourceImportProgressService {
         .values(values)
         .onConflictDoUpdate({
           target: [readingProgress.userId, readingProgress.titleKey],
-          set: { ...update, hiddenAt: null },
+          set: { ...update, chapterCompleted: false, hiddenAt: null },
         });
     });
   }

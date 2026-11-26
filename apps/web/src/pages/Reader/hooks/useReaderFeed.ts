@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { useNetwork } from '@mantine/hooks';
 import { generatePath, useNavigate, useSearchParams } from 'react-router';
 import { READER_READING_MODE, type ReaderReadingMode } from '@tanuki/contracts';
 import { getSpreadStart } from '../navigation';
 import { READER_PAGE_SEARCH_PARAM, ROUTE_PATHS } from '@/shared/lib/routes';
 import useCurrentUser from '@/entities/user/hooks/useCurrentUser';
-import useTitleDownloads from '@/entities/download/hooks/useTitleDownloads';
-import { isDownloadDone } from '@/entities/download/lib';
+import useIsChapterUnavailable from '@/entities/download/hooks/useIsChapterUnavailable';
 import {
   CHAPTER_PRELOAD_REMAINING_PAGES,
   getChapterPagesQueryOptions,
@@ -46,15 +44,15 @@ function useReaderFeed({
 }: Params) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const pageParam = searchParams.get(READER_PAGE_SEARCH_PARAM);
   const [chapterIds, setChapterIds] = useState([chapterId]);
-  // Страница из ссылки «Продолжить» читается один раз, при входе: дальше позиция живёт своей
-  // жизнью, а параметр убирается из адреса, чтобы перезагрузка не вернула на устаревшее место.
+  // Параметр страницы принадлежит ссылке, а затем убирается из адреса.
   const [initialPosition] = useState<ReaderPosition>(() => ({
     chapterId,
-    pageIndex: parseReaderPageParam(searchParams.get(READER_PAGE_SEARCH_PARAM)),
+    pageIndex: parseReaderPageParam(pageParam),
   }));
   const [position, setPosition] = useState<ReaderPosition>(initialPosition);
-  const [renderedChapterId, setRenderedChapterId] = useState(chapterId);
+  const [renderedLink, setRenderedLink] = useState({ chapterId, pageParam });
   // При входе прокручиваем и к первой странице: иначе остаётся скролл предыдущего экрана.
   const [scrollTarget, setScrollTarget] = useState<ReaderPosition>(initialPosition);
   const [tailChapterId, setTailChapterId] = useState<string | null>(null);
@@ -75,12 +73,7 @@ function useReaderFeed({
 
   // Без сети открывается только скачанное: не скачанную следующую главу лента не подклеивает, а в
   // конце главы об этом говорит экран конца.
-  const { online } = useNetwork();
-  const downloads = useTitleDownloads(titleId);
-  const isChapterUnavailable = useCallback(
-    (id: string) => !online && !isDownloadDone(downloads?.get(id)),
-    [online, downloads],
-  );
+  const isChapterUnavailable = useIsChapterUnavailable(titleId);
 
   const chapters: ReaderFeedChapter[] = chapterIds.map((id, index) => ({
     query: results[index]!,
@@ -113,14 +106,15 @@ function useReaderFeed({
 
   // Адрес при переходе в следующую главу переписываем мы сами, поэтому разойтись с чтением он
   // может только снаружи: кнопки соседних глав, выбор в drawer'е, прямая ссылка. Уже прочитанная
-  // глава в ленте остаётся, к её началу просто прокручиваемся; незнакомая начинает ленту заново.
+  // глава в ленте остаётся, к нужной странице просто прокручиваемся; незнакомая начинает ленту заново.
   // Сравнение и setState идут прямо в теле рендера — правило "adjusting state when a prop changes".
-  if (chapterId !== renderedChapterId) {
-    setRenderedChapterId(chapterId);
+  if (chapterId !== renderedLink.chapterId || pageParam !== renderedLink.pageParam) {
+    setRenderedLink({ chapterId, pageParam });
 
-    if (chapterId !== position.chapterId) {
-      setPosition({ chapterId, pageIndex: 0 });
-      setScrollTarget({ chapterId, pageIndex: 0 });
+    if (chapterId !== position.chapterId || pageParam !== null) {
+      const target = { chapterId, pageIndex: parseReaderPageParam(pageParam) };
+      setPosition(target);
+      setScrollTarget(target);
       setTailChapterId(null);
       if (!chapterIds.includes(chapterId)) {
         setChapterIds([chapterId]);

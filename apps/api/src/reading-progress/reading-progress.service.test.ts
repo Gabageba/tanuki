@@ -35,6 +35,7 @@ const row = (
   chapterTitle: null,
   branchId: 'default',
   pageIndex: 3,
+  chapterCompleted: false,
   hiddenAt: null,
   updatedAt: new Date(updatedAt),
 });

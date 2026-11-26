@@ -15,6 +15,8 @@ export const ReadingProgressSchema = z.object({
   chapterTitle: z.string().nullable(),
   branchId: z.string(), // Branch.id: имя ветки или DEFAULT_BRANCH_ID
   pageIndex: z.number().int().min(0),
+  /** Последняя страница входит в сохранённую позицию, в том числе в развороте. */
+  chapterCompleted: z.boolean().optional(),
   updatedAt: z.string().datetime(),
 });
 export type ReadingProgress = z.infer<typeof ReadingProgressSchema>;
@@ -60,6 +62,7 @@ export type TitleReadingProgressResponse = z.infer<typeof TitleReadingProgressRe
 export const UpdateReadingProgressRequestSchema = z.object({
   chapterId: z.string().min(1),
   pageIndex: z.number().int().min(0),
+  chapterCompleted: z.boolean().optional(),
 });
 export type UpdateReadingProgressRequest = z.infer<typeof UpdateReadingProgressRequestSchema>;
 

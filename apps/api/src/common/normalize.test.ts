@@ -5,9 +5,9 @@ import {
   TITLE_RESTRICTION,
   TITLE_TYPE,
   SOURCE_ID,
+  compareChapterNumber,
 } from '@tanuki/contracts';
 import {
-  compareChapterNumber,
   compareChapterNumberDesc,
   computeBranches,
   normalizeChapter,

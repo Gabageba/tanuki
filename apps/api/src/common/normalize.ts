@@ -128,8 +128,6 @@ export const normalizeTitle = (
   };
 };
 
-/** Главу без номера сравнивать не с чем — источник его просто не отдаёт, поэтому такие главы
- *  уходят в хвост нумерованных, сохраняя порядок источника (Array.prototype.sort стабилен). */
 /**
  * Нумерация по томам — когда заново, с 0 или 1, начинается большинство томов. Не «номер хоть раз
  * сбросился»: одной главы с ошибочным томом или экстры с чужим номером хватало, чтобы сквозную
@@ -149,14 +147,7 @@ export const detectNumbering = (chapters: RawChapter[]): ChapterNumbering => {
     : CHAPTER_NUMBERING.GLOBAL;
 };
 
-export const compareChapterNumber = (a: RawChapter, b: RawChapter): number => {
-  if (a.number === null) return b.number === null ? 0 : 1;
-  if (b.number === null) return -1;
-  return a.number - b.number;
-};
-
-/** То же самое, но от новой главы к старой — список глав отдаётся клиенту в этом порядке,
- *  безномерные всё так же остаются в хвосте. */
+/** Список глав отдаётся от новой главы к старой. Безномерные остаются в хвосте в порядке источника. */
 export const compareChapterNumberDesc = (a: RawChapter, b: RawChapter): number => {
   if (a.number === null) return b.number === null ? 0 : 1;
   if (b.number === null) return -1;

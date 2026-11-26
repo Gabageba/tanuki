@@ -22,6 +22,7 @@ import * as schema from '../database/schema';
 import type { DatabaseService } from '../database/database.service';
 import type { Env } from '../config/env';
 import { titleIdOf, normalizeChapter } from '../common/normalize';
+import { splitCompositeId } from '../common/opaque-id';
 import type { RawTitle, RawChapter } from '../parsers-client/parsers-client.types';
 import type { ParsersClientService } from '../parsers-client/parsers-client.service';
 import type { SourcesService } from '../sources/sources.service';
@@ -130,7 +131,7 @@ describe.skipIf(!TEST_URL)('shared title snapshot — PostgreSQL', () => {
     removeNewChapters: vi.fn(async () => {}),
   } as unknown as NotificationsService;
   const parsers = {
-    getDetails: vi.fn(async () => {
+    getDetails: vi.fn<ParsersClientService['getDetails']>(async () => {
       throw new Error('source offline');
     }),
   };
@@ -156,7 +157,9 @@ describe.skipIf(!TEST_URL)('shared title snapshot — PostgreSQL', () => {
     database,
     links,
     parsers as unknown as ParsersClientService,
-    {} as AdultContentService,
+    {
+      getAccess: async () => ({ showAdultSources: true, hideAdultTitles: false }),
+    } as AdultContentService,
     bookmarks,
     sources,
     snapshots,
@@ -190,7 +193,8 @@ describe.skipIf(!TEST_URL)('shared title snapshot — PostgreSQL', () => {
     await admin.unsafe(`CREATE DATABASE "${DATABASE_NAME}"`);
     const migrationDir = resolve('drizzle');
     const files = (await readdir(migrationDir)).filter((file) => file.endsWith('.sql')).sort();
-    for (const file of files.filter((file) => !file.startsWith('0036_'))) {
+    const snapshotMigrationIndex = files.findIndex((file) => file.startsWith('0036_'));
+    for (const file of files.slice(0, snapshotMigrationIndex)) {
       for (const statement of (await readFile(resolve(migrationDir, file), 'utf8')).split(
         '--> statement-breakpoint',
       )) {
@@ -213,16 +217,12 @@ describe.skipIf(!TEST_URL)('shared title snapshot — PostgreSQL', () => {
       ('remanga:/failed', 'remanga', 'failed', null, true)`;
     await client`INSERT INTO title_chapters_seen (title_key, chapter_id, branch_id, baseline, first_seen_at)
       VALUES (${KEY}, 'chapter', 'default', true, ${at(0).toISOString()})`;
-    for (const statement of (
-      await readFile(
-        resolve(
-          migrationDir,
-          files.find((file) => file.startsWith('0036_'))!,
-        ),
-        'utf8',
-      )
-    ).split('--> statement-breakpoint')) {
-      if (statement.trim()) await client.unsafe(statement);
+    for (const file of files.slice(snapshotMigrationIndex)) {
+      for (const statement of (await readFile(resolve(migrationDir, file), 'utf8')).split(
+        '--> statement-breakpoint',
+      )) {
+        if (statement.trim()) await client.unsafe(statement);
+      }
     }
     migration = {
       fallbacks: await db.select().from(schema.USER_TITLE_SNAPSHOT_FALLBACKS),
@@ -268,12 +268,40 @@ describe.skipIf(!TEST_URL)('shared title snapshot — PostgreSQL', () => {
     expect(migration.snapshots.find((row) => row.titleKey === KEY)?.chaptersInitialized).toBe(true);
     expect(migration.progress.find((row) => row.userId === USER_A)).toMatchObject({
       pageIndex: 7,
+      chapterCompleted: false,
       hiddenAt: at(1),
       updatedAt: at(2),
     });
     expect(migration.seen[0]).toMatchObject({ baseline: true, firstSeenAt: at(0) });
     expect(migration.columns).not.toContain('title_id');
     expect(migration.columns).not.toContain('cover_url');
+  });
+
+  it('конец главы хранится с позицией и сбрасывается при возвращении на середину', async () => {
+    const { chapterId } = mark(USER_A);
+    const { opaqueId } = splitCompositeId(titleIdOf('remanga', title()));
+    const details = { data: title({ chapters: [chapter(1)] }), stale: false };
+    parsers.getDetails.mockResolvedValueOnce(details).mockResolvedValueOnce(details);
+    await progress.update(USER_A, 'remanga', opaqueId, {
+      chapterId,
+      pageIndex: 6,
+      chapterCompleted: true,
+    });
+    await expect(progress.get(USER_A, 'remanga', opaqueId)).resolves.toMatchObject({
+      own: { chapterId, pageIndex: 6, chapterCompleted: true },
+    });
+
+    await db
+      .insert(schema.chapterReads)
+      .values({ userId: USER_A, titleKey: KEY, sourceId: 'remanga', chapterId });
+    await progress.update(USER_A, 'remanga', opaqueId, {
+      chapterId,
+      pageIndex: 2,
+      chapterCompleted: false,
+    });
+    await expect(progress.get(USER_A, 'remanga', opaqueId)).resolves.toMatchObject({
+      own: { chapterId, pageIndex: 2, chapterCompleted: false },
+    });
   });
 
   it('личные файлы изолированы, затем один ответ обновляет карточки двух пользователей', async () => {
@@ -535,6 +563,7 @@ describe.skipIf(!TEST_URL)('shared title snapshot — PostgreSQL', () => {
       progress: [
         {
           ...mark(USER_A),
+          chapterCompleted: true,
           titleId: null,
           titleName: null,
           coverUrl: null,
@@ -563,9 +592,11 @@ describe.skipIf(!TEST_URL)('shared title snapshot — PostgreSQL', () => {
     expect(exported.progress[0]).toMatchObject({
       titleId: null,
       titleName: null,
+      chapterCompleted: true,
       hiddenAt: at(2).toISOString().replace('.000Z', 'Z'),
     });
     await restorer.restore(USER_B, { ...request, backup: exported });
+    expect((await exporter.export(USER_B)).progress[0]?.chapterCompleted).toBe(true);
     expect((await exporter.export(USER_B)).bookmarks).toEqual(
       exported.bookmarks.map((row) => ({
         ...row,

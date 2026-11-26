@@ -394,6 +394,7 @@ export const readingProgress = pgTable(
     /** Branch.id — имя ветки или DEFAULT_BRANCH_ID, чтобы фронт открыл нужную ветку. */
     branchId: text('branch_id').notNull(),
     pageIndex: integer('page_index').notNull(),
+    chapterCompleted: boolean('chapter_completed').notNull().default(false),
 
     /**
      * Когда тайтл убрали из «Продолжить чтение»; null — не убирали. Пишется во все строки

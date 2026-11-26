@@ -34,6 +34,7 @@ function useCurrentPageObserver({ enabled, paused = false, onChange }: Params) {
   /** Снимает удержание страницы, к которой прокрутили последней (см. pinPage). */
   const unpin = useRef<(() => void) | null>(null);
   const pinnedKey = useRef<string | null>(null);
+  const scrollAfterRelease = useRef<AbortController | null>(null);
   /** Пока страница удерживается, лента прокручивается сама — это не движение читателя. */
   const [isPinned, setIsPinned] = useState(false);
 
@@ -47,6 +48,8 @@ function useCurrentPageObserver({ enabled, paused = false, onChange }: Params) {
    */
   const pinPage = useCallback((element: HTMLElement) => {
     unpin.current?.();
+    scrollAfterRelease.current?.abort();
+    scrollAfterRelease.current = null;
     const pinnedAt = performance.now();
     const position = getReaderPagePosition(element);
     const key = position && getReaderPageKey(position);
@@ -70,12 +73,30 @@ function useCurrentPageObserver({ enabled, paused = false, onChange }: Params) {
         unpin.current = null;
         pinnedKey.current = null;
         setIsPinned(false);
+
+        if (!event) return;
+        // Небольшая прокрутка может оставить под центром ту же страницу, которую наблюдатель
+        // уже увидел во время удержания. Запрашиваем её заново после реального скролла.
+        const controller = new AbortController();
+        scrollAfterRelease.current = controller;
+        window.addEventListener(
+          'scroll',
+          () => {
+            scrollAfterRelease.current = null;
+            const current = observer.current;
+            if (!current) return;
+            current.takeRecords();
+            current.disconnect();
+            elements.current.forEach((page) => current.observe(page));
+          },
+          { once: true, passive: true, signal: controller.signal },
+        );
       }
     };
     // Клик по самому документу — это полоса прокрутки; тап по странице (он прячет шапку) место
     // чтения не меняет и удержание не снимает.
     const handlePointerDown = (event: PointerEvent) => {
-      if (event.target === document.documentElement) release();
+      if (event.target === document.documentElement) release(event);
     };
 
     PIN_RELEASE_EVENTS.forEach((type) => window.addEventListener(type, release, { passive: true }));
@@ -84,7 +105,13 @@ function useCurrentPageObserver({ enabled, paused = false, onChange }: Params) {
     setIsPinned(true);
   }, []);
 
-  useEffect(() => () => unpin.current?.(), []);
+  useEffect(
+    () => () => {
+      unpin.current?.();
+      scrollAfterRelease.current?.abort();
+    },
+    [],
+  );
 
   useEffect(() => {
     // В горизонтальном режиме прокручивать ленту незачем — и удерживать в ней страницу тоже.
@@ -97,6 +124,8 @@ function useCurrentPageObserver({ enabled, paused = false, onChange }: Params) {
 
     const current = new IntersectionObserver(
       (entries) => {
+        // При восстановлении короткой страницы под центром может быть уже следующая.
+        if (pinnedKey.current || scrollAfterRelease.current) return;
         const centered = entries.find((entry) => entry.isIntersecting);
         if (!centered) return;
 

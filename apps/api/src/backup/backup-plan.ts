@@ -54,6 +54,12 @@ export const isFurther = (backup: BackupProgress, mine: ProgressMark) => {
   if (backup.chapterNumber !== mine.chapterNumber) {
     return backup.chapterNumber > mine.chapterNumber;
   }
+  if (
+    backup.chapterId === mine.chapterId &&
+    backup.chapterCompleted !== undefined &&
+    backup.chapterCompleted !== mine.chapterCompleted
+  )
+    return backup.chapterCompleted;
   return backup.pageIndex > mine.pageIndex;
 };
 
@@ -183,7 +189,12 @@ const planProgress = (input: RestorePlanInput) => {
       counts.added += 1;
       continue;
     }
-    if (mine.chapterId === row.chapterId && mine.pageIndex === row.pageIndex) continue;
+    if (
+      mine.chapterId === row.chapterId &&
+      mine.pageIndex === row.pageIndex &&
+      (row.chapterCompleted === undefined || mine.chapterCompleted === row.chapterCompleted)
+    )
+      continue;
 
     counts.differs += 1;
     if (winsProgress(input.progressPolicy, row, mine)) {
