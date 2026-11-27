@@ -1,5 +1,9 @@
-import { CHAPTER_NUMBERING, READING_MARK_CONFIDENCE } from '@tanuki/contracts';
-import { compareChapterNumber, detectNumbering } from '../common/normalize';
+import {
+  CHAPTER_NUMBERING,
+  READING_MARK_CONFIDENCE,
+  compareChapterNumber,
+} from '@tanuki/contracts';
+import { detectNumbering } from '../common/normalize';
 import type { RawChapter } from '../parsers-client/parsers-client.types';
 import type { AlignedChapter, ChapterAnchor, ChapterSnapshot, WeightedAnchor } from './models';
 

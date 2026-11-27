@@ -62,6 +62,7 @@ export const toReadingProgress = (row: ReadingProgressRow): ReadingProgress => (
   chapterTitle: row.chapterTitle,
   branchId: row.branchId,
   pageIndex: row.pageIndex,
+  chapterCompleted: row.chapterCompleted,
   updatedAt: toServerDateTime(row.updatedAt.getTime()),
 });
 
@@ -249,6 +250,7 @@ export class ReadingProgressService {
       chapterTitle: chapter.title,
       branchId: chapter.branch ?? DEFAULT_BRANCH_ID,
       pageIndex: body.pageIndex,
+      chapterCompleted: body.chapterCompleted ?? false,
     };
 
     // Как и в остальных записях, недоступная база — ошибка: иначе отметка молча потеряется, а

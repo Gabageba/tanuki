@@ -26,6 +26,7 @@ type Props = {
   mah?: MantineStyleProps['mah'];
   showDate?: boolean;
   activeChapterId?: string;
+  replaceHistory?: boolean;
   onChapterSelect?: () => void;
   /** Своя отметка в этом списке (resolveOwnMark): по ней красится прочитанное. */
   ownMark?: ReadingMark;
@@ -51,6 +52,7 @@ function ChaptersList({
   mah = '100%',
   showDate = false,
   activeChapterId,
+  replaceHistory,
   onChapterSelect,
   ownMark,
   linkedMarks = [],
@@ -131,6 +133,7 @@ function ChaptersList({
                 data-last={virtualItem.index === chapters.length - 1 || undefined}
                 component={Link}
                 to={getReaderPath(titleId, chapter.id, pageIndex)}
+                replace={replaceHistory}
                 opacity={unavailableChapterIds?.has(chapter.id) ? UNAVAILABLE_OPACITY : undefined}
                 label={
                   <ChapterItem

@@ -109,6 +109,7 @@ export {
 export {
   ChapterSchema,
   type Chapter,
+  compareChapterNumber,
   CHAPTER_NUMBERING,
   ChapterNumberingSchema,
   type ChapterNumbering,

@@ -1,7 +1,9 @@
 import { Group, Progress, Stack, Text } from '@mantine/core';
 import type { ChaptersResponse, TitleReadingProgressResponse } from '@tanuki/contracts';
+import useIsChapterUnavailable from '@/entities/download/hooks/useIsChapterUnavailable';
 import {
   getChapterBranchId,
+  resolveContinuePosition,
   resolveLinkedMarks,
   resolveOwnMark,
 } from '@/entities/title/readingProgress';
@@ -18,6 +20,7 @@ type Props = {
 
 /** Кнопка чтения по загруженным отметке и главам, под ней — докуда дочитано. */
 function TitleReadingButtons({ titleId, progress, chaptersData }: Props) {
+  const isChapterUnavailable = useIsChapterUnavailable(titleId);
   const { items: chapters, numbering } = chaptersData;
   const ownMark = resolveOwnMark(progress, chapters, numbering);
   const firstChapter = chapters.at(-1);
@@ -27,7 +30,11 @@ function TitleReadingButtons({ titleId, progress, chaptersData }: Props) {
   const linkedMarks = branchId ? resolveLinkedMarks(progress, chapters, branchId) : [];
 
   const mainButton = ownMark ? (
-    <ContinueReadingButton titleId={titleId} mark={ownMark} numbering={numbering} />
+    <ContinueReadingButton
+      titleId={titleId}
+      {...resolveContinuePosition(ownMark, chapters, isChapterUnavailable)}
+      numbering={numbering}
+    />
   ) : (
     <ReadFromStartButton titleId={titleId} firstChapter={firstChapter} />
   );

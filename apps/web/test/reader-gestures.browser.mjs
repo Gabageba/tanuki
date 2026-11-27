@@ -12,6 +12,8 @@ let origin;
 let handlers;
 let title;
 let chapter;
+let chapters;
+let savedProgress;
 
 before(async () => {
   server = await createServer({
@@ -24,9 +26,12 @@ before(async () => {
   ({ DEFAULT_HANDLERS: handlers } = await server.ssrLoadModule(
     '/src/shared/storybook/handlers.ts',
   ));
-  ({ TITLE: title, READING_CHAPTER: chapter } = await server.ssrLoadModule(
-    '/src/shared/storybook/titles.ts',
-  ));
+  ({
+    TITLE: title,
+    READING_CHAPTER: chapter,
+    TITLE_CHAPTERS: chapters,
+    READING_PROGRESS_RESPONSE: savedProgress,
+  } = await server.ssrLoadModule('/src/shared/storybook/titles.ts'));
   browser = await chromium.launch();
 });
 
@@ -35,7 +40,15 @@ after(async () => {
   await server?.close();
 });
 
-const openReader = async ({ horizontal = false, resumePage = 1, spread = false } = {}) => {
+const titlePath = () => `/title/${title.id}`;
+const readerPath = (chapterId) => `${titlePath()}/read/${chapterId}`;
+
+const openReader = async ({
+  horizontal = false,
+  resumePage = 1,
+  spread = false,
+  progress,
+} = {}) => {
   const context = await browser.newContext({
     serviceWorkers: 'block',
     viewport: { width: 375, height: 800 },
@@ -44,9 +57,22 @@ const openReader = async ({ horizontal = false, resumePage = 1, spread = false }
   });
   const page = await context.newPage();
   const errors = [];
+  let readingProgress = progress;
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
+    if (readingProgress && request.url().endsWith('/progress')) {
+      if (request.method() === 'GET') {
+        await route.fulfill({ json: readingProgress });
+        return;
+      }
+      if (request.method() === 'PUT') {
+        const position = request.postDataJSON();
+        readingProgress = { ...readingProgress, own: { ...readingProgress.own, ...position } };
+        await route.fulfill({ json: readingProgress.own });
+        return;
+      }
+    }
     const response = await getResponse(
       handlers,
       new globalThis.Request(request.url(), {
@@ -76,9 +102,14 @@ const openReader = async ({ horizontal = false, resumePage = 1, spread = false }
       });
     }
   });
-  await page.goto(
-    `${origin}/title/${encodeURIComponent(title.id)}/read/${encodeURIComponent(chapter.id)}?page=${resumePage}`,
-  );
+  if (progress) {
+    await page.goto(`${origin}${titlePath()}?tab=info&direction=desc`);
+    const continueLink = page.getByRole('link', { name: /^Продолжить с / });
+    await expect(continueLink).toBeVisible({ timeout: 15_000 });
+    await continueLink.click();
+  } else {
+    await page.goto(`${origin}${readerPath(chapter.id)}?page=${resumePage}`);
+  }
   await expect(page.locator('main img').first()).toBeVisible();
   await expect(page.locator('header')).toContainText('Берсерк');
   await expect(page.locator('main img').first()).toHaveJSProperty('complete', true);
@@ -92,6 +123,7 @@ const openReader = async ({ horizontal = false, resumePage = 1, spread = false }
 };
 
 const layer = (page) => page.locator('main [style*="scale("]');
+const currentPage = (page) => page.locator('main [data-reader-page-key]');
 const scale = (page) =>
   layer(page).evaluate(
     (element) => new globalThis.DOMMatrix(globalThis.getComputedStyle(element).transform).a,
@@ -112,6 +144,126 @@ const expectAnchor = async (element, local, point) => {
     })
     .toBeLessThan(2);
 };
+
+test('Продолжить открывает следующую главу, если сохранён конец предыдущей', async () => {
+  const [latest, completed] = chapters;
+  const reader = await openReader({
+    horizontal: true,
+    progress: {
+      ...savedProgress,
+      own: {
+        ...savedProgress.own,
+        chapterId: completed.id,
+        chapterNumber: completed.number,
+        pageIndex: 7,
+        chapterCompleted: true,
+      },
+    },
+  });
+  try {
+    await expect(reader.page).toHaveURL(`${origin}${readerPath(latest.id)}`);
+    await expect(currentPage(reader.page)).toHaveAttribute(
+      'data-reader-page-key',
+      `${latest.id}#0`,
+    );
+    assert.deepEqual(reader.errors, []);
+  } finally {
+    await reader.close();
+  }
+});
+
+test('Продолжить возвращает на сохранённый разворот после возврата с конца главы', async () => {
+  const { page, close, errors } = await openReader({
+    horizontal: true,
+    spread: true,
+    progress: savedProgress,
+  });
+  try {
+    const waitForSave = (pageIndex) =>
+      page.waitForResponse((response) => {
+        const request = response.request();
+        return (
+          request.method() === 'PUT' &&
+          request.url().endsWith('/progress') &&
+          request.postDataJSON().pageIndex === pageIndex
+        );
+      });
+    const completed = waitForSave(6);
+    await page.keyboard.press('End');
+    assert.equal((await completed).request().postDataJSON().chapterCompleted, true);
+
+    const partial = waitForSave(4);
+    await page.keyboard.press('ArrowLeft');
+    await expect(currentPage(page).first()).toHaveAttribute(
+      'data-reader-page-key',
+      `${chapter.id}#4`,
+    );
+    await page.goBack();
+    assert.equal((await partial).request().postDataJSON().chapterCompleted, false);
+    await page.reload();
+    await page.getByRole('link', { name: /^Продолжить с / }).click();
+    await expect(currentPage(page).first()).toHaveAttribute(
+      'data-reader-page-key',
+      `${chapter.id}#4`,
+    );
+    assert.deepEqual(errors, []);
+  } finally {
+    await close();
+  }
+});
+
+test('Назад после переходов между главами возвращает на страницу тайтла', async () => {
+  const reader = await openReader({ horizontal: true, progress: savedProgress });
+  const { page } = reader;
+  try {
+    await expect(currentPage(page)).toHaveAttribute('data-reader-page-key', `${chapter.id}#3`);
+    const chapterIndex = chapters.findIndex(({ id }) => id === chapter.id);
+    const next = chapters[chapterIndex - 1];
+    const following = chapters[chapterIndex - 2];
+    await page.keyboard.press('End');
+    await page.keyboard.press('ArrowRight');
+    await page.getByRole('link', { name: 'Следующая глава' }).click();
+    await expect(page).toHaveURL(`${origin}${readerPath(next.id)}`);
+    await page.locator(`a[href="${readerPath(following.id)}"]:visible`).click();
+    await expect(page).toHaveURL(`${origin}${readerPath(following.id)}`);
+    await expect(currentPage(page)).toHaveAttribute('data-reader-page-key', `${following.id}#0`);
+    const savedPosition = page.waitForRequest(
+      (request) =>
+        request.method() === 'PUT' &&
+        request.url().endsWith('/progress') &&
+        request.postDataJSON().chapterId === following.id,
+    );
+    await page.goBack();
+    await expect(page).toHaveURL((url) => url.pathname === titlePath());
+    assert.deepEqual((await savedPosition).postDataJSON(), {
+      chapterId: following.id,
+      pageIndex: 0,
+      chapterCompleted: false,
+    });
+    assert.deepEqual(reader.errors, []);
+  } finally {
+    await reader.close();
+  }
+});
+
+test('свайп от края экрана не листает страницу ридера', async () => {
+  const reader = await openReader({ horizontal: true, resumePage: 4 });
+  const { page, touch } = reader;
+  try {
+    const swipeRight = async (startX) => {
+      await touch('touchStart', [[startX, 300, 1]]);
+      for (const offset of [40, 80, 120]) await touch('touchMove', [[startX + offset, 300, 1]]);
+      await touch('touchEnd');
+    };
+    await swipeRight(5);
+    await expect(currentPage(page)).toHaveAttribute('data-reader-page-key', `${chapter.id}#3`);
+    await swipeRight(90);
+    await expect(currentPage(page)).toHaveAttribute('data-reader-page-key', `${chapter.id}#2`);
+    assert.deepEqual(reader.errors, []);
+  } finally {
+    await reader.close();
+  }
+});
 
 for (const horizontal of [false, true]) {
   test(`pinch держит точку под пальцами: ${horizontal ? 'постранично' : 'лента'}`, async () => {

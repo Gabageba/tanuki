@@ -33,13 +33,13 @@ function useUpdateReadingProgress({ titleId, notifyOnError = true }: Params) {
       ? ({ errorTitle: t('failedToSave') } satisfies ErrorMeta)
       : SILENT_ERROR_META,
     mutationFn: (variables: ProgressPosition) => sendReadingProgress(user?.id, titleId, variables),
-    onMutate: async ({ chapter, pageIndex }) => {
+    onMutate: async ({ chapter, pageIndex, chapterCompleted }) => {
       // Иначе уже летящий GET приземлится поверх и вернёт отметку на прежнее место.
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<TitleReadingProgressResponse>(queryKey);
       if (chapter) {
         queryClient.setQueryData<TitleReadingProgressResponse>(queryKey, (current) => ({
-          own: toOptimisticProgress(chapter, pageIndex),
+          own: toOptimisticProgress(chapter, pageIndex, chapterCompleted),
           linked: current?.linked ?? [],
         }));
       }

@@ -13,7 +13,7 @@ export type { FolderRef, FolderTarget, GroupMove } from '../library/library-merg
 /** Отметка пользователя — столько, сколько нужно, чтобы сравнить её с отметкой из копии. */
 export type ProgressMark = Pick<
   typeof readingProgress.$inferSelect,
-  'titleKey' | 'chapterId' | 'chapterNumber' | 'pageIndex' | 'updatedAt'
+  'titleKey' | 'chapterId' | 'chapterNumber' | 'pageIndex' | 'chapterCompleted' | 'updatedAt'
 >;
 
 export type BookmarkInsert = {

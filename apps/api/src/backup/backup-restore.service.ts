@@ -189,6 +189,7 @@ export class BackupRestoreService {
           chapterId: readingProgress.chapterId,
           chapterNumber: readingProgress.chapterNumber,
           pageIndex: readingProgress.pageIndex,
+          chapterCompleted: readingProgress.chapterCompleted,
           updatedAt: readingProgress.updatedAt,
         })
         .from(readingProgress)
@@ -248,6 +249,7 @@ export class BackupRestoreService {
             chapterTitle: row.chapterTitle,
             branchId: row.branchId,
             pageIndex: row.pageIndex,
+            chapterCompleted: row.chapterCompleted ?? false,
             hiddenAt: row.hiddenAt ? new Date(row.hiddenAt) : null,
             updatedAt: new Date(row.updatedAt),
           })),
@@ -262,6 +264,7 @@ export class BackupRestoreService {
             chapterTitle: sql`excluded.chapter_title`,
             branchId: sql`excluded.branch_id`,
             pageIndex: sql`excluded.page_index`,
+            chapterCompleted: sql`excluded.chapter_completed`,
             hiddenAt: sql`excluded.hidden_at`,
             updatedAt: sql`excluded.updated_at`,
           },

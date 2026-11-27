@@ -30,3 +30,10 @@ export const ChapterSchema = z.object({
 });
 
 export type Chapter = z.infer<typeof ChapterSchema>;
+
+/** Порядок навигации в читалке. Главы без номера идут после нумерованных в порядке источника. */
+export const compareChapterNumber = (a: Pick<Chapter, 'number'>, b: Pick<Chapter, 'number'>) => {
+  if (a.number === null) return b.number === null ? 0 : 1;
+  if (b.number === null) return -1;
+  return a.number - b.number;
+};

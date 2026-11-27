@@ -109,6 +109,7 @@ export type PendingProgressRow = {
   titleId: string;
   chapterId: string;
   pageIndex: number;
+  chapterCompleted?: boolean;
   chapter?: Chapter;
   savedAt: string;
 };

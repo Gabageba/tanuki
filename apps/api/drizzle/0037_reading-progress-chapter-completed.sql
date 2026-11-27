@@ -1,0 +1,1 @@
+ALTER TABLE "reading_progress" ADD COLUMN "chapter_completed" boolean DEFAULT false NOT NULL;

@@ -119,7 +119,8 @@ const registry = createRegistry({
  * A nightly contract must fail on broken parsing, not on an upstream 502 or a server that
  * cannot even send HTTP headers. Probe the same browse URL before running the full contract,
  * only for sources with confirmed upstream outages. An unexpected HTTP status (including
- * 401/403/404) still runs the contract and fails normally.
+ * 401/403/404) still runs the contract and fails normally. HENCHAN also serves a plain-text
+ * maintenance response with HTTP 200.
  *
  * This is CI-only: local runs continue exercising the full parser without exemptions.
  */
@@ -135,6 +136,10 @@ const upstreamOutageReason = async (sourceId: SourceId): Promise<string | null> 
 
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(12_000) });
+    if (sourceId === SOURCE_ID.HENCHAN && response.status === 200) {
+      const body = await response.text();
+      return body.trim() === 'technical maintenance.' ? `maintenance response from ${url}` : null;
+    }
     await response.body?.cancel();
     if ([502, 503, 504].includes(response.status)) {
       return `HTTP ${response.status} from ${url}`;

@@ -9,6 +9,7 @@ import { isReaderInteractionBlocked } from '../navigation';
 import type { Bounds, Pinch, Point, View } from './models';
 
 const GESTURE = {
+  SCREEN_EDGE_WIDTH: 24,
   SWIPE_DISTANCE: 50,
   TAP_DISTANCE: 12,
   DOUBLE_TAP_MS: 260,
@@ -231,7 +232,14 @@ function useReaderGestures({
     const deltaX = point.x - start.current.x;
     const deltaY = point.y - start.current.y;
     if (moved.current) {
+      // Горизонтальный свайп внутрь экрана от самого края принадлежит браузеру.
+      const startsAtScreenEdge =
+        event.pointerType === 'touch' &&
+        (deltaX > 0
+          ? start.current.x <= GESTURE.SCREEN_EDGE_WIDTH
+          : start.current.x >= window.innerWidth - GESTURE.SCREEN_EDGE_WIDTH);
       if (
+        !startsAtScreenEdge &&
         currentView.current.scale === 1 &&
         horizontal &&
         Math.abs(deltaX) >= GESTURE.SWIPE_DISTANCE &&

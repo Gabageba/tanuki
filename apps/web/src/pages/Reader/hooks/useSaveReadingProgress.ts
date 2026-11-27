@@ -16,10 +16,15 @@ const SAVE_DELAY_MS = 2000;
 /** Непрерывное листание тоже сохраняется; этот же таймер повторяет неудачную отправку. */
 const CHECKPOINT_INTERVAL_MS = 5000;
 
+type SavedPosition = ReaderPosition & { chapterCompleted: boolean };
+
 type Params = {
   titleId: string;
-  position: ReaderPosition | null;
+  position: SavedPosition | null;
 };
+
+export const getProgressKey = (position: SavedPosition) =>
+  `${getReaderPageKey(position)}:${position.chapterCompleted}`;
 
 /**
  * Запоминает, где остановились. В кеш позиция пишется сразу — список глав в drawer'е и кнопка
@@ -35,7 +40,7 @@ function useSaveReadingProgress({ titleId, position }: Params) {
   const { data: user } = useCurrentUser();
   const userId = user?.id;
 
-  const pending = useRef<ReaderPosition | null>(null);
+  const pending = useRef<SavedPosition | null>(null);
   const lastSavedKey = useRef<string | null>(null);
   const inFlightKey = useRef<string | null>(null);
   const exitInFlightKey = useRef<string | null>(null);
@@ -44,7 +49,7 @@ function useSaveReadingProgress({ titleId, position }: Params) {
   const getPending = useCallback(() => {
     const target = pending.current;
     if (!target) return null;
-    const key = getReaderPageKey(target);
+    const key = getProgressKey(target);
     return key === lastSavedKey.current ||
       key === inFlightKey.current ||
       key === exitInFlightKey.current
@@ -57,10 +62,10 @@ function useSaveReadingProgress({ titleId, position }: Params) {
     if (inFlightKey.current !== null || exitInFlightKey.current !== null) return;
     let target = getPending();
     while (target) {
-      const key = getReaderPageKey(target);
+      const key = getProgressKey(target);
       inFlightKey.current = key;
       try {
-        await mutateAsync({ chapterId: target.chapterId, pageIndex: target.pageIndex });
+        await mutateAsync(target);
         lastSavedKey.current = key;
       } catch {
         // Позиция остаётся несохранённой: следующий checkpoint или выход повторит запрос.
@@ -70,7 +75,7 @@ function useSaveReadingProgress({ titleId, position }: Params) {
       // При уходе могла ещё лететь предыдущая страница. Дождавшись её, сохраняем последнюю.
       // Неудачный запрос той же позиции здесь не повторяем: это дело таймера.
       target = isLeaving.current ? getPending() : null;
-      if (target && getReaderPageKey(target) === key) return;
+      if (target && getProgressKey(target) === key) return;
     }
   }, [getPending, mutateAsync]);
 
@@ -79,7 +84,7 @@ function useSaveReadingProgress({ titleId, position }: Params) {
   const flushOnExit = useCallback(() => {
     const target = getPending();
     if (!target) return;
-    const key = getReaderPageKey(target);
+    const key = getProgressKey(target);
     exitInFlightKey.current = key;
     sendReadingProgress(userId, titleId, target)
       .then(() => {
@@ -92,7 +97,7 @@ function useSaveReadingProgress({ titleId, position }: Params) {
         // После возврата во вкладку читатель мог уйти с более новой страницы.
         // Повтор той же неудачной позиции оставляем таймеру, пока читалка открыта.
         const target = getPending();
-        if (isLeaving.current && target && getReaderPageKey(target) !== key) void flush();
+        if (isLeaving.current && target && getProgressKey(target) !== key) void flush();
       });
   }, [getPending, userId, titleId, queryClient, flush]);
 
@@ -104,18 +109,20 @@ function useSaveReadingProgress({ titleId, position }: Params) {
 
   const chapterId = position?.chapterId;
   const pageIndex = position?.pageIndex;
+  const chapterCompleted = position?.chapterCompleted;
   const chapter = chaptersData?.items.find((item) => item.id === chapterId);
 
   useEffect(() => {
-    if (chapterId === undefined || pageIndex === undefined) return;
-    pending.current = { chapterId, pageIndex };
+    if (chapterId === undefined || pageIndex === undefined || chapterCompleted === undefined)
+      return;
+    pending.current = { chapterId, pageIndex, chapterCompleted };
 
     // Главы из другой ветки в этом списке нет — тогда отметку обновит ответ сервера.
     if (chapter) {
       queryClient.setQueryData<TitleReadingProgressResponse>(
         getReadingProgressQueryKey(titleId),
         (current) => ({
-          own: toOptimisticProgress(chapter, pageIndex),
+          own: toOptimisticProgress(chapter, pageIndex, chapterCompleted),
           linked: current?.linked ?? [],
         }),
       );
@@ -123,7 +130,7 @@ function useSaveReadingProgress({ titleId, position }: Params) {
 
     const timer = setTimeout(flush, SAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [titleId, chapterId, pageIndex, chapter, queryClient, flush]);
+  }, [titleId, chapterId, pageIndex, chapterCompleted, chapter, queryClient, flush]);
 
   useEffect(() => {
     isLeaving.current = false;

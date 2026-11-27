@@ -1,13 +1,16 @@
-import type { Chapter, ReadingProgress, TitleReadingProgressResponse } from '@tanuki/contracts';
+import type {
+  Chapter,
+  ReadingProgress,
+  TitleReadingProgressResponse,
+  UpdateReadingProgressRequest,
+} from '@tanuki/contracts';
 import { apiFetch, ApiRequestError, isNetworkError } from '@/shared/api/client';
 import { toServerDateTime } from '@/shared/lib/serverDateTime';
 import { getOfflineDb } from '@/entities/download/db';
 import type { PendingProgressRow } from '@/entities/download/models';
 import { toOptimisticProgress } from './readingProgress';
 
-export type ProgressPosition = {
-  chapterId: string;
-  pageIndex: number;
+export type ProgressPosition = UpdateReadingProgressRequest & {
   /** Глава целиком, если она под рукой: по ней отметка рисуется до ответа сервера. */
   chapter?: Chapter;
 };
@@ -15,11 +18,14 @@ export type ProgressPosition = {
 /** Запрос уходит синхронно, в момент вызова: так его можно слать из pagehide, когда на
  *  промисы мутации (onMutate ждёт cancelQueries) времени уже нет. keepalive не даёт браузеру
  *  оборвать его вместе с закрывающейся вкладкой. */
-export const saveReadingProgress = (titleId: string, { chapterId, pageIndex }: ProgressPosition) =>
+export const saveReadingProgress = (
+  titleId: string,
+  { chapterId, pageIndex, chapterCompleted }: ProgressPosition,
+) =>
   apiFetch<ReadingProgress>(`/titles/${titleId}/progress`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ chapterId, pageIndex }),
+    body: JSON.stringify({ chapterId, pageIndex, chapterCompleted }),
     keepalive: true,
   });
 
@@ -37,7 +43,7 @@ export const readPendingProgress = async (userId: string, titleId: string) => {
  *  скачанной главы. */
 export const toPendingOwnProgress = async (userId: string, row: PendingProgressRow) => {
   const chapter = row.chapter ?? (await getOfflineDb(userId).chapters.get(row.chapterId))?.chapter;
-  return chapter ? toOptimisticProgress(chapter, row.pageIndex) : null;
+  return chapter ? toOptimisticProgress(chapter, row.pageIndex, row.chapterCompleted) : null;
 };
 
 /** Ответ сервера с поправкой на отметку, которая ещё не ушла: она свежее. */
@@ -72,9 +78,7 @@ export const sendReadingProgress = async (
     if (!userId || !isNetworkError(error)) throw error;
     const row: PendingProgressRow = {
       titleId,
-      chapterId: position.chapterId,
-      pageIndex: position.pageIndex,
-      chapter: position.chapter,
+      ...position,
       savedAt: toServerDateTime(new Date()),
     };
     await getPendingTable(userId).put(row);

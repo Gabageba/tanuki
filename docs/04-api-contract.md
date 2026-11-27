@@ -327,10 +327,10 @@ PUT /titles/:titleId/links     → 204
 ```
 GET /titles/:titleId/progress  → { own: ReadingProgress | null, linked: LinkedReadingProgress[] }
 PUT /titles/:titleId/progress  → ReadingProgress
-    { chapterId: "sourceId:opaqueId", pageIndex: 0 }
+    { chapterId: "sourceId:opaqueId", pageIndex: 0, chapterCompleted?: boolean }
 
 ReadingProgress = { sourceId, chapterId, chapterVolume, chapterNumber, chapterTitle, branchId,
-                    pageIndex, updatedAt }
+                    pageIndex, chapterCompleted, updatedAt }
 LinkedReadingProgress = ReadingProgress & {
   projections: { branchId, chapterId, confidence: "exact" | "approximate" }[]
 }
@@ -339,6 +339,11 @@ LinkedReadingProgress = ReadingProgress & {
 Одна отметка на пару «пользователь × тайтл на источнике», ключ — тот же `sourceId:адрес`, что и
 у связей. `own` — отметка этого тайтла, `linked` — отметки всей его группы подтверждённых
 совпадений (см. выше), свежие первыми.
+
+`chapterCompleted` относится к сохранённой позиции. Если на сохранённой странице или развороте
+видна последняя страница, «Продолжить» откроет следующую главу в порядке читалки. Если глава
+недоступна (например, она не скачана и сети нет) или отметка сохранена без этого признака,
+откроется сохранённая страница.
 
 Чужие отметки на главы этого тайтла переносит сервер (`reading-progress/chapter-alignment.ts`):
 полные списки глав ветки отметки и каждой ветки тайтла выравниваются целиком.
@@ -367,8 +372,8 @@ LinkedReadingProgress = ReadingProgress & {
 (`reading-progress/fixtures`): каждая глава каждой ветки переносится на ветки других источников.
 
 Том, номер, название и ветку главы при записи сервер берёт из деталей источника сам — клиент шлёт
-только id главы и страницу. Чтение при недоступной базе отдаёт пустой прогресс, запись отвечает
-`STORAGE_UNAVAILABLE`.
+только id главы, страницу и признак конца главы. Чтение при недоступной базе отдаёт пустой
+прогресс, запись отвечает `STORAGE_UNAVAILABLE`.
 
 #### «Продолжить чтение»
 

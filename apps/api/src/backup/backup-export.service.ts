@@ -162,6 +162,7 @@ export class BackupExportService {
             chapterTitle: row.chapterTitle,
             branchId: row.branchId,
             pageIndex: row.pageIndex,
+            chapterCompleted: row.chapterCompleted,
             titleId: row.titleId,
             titleName: row.titleName,
             coverUrl: row.coverUrl,

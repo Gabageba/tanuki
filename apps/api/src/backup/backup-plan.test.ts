@@ -138,6 +138,7 @@ const userMark = (url: string, overrides: Partial<ProgressMark> = {}): ProgressM
   chapterId: `${SOURCE_A}:ch-5`,
   chapterNumber: 5,
   pageIndex: 0,
+  chapterCompleted: false,
   updatedAt: new Date('2026-09-01T00:00:00Z'),
   ...overrides,
 });

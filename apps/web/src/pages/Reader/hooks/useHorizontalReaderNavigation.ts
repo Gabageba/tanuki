@@ -57,7 +57,9 @@ function useHorizontalReaderNavigation({
 
   const goToChapter = useCallback(
     (targetChapterId: string) => {
-      navigate(generatePath(ROUTE_PATHS.READER, { titleId, chapterId: targetChapterId }));
+      navigate(generatePath(ROUTE_PATHS.READER, { titleId, chapterId: targetChapterId }), {
+        replace: true,
+      });
     },
     [navigate, titleId],
   );
